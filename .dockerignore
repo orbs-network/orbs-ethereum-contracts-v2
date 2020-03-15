@@ -1,0 +1,9 @@
+deprecated-federation/
+
+.circleci/
+
+**/node_modules/
+
+/.gitignore
+/*.js
+/*.sh
