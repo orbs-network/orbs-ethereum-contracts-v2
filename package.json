@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run compile && mocha --exit --full-trace -r ./tsinit.js ./test/*.spec.ts --timeout 20000",
     "coverage": "solidity-coverage",
-    "compile": "rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
+    "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
     "migrate": "truffle migrate --reset",
     "version": "truffle --version",
     "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 100 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log"
