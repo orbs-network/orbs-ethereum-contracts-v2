@@ -82,15 +82,15 @@
       "type": "function"
     }
   ],
-  "metadata": "{\"compiler\":{\"version\":\"0.5.16+commit.9c3226ce\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakeOwner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"_sign\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_updatedStake\",\"type\":\"uint256\"}],\"name\":\"stakeChange\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_stakeOwners\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"bool[]\",\"name\":\"_signs\",\"type\":\"bool[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_updatedStakes\",\"type\":\"uint256[]\"}],\"name\":\"stakeChangeBatch\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakeOwner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"stakeMigration\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{\"stakeChange(address,uint256,bool,uint256)\":{\"details\":\"Notifies of stake change event.\",\"params\":{\"_amount\":\"uint256 The difference in the total staked amount.\",\"_sign\":\"bool The sign of the added (true) or subtracted (false) amount.\",\"_stakeOwner\":\"address The address of the subject stake owner.\",\"_updatedStake\":\"uint256 The updated total staked amount.\"}},\"stakeChangeBatch(address[],uint256[],bool[],uint256[])\":{\"details\":\"Notifies of multiple stake change events.\",\"params\":{\"_amounts\":\"uint256[] The differences in total staked amounts.\",\"_signs\":\"bool[] The signs of the added (true) or subtracted (false) amounts.\",\"_stakeOwners\":\"address[] The addresses of subject stake owners.\",\"_updatedStakes\":\"uint256[] The updated total staked amounts.\"}},\"stakeMigration(address,uint256)\":{\"details\":\"Notifies of stake migration event.\",\"params\":{\"_amount\":\"uint256 The migrated amount.\",\"_stakeOwner\":\"address The address of the subject stake owner.\"}}},\"title\":\"An interface for notifying of stake change events (e.g., stake, unstake, partial unstake, restate, etc.).\"},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/Users/ron/repos/orbs-ethereum-contracts/pos-v2/contracts/IStakeChangeNotifier.sol\":\"IStakeChangeNotifier\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"/Users/ron/repos/orbs-ethereum-contracts/pos-v2/contracts/IStakeChangeNotifier.sol\":{\"keccak256\":\"0x8c5ea4ca9a4ddbca8191edb749915f0bbb470fe3a26c0c66e857c4e520bba62f\",\"urls\":[\"bzz-raw://d80a852aaa8362638c2941058af42df684730191abb1c358b87ba7fec825b68b\",\"dweb:/ipfs/QmP2t6ZKNoGVLacmPrw2KHZMCzoBydgiLPCZrweqL7dyBw\"]}},\"version\":1}",
+  "metadata": "{\"compiler\":{\"version\":\"0.5.16+commit.9c3226ce\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakeOwner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"_sign\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"_updatedStake\",\"type\":\"uint256\"}],\"name\":\"stakeChange\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_stakeOwners\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"bool[]\",\"name\":\"_signs\",\"type\":\"bool[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_updatedStakes\",\"type\":\"uint256[]\"}],\"name\":\"stakeChangeBatch\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_stakeOwner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"stakeMigration\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"methods\":{\"stakeChange(address,uint256,bool,uint256)\":{\"details\":\"Notifies of stake change event.\",\"params\":{\"_amount\":\"uint256 The difference in the total staked amount.\",\"_sign\":\"bool The sign of the added (true) or subtracted (false) amount.\",\"_stakeOwner\":\"address The address of the subject stake owner.\",\"_updatedStake\":\"uint256 The updated total staked amount.\"}},\"stakeChangeBatch(address[],uint256[],bool[],uint256[])\":{\"details\":\"Notifies of multiple stake change events.\",\"params\":{\"_amounts\":\"uint256[] The differences in total staked amounts.\",\"_signs\":\"bool[] The signs of the added (true) or subtracted (false) amounts.\",\"_stakeOwners\":\"address[] The addresses of subject stake owners.\",\"_updatedStakes\":\"uint256[] The updated total staked amounts.\"}},\"stakeMigration(address,uint256)\":{\"details\":\"Notifies of stake migration event.\",\"params\":{\"_amount\":\"uint256 The migrated amount.\",\"_stakeOwner\":\"address The address of the subject stake owner.\"}}},\"title\":\"An interface for notifying of stake change events (e.g., stake, unstake, partial unstake, restate, etc.).\"},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/Users/ron/repos/orbs-ethereum-contracts-v2/pos-v2/contracts/IStakeChangeNotifier.sol\":\"IStakeChangeNotifier\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"/Users/ron/repos/orbs-ethereum-contracts-v2/pos-v2/contracts/IStakeChangeNotifier.sol\":{\"keccak256\":\"0x8c5ea4ca9a4ddbca8191edb749915f0bbb470fe3a26c0c66e857c4e520bba62f\",\"urls\":[\"bzz-raw://d80a852aaa8362638c2941058af42df684730191abb1c358b87ba7fec825b68b\",\"dweb:/ipfs/QmP2t6ZKNoGVLacmPrw2KHZMCzoBydgiLPCZrweqL7dyBw\"]}},\"version\":1}",
   "bytecode": "0x",
   "deployedBytecode": "0x",
   "sourceMap": "",
   "deployedSourceMap": "",
   "source": "pragma solidity 0.5.16;\n\n/// @title An interface for notifying of stake change events (e.g., stake, unstake, partial unstake, restate, etc.).\ninterface IStakeChangeNotifier {\n    /// @dev Notifies of stake change event.\n    /// @param _stakeOwner address The address of the subject stake owner.\n    /// @param _amount uint256 The difference in the total staked amount.\n    /// @param _sign bool The sign of the added (true) or subtracted (false) amount.\n    /// @param _updatedStake uint256 The updated total staked amount.\n    function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external;\n\n    /// @dev Notifies of multiple stake change events.\n    /// @param _stakeOwners address[] The addresses of subject stake owners.\n    /// @param _amounts uint256[] The differences in total staked amounts.\n    /// @param _signs bool[] The signs of the added (true) or subtracted (false) amounts.\n    /// @param _updatedStakes uint256[] The updated total staked amounts.\n    function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs,\n        uint256[] calldata _updatedStakes) external;\n\n    /// @dev Notifies of stake migration event.\n    /// @param _stakeOwner address The address of the subject stake owner.\n    /// @param _amount uint256 The migrated amount.\n    function stakeMigration(address _stakeOwner, uint256 _amount) external;\n}\n",
-  "sourcePath": "/Users/ron/repos/orbs-ethereum-contracts/pos-v2/contracts/IStakeChangeNotifier.sol",
+  "sourcePath": "/Users/ron/repos/orbs-ethereum-contracts-v2/pos-v2/contracts/IStakeChangeNotifier.sol",
   "ast": {
-    "absolutePath": "/Users/ron/repos/orbs-ethereum-contracts/pos-v2/contracts/IStakeChangeNotifier.sol",
+    "absolutePath": "/Users/ron/repos/orbs-ethereum-contracts-v2/pos-v2/contracts/IStakeChangeNotifier.sol",
     "exportedSymbols": {
       "IStakeChangeNotifier": [
         2476
@@ -252,7 +252,7 @@
             "scope": 2476,
             "src": "528:103:3",
             "stateMutability": "nonpayable",
-            "superFunction": 6027,
+            "superFunction": 5987,
             "visibility": "external"
           },
           {
@@ -425,7 +425,7 @@
             "scope": 2476,
             "src": "1008:164:3",
             "stateMutability": "nonpayable",
-            "superFunction": 6016,
+            "superFunction": 5976,
             "visibility": "external"
           },
           {
@@ -506,7 +506,7 @@
             "scope": 2476,
             "src": "1353:71:3",
             "stateMutability": "nonpayable",
-            "superFunction": 6034,
+            "superFunction": 5994,
             "visibility": "external"
           }
         ],
@@ -517,7 +517,7 @@
     "src": "0:1427:3"
   },
   "legacyAST": {
-    "absolutePath": "/Users/ron/repos/orbs-ethereum-contracts/pos-v2/contracts/IStakeChangeNotifier.sol",
+    "absolutePath": "/Users/ron/repos/orbs-ethereum-contracts-v2/pos-v2/contracts/IStakeChangeNotifier.sol",
     "exportedSymbols": {
       "IStakeChangeNotifier": [
         2476
@@ -679,7 +679,7 @@
             "scope": 2476,
             "src": "528:103:3",
             "stateMutability": "nonpayable",
-            "superFunction": 6027,
+            "superFunction": 5987,
             "visibility": "external"
           },
           {
@@ -852,7 +852,7 @@
             "scope": 2476,
             "src": "1008:164:3",
             "stateMutability": "nonpayable",
-            "superFunction": 6016,
+            "superFunction": 5976,
             "visibility": "external"
           },
           {
@@ -933,7 +933,7 @@
             "scope": 2476,
             "src": "1353:71:3",
             "stateMutability": "nonpayable",
-            "superFunction": 6034,
+            "superFunction": 5994,
             "visibility": "external"
           }
         ],
@@ -949,7 +949,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.23",
-  "updatedAt": "2020-03-11T14:45:21.553Z",
+  "updatedAt": "2020-03-15T19:03:11.506Z",
   "devdoc": {
     "methods": {
       "stakeChange(address,uint256,bool,uint256)": {

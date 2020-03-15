@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/orbs-network/orbs-ethereum-contracts/pos-v2/management-adapter/eth"
+	"github.com/orbs-network/orbs-ethereum-contracts-v2/pos-v2/management-adapter/eth"
 	"os"
 	"strings"
 )
