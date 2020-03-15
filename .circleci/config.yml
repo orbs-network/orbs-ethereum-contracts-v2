@@ -5,11 +5,11 @@ jobs:
       - image: aviramstern/aviram-orbs:ubuntu-go-node
     steps:
       - checkout
-      - run: cd pos-v2 && ./test.sh
+      - run: ./test.sh
       - store_artifacts:
-          path: pos-v2/_out
+          path: _out
       - store_test_results:
-          path: pos-v2/_reports
+          path: _reports
 
 workflows:
   version: 2
