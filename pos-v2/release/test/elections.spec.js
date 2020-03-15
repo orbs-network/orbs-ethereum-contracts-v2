@@ -55,9 +55,7 @@ chai_1.default.use(require('chai-bn')(bn_js_1.default));
 chai_1.default.use(require('./matchers'));
 var expect = chai_1.default.expect;
 var assert = chai_1.default.assert;
-var committee_provider_1 = require("./committee-provider");
 var helpers_1 = require("./helpers");
-var eth_1 = require("../eth");
 describe('elections-high-level-flows', function () { return __awaiter(void 0, void 0, void 0, function () {
     return __generator(this, function (_a) {
         it('handle delegation requests', function () { return __awaiter(void 0, void 0, void 0, function () {
@@ -85,7 +83,7 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
             });
         }); });
         it('sorts committee by stake', function () { return __awaiter(void 0, void 0, void 0, function () {
-            var stake100, stake200, stake300, stake500, stake1000, d, committeeProvider, validatorStaked100, r, committeeFromAdapter, validatorStaked200, validatorStaked300, inTopologyValidator, outOfTopologyValidator, validator;
+            var stake100, stake200, stake300, stake500, stake1000, d, validatorStaked100, r, validatorStaked200, validatorStaked300, inTopologyValidator, outOfTopologyValidator, validator;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -97,7 +95,6 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         return [4 /*yield*/, driver_1.Driver.new(2, 4, stake100)];
                     case 1:
                         d = _a.sent();
-                        committeeProvider = new committee_provider_1.CommitteeProvider(eth_1.ETHEREUM_URL, d.elections.address);
                         validatorStaked100 = d.newParticipant();
                         return [4 /*yield*/, validatorStaked100.stake(stake100)];
                     case 2:
@@ -123,21 +120,13 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                             orbsAddrs: [validatorStaked100.orbsAddress],
                             stakes: [stake100],
                         });
-                        return [4 /*yield*/, committeeProvider.getCommitteeAsOf(r.blockNumber)];
-                    case 5:
-                        committeeFromAdapter = _a.sent();
-                        expect(committeeFromAdapter).to.haveCommittee({
-                            addrs: [validatorStaked100.address.toLowerCase()],
-                            orbsAddrs: [validatorStaked100.orbsAddress.toLowerCase()],
-                            stakes: [stake100],
-                        });
                         validatorStaked200 = d.newParticipant();
                         return [4 /*yield*/, validatorStaked200.stake(stake200)];
-                    case 6:
+                    case 5:
                         r = _a.sent();
                         expect(r).to.have.a.stakeChangedEvent({ addr: validatorStaked200.address, committeeStake: stake200 });
                         return [4 /*yield*/, validatorStaked200.registerAsValidator()];
-                    case 7:
+                    case 6:
                         r = _a.sent();
                         expect(r).to.have.a.validatorRegisteredEvent({
                             addr: validatorStaked200.address,
@@ -149,7 +138,7 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         });
                         expect(r).to.not.have.a.committeeChangedEvent();
                         return [4 /*yield*/, validatorStaked200.notifyReadyForCommittee()];
-                    case 8:
+                    case 7:
                         r = _a.sent();
                         expect(r).to.have.a.committeeChangedEvent({
                             addrs: [validatorStaked200.address, validatorStaked100.address],
@@ -158,11 +147,11 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         });
                         validatorStaked300 = d.newParticipant();
                         return [4 /*yield*/, validatorStaked300.stake(stake300)];
-                    case 9:
+                    case 8:
                         r = _a.sent();
                         expect(r).to.have.a.stakedEvent();
                         return [4 /*yield*/, validatorStaked300.registerAsValidator()];
-                    case 10:
+                    case 9:
                         r = _a.sent();
                         expect(r).to.have.a.validatorRegisteredEvent({
                             addr: validatorStaked300.address,
@@ -174,7 +163,7 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         });
                         expect(r).to.not.have.a.committeeChangedEvent();
                         return [4 /*yield*/, validatorStaked300.notifyReadyForCommittee()];
-                    case 11:
+                    case 10:
                         r = _a.sent();
                         expect(r).to.have.a.committeeChangedEvent({
                             addrs: [validatorStaked300.address, validatorStaked200.address],
@@ -182,7 +171,7 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                             stakes: [stake300, stake200]
                         });
                         return [4 /*yield*/, d.delegateMoreStake(stake300, validatorStaked200)];
-                    case 12:
+                    case 11:
                         r = _a.sent();
                         expect(r).to.have.a.committeeChangedEvent({
                             addrs: [validatorStaked200.address, validatorStaked300.address],
@@ -191,7 +180,7 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         });
                         expect(r).to.not.have.a.topologyChangedEvent();
                         return [4 /*yield*/, d.delegateMoreStake(stake500, validatorStaked100)];
-                    case 13:
+                    case 12:
                         r = _a.sent();
                         expect(r).to.have.a.committeeChangedEvent({
                             addrs: [validatorStaked100.address, validatorStaked200.address],
@@ -201,11 +190,11 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         expect(r).to.not.have.a.topologyChangedEvent();
                         inTopologyValidator = d.newParticipant();
                         return [4 /*yield*/, inTopologyValidator.stake(stake100)];
-                    case 14:
+                    case 13:
                         r = _a.sent();
                         expect(r).to.have.a.stakedEvent();
                         return [4 /*yield*/, inTopologyValidator.registerAsValidator()];
-                    case 15:
+                    case 14:
                         r = _a.sent();
                         expect(r).to.have.a.topologyChangedEvent({
                             orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress, validatorStaked300.orbsAddress, inTopologyValidator.orbsAddress],
@@ -213,43 +202,43 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                         });
                         expect(r).to.not.have.a.committeeChangedEvent();
                         return [4 /*yield*/, inTopologyValidator.notifyReadyForCommittee()];
-                    case 16:
+                    case 15:
                         r = _a.sent();
                         expect(r).to.not.have.a.committeeChangedEvent();
                         return [4 /*yield*/, d.delegateMoreStake(201, inTopologyValidator)];
-                    case 17:
+                    case 16:
                         // The bottom validator in the topology delegates more stake and switches places with the second to last
                         // This does not change the committee nor the topology, so no event should be emitted
                         r = _a.sent();
                         expect(r).to.not.have.a.committeeChangedEvent();
                         expect(r).to.not.have.a.topologyChangedEvent();
                         return [4 /*yield*/, d.elections.getTopology()];
-                    case 18:
+                    case 17:
                         // make sure the order of validators really did change
                         r = _a.sent();
                         expect(r).to.eql([validatorStaked100.address, validatorStaked200.address, inTopologyValidator.address, validatorStaked300.address]);
                         outOfTopologyValidator = d.newParticipant();
                         return [4 /*yield*/, outOfTopologyValidator.stake(stake100)];
-                    case 19:
+                    case 18:
                         r = _a.sent();
                         expect(r).to.have.a.stakedEvent();
                         return [4 /*yield*/, outOfTopologyValidator.registerAsValidator()];
-                    case 20:
+                    case 19:
                         r = _a.sent();
                         expect(r).to.not.have.a.topologyChangedEvent();
                         return [4 /*yield*/, outOfTopologyValidator.notifyReadyForCommittee()];
-                    case 21:
+                    case 20:
                         r = _a.sent();
                         expect(r).to.not.have.a.committeeChangedEvent();
                         validator = d.newParticipant();
                         return [4 /*yield*/, validator.registerAsValidator()];
-                    case 22:
+                    case 21:
                         _a.sent();
                         return [4 /*yield*/, validator.notifyReadyForCommittee()];
-                    case 23:
+                    case 22:
                         _a.sent();
                         return [4 /*yield*/, validator.stake(stake1000)];
-                    case 24:
+                    case 23:
                         r = _a.sent(); // now top of committee
                         expect(r).to.have.a.committeeChangedEvent({
                             addrs: [validator.address, validatorStaked100.address],
@@ -257,7 +246,7 @@ describe('elections-high-level-flows', function () { return __awaiter(void 0, vo
                             stakes: [stake1000, stake100.add(stake500)]
                         });
                         return [4 /*yield*/, validator.unstake(501)];
-                    case 25:
+                    case 24:
                         r = _a.sent(); // now out of committee but still in topology
                         expect(r).to.have.a.committeeChangedEvent({
                             addrs: [validatorStaked100.address, validatorStaked200.address],

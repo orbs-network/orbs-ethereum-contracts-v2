@@ -22,7 +22,6 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {CommitteeProvider} from './committee-provider';
 import {bn, evmIncreaseTime} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
 
@@ -50,7 +49,6 @@ describe('elections-high-level-flows', async () => {
         const stake1000 = new BN(1000);
 
         const d = await Driver.new(2, 4, stake100);
-        const committeeProvider = new CommitteeProvider(ETHEREUM_URL, d.elections.address);
 
         // First validator registers
         const validatorStaked100 = d.newParticipant();
@@ -72,13 +70,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address],
             orbsAddrs: [validatorStaked100.orbsAddress],
-            stakes: [stake100],
-        });
-
-        const committeeFromAdapter = await committeeProvider.getCommitteeAsOf(r.blockNumber);
-        expect(committeeFromAdapter).to.haveCommittee({
-            addrs: [validatorStaked100.address.toLowerCase()],
-            orbsAddrs: [validatorStaked100.orbsAddress.toLowerCase()],
             stakes: [stake100],
         });
 
