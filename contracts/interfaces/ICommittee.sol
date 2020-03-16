@@ -4,6 +4,9 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface ICommittee {
+    event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] stakes);
+	event AuditrosChanged(address[] addrs, address[] orbsAddrs, uint256[] stakes);
+
     // No events
     // No external functions
 
@@ -13,17 +16,17 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a stake change for sorting to a relevant committee member.
-    /// sotingStake = 0 indicates removal of the member from the committee
-	function stakeChange(address addr, uint256 sotingStake); /* onlyDelegationContract */;
+    /// stake = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
+	function stakeChange(address addr, uint256 stake, bool readyForCommittee); /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
 	/// Returns the N top committee members
-	function getCommitee(uint N) external view returns (address[] memory); /* onlyDelegationContract */;
+	function getCommitee(uint N) external view returns (address[] memory, uint256[] memory); 
 
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal stake, and committee members
     /// Every member with sortingStake >= mimimumStake OR in top minimumN is included in the committee
-	function setMinimumStake(uint256 mimimumStake, minimumN); /* onlyDelegationContract */;
+	function setMinimumStake(uint256 mimimumStake, minimumN); /* onlyElectionContract */;
 
 
 	/*
@@ -32,5 +35,16 @@ interface ICommittee {
 	
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
-    
+
+	/*
+	 * Getters
+	 */
+
+    /// @dev returns the current committee
+    /// used also by the rewards and fees contracts
+	function getCommittee() external view returns (address[] memory addr, address[] memory orbsAddr, uint32[] ip);
+
+    /// @dev returns the current auditors (out of commiteee) topology
+	function getAuditors() external view returns (address[] memory addr, address[] memory orbsAddr, uint32[] ip);
+
 }

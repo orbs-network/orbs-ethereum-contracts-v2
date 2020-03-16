@@ -41,7 +41,7 @@ interface IFees {
      */
 
     /// @dev Called by: elections contract (committee provider)
-    /// Notifies a change in the committee
+    /// Notifies a change in one of the committees
     function committeeChanged() external;
 
     /*

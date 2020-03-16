@@ -31,8 +31,8 @@ interface IRewards {
      */
 
     /// @dev Called by: Elections contract (committee provider)
-    /// Notifies a change in the committee
-    function committeeChanged(address[] calldata addrs, uint256[] calldata stakes) external /* onlyCommitteeProvider */;
+    /// Notifies a change in one of the committees
+    function committeeChanged() external;
 
     /*
     *   Reward-governor methods

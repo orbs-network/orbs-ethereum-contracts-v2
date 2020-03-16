@@ -5,8 +5,6 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface IElections /* is IStakeChangeNotifier */ {
     // Election state change events
-	event CommitteeChanged(string committee, address[] addrs, address[] orbsAddrs, uint256[] stakes);
-	event TopologyChanged(string committee, address[] orbsAddrs, bytes4[] ips); //TBD
     event ValidatorVotedUnready(address validator);
     event ValidatorVotedOut(address validator);
 
@@ -52,9 +50,4 @@ interface IElections /* is IStakeChangeNotifier */ {
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
 
-	/*
-	 * Getters
-	 */
-
-	function getTopology() external view returns (address[] memory addr, address[] memory orbsAddr, uint32[] ip);
 }
