@@ -43,6 +43,14 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies a batch of stake updates - TBD if needed
 	function delegatedStakeChangeBatch(address[] calldata addr, uint256[] calldata selfStake, uint256[] calldata delegated_stake); /* onlyDelegationContract */;    
 
+	/// @dev Called by: validator registration contract
+	/// Notifies a new validator was registered
+	function validatorRegistred(); /* onlyValidatorsRegistrationContract */;    
+
+	/// @dev Called by: validator registration contract
+	/// Notifies a new validator was unregistered
+	function validatorunegistred(); /* onlyValidatorsRegistrationContract */;    
+
 	/*
 	 * Governance
 	 */
