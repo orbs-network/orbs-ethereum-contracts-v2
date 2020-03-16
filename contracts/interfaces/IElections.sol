@@ -36,11 +36,12 @@ interface IElections /* is IStakeChangeNotifier */ {
      */
 
 	/// @dev Called by: delegation contract
-	/// Notifies a stake change event
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegated_stake); /* onlyDelegationContract */;
+	/// Notifies a delegated stake change event
+	/// total_delegated_stake = 0 if addr delegates to another validator
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 total_delegated, uint256 delta_total_delegated, bool sign_total_delegated); /* onlyDelegationContract */;
 
 	/// @dev Called by: delegation contract
-	/// Notifies a batch of stake updates - TBD if needed
+	/// Notifies a batch of delegated stake updates - TBD if needed
 	function delegatedStakeChangeBatch(address[] calldata addr, uint256[] calldata selfStake, uint256[] calldata delegated_stake); /* onlyDelegationContract */;    
 
 	/// @dev Called by: validator registration contract
