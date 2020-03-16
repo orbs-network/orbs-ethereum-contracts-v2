@@ -17,7 +17,7 @@ export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     ));
 
 export class Web3Driver{
-    public  web3 : Web3;
+    private web3 : Web3;
     private nonceVersion = 0;
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
         this.web3 = this.web3Provider();
