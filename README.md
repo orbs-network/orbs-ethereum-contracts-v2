@@ -1,7 +1,7 @@
 # orbs-ethereum-contracts-v2
 Orbs PoS V2 contracts and testkit
 
-To use the testkit 
+### To use the test-kit 
 ```bash
 npm install pos-v2
 ```
@@ -10,23 +10,20 @@ or
 yarn add pos-v2
 ```
 
-- Ganache must be started with these default settings: 
+#### setup ganache
+Ganache must run in order for the testkit to function.
+By default the test-kit will assume Ganache is running locally with these default settings: 
 ```bash
 ganache-cli -p 7545 -i 5777 -a 100 -m  "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
 ```
 
-If you don't run ganache locally:
-- `import { ganache } from "pos-v2";` to use `startGanache()` and `stopGanache()` methods to start and stop ganache programatically
-- To override the default ethereum configuration set these env vars:
-  - `ETHEREUM_MNEMONIC` (`vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid`)
-  - `ETHEREUM_URL`(`http://localhost:7545`)
+##### alternative options to running ganache:
+- Launch Ganache programatically: `import { ganache } from "pos-v2";` to use `await startGanache()` and `await stopGanache()` from your code.
+- Access a remote Ethereum node/network:
+  - `ETHEREUM_MNEMONIC` (default: `vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid`)
+  - `ETHEREUM_URL` (default: `http://localhost:7545`)
 
-
-  
-Usage Example:
-
-
-
+#### Usage Example:
 
 ```typescript
 import BN from 'bn.js';
