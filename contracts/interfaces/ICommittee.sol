@@ -5,7 +5,7 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface ICommittee {
     event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] weights);
-	event AuditrosChanged(address[] addrs, address[] orbsAddrs, uint256[] weights);
+	event StandbysChanged(address[] addrs, address[] orbsAddrs, uint256[] weights);
 
     // No events
     // No external functions
@@ -17,20 +17,20 @@ interface ICommittee {
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
     /// weight = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight, bool readyForCommittee) returns (bool commiteeChanged, bool auditsChanged); /* onlyElectionContract */;
+	function memberWeightChange(address addr, uint256 weight, bool readyForCommittee) returns (bool commiteeChanged, bool standbysChanged); /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
     /// weight = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
-	function removeMember(address addr) returns (bool commiteeChanged, bool auditsChanged); /* onlyElectionContract */;
+	function removeMember(address addr) returns (bool commiteeChanged, bool standbysChanged); /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
-	/// Returns the committee members and audits
+	/// Returns the committee members and standbys
 	function getWeight(uint N) external view returns (uint256 weight); 
 
 	/// @dev Called by: Elections contract
-	/// Returns the committee members and audits
-	function getCommitee(uint N) external view returns (address[] memory committee, uint256[] memory audits); 
+	/// Returns the committee members and standbys
+	function getCommitee(uint N) external view returns (address[] memory committee, uint256[] memory standbys); 
 
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal weight, and committee members
@@ -53,7 +53,7 @@ interface ICommittee {
     /// used also by the rewards and fees contracts
 	function getCommittee() external view returns (address[] memory addr, address[] memory orbsAddr, uint32[] ip);
 
-    /// @dev returns the current auditors (out of commiteee) topology
-	function getAuditors() external view returns (address[] memory addr, address[] memory orbsAddr, uint32[] ip);
+    /// @dev returns the current standbys (out of commiteee) topology
+	function getStandbys() external view returns (address[] memory addr, address[] memory orbsAddr, uint32[] ip);
 
 }
