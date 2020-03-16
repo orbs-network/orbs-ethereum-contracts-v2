@@ -17,11 +17,11 @@ interface ICommittee {
 	/// @dev Called by: Elections contract
 	/// Notifies a stake change for sorting to a relevant committee member.
     /// stake = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
-	function stakeChange(address addr, uint256 stake, bool readyForCommittee); /* onlyElectionContract */;
+	function stakeChange(address addr, uint256 stake, bool readyForCommittee) returns (bool commiteeChanged, bool auditsChanged); /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
-	/// Returns the N top committee members
-	function getCommitee(uint N) external view returns (address[] memory, uint256[] memory); 
+	/// Returns the committee members and audits
+	function getCommitee(uint N) external view returns (address[] memory committee, uint256[] memory audits); 
 
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal stake, and committee members
