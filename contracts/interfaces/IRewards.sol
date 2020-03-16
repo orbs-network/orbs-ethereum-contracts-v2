@@ -15,13 +15,13 @@ interface IRewards {
     function assignRewards() external returns (uint256);
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
-    function getRewardBalance(address addr) external view returns (uint256);
+    function getRewardBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Distributes msg.sender's orbs token rewards to a list of addresses, by transferring directly into the staking contract.
     function distributeOrbsTokenRewards(address[] calldata to, uint256[] calldata amounts) external;
 
     /// @return The timestamp of the last reward assignment.
-    function getLastRewardsAssignment() external view returns (uint256);
+    function getLastRewardsAssignment() external view returns (uint256 assignment_time);
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUpPool(uint256 amount) external;
