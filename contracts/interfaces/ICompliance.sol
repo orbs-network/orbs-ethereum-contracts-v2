@@ -3,7 +3,7 @@ pragma solidity 0.5.16;
 import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
-interface IConformance is Ownable { 
+interface ICompliance is Ownable { 
 	event ValidatorComformenceUpdare(address validator, string type);
 
 	/*
@@ -12,11 +12,11 @@ interface IConformance is Ownable {
 
     /// @dev Called by a validator as part of the automatic vote unready flow
     /// Used by the Election contract
-	function getValidatorComformence(address addr) returns (string type) external;
+	function getValidatorCompliance(address addr) returns (string type) external;
 
     /// @dev Called by a validator as part of the automatic vote unready flow
     /// Used by the Election contract
-	function setValidatorComformence(address addr, string type) external /* Owner only */ ; 
+	function setValidatorCompliance(address addr, string type) external /* Owner only */ ; 
 
 	/*
 	 * Governance
