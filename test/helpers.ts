@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import BN from "bn.js";
-import {web3} from "../eth";
+import { Web3Driver } from "../eth";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
     for (let i = 0; i < n; i++) {
@@ -8,9 +8,9 @@ export const retry = (n: number, f: () => Promise<void>) => async  () => {
     }
 };
 
-export const evmIncreaseTime = async (seconds: number) => new Promise(
+export const evmIncreaseTime = async (web3: Web3Driver, seconds: number) => new Promise(
     (resolve, reject) =>
-        (web3.web3.currentProvider as any).send(
+        (web3.currentProvider as any).send(
             {method: "evm_increaseTime", params: [seconds]},
             (err, res) => err ? reject(err) : resolve(res)
         )

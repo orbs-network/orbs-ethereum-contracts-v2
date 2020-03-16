@@ -277,7 +277,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         // ...*.* TiMe wArP *.*.....
-        await evmIncreaseTime(defaultDriverOptions.voteOutTimeout);
+        await evmIncreaseTime(d.web3, defaultDriverOptions.voteOutTimeout);
 
         r = await d.elections.voteOut(committee[1].address, {from: committee[1].orbsAddress}); // this should have crossed the vote-out threshold, but the previous vote had timed out
         expect(r).to.have.a.voteOutEvent({
@@ -618,7 +618,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         // Create a new staking contract and stake different amounts
-        const newStaking = await Driver.newStakingContract(d.elections.address, d.erc20.address);
+        const newStaking = await Driver.newStakingContract(d.web3, d.elections.address, d.erc20.address);
         await d.contractRegistry.set("staking", newStaking.address);
 
         await v1.stake(defaultDriverOptions.minimumStake * 5, newStaking);
@@ -728,7 +728,7 @@ describe('elections-high-level-flows', async () => {
         await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, bannedValidator);
 
         // ...*.* TiMe wArP *.*.....
-        evmIncreaseTime(BANNING_LOCK_TIMEOUT);
+        evmIncreaseTime(d.web3, BANNING_LOCK_TIMEOUT);
 
         // -----------------------------------------------------------------------------------
         // -------------- AFTER BANNING LOCKED - TRY TO UNBAN AND ALWAYS FAIL: ---------------

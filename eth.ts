@@ -8,10 +8,18 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
+export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
+    ETHEREUM_MNEMONIC,
+    ETHEREUM_URL,
+    0,
+    100,
+    false
+    ));
+
 export class Web3Driver{
     public  web3 : Web3;
     private nonceVersion = 0;
-    constructor(private web3Provider : () => Web3){
+    constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
         this.web3 = this.web3Provider();
     }
 
@@ -40,7 +48,7 @@ export class Web3Driver{
                 }
                 return web3Contract;
             }
-            return new Contract(abi, web3ContractProvider) as Contracts[N];
+            return new Contract(this, abi, web3ContractProvider) as Contracts[N];
         } catch (e) {
             this.refreshNonce();
             throw e;
@@ -52,18 +60,10 @@ export class Web3Driver{
         this.nonceVersion++;
     }
 }
-export const web3 = new Web3Driver(() => new Web3(new HDWalletProvider(
-    ETHEREUM_MNEMONIC,
-    ETHEREUM_URL,
-    0,
-    100,
-    false
-    )
-));
 
 export class Contract {
 
-    constructor(abi: any, public web3ContractProvider: ()=>Web3Contract) {
+    constructor(public web3: Web3Driver, abi: any, public web3ContractProvider: ()=>Web3Contract) {
         Object.keys(web3ContractProvider().methods)
             .filter(x => x[0] != '0')
             .forEach(m => {
@@ -83,7 +83,7 @@ export class Contract {
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
-        const accounts = await web3.eth.getAccounts();
+        const accounts = await this.web3.eth.getAccounts();
         let opts = {};
         if (args.length > 0 && JSON.stringify(args[args.length - 1])[0] == '{') {
             opts = args.pop();
@@ -98,7 +98,7 @@ export class Contract {
             }); // if we return directly, it will not throw the exceptions but return a rejected promise
             return ret;
         } catch(e) {
-            web3.refreshNonce();
+            this.web3.refreshNonce();
             throw e;
         }
     }

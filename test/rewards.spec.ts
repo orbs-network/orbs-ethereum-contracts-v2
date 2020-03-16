@@ -7,15 +7,15 @@ import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
 import {feeAddedToBucketEvents} from "./event-parsing";
 import {evmIncreaseTime} from "./helpers";
-import {web3} from "../eth";
 import {TransactionReceipt} from "web3-core";
+import { Web3Driver } from '../eth';
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
 const MONTH_IN_SECONDS = 30*24*60*60;
 
-async function txTimestamp(r: TransactionReceipt): Promise<number> { // TODO move
+async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
   return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
 }
 
@@ -85,7 +85,7 @@ describe('rewards-level-flows', async () => {
     await d.erc20.approve(subs.address, payment, {from: appOwner.address});
 
     let r = await subs.createVC(payment, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
-    let startTime = await txTimestamp(r);
+    let startTime = await txTimestamp(d.web3, r);
 
     const feeBuckets = feeAddedToBucketEvents(r);
 
@@ -117,10 +117,10 @@ describe('rewards-level-flows', async () => {
     }
 
     await sleep(3000);
-    await evmIncreaseTime(MONTH_IN_SECONDS*4);
+    await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
 
     r = await d.rewards.assignRewards();
-    const endTime = await txTimestamp(r);
+    const endTime = await txTimestamp(d.web3, r);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = (rate: number, type:"fixed"|"prorata") => {
