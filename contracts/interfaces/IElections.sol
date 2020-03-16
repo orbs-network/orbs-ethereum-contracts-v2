@@ -37,11 +37,11 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	/// @dev Called by: delegation contract
 	/// Notifies a stake change event
-	function stakeChange(address addr, uint256 selfStake, uint256 delegated_stake); /* onlyDelegationContract */;
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegated_stake); /* onlyDelegationContract */;
 
 	/// @dev Called by: delegation contract
-	/// Notifies a batch of stake updates
-	function stakeChangeBatch(address[] calldata addr, uint256[] calldata selfStake, uint256[] calldata delegated_stake); /* onlyDelegationContract */;    
+	/// Notifies a batch of stake updates - TBD if needed
+	function delegatedStakeChangeBatch(address[] calldata addr, uint256[] calldata selfStake, uint256[] calldata delegated_stake); /* onlyDelegationContract */;    
 
 	/*
 	 * Governance
