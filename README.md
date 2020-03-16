@@ -3,12 +3,9 @@ Orbs PoS V2 contracts and testkit
 
 ### To use the test-kit 
 ```bash
-npm install pos-v2
+npm install @orbs-network/orbs-ethereum-contracts-v2
 ```
-or
-```bash
-yarn add pos-v2
-```
+
 
 #### setup ganache
 Ganache must run in order for the testkit to function.
@@ -23,24 +20,26 @@ ganache-cli -p 7545 -i 5777 -a 100 -m  "vanish junk genuine web seminar cook abs
   - `ETHEREUM_MNEMONIC` (default: `vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid`)
   - `ETHEREUM_URL` (default: `http://localhost:7545`)
 
-#### Usage Example:
+#### Usage Example - javascript:
 
-```typescript
-import BN from 'bn.js';
-import { Driver } from 'pos-v2';
+```javascript
+const BN = require('bn.js').BN;
+const Driver = require('@orbs-network/orbs-ethereum-contracts-v2').Driver;
 
-async function createVC(d : Driver) {
+async function createVC() {
+    const d = await Driver.new(); // deploys all contracts and returns a driver object
+
     const monthlyRate = new BN(1000);
     const firstPayment = monthlyRate.mul(new BN(2));
 
     const subscriber = await d.newSubscriber('defaultTier', monthlyRate);
-    
+
     // buy subscription for a new VC
     const appOwner = d.newParticipant();
-    
+
     await d.erc20.assign(appOwner.address, firstPayment); // mint fake ORBS
 
-    await d.erc20.approve(subscriber.address, firstPayment, { 
+    await d.erc20.approve(subscriber.address, firstPayment, {
         from: appOwner.address
     });
 
@@ -48,4 +47,15 @@ async function createVC(d : Driver) {
         from: appOwner.address
     });
 }
+
+
+// just print the tx Hash and exit
+
+createVC().then((r)=>{
+    console.log('Success, txHash', r.transactionHash);
+    process.exit(0);
+}).catch((e)=>{
+    console.error(e);
+    process.exit(1);
+});
 ```
