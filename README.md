@@ -12,7 +12,7 @@ yarn add pos-v2
 
 - Ganache must be started with these default settings: 
 ```bash
-ganache-cli -p 7545 -i 5777 -a 100 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\"
+ganache-cli -p 7545 -i 5777 -a 100 -m  "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid"
 ```
 
 If you don't run ganache locally:
