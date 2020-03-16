@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/orbs-ethereum-contracts-v2",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "",
   "main": "./release/test/test-kit.js",
   "scripts": {
