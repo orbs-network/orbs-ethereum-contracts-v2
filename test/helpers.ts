@@ -10,7 +10,7 @@ export const retry = (n: number, f: () => Promise<void>) => async  () => {
 
 export const evmIncreaseTime = async (seconds: number) => new Promise(
     (resolve, reject) =>
-        (web3.currentProvider as any).send(
+        (web3.web3.currentProvider as any).send(
             {method: "evm_increaseTime", params: [seconds]},
             (err, res) => err ? reject(err) : resolve(res)
         )

@@ -2,30 +2,69 @@ import Web3 from "web3";
 import {compiledContracts} from "./compiled-contracts";
 import { Contract as Web3Contract } from "web3-eth-contract";
 import BN from "bn.js";
+import { Contracts } from "./typings/contracts";
 const HDWalletProvider = require("truffle-hdwallet-provider");
 
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
+export class Web3Driver{
+    public  web3 : Web3;
+    private nonceVersion = 0;
+    constructor(private web3Provider : () => Web3){
+        this.web3 = this.web3Provider();
+    }
 
-const refreshWeb3 = () => {
-    web3 = new Web3(new HDWalletProvider(
-        ETHEREUM_MNEMONIC,
-        ETHEREUM_URL,
-        0,
-        100,
-        false
-        )
-    );
-};
+    get eth(){
+        return this.web3.eth;
+    }
+    get currentProvider(){
+        return this.web3.currentProvider;
+    }
 
-export var web3;
-refreshWeb3();
+    async deploy<N extends keyof Contracts>(contractName: N, args: any[], options?: any) {
+        try {
+            const abi = compiledContracts[contractName].abi;
+            const accounts = await this.web3.eth.getAccounts();
+            let web3Contract = await new this.web3.eth.Contract(abi).deploy({
+                data: compiledContracts[contractName].bytecode,
+                arguments: args || []
+            }).send({
+                from: accounts[0],
+                ...(options || {})
+            });
+            let lastNonce = this.nonceVersion;
+            const web3ContractProvider = () => {
+                if (this.nonceVersion != lastNonce){
+                    web3Contract = new this.web3.eth.Contract(abi, web3Contract.options.address);
+                }
+                return web3Contract;
+            }
+            return new Contract(abi, web3ContractProvider) as Contracts[N];
+        } catch (e) {
+            this.refreshNonce();
+            throw e;
+        }
+    }
+    
+    refreshNonce(){
+        this.web3 = this.web3Provider();
+        this.nonceVersion++;
+    }
+}
+export const web3 = new Web3Driver(() => new Web3(new HDWalletProvider(
+    ETHEREUM_MNEMONIC,
+    ETHEREUM_URL,
+    0,
+    100,
+    false
+    )
+));
 
 export class Contract {
 
-    constructor(private abi, public web3Contract: Web3Contract) {
-        Object.keys(web3Contract.methods)
+    constructor(abi: any, public web3ContractProvider: ()=>Web3Contract) {
+        Object.keys(web3ContractProvider().methods)
             .filter(x => x[0] != '0')
             .forEach(m => {
                 this[m] = function () {
@@ -39,9 +78,8 @@ export class Contract {
         return this.web3Contract.options.address;
     }
 
-    private recreateWeb3Contract() {
-        refreshWeb3();
-        this.web3Contract = new web3.eth.Contract(this.abi, this.address);
+    get web3Contract(): Web3Contract {
+        return this.web3ContractProvider();
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
@@ -60,29 +98,8 @@ export class Contract {
             }); // if we return directly, it will not throw the exceptions but return a rejected promise
             return ret;
         } catch(e) {
-            this.recreateWeb3Contract();
+            web3.refreshNonce();
             throw e;
         }
     }
-
 }
-
-export async function deploy(contractName: string, args: any[], options?: any): Promise<any> {
-    const accounts = await web3.eth.getAccounts();
-    const abi = compiledContracts[contractName].abi;
-
-    try {
-        const web3Contract = await (new web3.eth.Contract(abi).deploy({
-            data: compiledContracts[contractName].bytecode,
-            arguments: args || []
-        }).send({
-            from: accounts[0],
-            ...(options || {})
-        }));
-        return new Contract(abi, web3Contract);
-    } catch (e) {
-        refreshWeb3();
-        throw e;
-    }
-}
-
