@@ -15,17 +15,28 @@ import {deploy, web3} from "../eth";
 import {ProtocolContract} from "../typings/protocol-contract";
 import {DEFAULT_ENCODING} from "crypto";
 
-export const DEFAULT_MINIMUM_STAKE = 100;
-export const DEFAULT_COMMITTEE_SIZE = 2;
-export const DEFAULT_TOPOLOGY_SIZE = 3;
-export const DEFAULT_MAX_DELEGATION_RATIO = 10;
-export const DEFAULT_VOTE_OUT_THRESHOLD = 80;
-export const DEFAULT_BANNING_THRESHOLD = 80;
-export const DEFAULT_VOTE_OUT_TIMEOUT = 24*60*60;
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
+export type DriverOptions = {
+    maxCommitteeSize: number;
+    maxTopologySize: number;
+    minimumStake:number|BN;
+    maxDelegationRatio: number;
+    voteOutThreshold: number;
+    voteOutTimeout: number;
+    banningThreshold: number;
+}
+export const defaultDriverOptions: Readonly<DriverOptions>  & {readonly minimumStake : number}= {
+    maxCommitteeSize : 2,
+    maxTopologySize : 3,
+    minimumStake : 100,
+    maxDelegationRatio : 10,
+    voteOutThreshold : 80,
+    voteOutTimeout : 24 * 60 * 60,
+    banningThreshold : 80,
+}
 export class Driver {
     private participants: Participant[] = [];
 
@@ -41,9 +52,10 @@ export class Driver {
         public contractRegistry: ContractRegistryContract,
     ) {}
 
-    static async new(maxCommitteeSize=DEFAULT_COMMITTEE_SIZE, maxTopologySize=DEFAULT_TOPOLOGY_SIZE, minimumStake:number|BN=DEFAULT_MINIMUM_STAKE, maxDelegationRatio=DEFAULT_MAX_DELEGATION_RATIO, voteOutThreshold=DEFAULT_VOTE_OUT_THRESHOLD, voteOutTimeout=DEFAULT_VOTE_OUT_TIMEOUT, banningThreshold=DEFAULT_BANNING_THRESHOLD): Promise<Driver> {
+    static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
         const accounts = await web3.eth.getAccounts();
 
+        const {maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold} = Object.assign({}, defaultDriverOptions, options);
         const contractRegistry: ContractRegistryContract = await deploy( 'ContractRegistry',[accounts[0]]);
         const externalToken: ERC20Contract = await deploy( 'TestingERC20', []);
         const erc20: ERC20Contract = await deploy( 'TestingERC20', []);
