@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/orbs-ethereum-contracts-v2",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "./release/test/test-kit.js",
   "scripts": {
@@ -8,7 +8,6 @@
     "coverage": "solidity-coverage",
     "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
     "migrate": "truffle migrate --reset",
-    "version": "truffle --version",
     "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 100 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log"
   },
   "author": "",
