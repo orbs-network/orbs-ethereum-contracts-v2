@@ -6,6 +6,9 @@ Orbs PoS V2 contracts and testkit
 npm install @orbs-network/orbs-ethereum-contracts-v2
 ```
 
+#### Known issues
+- many capabilities are still not exported. Please be patient and tell us about needed features
+- currently the Driver object does not shutdown correctly, sometimes calling process.exit() will be required, until we expose a `shutdown` method
 
 #### setup ganache
 Ganache must run in order for the testkit to function.
@@ -15,7 +18,14 @@ ganache-cli -p 7545 -i 5777 -a 100 -m  "vanish junk genuine web seminar cook abs
 ```
 
 ##### alternative options to running ganache:
-- Launch Ganache programatically: `import { ganache } from "pos-v2";` to use `await startGanache()` and `await stopGanache()` from your code.
+- Launch Ganache programatically: 
+```javascript
+import { ganache } from "@orbs-network/orbs-ethereum-contracts-v2";
+...
+await ganache.startGanache()
+...
+await ganache.stopGanache()
+```
 - Access a remote Ethereum node/network:
   - `ETHEREUM_MNEMONIC` (default: `vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid`)
   - `ETHEREUM_URL` (default: `http://localhost:7545`)
