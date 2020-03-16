@@ -54,10 +54,12 @@ export const ganache = {
         );
         console.log('Ganache is up');
     },
-    stopGanache() {
+    async stopGanache() {
         if (ganache.process) {
             console.log('Ganache goes down');
             ganache.process.kill('SIGINT');
+            await new Promise(res => ganache.process!.on('exit', res));
+            ganache.process = null;
         }
     }
 };
