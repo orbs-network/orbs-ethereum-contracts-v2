@@ -18,6 +18,9 @@ interface IValidatorsRegistration {
     /// @dev Called by a participant who wishes to update its propertires
 	function updateValidator(bytes4 ip, address orbsAddr, string name, string website, string contact) external;
 
+    /// @dev Called by a prticipant to update additional validator metadata properties.
+    function setMetadata(string key, string value) external;
+
     /// @dev Called by a participant who wishes to unregister
 	function unregisterValidator() external;
 

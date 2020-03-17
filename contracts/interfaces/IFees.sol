@@ -14,19 +14,19 @@ interface IFees {
      */
 
     /// @dev Calculates and assigns validator fees and bootstrap fund for the time period since the last reward calculation
-    function assignFees() external returns (uint256);
+    function assignFees() external;
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
-    function getOrbsBalance(address addr) external view returns (uint256);
+    function getOrbsBalance(address addr) external view returns (uint256 balance);
 
     /// @return Returns the currently unclaimed bootstrap balance of the given address.
-    function getBootstrapBalance(address addr) external view returns (uint256);
+    function getBootstrapBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
-    function withdrawFunds() external returns (uint256);
+    function withdrawFunds() external;
 
     /// @return The timestamp of the last reward assignment.
-    function getLastFeesAssignment() external view returns (uint256);
+    function getLastFeesAssignment() external view returns (uint256 time);
 
     /// @dev Transfers the given amount of bootstrap tokens form the sender to this contract and update the pool.
     /// Assumes the tokens were approved for transfer
@@ -37,19 +37,14 @@ interface IFees {
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate) external;
 
     /*
-     *   Methods restricted to other Orbs contracts
+     * Reward-governor methods
      */
 
-    /// @dev Called by: elections contract (committee provider)
-    /// Notifies a change in one of the committees
-    function committeeChanged() external;
+    /// @dev Assigns rewards and sets a new monthly rate for the geenral commitee bootstrap.
+    function setGeneralCommitteeeBootstrapMonthlyRate(uint256 rate);
 
-    /*
-    *   Reward-governor methods
-    */
-
-    /// @dev Assigns rewards and sets a new monthly rate for the bootstrap pool.
-    function setBootstrapMonthlyRate(uint256 rate) external /* onlyRewardsGovernor */;
+    /// @dev Assigns rewards and sets a new monthly rate for the compliance commitee bootstrap.
+    function setComplianceCommitteeeBootstrapMonthlyRate(uint256 rate);
 
     /*
      * General governance
