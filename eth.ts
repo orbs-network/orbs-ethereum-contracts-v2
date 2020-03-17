@@ -18,7 +18,7 @@ export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
 
 export class Web3Driver{
     private web3 : Web3;
-    private nonceVersion = 0;
+    private refreshCount = 0;
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
         this.web3 = this.web3Provider();
     }
@@ -41,23 +41,24 @@ export class Web3Driver{
                 from: accounts[0],
                 ...(options || {})
             });
-            let lastNonce = this.nonceVersion;
+            let lastNonce = this.refreshCount;
             const web3ContractProvider = () => {
-                if (this.nonceVersion != lastNonce){
+                if (this.refreshCount != lastNonce){
                     web3Contract = new this.web3.eth.Contract(abi, web3Contract.options.address);
+                    lastNonce = this.refreshCount;
                 }
                 return web3Contract;
             }
             return new Contract(this, abi, web3ContractProvider) as Contracts[N];
         } catch (e) {
-            this.refreshNonce();
+            this.refresh();
             throw e;
         }
     }
     
-    refreshNonce(){
+    refresh(){
         this.web3 = this.web3Provider();
-        this.nonceVersion++;
+        this.refreshCount++;
     }
 }
 
@@ -98,7 +99,7 @@ export class Contract {
             }); // if we return directly, it will not throw the exceptions but return a rejected promise
             return ret;
         } catch(e) {
-            this.web3.refreshNonce();
+            this.web3.refresh();
             throw e;
         }
     }
