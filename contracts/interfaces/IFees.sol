@@ -3,7 +3,7 @@ pragma solidity 0.5.16;
 import "../IStakingContract.sol";
 import "./IContractRegistry.sol";
 
-/// @title Rewards contract interface
+/// @title Fees contract interface
 interface IFees {
     event FeesAssigned(address[] assignees, uint256 orbs_amount, uint256 bootstrap_amount);
     event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
