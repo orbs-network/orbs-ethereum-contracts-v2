@@ -5,7 +5,6 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface IDelegations {
     // Delegation state change events
-	event StakeChanged(address addr, uint256 stake);
     event DelegatedStakeChanged(address addr, uint256 selfSstake, uint256 delegatedStake);
 
     // Function calls
