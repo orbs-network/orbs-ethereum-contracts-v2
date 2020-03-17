@@ -122,7 +122,7 @@ export class Participant {
     private elections: ElectionsContract;
 
     constructor(public address: string, public orbsAddress: string, driver: Driver) {
-        this.ip = address.substring(0, 10).toLowerCase();
+        this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify 
         this.erc20 = driver.erc20;
         this.externalToken = driver.externalToken;
         this.staking = driver.staking;
