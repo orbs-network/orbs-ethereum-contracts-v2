@@ -16,9 +16,13 @@ export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     false
     ));
 
+type ContractEntry = {
+    web3Contract : Web3Contract | null;
+    name: string
+}
 export class Web3Driver{
     private web3 : Web3;
-    private refreshCount = 0;
+    private contracts = new Map<string, ContractEntry>();
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
         this.web3 = this.web3Provider();
     }
@@ -41,31 +45,36 @@ export class Web3Driver{
                 from: accounts[0],
                 ...(options || {})
             });
-            let lastNonce = this.refreshCount;
-            const web3ContractProvider = () => {
-                if (this.refreshCount != lastNonce){
-                    web3Contract = new this.web3.eth.Contract(abi, web3Contract.options.address);
-                    lastNonce = this.refreshCount;
-                }
-                return web3Contract;
-            }
-            return new Contract(this, abi, web3ContractProvider) as Contracts[N];
+            this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
+            return new Contract(this, abi, web3Contract.options.address) as Contracts[N];
         } catch (e) {
             this.refresh();
             throw e;
         }
     }
+
+    getContract(address: string){
+        const entry = this.contracts.get(address);
+        if (!entry){
+            throw new Error(`did not find contract entry for contract ${address}`);
+        }
+        const contract = entry.web3Contract || new this.web3.eth.Contract(compiledContracts[entry.name].abi, address);
+        entry.web3Contract = contract;
+        return contract;
+    }
     
     refresh(){
         this.web3 = this.web3Provider();
-        this.refreshCount++;
+        for (const entry of this.contracts.values()){
+            entry.web3Contract = null;
+        }
     }
 }
 
 export class Contract {
 
-    constructor(public web3: Web3Driver, abi: any, public web3ContractProvider: ()=>Web3Contract) {
-        Object.keys(web3ContractProvider().methods)
+    constructor(public web3: Web3Driver, abi: any, public address: string) {
+        Object.keys(this.web3Contract.methods)
             .filter(x => x[0] != '0')
             .forEach(m => {
                 this[m] = function () {
@@ -75,12 +84,8 @@ export class Contract {
             })
     }
 
-    get address(): string {
-        return this.web3Contract.options.address;
-    }
-
     get web3Contract(): Web3Contract {
-        return this.web3ContractProvider();
+        return this.web3.getContract(this.address);
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
