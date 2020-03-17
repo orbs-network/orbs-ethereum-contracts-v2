@@ -3,7 +3,7 @@ pragma solidity 0.5.16;
 import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
-interface IDelegations {
+interface IDelegations /* is IStakeChangeNotifier */ {
     // Delegation state change events
     event DelegatedStakeChanged(address addr, uint256 selfSstake, uint256 delegatedStake);
 
@@ -17,18 +17,6 @@ interface IDelegations {
 	/// @dev Stake delegation
 	function delegate(address to) external;
     
-	/*
-     * Methods restricted to other Orbs contracts
-     */
-
-	/// @dev Called by: delegation contract
-	/// Notifies a stake change event
-	function stakeChange(address addr, uint256 selfStake, uint256 delegatedStake); /* onlyDelegationContract */;
-
-	/// @dev Called by: delegation contract
-	/// Notifies a batch of stake updates
-	function stakeChangeBatch(address[] calldata addr, uint256[] calldata selfStake, uint256[] calldata delegatedStake); /* onlyDelegationContract */;    
-
 	/*
 	 * Governance
 	 */
