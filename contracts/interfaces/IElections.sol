@@ -46,11 +46,11 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
-	function validatorRegistred(); /* onlyValidatorsRegistrationContract */;    
+	function validatorRegistred(address addr); /* onlyValidatorsRegistrationContract */;    
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
-	function validatorunegistred(); /* onlyValidatorsRegistrationContract */;    
+	function validatorunegistred(address addr); /* onlyValidatorsRegistrationContract */;    
 
 	/*
 	 * Governance
