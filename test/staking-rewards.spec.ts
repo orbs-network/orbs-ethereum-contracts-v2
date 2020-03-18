@@ -31,7 +31,7 @@ describe('staking-rewards-level-flows', async () => {
     /* top up staking rewards pool */
     const g = d.rewardsGovernor;
 
-    const annualRate = 12;
+    const annualRate = 12000;
     const poolAmount = 2000000000;
     const annualCap = poolAmount;
 
@@ -75,7 +75,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const calcRewards = () => {
       const totalCommitteeStake = _.sumBy(validators, v => v.stake.toNumber());
-      const annualAmount = Math.min(Math.floor(annualRate * totalCommitteeStake / 100), annualCap);
+      const annualAmount = Math.min(Math.floor(annualRate * totalCommitteeStake / 100000), annualCap);
       const rewards = new BN(Math.floor(annualAmount * elapsedTime / YEAR_IN_SECONDS));
       const rewardsArr = validators.map(v => rewards.mul(v.stake).div(bn(totalCommitteeStake)));
       const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
@@ -164,7 +164,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const calcRewards = () => {
       const totalCommitteeStake = _.sumBy(validators, v => v.stake.toNumber());
-      const annualAmount = Math.min(Math.floor(annualRate * totalCommitteeStake / 100), annualCap);
+      const annualAmount = Math.min(Math.floor(annualRate * totalCommitteeStake / 100000), annualCap);
       const rewards = new BN(Math.floor(annualAmount * elapsedTime / YEAR_IN_SECONDS));
       const rewardsArr = validators.map(v => rewards.mul(v.stake).div(bn(totalCommitteeStake)));
       const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
