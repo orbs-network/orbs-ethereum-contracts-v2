@@ -410,8 +410,6 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 			committeeOrbsAddresses[i] = val.orbsAddress;
 			committeeAddresses[i] = topology[i];
 		}
-		ICommitteeListener committeeListener = ICommitteeListener(contractRegistry.get("rewards"));
-		committeeListener.committeeChanged(committeeAddresses, committeeStakes);
 		emit CommitteeChanged(committeeAddresses, committeeOrbsAddresses, committeeStakes);
 	}
 
@@ -569,4 +567,11 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return uncappedStakes[v];
 	}
 
+	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights) { // todo - temporary, remove
+		weights = _loadCommitteeStakes();
+		validators = new address[](weights.length);
+		for (uint i = 0; i < weights.length; i++) {
+			validators[i] = topology[i];
+		}
+	}
 }

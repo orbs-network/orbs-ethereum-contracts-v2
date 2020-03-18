@@ -8,12 +8,13 @@ import { SubscriptionsContract } from "../typings/subscriptions-contract";
 import { ElectionsContract } from "../typings/elections-contract";
 import { ERC20Contract } from "../typings/erc20-contract";
 import { StakingContract } from "../typings/staking-contract";
-import { RewardsContract } from "../typings/rewards-contract";
 import { MonthlySubscriptionPlanContract } from "../typings/monthly-subscription-plan-contract";
 import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import {deploy, web3} from "../eth";
 import {ProtocolContract} from "../typings/protocol-contract";
-import {DEFAULT_ENCODING} from "crypto";
+import {BootstrapRewardsContract} from "../typings/bootstrap-rewards-contract";
+import {StakingRewardsContract} from "../typings/staking-rewards-contract";
+import {FeesContract} from "../typings/fees-contract";
 
 export const DEFAULT_MINIMUM_STAKE = 100;
 export const DEFAULT_COMMITTEE_SIZE = 2;
@@ -36,7 +37,9 @@ export class Driver {
         public externalToken: ERC20Contract,
         public staking: StakingContract,
         public subscriptions: SubscriptionsContract,
-        public rewards: RewardsContract,
+        public bootstrapRewards: BootstrapRewardsContract,
+        public stakingRewards: StakingRewardsContract,
+        public fees: FeesContract,
         public protocol: ProtocolContract,
         public contractRegistry: ContractRegistryContract,
     ) {}
@@ -47,25 +50,31 @@ export class Driver {
         const contractRegistry: ContractRegistryContract = await deploy( 'ContractRegistry',[accounts[0]]);
         const externalToken: ERC20Contract = await deploy( 'TestingERC20', []);
         const erc20: ERC20Contract = await deploy( 'TestingERC20', []);
-        const rewards: RewardsContract = await deploy( 'Rewards', [erc20.address, externalToken.address, accounts[0]]);
+        const bootstrapRewards: BootstrapRewardsContract = await deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
+        const stakingRewards: StakingRewardsContract = await deploy( 'StakingRewards', [erc20.address, accounts[0]]);
+        const fees: FeesContract = await deploy( 'Fees', [erc20.address]);
         const elections: ElectionsContract = await deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking: StakingContract = await Driver.newStakingContract(elections.address, erc20.address);
         const subscriptions: SubscriptionsContract = await deploy( 'Subscriptions', [erc20.address] );
         const protocol: ProtocolContract = await deploy('Protocol', []);
 
         await contractRegistry.set("staking", staking.address);
-        await contractRegistry.set("rewards", rewards.address);
+        await contractRegistry.set("bootstrapRewards", bootstrapRewards.address);
+        await contractRegistry.set("stakingRewards", stakingRewards.address);
+        await contractRegistry.set("fees", fees.address);
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
 
         await elections.setContractRegistry(contractRegistry.address);
-        await rewards.setContractRegistry(contractRegistry.address);
+        await bootstrapRewards.setContractRegistry(contractRegistry.address);
+        await stakingRewards.setContractRegistry(contractRegistry.address);
+        await fees.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
 
-        return new Driver(accounts, elections, erc20, externalToken, staking, subscriptions, rewards, protocol, contractRegistry);
+        return new Driver(accounts, elections, erc20, externalToken, staking, subscriptions, bootstrapRewards, stakingRewards, fees, protocol, contractRegistry);
     }
 
     static async newContractRegistry(governorAddr: string): Promise<ContractRegistryContract> {
@@ -122,7 +131,7 @@ export class Participant {
     private elections: ElectionsContract;
 
     constructor(public address: string, public orbsAddress: string, driver: Driver) {
-        this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify 
+        this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify
         this.erc20 = driver.erc20;
         this.externalToken = driver.externalToken;
         this.staking = driver.staking;

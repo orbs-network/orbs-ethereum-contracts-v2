@@ -66,4 +66,6 @@ interface IElections /* is IStakeChangeNotifier */ {
 	 */
 
 	function getTopology() external view returns (address[] memory);
+
+	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights); // todo - temporary, remove
 }

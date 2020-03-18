@@ -6,6 +6,7 @@ import "./interfaces/ISubscriptions.sol";
 import "./interfaces/IRewards.sol";
 import "./interfaces/IContractRegistry.sol";
 import "./interfaces/IProtocol.sol";
+import "./Fees.sol";
 
 contract Subscriptions is ISubscriptions, Ownable{
     using SafeMath for uint256;
@@ -94,9 +95,9 @@ contract Subscriptions is ISubscriptions, Ownable{
         VirtualChain storage vc = virtualChains[vcid];
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
-        IRewards rewardsContract = IRewards(contractRegistry.get("rewards"));
-        require(erc20.transfer(address(rewardsContract), amount), "failed to transfer subscription fees");
-        rewardsContract.fillFeeBuckets(amount, vc.rate);
+        Fees feesContract = Fees(contractRegistry.get("fees"));
+        require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
+        feesContract.fillFeeBuckets(amount, vc.rate); // todo - buckets to fill depend on the vc type (kyc/general)
 
         emit SubscriptionChanged(vcid, vc.genRef, vc.expiresAt, vc.tier, vc.deploymentSubset);
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
