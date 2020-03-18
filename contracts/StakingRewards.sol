@@ -16,7 +16,7 @@ contract StakingRewards is IStakingRewards, Ownable {
     IContractRegistry contractRegistry;
 
     uint256 pool;
-    uint256 poolAnnualRate;
+    uint256 annualRateInPercentMille;
     uint256 annualCap; // todo - apply this cap
 
     uint256 lastPayedAt;
@@ -45,9 +45,9 @@ contract StakingRewards is IStakingRewards, Ownable {
         contractRegistry = _contractRegistry;
     }
 
-    function setAnnualRate(uint256 rate, uint256 annual_cap) external onlyRewardsGovernor { // todo: should be annual and not monthly
+    function setAnnualRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
         _assignRewards();
-        poolAnnualRate = rate;
+        annualRateInPercentMille = annual_rate_in_percent_mille;
         annualCap = annual_cap;
     }
 
@@ -72,11 +72,39 @@ contract StakingRewards is IStakingRewards, Ownable {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
-        uint256 duration = now.sub(lastPayedAt);
+        (address[] memory validators, uint256[] memory stakes) = _getCommittee();
 
-        uint256 amount = Math.min(poolAnnualRate.mul(duration).div(365 days), pool);
-        assignAmountProRata(amount);
-        pool = pool.sub(amount);
+        uint256 totalAssigned = 0;
+        uint256 totalStake = 0;
+        for (uint i = 0; i < validators.length; i++) {
+            totalStake = totalStake.add(stakes[i]);
+        }
+
+        if (totalStake > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
+            uint256 duration = now.sub(lastPayedAt);
+
+            uint256 annualAmount = Math.min(annualRateInPercentMille.mul(totalStake).div(100000), annualCap);
+            uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pool);
+            pool = pool.sub(amount);
+
+            uint256[] memory assignedRewards = new uint256[](validators.length);
+
+            for (uint i = 0; i < validators.length; i++) {
+                uint256 curAmount = amount.mul(stakes[i]).div(totalStake);
+                assignedRewards[i] = curAmount;
+                totalAssigned = totalAssigned.add(curAmount);
+            }
+
+            uint256 remainder = amount.sub(totalAssigned);
+            if (remainder > 0 && validators.length > 0) {
+                uint ind = now % validators.length;
+                assignedRewards[ind] = assignedRewards[ind].add(remainder);
+            }
+
+            for (uint i = 0; i < validators.length; i++) {
+                addToBalance(validators[i], assignedRewards[i]);
+            }
+        }
 
         lastPayedAt = now;
     }
@@ -84,38 +112,6 @@ contract StakingRewards is IStakingRewards, Ownable {
     function addToBalance(address addr, uint256 amount) private {
         orbsBalance[addr] = orbsBalance[addr].add(amount);
         emit StakingRewardAssigned(addr, amount, orbsBalance[addr]);
-    }
-
-    function assignAmountProRata(uint256 amount) private {
-        (address[] memory validators, uint256[] memory weights) = _getCommittee();
-
-        uint256 totalAssigned = 0;
-        uint256 totalStake = 0;
-        for (uint i = 0; i < validators.length; i++) {
-            totalStake = totalStake.add(weights[i]);
-        }
-
-        if (totalStake == 0) { // TODO - handle this case. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
-            return;
-        }
-
-        uint256[] memory assignedRewards = new uint256[](validators.length);
-
-        for (uint i = 0; i < validators.length; i++) {
-            uint256 curAmount = amount.mul(weights[i]).div(totalStake);
-            assignedRewards[i] = curAmount;
-            totalAssigned = totalAssigned.add(curAmount);
-        }
-
-        uint256 remainder = amount.sub(totalAssigned);
-        if (remainder > 0 && validators.length > 0) {
-            uint ind = now % validators.length;
-            assignedRewards[ind] = assignedRewards[ind].add(remainder);
-        }
-
-        for (uint i = 0; i < validators.length; i++) {
-            addToBalance(validators[i], assignedRewards[i]);
-        }
     }
 
     function distributeOrbsTokenRewards(address[] calldata to, uint256[] calldata amounts) external {

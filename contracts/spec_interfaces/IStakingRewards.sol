@@ -31,7 +31,7 @@ interface IStakingRewards {
     */
 
     /// @dev Assigns rewards and sets a new monthly rate for the pro-rata pool.
-    function setAnnualRate(uint256 annual_rate, uint256 annual_cap) external /* onlyRewardsGovernor */;
+    function setAnnualRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyRewardsGovernor */;
 
     /*
      * General governance
