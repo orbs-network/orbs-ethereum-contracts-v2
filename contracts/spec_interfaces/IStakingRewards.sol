@@ -4,15 +4,15 @@ import "../IStakingContract.sol";
 import "./IContractRegistry.sol";
 
 /// @title Rewards contract interface
-interface IRewards {
-    event RewardAssigned(address assignee, uint256 amount, uint256 balance);
+interface IStakingRewards {
+    event StakingRewardAssigned(address assignee, uint256 amount, uint256 balance);
 
     /*
      *   External methods
      */
 
     /// @dev Calculates and assigns validator rewards for the time period since the last reward calculation
-    function assignRewards() external returns (uint256);
+    function assignRewards() external;
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
     function getRewardBalance(address addr) external view returns (uint256 balance);
@@ -25,14 +25,6 @@ interface IRewards {
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUpPool(uint256 amount) external;
-
-    /*
-     *   Methods restricted to other Orbs contracts
-     */
-
-    /// @dev Called by: Elections contract (committee provider)
-    /// Notifies a change in one of the committees
-    function committeeChanged() external;
 
     /*
     *   Reward-governor methods

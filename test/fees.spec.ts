@@ -84,7 +84,7 @@ describe('fees-contract', async () => {
       expect(l.added).to.be.bignumber.equal(new BN(vcRate));
     });
 
-    expect(await d.fees.getLastPayedAt()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.fees.getLastFeesAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
     // and subtract it afterwards
@@ -97,8 +97,8 @@ describe('fees-contract', async () => {
     await sleep(3000);
     await evmIncreaseTime(MONTH_IN_SECONDS*4);
 
-    r = await d.fees.assignFees();
-    const endTime = await txTimestamp(r);
+    const assignFeesTxRes = await d.fees.assignFees();
+    const endTime = await txTimestamp(assignFeesTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcFeeRewards = () => {
@@ -123,6 +123,10 @@ describe('fees-contract', async () => {
 
     // Calculate expected rewards from VC fees
     const totalOrbsRewardsArr = calcFeeRewards();
+    expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
+      assignees: validators.map(v => v.v.address),
+      orbs_amounts: totalOrbsRewardsArr
+    });
 
     const orbsBalances:BN[] = [];
     for (const v of validators) {

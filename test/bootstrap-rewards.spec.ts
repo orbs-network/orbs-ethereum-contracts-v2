@@ -4,7 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
-import {evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime} from "./helpers";
 import {web3} from "../eth";
 import {TransactionReceipt} from "web3-core";
 
@@ -32,13 +32,17 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const g = d.rewardsGovernor;
 
-    const fixedPoolRate = 10000000;
-    const fixedPoolAmount = fixedPoolRate*12;
+    const poolRate = 10000000;
+    const poolAmount = poolRate*12;
 
-    let r = await d.bootstrapRewards.setPoolMonthlyRate(fixedPoolRate, {from: g.address});
+    let r = await d.bootstrapRewards.setPoolMonthlyRate(poolRate, {from: g.address});
     const startTime = await txTimestamp(r);
-    await g.assignAndApproveExternalToken(fixedPoolAmount, d.bootstrapRewards.address);
-    await d.bootstrapRewards.topUpPool(fixedPoolAmount, {from: g.address});
+    await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewards.address);
+    r = await d.bootstrapRewards.topUpBootstrapPool(poolAmount, {from: g.address});
+    expect(r).to.have.a.bootstrapAddedToPoolEvent({
+      added: bn(poolAmount),
+      total: bn(poolAmount) // todo: a test where total is more than added
+    });
 
     // create committee
 
@@ -67,12 +71,12 @@ describe('bootstrap-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(MONTH_IN_SECONDS*4);
 
-    r = await d.bootstrapRewards.assignRewards();
-    const endTime = await txTimestamp(r);
+    const assignRewardsTxRes = await d.bootstrapRewards.assignRewards();
+    const endTime = await txTimestamp(assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
-    const calcRewards = (rate: number) => {
-      const rewards = new BN(Math.floor(rate * elapsedTime / MONTH_IN_SECONDS));
+    const calcRewards = () => {
+      const rewards = new BN(Math.floor(poolRate * elapsedTime / MONTH_IN_SECONDS));
       const rewardsArr = validators.map(() => rewards.div(new BN(validators.length)));
       const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
       const remainderWinnerIdx = endTime % nValidators;
@@ -80,11 +84,15 @@ describe('bootstrap-rewards-level-flows', async () => {
       return rewardsArr;
     };
 
-    const totalExternalTokenRewardsArr = calcRewards(fixedPoolRate);
+    const totalExternalTokenRewardsArr = calcRewards();
+    expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
+      assignees: validators.map(v => v.v.address),
+      amounts: totalExternalTokenRewardsArr
+    });
 
     const externalBalances:BN[] = [];
     for (const v of validators) {
-      externalBalances.push(new BN(await d.bootstrapRewards.getExternalTokenBalance(v.v.address)));
+      externalBalances.push(new BN(await d.bootstrapRewards.getBootstrapBalance(v.v.address)));
     }
 
     for (const v of validators) {
@@ -93,7 +101,7 @@ describe('bootstrap-rewards-level-flows', async () => {
       expect(externalBalances[i]).to.be.bignumber.equal(new BN(totalExternalTokenRewardsArr[i]));
 
       // claim the funds
-      const expectedBalance = parseInt(await d.bootstrapRewards.getExternalTokenBalance(v.v.address));
+      const expectedBalance = parseInt(await d.bootstrapRewards.getBootstrapBalance(v.v.address));
       expect(expectedBalance).to.be.equal(externalBalances[i].toNumber());
       await d.bootstrapRewards.withdrawFunds({from: v.v.address});
       const externalBalance = await d.externalToken.balanceOf(v.v.address);

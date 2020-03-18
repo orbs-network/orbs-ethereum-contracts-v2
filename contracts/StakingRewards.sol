@@ -6,16 +6,18 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./IStakingContract.sol";
-import "./interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IContractRegistry.sol";
 import "./interfaces/IElections.sol";
+import "./spec_interfaces/IStakingRewards.sol";
 
-contract StakingRewards is Ownable {
+contract StakingRewards is IStakingRewards, Ownable {
     using SafeMath for uint256;
 
     IContractRegistry contractRegistry;
 
     uint256 pool;
-    uint256 poolMonthlyRate;
+    uint256 poolAnnualRate;
+    uint256 annualCap; // todo - apply this cap
 
     uint256 lastPayedAt;
 
@@ -43,9 +45,10 @@ contract StakingRewards is Ownable {
         contractRegistry = _contractRegistry;
     }
 
-    function setPoolMonthlyRate(uint256 rate) external onlyRewardsGovernor {
+    function setAnnualRate(uint256 rate, uint256 annual_cap) external onlyRewardsGovernor { // todo: should be annual and not monthly
         _assignRewards();
-        poolMonthlyRate = rate;
+        poolAnnualRate = rate;
+        annualCap = annual_cap;
     }
 
     function topUpPool(uint256 amount) external {
@@ -53,11 +56,11 @@ contract StakingRewards is Ownable {
         require(erc20.transferFrom(msg.sender, address(this), amount), "Rewards::topUpProRataPool - insufficient allowance");
     }
 
-    function getOrbsBalance(address addr) external view returns (uint256) {
+    function getRewardBalance(address addr) external view returns (uint256) {
         return orbsBalance[addr];
     }
 
-    function getLastPayedAt() external view returns (uint256) {
+    function getLastRewardsAssignment() external view returns (uint256) {
         return lastPayedAt;
     }
 
@@ -71,7 +74,7 @@ contract StakingRewards is Ownable {
 
         uint256 duration = now.sub(lastPayedAt);
 
-        uint256 amount = Math.min(poolMonthlyRate.mul(duration).div(30 days), pool);
+        uint256 amount = Math.min(poolAnnualRate.mul(duration).div(365 days), pool);
         assignAmountProRata(amount);
         pool = pool.sub(amount);
 
@@ -80,6 +83,7 @@ contract StakingRewards is Ownable {
 
     function addToBalance(address addr, uint256 amount) private {
         orbsBalance[addr] = orbsBalance[addr].add(amount);
+        emit StakingRewardAssigned(addr, amount, orbsBalance[addr]);
     }
 
     function assignAmountProRata(uint256 amount) private {
@@ -95,17 +99,22 @@ contract StakingRewards is Ownable {
             return;
         }
 
+        uint256[] memory assignedRewards = new uint256[](validators.length);
+
         for (uint i = 0; i < validators.length; i++) {
             uint256 curAmount = amount.mul(weights[i]).div(totalStake);
-            address curAddr = validators[i];
-            addToBalance(curAddr, curAmount);
+            assignedRewards[i] = curAmount;
             totalAssigned = totalAssigned.add(curAmount);
         }
 
         uint256 remainder = amount.sub(totalAssigned);
         if (remainder > 0 && validators.length > 0) {
-            address addr = validators[now % validators.length];
-            addToBalance(addr, remainder);
+            uint ind = now % validators.length;
+            assignedRewards[ind] = assignedRewards[ind].add(remainder);
+        }
+
+        for (uint i = 0; i < validators.length; i++) {
+            addToBalance(validators[i], assignedRewards[i]);
         }
     }
 

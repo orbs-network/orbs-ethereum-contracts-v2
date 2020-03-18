@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./IStakingContract.sol";
-import "./interfaces/IContractRegistry.sol";
 import "./interfaces/IElections.sol";
+import "./spec_interfaces/IFees.sol";
 
-contract Fees is Ownable {
+contract Fees is IFees, Ownable {
     using SafeMath for uint256;
 
     IContractRegistry contractRegistry;
@@ -40,7 +40,7 @@ contract Fees is Ownable {
         return orbsBalance[addr];
     }
 
-    function getLastPayedAt() external view returns (uint256) {
+    function getLastFeesAssignment() external view returns (uint256) {
         return lastPayedAt;
     }
 
@@ -82,26 +82,31 @@ contract Fees is Ownable {
     function assignAmountFixed(uint256 amount) private {
         address[] memory currentCommittee = _getCommittee();
 
+        uint256[] memory assignedFees = new uint256[](currentCommittee.length);
+
         uint256 totalAssigned = 0;
 
         for (uint i = 0; i < currentCommittee.length; i++) {
             uint256 curAmount = amount.div(currentCommittee.length);
-            address curAddr = currentCommittee[i];
-            addToBalance(curAddr, curAmount);
+            assignedFees[i] = curAmount;
             totalAssigned = totalAssigned.add(curAmount);
         }
+
         uint256 remainder = amount.sub(totalAssigned);
         if (remainder > 0 && currentCommittee.length > 0) {
-            address addr = currentCommittee[now % currentCommittee.length];
-            addToBalance(addr, remainder);
+            uint ind = now % currentCommittee.length;
+            assignedFees[ind] = assignedFees[ind].add(remainder);
         }
+
+        for (uint i = 0; i < currentCommittee.length; i++) {
+            addToBalance(currentCommittee[i], assignedFees[i]);
+        }
+        emit FeesAssigned(currentCommittee, assignedFees);
     }
 
     function addToBalance(address addr, uint256 amount) private {
         orbsBalance[addr] = orbsBalance[addr].add(amount);
     }
-
-    event FeeAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
 
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate) external {
         _assignFees(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
@@ -113,7 +118,7 @@ contract Fees is Ownable {
         uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - now % bucketTimePeriod).div(bucketTimePeriod));
         feePoolBuckets[bucket] = feePoolBuckets[bucket].add(bucketAmount);
         _amount = _amount.sub(bucketAmount);
-        emit FeeAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
+        emit FeesAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
 
         // following buckets are added with the monthly rate
         while (_amount > 0) {
@@ -121,7 +126,7 @@ contract Fees is Ownable {
             bucketAmount = Math.min(monthlyRate, _amount);
             feePoolBuckets[bucket] = feePoolBuckets[bucket].add(bucketAmount);
             _amount = _amount.sub(bucketAmount);
-            emit FeeAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
+            emit FeesAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
         }
 
         assert(_amount == 0);

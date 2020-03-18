@@ -5,16 +5,21 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IContractRegistry.sol";
 import "./interfaces/IElections.sol";
+import "./spec_interfaces/IBootstrapRewards.sol";
 
-contract BootstrapRewards is Ownable {
+contract BootstrapRewards is IBootstrapRewards, Ownable {
     using SafeMath for uint256;
 
     IContractRegistry contractRegistry;
 
     uint256 pool;
-    uint256 poolMonthlyRate; // TODO - should the fixed pool rate be a function of the committee size?
+
+    // TODO - should the fixed pool rate be a function of the committee size?
+    uint256 poolMonthlyRate; // todo - deprecate this
+    uint256 generalCommitteeMonthlyRate; // todo - apply this rate
+    uint256 complianceCommitteeMonthlyRate; // todo - apply this rate
 
     uint256 lastPayedAt;
 
@@ -42,21 +47,33 @@ contract BootstrapRewards is Ownable {
         contractRegistry = _contractRegistry;
     }
 
+    // todo - deprecate this, use setGeneralCommitteeBootstrapMonthlyRate and setComplianceCommitteeBootstrapMonthlyRate instead
     function setPoolMonthlyRate(uint256 rate) external onlyRewardsGovernor {
         _assignRewards();
         poolMonthlyRate = rate;
     }
 
-    function topUpPool(uint256 amount) external {
-        pool = pool.add(amount);
-        require(externalToken.transferFrom(msg.sender, address(this), amount), "Rewards::topUpFixedPool - insufficient allowance");
+    function setGeneralCommitteeBootstrapMonthlyRate(uint256 rate) external {
+        _assignRewards();
+        generalCommitteeMonthlyRate = rate;
     }
 
-    function getExternalTokenBalance(address addr) external view returns (uint256) {
+    function setComplianceCommitteeBootstrapMonthlyRate(uint256 rate) external {
+        _assignRewards();
+        complianceCommitteeMonthlyRate = rate;
+    }
+
+    function topUpBootstrapPool(uint256 amount) external {
+        pool = pool.add(amount);
+        require(externalToken.transferFrom(msg.sender, address(this), amount), "Rewards::topUpFixedPool - insufficient allowance");
+        emit BootstrapAddedToPool(amount, pool);
+    }
+
+    function getBootstrapBalance(address addr) external view returns (uint256) {
         return externalTokenBalance[addr];
     }
 
-    function getLastPayedAt() external view returns (uint256) {
+    function getLastBootstrapAssignment() external view returns (uint256) {
         return lastPayedAt;
     }
 
@@ -84,27 +101,32 @@ contract BootstrapRewards is Ownable {
     function assignAmountFixed(uint256 amount) private {
         address[] memory currentCommittee = _getCommittee();
 
+        uint256[] memory assignedRewards = new uint256[](currentCommittee.length);
+
         uint256 totalAssigned = 0;
 
         for (uint i = 0; i < currentCommittee.length; i++) {
             uint256 curAmount = amount.div(currentCommittee.length);
-            address curAddr = currentCommittee[i];
-            addToBalance(curAddr, curAmount);
+            assignedRewards[i] = curAmount;
             totalAssigned = totalAssigned.add(curAmount);
         }
 
         uint256 remainder = amount.sub(totalAssigned);
         if (remainder > 0 && currentCommittee.length > 0) {
-            address addr = currentCommittee[now % currentCommittee.length];
-            addToBalance(addr, remainder);
+            uint ind = now % currentCommittee.length;
+            assignedRewards[ind] = assignedRewards[ind].add(remainder);
         }
+
+        for (uint i = 0; i < currentCommittee.length; i++) {
+            addToBalance(currentCommittee[i], assignedRewards[i]);
+        }
+        emit BootstrapRewardsAssigned(currentCommittee, assignedRewards);
     }
 
-    function withdrawFunds() external returns (uint256) {
+    function withdrawFunds() external {
         uint256 amount = externalTokenBalance[msg.sender];
         externalTokenBalance[msg.sender] = externalTokenBalance[msg.sender].sub(amount);
         require(externalToken.transfer(msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
-        return amount;
     }
 
     function _getCommittee() private view returns (address[] memory) {

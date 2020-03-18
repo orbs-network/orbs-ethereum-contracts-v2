@@ -4,14 +4,14 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
-import {evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime} from "./helpers";
 import {web3} from "../eth";
 import {TransactionReceipt} from "web3-core";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
-const MONTH_IN_SECONDS = 30*24*60*60;
+const YEAR_IN_SECONDS = 365*24*60*60;
 
 async function txTimestamp(r: TransactionReceipt): Promise<number> { // TODO move
   return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
@@ -34,7 +34,7 @@ describe('staking-rewards-level-flows', async () => {
     const poolRate = 2000000000;
     const poolAmount = poolRate*12;
 
-    let r = await d.stakingRewards.setPoolMonthlyRate(poolRate, {from: g.address});
+    let r = await d.stakingRewards.setAnnualRate(poolRate, 0 /* todo - annual_cap */, {from: g.address}); // todo monthly to annual
     const startTime = await txTimestamp(r);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
@@ -63,18 +63,18 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.stakingRewards.getLastPayedAt()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.stakingRewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
-    await evmIncreaseTime(MONTH_IN_SECONDS*4);
+    await evmIncreaseTime(YEAR_IN_SECONDS*4);
 
-    r = await d.stakingRewards.assignRewards();
-    const endTime = await txTimestamp(r);
+    const assignRewardTxRes = await d.stakingRewards.assignRewards();
+    const endTime = await txTimestamp(assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
-    const calcRewards = (rate: number) => {
+    const calcRewards = () => {
       const totalCommitteeStake = new BN(_.sumBy(validators, v => v.stake.toNumber()));
-      const rewards = new BN(Math.floor(rate * elapsedTime / MONTH_IN_SECONDS));
+      const rewards = new BN(Math.floor(poolRate * elapsedTime / YEAR_IN_SECONDS));
       const rewardsArr = validators.map(v => rewards.mul(v.stake).div(totalCommitteeStake));
       const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
       const remainderWinnerIdx = endTime % nValidators;
@@ -82,17 +82,21 @@ describe('staking-rewards-level-flows', async () => {
       return rewardsArr;
     };
 
-    // Total of each token
-    const totalOrbsRewardsArr = calcRewards(poolRate);
+    const totalOrbsRewardsArr = calcRewards();
 
     const orbsBalances:BN[] = [];
     for (const v of validators) {
-      orbsBalances.push(new BN(await d.stakingRewards.getOrbsBalance(v.v.address)));
+      orbsBalances.push(new BN(await d.stakingRewards.getRewardBalance(v.v.address)));
     }
 
     for (const v of validators) {
       const i = validators.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
+      expect(assignRewardTxRes).to.have.a.stakingRewardAssignedEvent({
+        assignee: v.v.address,
+        amount: bn(new BN(totalOrbsRewardsArr[i])),
+        balance: bn(new BN(totalOrbsRewardsArr[i])) // todo: a test where balance is different than amount
+      });
 
       r = await d.stakingRewards.distributeOrbsTokenRewards([v.v.address], [totalOrbsRewardsArr[i]], {from: v.v.address});
       expect(r).to.have.a.stakedEvent({

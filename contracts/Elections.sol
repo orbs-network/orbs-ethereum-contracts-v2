@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "./interfaces/ICommitteeListener.sol";
 import "./interfaces/IElections.sol";
-import "./interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IContractRegistry.sol";
 import "./IStakingContract.sol";
 
 contract Elections is IElections, IStakeChangeNotifier, Ownable {
@@ -567,7 +567,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return uncappedStakes[v];
 	}
 
-	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights) { // todo - temporary, remove
+	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights) { // todo - temporary, remove. Should be replaced by committee contracts
 		weights = _loadCommitteeStakes();
 		validators = new address[](weights.length);
 		for (uint i = 0; i < weights.length; i++) {

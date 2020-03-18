@@ -1,6 +1,6 @@
 pragma solidity 0.5.16;
 
-import "./IContractRegistry.sol";
+import "../spec_interfaces/IContractRegistry.sol";
 import "../IStakeChangeNotifier.sol";
 
 /// @title Elections contract interface

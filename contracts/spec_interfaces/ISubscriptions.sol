@@ -1,6 +1,6 @@
 pragma solidity 0.5.16;
 
-import "./IRewards.sol";
+import "./IFees.sol";
 
 /// @title Subscriptions contract interface
 interface ISubscriptions {
