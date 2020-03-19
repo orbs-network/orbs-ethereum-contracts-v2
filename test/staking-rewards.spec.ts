@@ -5,15 +5,15 @@ import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
 import {bn, evmIncreaseTime} from "./helpers";
-import {web3} from "../eth";
 import {TransactionReceipt} from "web3-core";
+import {Web3Driver} from "../eth";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
-async function txTimestamp(r: TransactionReceipt): Promise<number> { // TODO move
+async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
   return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
 }
 
@@ -36,7 +36,7 @@ describe('staking-rewards-level-flows', async () => {
     const annualCap = poolAmount;
 
     let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
-    const startTime = await txTimestamp(r);
+    const startTime = await txTimestamp(d.web3, r);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
 
@@ -67,10 +67,10 @@ describe('staking-rewards-level-flows', async () => {
     expect(await d.stakingRewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
-    await evmIncreaseTime(YEAR_IN_SECONDS*4);
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardTxRes = await d.stakingRewards.assignRewards();
-    const endTime = await txTimestamp(assignRewardTxRes);
+    const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
@@ -125,7 +125,7 @@ describe('staking-rewards-level-flows', async () => {
     const annualCap = 100;
 
     let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
-    const startTime = await txTimestamp(r);
+    const startTime = await txTimestamp(d.web3, r);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
 
@@ -156,10 +156,10 @@ describe('staking-rewards-level-flows', async () => {
     expect(await d.stakingRewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
-    await evmIncreaseTime(YEAR_IN_SECONDS*4);
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardTxRes = await d.stakingRewards.assignRewards();
-    const endTime = await txTimestamp(assignRewardTxRes);
+    const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {

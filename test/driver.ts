@@ -12,6 +12,11 @@ import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import { Contracts } from "../typings/contracts";
 import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
+import {BootstrapRewardsContract} from "../typings/bootstrap-rewards-contract";
+import {StakingRewardsContract} from "../typings/staking-rewards-contract";
+import {FeesContract} from "../typings/fees-contract";
+import {SubscriptionsContract} from "../typings/subscriptions-contract";
+import {ProtocolContract} from "../typings/protocol-contract";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -44,16 +49,16 @@ export class Driver {
     constructor(
         public web3: Web3Driver,
         public accounts: string[],
-        public elections: Contracts.Elections,
-        public erc20: Contracts.ERC20,
-        public externalToken: Contracts.ERC20,
-        public staking: Contracts.Staking,
-        public subscriptions: Contracts.Subscriptions,
-        public bootstrapRewards: Contracts.BootstrapRewards,
-        public stakingRewards: Contracts.StakingRewards,
-        public fees: Contracts.Fees,
-        public protocol: Contracts.Protocol,
-        public contractRegistry: Contracts.ContractRegistry,
+        public elections: Contracts["Elections"],
+        public erc20: Contracts["TestingERC20"],
+        public externalToken: Contracts["TestingERC20"],
+        public staking: Contracts["StakingContract"],
+        public subscriptions: Contracts["Subscriptions"],
+        public bootstrapRewards: Contracts["BootstrapRewards"],
+        public stakingRewards: Contracts["StakingRewards"],
+        public fees: Contracts["Fees"],
+        public protocol: Contracts["Protocol"],
+        public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
@@ -70,7 +75,7 @@ export class Driver {
         const fees: FeesContract = await web3.deploy( 'Fees', [erc20.address]);
         const elections: ElectionsContract = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
             voteOutThreshold, voteOutTimeout, banningThreshold]);
-        const staking: StakingContract = await Driver.newStakingContract(elections.address, erc20.address);
+        const staking: StakingContract = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions: SubscriptionsContract = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol: ProtocolContract = await web3.deploy('Protocol', []);
 
