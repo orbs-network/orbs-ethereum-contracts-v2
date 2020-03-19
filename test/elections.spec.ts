@@ -6,14 +6,11 @@ declare const web3: Web3;
 
 import BN from "bn.js";
 import {
-    DEFAULT_BANNING_THRESHOLD, DEFAULT_COMMITTEE_SIZE,
-    DEFAULT_MINIMUM_STAKE, DEFAULT_TOPOLOGY_SIZE,
-    DEFAULT_VOTE_OUT_THRESHOLD, DEFAULT_VOTE_OUT_TIMEOUT,
+    defaultDriverOptions, 
     BANNING_LOCK_TIMEOUT,
     Driver,
     expectRejected,
-    Participant,
-    ZERO_ADDR
+    Participant
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
@@ -48,7 +45,7 @@ describe('elections-high-level-flows', async () => {
         const stake500 = new BN(500);
         const stake1000 = new BN(1000);
 
-        const d = await Driver.new(2, 4, stake100);
+        const d = await Driver.new({maxCommitteeSize: 2, maxTopologySize: 4, minimumStake: stake100});
 
         // First validator registers
         const validatorStaked100 = d.newParticipant();
@@ -189,20 +186,20 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('votes out a committee member', async () => {
-        assert(DEFAULT_VOTE_OUT_THRESHOLD < 98); // so each committee member will hold a positive stake
-        assert(Math.floor(DEFAULT_VOTE_OUT_THRESHOLD / 2) >= 98 - DEFAULT_VOTE_OUT_THRESHOLD); // so the committee list will be ordered by stake
+        assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
+        assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
 
         const stakesPercentage = [
-            Math.ceil(DEFAULT_VOTE_OUT_THRESHOLD / 2),
-            Math.floor(DEFAULT_VOTE_OUT_THRESHOLD / 2),
-            98 - DEFAULT_VOTE_OUT_THRESHOLD,
+            Math.ceil(defaultDriverOptions.voteOutThreshold / 2),
+            Math.floor(defaultDriverOptions.voteOutThreshold / 2),
+            98 - defaultDriverOptions.voteOutThreshold,
             1,
             1
         ];
         const committeeSize = stakesPercentage.length;
         const thresholdCrossingIndex = 1;
 
-        const d = await Driver.new(committeeSize, committeeSize + 1);
+        const d = await Driver.new({maxCommitteeSize: committeeSize, maxTopologySize: committeeSize + 1});
 
         let r;
         const committee: Participant[] = [];
@@ -210,7 +207,7 @@ describe('elections-high-level-flows', async () => {
             const v = d.newParticipant();
             await v.registerAsValidator();
             await v.notifyReadyForCommittee();
-            r = await v.stake(DEFAULT_MINIMUM_STAKE * p);
+            r = await v.stake(defaultDriverOptions.minimumStake * p);
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
@@ -255,10 +252,10 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('discards stale votes', async () => {
-        assert(DEFAULT_VOTE_OUT_THRESHOLD > 50); // so one out of two equal committee members does not cross the threshold
+        assert(defaultDriverOptions.voteOutThreshold > 50); // so one out of two equal committee members does not cross the threshold
 
         const committeeSize = 2;
-        const d = await Driver.new(committeeSize, committeeSize + 1);
+        const d = await Driver.new({maxCommitteeSize: committeeSize, maxTopologySize: committeeSize + 1});
 
         let r;
         const committee: Participant[] = [];
@@ -266,7 +263,7 @@ describe('elections-high-level-flows', async () => {
             const v = d.newParticipant();
             await v.registerAsValidator();
             await v.notifyReadyForCommittee();
-            r = await v.stake(DEFAULT_MINIMUM_STAKE);
+            r = await v.stake(defaultDriverOptions.minimumStake);
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
@@ -280,7 +277,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         // ...*.* TiMe wArP *.*.....
-        await evmIncreaseTime(DEFAULT_VOTE_OUT_TIMEOUT);
+        await evmIncreaseTime(d.web3, defaultDriverOptions.voteOutTimeout);
 
         r = await d.elections.voteOut(committee[1].address, {from: committee[1].orbsAddress}); // this should have crossed the vote-out threshold, but the previous vote had timed out
         expect(r).to.have.a.voteOutEvent({
@@ -306,7 +303,7 @@ describe('elections-high-level-flows', async () => {
 
     it('should remove a validator with insufficient stake from committee', async () => {
         const MIN_STAKE = new BN(100);
-        const d = await Driver.new(10, 15, MIN_STAKE);
+        const d = await Driver.new({maxCommitteeSize: 10, maxTopologySize: 15, minimumStake: MIN_STAKE});
 
         const v = d.newParticipant();
         await v.stake(MIN_STAKE);
@@ -413,7 +410,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('enforces effective stake limit of x-times the own stake', async () => {
-        const d = await Driver.new(2, 3, 100, 10);
+        const d = await Driver.new({maxCommitteeSize: 2, maxTopologySize: 3, minimumStake:100, maxDelegationRatio: 10});
 
         const v1 = d.newParticipant();
         const v2 = d.newParticipant();
@@ -490,13 +487,13 @@ describe('elections-high-level-flows', async () => {
         const v2 = d.newParticipant();
 
         await v1.delegate(v2);
-        await v1.stake(DEFAULT_MINIMUM_STAKE);
+        await v1.stake(defaultDriverOptions.minimumStake);
         await v1.registerAsValidator();
         await v1.notifyReadyForCommittee();
 
         await v2.registerAsValidator();
         await v2.notifyReadyForCommittee();
-        let r = await v2.stake(DEFAULT_MINIMUM_STAKE);
+        let r = await v2.stake(defaultDriverOptions.minimumStake);
 
         expect(r).to.have.a.committeeChangedEvent({ // Make sure v1 does not enter the committee
             addrs: [v2.address],
@@ -507,7 +504,7 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
         await v.registerAsValidator();
-        let r = await v.stake(DEFAULT_MINIMUM_STAKE);
+        let r = await v.stake(defaultDriverOptions.minimumStake);
         expect(r).to.have.a.topologyChangedEvent({
             orbsAddrs: [v.orbsAddress]
         });
@@ -523,14 +520,14 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
         await v.registerAsValidator();
-        await v.stake(DEFAULT_MINIMUM_STAKE);
+        await v.stake(defaultDriverOptions.minimumStake);
 
         let r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v.address]
         });
 
-        r = await v.unstake(DEFAULT_MINIMUM_STAKE);
+        r = await v.unstake(defaultDriverOptions.minimumStake);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: []
         });
@@ -540,11 +537,11 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
         let r;
 
-        const topology: Participant[] = await Promise.all(_.range(DEFAULT_TOPOLOGY_SIZE, 0, -1).map(async i => {
+        const topology: Participant[] = await Promise.all(_.range(defaultDriverOptions.maxTopologySize, 0, -1).map(async i => {
             const v = d.newParticipant();
             await v.registerAsValidator();
             await v.notifyReadyForCommittee();
-            r = await v.stake(DEFAULT_MINIMUM_STAKE * i);
+            r = await v.stake(defaultDriverOptions.minimumStake * i);
             return v;
         }));
         expect(r).to.have.a.topologyChangedEvent({
@@ -553,15 +550,15 @@ describe('elections-high-level-flows', async () => {
 
         const newValidator = d.newParticipant();
         await newValidator.registerAsValidator();
-        r = await newValidator.stake(DEFAULT_MINIMUM_STAKE * 2);
+        r = await newValidator.stake(defaultDriverOptions.minimumStake * 2);
         expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: topology.slice(0, DEFAULT_TOPOLOGY_SIZE - 1).map(v => v.orbsAddress).concat(newValidator.orbsAddress)
+            orbsAddrs: topology.slice(0, defaultDriverOptions.maxTopologySize - 1).map(v => v.orbsAddress).concat(newValidator.orbsAddress)
         });
 
         const newValidator2 = d.newParticipant();
         await newValidator2.registerAsValidator();
         await newValidator2.notifyReadyForCommittee();
-        r = await newValidator2.stake(DEFAULT_MINIMUM_STAKE);
+        r = await newValidator2.stake(defaultDriverOptions.minimumStake);
         expect(r).to.not.have.a.topologyChangedEvent();
     });
 
@@ -570,7 +567,7 @@ describe('elections-high-level-flows', async () => {
 
         const p = d.newParticipant();
         await p.registerAsValidator();
-        let r = await p.stake(DEFAULT_MINIMUM_STAKE);
+        let r = await p.stake(defaultDriverOptions.minimumStake);
         expect(r).to.have.a.topologyChangedEvent({
             orbsAddrs: [p.orbsAddress]
         });
@@ -604,42 +601,42 @@ describe('elections-high-level-flows', async () => {
         const v1 = d.newParticipant();
         await v1.registerAsValidator();
         await v1.notifyReadyForCommittee();
-        await v1.stake(DEFAULT_MINIMUM_STAKE * 2);
+        await v1.stake(defaultDriverOptions.minimumStake * 2);
 
         const v2 = d.newParticipant();
         await v2.registerAsValidator();
         await v2.notifyReadyForCommittee();
-        await v2.stake(DEFAULT_MINIMUM_STAKE);
+        await v2.stake(defaultDriverOptions.minimumStake);
 
         const delegator = d.newParticipant();
-        await delegator.stake(DEFAULT_MINIMUM_STAKE * 2);
+        await delegator.stake(defaultDriverOptions.minimumStake * 2);
         let r = await delegator.delegate(v2);
 
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v2, v1].map(v => v.orbsAddress),
-            stakes: bn([DEFAULT_MINIMUM_STAKE * 3, DEFAULT_MINIMUM_STAKE * 2])
+            stakes: bn([defaultDriverOptions.minimumStake * 3, defaultDriverOptions.minimumStake * 2])
         });
 
         // Create a new staking contract and stake different amounts
-        const newStaking = await Driver.newStakingContract(d.elections.address, d.erc20.address);
+        const newStaking = await Driver.newStakingContract(d.web3, d.elections.address, d.erc20.address);
         await d.contractRegistry.set("staking", newStaking.address);
 
-        await v1.stake(DEFAULT_MINIMUM_STAKE * 5, newStaking);
-        await v2.stake(DEFAULT_MINIMUM_STAKE * 3, newStaking);
-        await delegator.stake(DEFAULT_MINIMUM_STAKE, newStaking);
+        await v1.stake(defaultDriverOptions.minimumStake * 5, newStaking);
+        await v2.stake(defaultDriverOptions.minimumStake * 3, newStaking);
+        await delegator.stake(defaultDriverOptions.minimumStake, newStaking);
 
         // refresh the stakes
         const anonymous = d.newParticipant();
         r = await d.elections.refreshStakes([v1.address, v2.address, delegator.address], {from: anonymous.address});
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v1, v2].map(v => v.orbsAddress),
-            stakes: bn([DEFAULT_MINIMUM_STAKE * 5, DEFAULT_MINIMUM_STAKE * 4])
+            stakes: bn([defaultDriverOptions.minimumStake * 5, defaultDriverOptions.minimumStake * 4])
         })
 
     });
 
     it("allows voting only to 3 at a time", async () => {
-        const d = await Driver.new(DEFAULT_COMMITTEE_SIZE, DEFAULT_TOPOLOGY_SIZE, 0);
+        const d = await Driver.new({minimumStake: 0});
 
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
 
@@ -649,7 +646,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it("does not count delegators voting - because they don't have effective governance stake", async () => {
-        const d = await Driver.new(DEFAULT_COMMITTEE_SIZE, DEFAULT_TOPOLOGY_SIZE, 0);
+        const d = await Driver.new({minimumStake: 0});
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -667,7 +664,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it("bans a validator only when accumulated votes stake reaches the threshold", async () => {
-        const d = await Driver.new(DEFAULT_COMMITTEE_SIZE, DEFAULT_TOPOLOGY_SIZE, 0);
+        const d = await Driver.new({minimumStake: 0});
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -702,7 +699,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it("can revoke a vote and unban a validator as a result", async () => {
-        const d = await Driver.new(DEFAULT_COMMITTEE_SIZE, DEFAULT_TOPOLOGY_SIZE, 0);
+        const d = await Driver.new({minimumStake: 0});
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -724,14 +721,14 @@ describe('elections-high-level-flows', async () => {
     });
 
     it("banning does not responds to changes in staking, delegating or voting after locking (one week)", async () => {
-        const d = await Driver.new(DEFAULT_COMMITTEE_SIZE, DEFAULT_TOPOLOGY_SIZE, 0);
+        const d = await Driver.new({minimumStake: 0});
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
         await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, bannedValidator);
 
         // ...*.* TiMe wArP *.*.....
-        evmIncreaseTime(BANNING_LOCK_TIMEOUT);
+        evmIncreaseTime(d.web3, BANNING_LOCK_TIMEOUT);
 
         // -----------------------------------------------------------------------------------
         // -------------- AFTER BANNING LOCKED - TRY TO UNBAN AND ALWAYS FAIL: ---------------
@@ -753,7 +750,7 @@ describe('elections-high-level-flows', async () => {
         // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES ---------------
 
         const dilutingParticipant = d.newParticipant();
-        const dilutingStake = DEFAULT_MINIMUM_STAKE * DEFAULT_BANNING_THRESHOLD * 200;
+        const dilutingStake = defaultDriverOptions.minimumStake * defaultDriverOptions.banningThreshold * 200;
         await dilutingParticipant.stake(dilutingStake);
         expect(r).to.not.have.a.unbannedEvent(); // because we need a trigger to detect the change
         expect(r).to.not.have.a.topologyChangedEvent();
@@ -782,7 +779,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it("banning responds to changes in staking and delegating before locking", async () => {
-        const d = await Driver.new(DEFAULT_COMMITTEE_SIZE, DEFAULT_TOPOLOGY_SIZE, 0);
+        const d = await Driver.new({minimumStake: 0});
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -811,7 +808,7 @@ describe('elections-high-level-flows', async () => {
 
         const originalTotalStake = await d.elections.getTotalGovernanceStake();
         const dilutingParticipant = d.newParticipant();
-        const dilutingStake = DEFAULT_MINIMUM_STAKE * DEFAULT_BANNING_THRESHOLD * 200;
+        const dilutingStake = defaultDriverOptions.minimumStake * defaultDriverOptions.banningThreshold * 200;
         r = await dilutingParticipant.stake(dilutingStake);
         expect(r).to.not.have.a.topologyChangedEvent(); // because we need a trigger to detect the change
         expect(r).to.not.have.a.bannedEvent();
@@ -884,21 +881,21 @@ describe('elections-high-level-flows', async () => {
     });
     //
     // it("allows anyone to refresh a banning vote of another staker to reflect current stake", async () => {
-    //     assert(DEFAULT_BANNING_THRESHOLD < 98); // so each committee member will hold a positive stake
-    //     assert(Math.floor(DEFAULT_BANNING_THRESHOLD / 2) >= 98 - DEFAULT_BANNING_THRESHOLD); // so the committee list will be ordered by stake
+    //     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
+    //     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
     //
     //     const d = await Driver.new();
     //
     //     const stakesPercentage = [
-    //         DEFAULT_BANNING_THRESHOLD,
-    //         100 - DEFAULT_BANNING_THRESHOLD - 1,
+    //         defaultDriverOptions.banningThreshold,
+    //         100 - defaultDriverOptions.banningThreshold - 1,
     //         1
     //     ];
     //
     //     const stakeHolders: Participant[] = [];
     //     for (const p of stakesPercentage) {
     //         const v = d.newParticipant();
-    //         await v.stake(DEFAULT_MINIMUM_STAKE * p);
+    //         await v.stake(defaultDriverOptions.minimumStake * p);
     //         stakeHolders.push(v);
     //     }
     //
@@ -917,7 +914,7 @@ describe('elections-high-level-flows', async () => {
     //         orbsAddrs: []
     //     });
     //
-    //     r = await stakeHolders[0].unstake(DEFAULT_MINIMUM_STAKE); // threshold is now uncrossed, but banning mechanism is not yet aware
+    //     r = await stakeHolders[0].unstake(defaultDriverOptions.minimumStake); // threshold is now uncrossed, but banning mechanism is not yet aware
     //     expect(r).to.not.have.a.topologyChangedEvent();
     //
     //     const anonymous = d.newParticipant();
@@ -929,21 +926,21 @@ describe('elections-high-level-flows', async () => {
     // });
     //
     // it("does not cast a banning vote by refreshBanningVote", async () => {
-    //     assert(DEFAULT_BANNING_THRESHOLD < 98); // so each committee member will hold a positive stake
-    //     assert(Math.floor(DEFAULT_BANNING_THRESHOLD / 2) >= 98 - DEFAULT_BANNING_THRESHOLD); // so the committee list will be ordered by stake
+    //     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
+    //     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
     //
     //     const d = await Driver.new();
     //
     //     const stakesPercentage = [
-    //         DEFAULT_BANNING_THRESHOLD,
-    //         100 - DEFAULT_BANNING_THRESHOLD - 1,
+    //         defaultDriverOptions.banningThreshold,
+    //         100 - defaultDriverOptions.banningThreshold - 1,
     //         1
     //     ];
     //
     //     const stakeHolders: Participant[] = [];
     //     for (const p of stakesPercentage) {
     //         const v = d.newParticipant();
-    //         await v.stake(DEFAULT_MINIMUM_STAKE * p);
+    //         await v.stake(defaultDriverOptions.minimumStake * p);
     //         stakeHolders.push(v);
     //     }
     //
@@ -963,15 +960,15 @@ describe('elections-high-level-flows', async () => {
 });
 
 async function banningScenario_setupDelegatorsAndValidators(driver) {
-    assert(DEFAULT_BANNING_THRESHOLD < 98); // so each committee member will hold a positive stake
-    assert(Math.floor(DEFAULT_BANNING_THRESHOLD / 2) >= 98 - DEFAULT_BANNING_THRESHOLD); // so the committee list will be ordered by stake
+    assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
+    assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
 
 
     // -------------- SETUP ---------------
     const stakesPercentage = [
-        Math.ceil(DEFAULT_BANNING_THRESHOLD / 2),
-        Math.floor(DEFAULT_BANNING_THRESHOLD / 2),
-        98 - DEFAULT_BANNING_THRESHOLD,
+        Math.ceil(defaultDriverOptions.banningThreshold / 2),
+        Math.floor(defaultDriverOptions.banningThreshold / 2),
+        98 - defaultDriverOptions.banningThreshold,
         1,
         1
     ];
@@ -981,7 +978,7 @@ async function banningScenario_setupDelegatorsAndValidators(driver) {
     for (const p of stakesPercentage) {
         // stake holders will not have own stake, only delegated - to test the use of governance stake
         const delegator = driver.newParticipant();
-        await delegator.stake(DEFAULT_MINIMUM_STAKE * p);
+        await delegator.stake(defaultDriverOptions.minimumStake * p);
         const v = driver.newParticipant();
         await delegator.delegate(v);
         delegatees.push(v);

@@ -15,6 +15,7 @@ export interface UnstakedEvent {
 }
 
 export interface StakingContract extends Contract {
+  setStakeChangeNotifier(electionsAddr: string, params?: TransactionConfig ): Promise<TransactionReceipt>
   stake(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   unstake(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   restake(params?: TransactionConfig): Promise<TransactionReceipt>;
