@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "main": "./release/test/test-kit.js",
+  "repository": "https://github.com/orbs-network/orbs-ethereum-contracts-v2",
   "scripts": {
     "test": "npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/*.spec.ts --timeout 20000",
     "coverage": "solidity-coverage",
