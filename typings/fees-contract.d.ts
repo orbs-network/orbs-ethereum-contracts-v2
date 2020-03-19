@@ -2,6 +2,13 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import {Contract} from "../eth";
 import * as BN from "bn.js";
 
+export interface FeesAddedToBucketEvent {
+  bucketId: string|BN,
+  added: string|BN,
+  total: string|BN,
+  complianceType: string
+}
+
 export interface FeesAssignedEvent {
   assignees: string[],
   orbs_amounts: Array<string|BN>

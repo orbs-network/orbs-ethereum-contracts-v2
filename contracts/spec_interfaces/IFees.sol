@@ -6,7 +6,7 @@ import "./IContractRegistry.sol";
 /// @title Fees contract interface
 interface IFees {
     event FeesAssigned(address[] assignees, uint256[] orbs_amounts);
-    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
+    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, string complianceType);
 
     /*
      *   External methods
@@ -25,8 +25,12 @@ interface IFees {
     function getLastFeesAssignment() external view returns (uint256 time);
 
     /// @dev Called by: subscriptions contract
-    /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate) external;
+    /// Top-ups the compliance fee pool with the given amount at the given rate (typically called by the subscriptions contract)
+    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate) external;
+
+    /// @dev Called by: subscriptions contract
+    /// Top-ups the general fee pool with the given amount at the given rate (typically called by the subscriptions contract)
+    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate) external;
 
     /*
      * General governance

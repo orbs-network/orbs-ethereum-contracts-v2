@@ -1,11 +1,10 @@
 import 'mocha';
 
 import * as _ from "lodash";
-import Web3 from "web3";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
-import {feeAddedToBucketEvents} from "./event-parsing";
+import {feesAddedToBucketEvents} from "./event-parsing";
 import {evmIncreaseTime} from "./helpers";
 import {web3} from "../eth";
 import {TransactionReceipt} from "web3-core";
@@ -67,15 +66,15 @@ describe('fees-contract', async () => {
     let r = await subs.createVC(payment, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
     let startTime = await txTimestamp(r);
 
-    const feeBuckets = feeAddedToBucketEvents(r);
+    const feeBuckets = feesAddedToBucketEvents(r);
 
     // all the payed rewards were added to a bucket
     const totalAdded = feeBuckets.reduce((t, l) => t.add(new BN(l.added)), new BN(0));
     expect(totalAdded).to.be.bignumber.equal(new BN(payment));
 
     // the first bucket was added to with proportion to the remaining time
-    const secondsInFirstMonth = parseInt(feeBuckets[1].bucketId) - startTime;
-    expect(parseInt(feeBuckets[0].added)).to.equal(Math.floor(secondsInFirstMonth * vcRate / MONTH_IN_SECONDS));
+    const secondsInFirstMonth = parseInt(feeBuckets[1].bucketId as string) - startTime;
+    expect(parseInt(feeBuckets[0].added as string)).to.equal(Math.floor(secondsInFirstMonth * vcRate / MONTH_IN_SECONDS));
 
     // all middle buckets were added to by the monthly rate
     const middleBuckets = feeBuckets.filter((l, i) => i > 0 && i < feeBuckets.length - 1);
@@ -99,15 +98,14 @@ describe('fees-contract', async () => {
 
     const assignFeesTxRes = await d.fees.assignFees();
     const endTime = await txTimestamp(assignFeesTxRes);
-    const elapsedTime = endTime - startTime;
 
     const calcFeeRewards = () => {
       let rewards = 0;
       for (const bucket of feeBuckets) {
-        const bucketStartTime = Math.max(parseInt(bucket.bucketId), startTime);
+        const bucketStartTime = Math.max(parseInt(bucket.bucketId as string), startTime);
         const bucketEndTime = bucketStartTime - (bucketStartTime % MONTH_IN_SECONDS) + MONTH_IN_SECONDS;
         const bucketRemainingTime = bucketEndTime - bucketStartTime;
-        const bucketAmount = parseInt(bucket.added);
+        const bucketAmount = parseInt(bucket.added as string);
         if (bucketStartTime < endTime) {
           const payedDuration = Math.min(endTime, bucketEndTime) - bucketStartTime;
           const amount = Math.floor(bucketAmount * payedDuration / bucketRemainingTime);

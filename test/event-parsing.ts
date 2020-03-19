@@ -2,6 +2,7 @@ import Web3 from "web3";
 import * as _ from "lodash";
 import {SubscriptionChangedEvent} from "../typings/subscriptions-contract";
 import {compiledContracts} from "../compiled-contracts";
+import {FeesAddedToBucketEvent} from "../typings/fees-contract";
 
 const elections = compiledContracts["Elections"];
 const staking = compiledContracts["StakingContract"];
@@ -31,7 +32,7 @@ export const delegatedEvents = (txResult) => parseLogs(txResult, elections, "Del
 export const stakeChangedEvents = (txResult) => parseLogs(txResult, elections, "StakeChanged(address,uint256,uint256,uint256,uint256,uint256)");
 export const subscriptionChangedEvents = (txResult): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,uint256,uint256,string,string)");
 export const paymentEvents = (txResult) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)");
-export const feeAddedToBucketEvents = (txResult) => parseLogs(txResult, fees, "FeesAddedToBucket(uint256,uint256,uint256)");
+export const feesAddedToBucketEvents = (txResult): FeesAddedToBucketEvent[] => parseLogs(txResult, fees, "FeesAddedToBucket(uint256,uint256,uint256,string)");
 export const bootstrapRewardAssignedEvents = (txResult) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardAssigned(address,uint256,uint256)");
 export const stakingRewardAssignedEvents = (txResult) => parseLogs(txResult, stakingRewards, "StakingRewardAssigned(address,uint256,uint256)");
 export const feesAssignedEvents = (txResult) => parseLogs(txResult, fees, "FeesAssigned(address[],uint256[])");

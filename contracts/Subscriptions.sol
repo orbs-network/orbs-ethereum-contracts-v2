@@ -97,7 +97,7 @@ contract Subscriptions is ISubscriptions, Ownable{
 
         Fees feesContract = Fees(contractRegistry.get("fees"));
         require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
-        feesContract.fillFeeBuckets(amount, vc.rate); // todo - buckets to fill depend on the vc type (kyc/general)
+        feesContract.fillGeneralFeeBuckets(amount, vc.rate); // todo - buckets to fill depend on the vc type (kyc/general)
 
         emit SubscriptionChanged(vcid, vc.genRef, vc.expiresAt, vc.tier, vc.deploymentSubset);
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);

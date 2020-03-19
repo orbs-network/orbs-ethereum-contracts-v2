@@ -12,11 +12,17 @@ import "./spec_interfaces/IFees.sol";
 contract Fees is IFees, Ownable {
     using SafeMath for uint256;
 
+    enum ComplianceType {
+        General,
+        Compliance
+    }
+
     IContractRegistry contractRegistry;
 
     uint256 constant bucketTimePeriod = 30 days;
 
-    mapping(uint256 => uint256) feePoolBuckets;
+    mapping(uint256 => uint256) generalFeePoolBuckets;
+    mapping(uint256 => uint256) complianceFeePoolBuckets;
 
     uint256 lastPayedAt;
 
@@ -56,31 +62,40 @@ contract Fees is IFees, Ownable {
 
         // Fee pool
         uint bucketsPayed = 0;
-        uint feePoolAmount = 0;
+        uint generalFeePoolAmount = 0;
+        uint complianceFeePoolAmount = 0;
         while (bucketsPayed < MAX_REWARD_BUCKET_ITERATIONS && lastPayedAt < now) {
             uint256 bucketStart = _bucketTime(lastPayedAt);
             uint256 bucketEnd = bucketStart.add(bucketTimePeriod);
             uint256 payUntil = Math.min(bucketEnd, now);
             uint256 bucketDuration = payUntil.sub(lastPayedAt);
             uint256 remainingBucketTime = bucketEnd.sub(lastPayedAt);
-            uint256 amount = feePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
 
-            feePoolAmount += amount;
-            feePoolBuckets[bucketStart] = feePoolBuckets[bucketStart].sub(amount);
+            uint256 amount = generalFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
+            generalFeePoolAmount += amount;
+            generalFeePoolBuckets[bucketStart] = generalFeePoolBuckets[bucketStart].sub(amount);
+
+            amount = complianceFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
+            complianceFeePoolAmount += amount;
+            complianceFeePoolBuckets[bucketStart] = complianceFeePoolBuckets[bucketStart].sub(amount);
+
             lastPayedAt = payUntil;
 
             assert(lastPayedAt <= bucketEnd);
             if (lastPayedAt == bucketEnd) {
-                delete feePoolBuckets[bucketStart];
+                delete generalFeePoolBuckets[bucketStart];
+                delete complianceFeePoolBuckets[bucketStart];
             }
 
             bucketsPayed++;
         }
-        assignAmountFixed(feePoolAmount);
+
+        assignAmountFixed(generalFeePoolAmount, ComplianceType.General);
+        assignAmountFixed(complianceFeePoolAmount, ComplianceType.Compliance);
     }
 
-    function assignAmountFixed(uint256 amount) private {
-        address[] memory currentCommittee = _getCommittee();
+    function assignAmountFixed(uint256 amount, ComplianceType complianceType) private {
+        address[] memory currentCommittee = _getCommittee(complianceType);
 
         uint256[] memory assignedFees = new uint256[](currentCommittee.length);
 
@@ -108,7 +123,32 @@ contract Fees is IFees, Ownable {
         orbsBalance[addr] = orbsBalance[addr].add(amount);
     }
 
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate) external {
+    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate) external {
+        fillFeeBuckets(amount, monthlyRate, ComplianceType.General);
+    }
+
+    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate) external {
+        fillFeeBuckets(amount, monthlyRate, ComplianceType.Compliance);
+    }
+
+    function fillBucket(uint256 bucketId, uint256 amount, ComplianceType complianceType) private {
+        uint256 total;
+        string memory complianceStr;
+        if (complianceType == ComplianceType.General) {
+            generalFeePoolBuckets[bucketId] = generalFeePoolBuckets[bucketId].add(amount);
+            total = generalFeePoolBuckets[bucketId];
+            complianceStr = "General";
+        } else {
+            assert(complianceType == ComplianceType.Compliance);
+            complianceFeePoolBuckets[bucketId] = complianceFeePoolBuckets[bucketId].add(amount);
+            total = complianceFeePoolBuckets[bucketId];
+            complianceStr = "Compliance";
+        }
+
+        emit FeesAddedToBucket(bucketId, amount, total, complianceStr);
+    }
+
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, ComplianceType complianceType) private {
         _assignFees(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(now);
@@ -116,17 +156,15 @@ contract Fees is IFees, Ownable {
 
         // add the partial amount to the first bucket
         uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - now % bucketTimePeriod).div(bucketTimePeriod));
-        feePoolBuckets[bucket] = feePoolBuckets[bucket].add(bucketAmount);
+        fillBucket(bucket, bucketAmount, complianceType);
         _amount = _amount.sub(bucketAmount);
-        emit FeesAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
 
         // following buckets are added with the monthly rate
         while (_amount > 0) {
             bucket = bucket.add(bucketTimePeriod);
             bucketAmount = Math.min(monthlyRate, _amount);
-            feePoolBuckets[bucket] = feePoolBuckets[bucket].add(bucketAmount);
+            fillBucket(bucket, bucketAmount, complianceType);
             _amount = _amount.sub(bucketAmount);
-            emit FeesAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
         }
 
         assert(_amount == 0);
@@ -142,11 +180,15 @@ contract Fees is IFees, Ownable {
         return time - time % bucketTimePeriod;
     }
 
-    function _getCommittee() private view returns (address[] memory) {
+    function _getCommittee(ComplianceType complianceType) private view returns (address[] memory) {
         // todo - use committee contracts, for both general and kyc committees
-        IElections e = IElections(contractRegistry.get("elections"));
-        (address[] memory validators, ) =  e.getCommittee();
-        return validators;
+        if (complianceType == ComplianceType.General) {
+            IElections e = IElections(contractRegistry.get("elections"));
+            (address[] memory validators, ) =  e.getCommittee();
+            return validators;
+        } else {
+            return new address[](0);
+        }
     }
 
 }

@@ -8,7 +8,7 @@ import {
   validatorRegisteredEvents,
   subscriptionChangedEvents,
   paymentEvents,
-  feeAddedToBucketEvents,
+  feesAddedToBucketEvents,
   unstakedEvents,
   topologyChangedEvents,
   voteOutEvents,
@@ -127,7 +127,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("unstakedEvent", containEvent(unstakedEvents));
   chai.Assertion.overwriteMethod("subscriptionChangedEvent", containEvent(subscriptionChangedEvents));
   chai.Assertion.overwriteMethod("paymentEvent", containEvent(paymentEvents));
-  chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feeAddedToBucketEvents));
+  chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
   chai.Assertion.overwriteMethod("bootstrapRewardAssignedEvent", containEvent(bootstrapRewardAssignedEvents));
   chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents));
