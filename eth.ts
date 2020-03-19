@@ -2,30 +2,79 @@ import Web3 from "web3";
 import {compiledContracts} from "./compiled-contracts";
 import { Contract as Web3Contract } from "web3-eth-contract";
 import BN from "bn.js";
+import { Contracts } from "./typings/contracts";
 const HDWalletProvider = require("truffle-hdwallet-provider");
 
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
+export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
+    ETHEREUM_MNEMONIC,
+    ETHEREUM_URL,
+    0,
+    100,
+    false
+    ));
 
-const refreshWeb3 = () => {
-    web3 = new Web3(new HDWalletProvider(
-        ETHEREUM_MNEMONIC,
-        ETHEREUM_URL,
-        0,
-        100,
-        false
-        )
-    );
-};
+type ContractEntry = {
+    web3Contract : Web3Contract | null;
+    name: string
+}
+export class Web3Driver{
+    private web3 : Web3;
+    private contracts = new Map<string, ContractEntry>();
+    constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
+        this.web3 = this.web3Provider();
+    }
 
-export var web3;
-refreshWeb3();
+    get eth(){
+        return this.web3.eth;
+    }
+    get currentProvider(){
+        return this.web3.currentProvider;
+    }
+
+    async deploy<N extends keyof Contracts>(contractName: N, args: any[], options?: any) {
+        try {
+            const abi = compiledContracts[contractName].abi;
+            const accounts = await this.web3.eth.getAccounts();
+            let web3Contract = await new this.web3.eth.Contract(abi).deploy({
+                data: compiledContracts[contractName].bytecode,
+                arguments: args || []
+            }).send({
+                from: accounts[0],
+                ...(options || {})
+            });
+            this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
+            return new Contract(this, abi, web3Contract.options.address) as Contracts[N];
+        } catch (e) {
+            this.refresh();
+            throw e;
+        }
+    }
+
+    getContract(address: string){
+        const entry = this.contracts.get(address);
+        if (!entry){
+            throw new Error(`did not find contract entry for contract ${address}`);
+        }
+        const contract = entry.web3Contract || new this.web3.eth.Contract(compiledContracts[entry.name].abi, address);
+        entry.web3Contract = contract;
+        return contract;
+    }
+    
+    refresh(){
+        this.web3 = this.web3Provider();
+        for (const entry of this.contracts.values()){
+            entry.web3Contract = null;
+        }
+    }
+}
 
 export class Contract {
 
-    constructor(private abi, public web3Contract: Web3Contract) {
-        Object.keys(web3Contract.methods)
+    constructor(public web3: Web3Driver, abi: any, public address: string) {
+        Object.keys(this.web3Contract.methods)
             .filter(x => x[0] != '0')
             .forEach(m => {
                 this[m] = function () {
@@ -35,17 +84,12 @@ export class Contract {
             })
     }
 
-    get address(): string {
-        return this.web3Contract.options.address;
-    }
-
-    private recreateWeb3Contract() {
-        refreshWeb3();
-        this.web3Contract = new web3.eth.Contract(this.abi, this.address);
+    get web3Contract(): Web3Contract {
+        return this.web3.getContract(this.address);
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
-        const accounts = await web3.eth.getAccounts();
+        const accounts = await this.web3.eth.getAccounts();
         let opts = {};
         if (args.length > 0 && JSON.stringify(args[args.length - 1])[0] == '{') {
             opts = args.pop();
@@ -60,29 +104,8 @@ export class Contract {
             }); // if we return directly, it will not throw the exceptions but return a rejected promise
             return ret;
         } catch(e) {
-            this.recreateWeb3Contract();
+            this.web3.refresh();
             throw e;
         }
     }
-
 }
-
-export async function deploy(contractName: string, args: any[], options?: any): Promise<any> {
-    const accounts = await web3.eth.getAccounts();
-    const abi = compiledContracts[contractName].abi;
-
-    try {
-        const web3Contract = await (new web3.eth.Contract(abi).deploy({
-            data: compiledContracts[contractName].bytecode,
-            arguments: args || []
-        }).send({
-            from: accounts[0],
-            ...(options || {})
-        }));
-        return new Contract(abi, web3Contract);
-    } catch (e) {
-        refreshWeb3();
-        throw e;
-    }
-}
-

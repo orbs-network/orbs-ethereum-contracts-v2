@@ -4,7 +4,6 @@ import BN from "bn.js";
 import {Driver, expectRejected, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
-import {web3} from "../eth";
 import {bn} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -31,7 +30,7 @@ describe('subscriptions-high-level-flows', async () => {
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
 
     const blockNumber = new BN(r.blockNumber);
-    const blockTimestamp = new BN((await web3.eth.getBlock(blockNumber)).timestamp);
+    const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
     const expectedGenRef = blockNumber.add(new BN('300'));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
