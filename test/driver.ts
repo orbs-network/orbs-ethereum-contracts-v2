@@ -52,6 +52,7 @@ export class Driver {
         public rewards: Contracts['Rewards'],
         public protocol: Contracts['Protocol'],
         public contractRegistry: Contracts['ContractRegistry'],
+        public compliance: Contracts["Compliance"],
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
@@ -64,25 +65,28 @@ export class Driver {
         const externalToken = await web3.deploy( 'TestingERC20', []);
         const erc20 = await web3.deploy( 'TestingERC20', []);
         const rewards = await web3.deploy( 'Rewards', [erc20.address, externalToken.address, accounts[0]]);
-        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio, 
+        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
             voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
+        const compliance = await web3.deploy('Compliance', []);
 
         await contractRegistry.set("staking", staking.address);
         await contractRegistry.set("rewards", rewards.address);
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
+        await contractRegistry.set("compliance", compliance.address);
 
         await elections.setContractRegistry(contractRegistry.address);
         await rewards.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
+        await compliance.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
 
-        return new Driver(web3, accounts, elections, erc20, externalToken, staking, subscriptions, rewards, protocol, contractRegistry);
+        return new Driver(web3, accounts, elections, erc20, externalToken, staking, subscriptions, rewards, protocol, contractRegistry, compliance);
     }
 
     static async newContractRegistry(web3: Web3Driver, governorAddr: string): Promise<ContractRegistryContract> {
@@ -139,7 +143,7 @@ export class Participant {
     private elections: ElectionsContract;
 
     constructor(public address: string, public orbsAddress: string, driver: Driver) {
-        this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify 
+        this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify
         this.erc20 = driver.erc20;
         this.externalToken = driver.externalToken;
         this.staking = driver.staking;

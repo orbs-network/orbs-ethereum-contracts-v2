@@ -14,7 +14,7 @@ interface ICompliance /* is Ownable */ {
 
     /// @dev Called by a validator as part of the automatic vote unready flow
     /// Used by the Election contract
-	function getValidatorCompliance(address addr) external returns (string memory conformanceType);
+	function getValidatorCompliance(address addr) external view returns (string memory conformanceType);
 
     /// @dev Called by a validator as part of the automatic vote unready flow
     /// Used by the Election contract

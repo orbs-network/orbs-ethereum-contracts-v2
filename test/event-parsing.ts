@@ -4,6 +4,7 @@ import {SubscriptionChangedEvent} from "../typings/subscriptions-contract";
 import {compiledContracts} from "../compiled-contracts";
 
 const elections = compiledContracts["Elections"];
+const compliance = compiledContracts["Compliance"];
 const staking = compiledContracts["StakingContract"];
 const subscriptions = compiledContracts["Subscriptions"];
 const rewards = compiledContracts["Rewards"];
@@ -42,4 +43,4 @@ export const protocolChangedEvents = (txResult) => parseLogs(txResult, protocol,
 export const banningVoteEvents = (txResult) => parseLogs(txResult, elections, "BanningVote(address,address[])");
 export const electionsBanned = (txResult) => parseLogs(txResult, elections, "Banned(address)");
 export const electionsUnbanned = (txResult) => parseLogs(txResult, elections, "Unbanned(address)");
-export const electionsDebugEvents = (txResult) => parseLogs(txResult, elections, "Debug(string,uint256)");
+export const validatorConformanceUpdateEvents = (txResult) => parseLogs(txResult, compliance, "ValidatorConformanceUpdate(address,string)");
