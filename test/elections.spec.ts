@@ -6,7 +6,7 @@ declare const web3: Web3;
 
 import BN from "bn.js";
 import {
-    defaultDriverOptions, 
+    defaultDriverOptions,
     BANNING_LOCK_TIMEOUT,
     Driver,
     expectRejected,
@@ -53,7 +53,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakedEvent();
 
         r = await validatorStaked100.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent({
+        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
             addr: validatorStaked100.address,
             ip: validatorStaked100.ip
         });
@@ -75,7 +75,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakeChangedEvent({addr: validatorStaked200.address, committeeStake: stake200});
 
         r = await validatorStaked200.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent({
+        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
             addr: validatorStaked200.address,
             ip: validatorStaked200.ip,
         });
@@ -99,7 +99,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakedEvent();
 
         r = await validatorStaked300.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent({
+        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
             addr: validatorStaked300.address,
             ip: validatorStaked300.ip
         });
@@ -347,7 +347,7 @@ describe('elections-high-level-flows', async () => {
         await v.stake(100);
 
         const r = await d.elections.registerValidator(v.ip, v.orbsAddress, {from: v.address});
-        expect(r).to.have.a.validatorRegisteredEvent({
+        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
             addr: v.address,
             ip: v.ip
         });
@@ -879,83 +879,6 @@ describe('elections-high-level-flows', async () => {
             orbsAddrs: []
         });
     });
-    //
-    // it("allows anyone to refresh a banning vote of another staker to reflect current stake", async () => {
-    //     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
-    //     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
-    //
-    //     const d = await Driver.new();
-    //
-    //     const stakesPercentage = [
-    //         defaultDriverOptions.banningThreshold,
-    //         100 - defaultDriverOptions.banningThreshold - 1,
-    //         1
-    //     ];
-    //
-    //     const stakeHolders: Participant[] = [];
-    //     for (const p of stakesPercentage) {
-    //         const v = d.newParticipant();
-    //         await v.stake(defaultDriverOptions.minimumStake * p);
-    //         stakeHolders.push(v);
-    //     }
-    //
-    //     const bannedValidator = stakeHolders[stakeHolders.length - 1];
-    //     let r = await bannedValidator.registerAsValidator();
-    //     expect(r).to.have.a.topologyChangedEvent({
-    //         orbsAddrs: [bannedValidator.orbsAddress]
-    //     });
-    //
-    //     r = await d.elections.setBanningVotes(bannedValidator.address, {from: stakeHolders[0].address}); // threshold is crossed
-    //     expect(r).to.have.a.banningVoteEvent({
-    //         voter: stakeHolders[0].address,
-    //         against: bannedValidator.address
-    //     });
-    //     expect(r).to.have.a.topologyChangedEvent({
-    //         orbsAddrs: []
-    //     });
-    //
-    //     r = await stakeHolders[0].unstake(defaultDriverOptions.minimumStake); // threshold is now uncrossed, but banning mechanism is not yet aware
-    //     expect(r).to.not.have.a.topologyChangedEvent();
-    //
-    //     const anonymous = d.newParticipant();
-    //     r = await d.elections.refreshBanningVote(stakeHolders[0].address, bannedValidator.address, {from: anonymous.address}); // vote is refreshed to reflect lowered stake, validator should be unbanned
-    //     expect(r).to.have.a.topologyChangedEvent({
-    //         orbsAddrs: [bannedValidator.orbsAddress]
-    //     });
-    //
-    // });
-    //
-    // it("does not cast a banning vote by refreshBanningVote", async () => {
-    //     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
-    //     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
-    //
-    //     const d = await Driver.new();
-    //
-    //     const stakesPercentage = [
-    //         defaultDriverOptions.banningThreshold,
-    //         100 - defaultDriverOptions.banningThreshold - 1,
-    //         1
-    //     ];
-    //
-    //     const stakeHolders: Participant[] = [];
-    //     for (const p of stakesPercentage) {
-    //         const v = d.newParticipant();
-    //         await v.stake(defaultDriverOptions.minimumStake * p);
-    //         stakeHolders.push(v);
-    //     }
-    //
-    //     const bannedValidator = stakeHolders[stakeHolders.length - 1];
-    //     let r = await bannedValidator.registerAsValidator();
-    //     expect(r).to.have.a.topologyChangedEvent({
-    //         orbsAddrs: [bannedValidator.orbsAddress]
-    //     });
-    //
-    //     const anonymous = d.newParticipant();
-    //
-    //     // vote was not cast initially, so refreshing it should not caused a ban
-    //     r = await d.elections.refreshBanningVote(stakeHolders[0].address, bannedValidator.address, {from: anonymous.address});
-    //     expect(r).to.not.have.a.topologyChangedEvent();
-    // });
 
 });
 

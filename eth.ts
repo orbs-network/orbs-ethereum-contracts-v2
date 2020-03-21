@@ -3,6 +3,7 @@ import {compiledContracts} from "./compiled-contracts";
 import { Contract as Web3Contract } from "web3-eth-contract";
 import BN from "bn.js";
 import { Contracts } from "./typings/contracts";
+import {TransactionReceipt} from "web3-core";
 const HDWalletProvider = require("truffle-hdwallet-provider");
 
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
@@ -53,6 +54,10 @@ export class Web3Driver{
         }
     }
 
+    async txTimestamp(r: TransactionReceipt): Promise<number> {
+        return (await this.eth.getBlock(r.blockNumber)).timestamp as number;
+    }
+
     getContract(address: string){
         const entry = this.contracts.get(address);
         if (!entry){
@@ -62,7 +67,7 @@ export class Web3Driver{
         entry.web3Contract = contract;
         return contract;
     }
-    
+
     refresh(){
         this.web3 = this.web3Provider();
         for (const entry of this.contracts.values()){
