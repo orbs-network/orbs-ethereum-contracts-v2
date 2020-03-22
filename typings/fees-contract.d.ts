@@ -3,8 +3,8 @@ import {Contract} from "../eth";
 import * as BN from "bn.js";
 
 export interface FeesAddedToBucketEvent {
-  bucketId: string|BN|number,
-  added: string|BN|number,
+  bucketId: string|BN,
+  added: string|BN,
   total: string|BN,
   complianceType: string
 }
