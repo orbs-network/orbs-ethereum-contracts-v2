@@ -4,8 +4,8 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
-import {feesAddedToBucketEvents} from "./event-parsing";
-import {evmIncreaseTime} from "./helpers";
+import {feesAddedToBucketEvents, subscriptionChangedEvents} from "./event-parsing";
+import {bn, evmIncreaseTime} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 
@@ -142,5 +142,53 @@ describe('fees-contract', async () => {
       expect(new BN(actualBalance)).to.bignumber.equal(new BN(orbsBalances[i]));
     }
 
+  });
+
+  it('should fill the correct fee buckets on subscription extension', async () => {
+    const bucketId = (timestamp: number) => timestamp - timestamp % MONTH_IN_SECONDS;
+    const d = await Driver.new();
+
+    const vcRate = 3000000000;
+    const subs = await d.newSubscriber('tier', vcRate);
+
+    const initialDurationInMonths = 3;
+    const firstPayment = initialDurationInMonths * vcRate;
+    const appOwner = d.newParticipant();
+    await d.erc20.assign(appOwner.address, firstPayment);
+    await d.erc20.approve(subs.address, firstPayment, {from: appOwner.address});
+
+    let r = await subs.createVC(firstPayment, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+    let startTime = await txTimestamp(d.web3, r);
+    expect(r).to.have.a.subscriptionChangedEvent({
+      expiresAt: bn(startTime + MONTH_IN_SECONDS * initialDurationInMonths)
+    });
+    const vcid = subscriptionChangedEvents(r)[0].vcid;
+
+    const extensionInMonths = 2;
+    const secondPayment = extensionInMonths * vcRate;
+    await d.erc20.assign(appOwner.address, secondPayment);
+    await d.erc20.approve(subs.address, secondPayment, {from: appOwner.address});
+    r = await subs.extendSubscription(vcid, secondPayment, {from: appOwner.address});
+
+    const firstBucketAmount = Math.floor((bucketId(startTime + MONTH_IN_SECONDS * (initialDurationInMonths + 1)) - (startTime + MONTH_IN_SECONDS * initialDurationInMonths)) * vcRate / MONTH_IN_SECONDS);
+    expect(r).to.have.a.feesAddedToBucketEvent({
+      bucketId: bucketId(startTime + MONTH_IN_SECONDS * initialDurationInMonths).toString(),
+      added: firstBucketAmount.toString()
+    });
+
+    const secondBucketAmount = vcRate;
+    expect(r).to.have.a.feesAddedToBucketEvent({
+      bucketId: bn(bucketId(startTime + MONTH_IN_SECONDS * (initialDurationInMonths + 1))),
+      added: secondBucketAmount.toString()
+    });
+
+    if (startTime != bucketId(startTime)) {
+      expect(r).to.have.a.feesAddedToBucketEvent({
+        bucketId: bucketId(startTime + MONTH_IN_SECONDS * (initialDurationInMonths + extensionInMonths)).toString(),
+        added: (secondPayment - firstBucketAmount - secondBucketAmount).toString(),
+      });
+    }
+
   })
+
 });

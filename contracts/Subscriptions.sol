@@ -93,11 +93,11 @@ contract Subscriptions is ISubscriptions, Ownable{
 
     function _extendSubscription(uint256 vcid, uint256 amount, address payer) private {
         VirtualChain storage vc = virtualChains[vcid];
-        vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
         Fees feesContract = Fees(contractRegistry.get("fees"));
         require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
-        feesContract.fillGeneralFeeBuckets(amount, vc.rate); // todo - buckets to fill depend on the vc type (kyc/general)
+        feesContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt); // todo - buckets to fill depend on the vc type (kyc/general)
+        vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
         emit SubscriptionChanged(vcid, vc.genRef, vc.expiresAt, vc.tier, vc.deploymentSubset);
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);

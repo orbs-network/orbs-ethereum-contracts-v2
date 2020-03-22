@@ -26,11 +26,11 @@ interface IFees {
 
     /// @dev Called by: subscriptions contract
     /// Top-ups the compliance fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate) external;
+    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 sinceTime) external;
 
     /// @dev Called by: subscriptions contract
     /// Top-ups the general fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate) external;
+    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 sinceTime) external;
 
     /*
      * General governance
