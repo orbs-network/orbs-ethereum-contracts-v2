@@ -28,6 +28,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     IERC20 externalToken;
     address rewardsGovernor;
 
+    // TODO - add functionality similar to ownable (transfer governance, etc)
     modifier onlyRewardsGovernor() {
         require(msg.sender == rewardsGovernor, "caller is not the rewards governor");
 
