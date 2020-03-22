@@ -8,8 +8,7 @@ import {
   validatorRegisteredEvents,
   subscriptionChangedEvents,
   paymentEvents,
-  rewardAssignedEvents,
-  feeAddedToBucketEvents,
+  feesAddedToBucketEvents,
   unstakedEvents,
   topologyChangedEvents,
   voteOutEvents,
@@ -21,7 +20,11 @@ import {
   electionsBanned,
   electionsUnbanned,
   vcOwnerChangedEvents,
-  vcCreatedEvents
+  vcCreatedEvents,
+  bootstrapRewardAssignedEvents,
+  feesAssignedEvents,
+  bootstrapAddedToPoolEvents,
+  stakingRewardAssignedEvents, bootstrapRewardsAssignedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import {
@@ -43,6 +46,9 @@ import {
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
+import {StakingRewardAssignedEvent} from "../typings/staking-rewards-contract";
+import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/bootstrap-rewards-contract";
+import {FeesAssignedEvent} from "../typings/fees-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -121,8 +127,12 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("unstakedEvent", containEvent(unstakedEvents));
   chai.Assertion.overwriteMethod("subscriptionChangedEvent", containEvent(subscriptionChangedEvents));
   chai.Assertion.overwriteMethod("paymentEvent", containEvent(paymentEvents));
-  chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feeAddedToBucketEvents));
-  chai.Assertion.overwriteMethod("rewardAssignedEvent", containEvent(rewardAssignedEvents));
+  chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
+  chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
+  chai.Assertion.overwriteMethod("bootstrapRewardAssignedEvent", containEvent(bootstrapRewardAssignedEvents));
+  chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents));
+  chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
+  chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents));
   chai.Assertion.overwriteMethod("topologyChangedEvent", containEvent(topologyChangedEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
   chai.Assertion.overwriteMethod("votedOutOfCommitteeEvent", containEvent(votedOutOfCommitteeEvents));
@@ -160,6 +170,10 @@ declare global {
       bannedEvent(data?: Partial<BannedEvent>): void;
       unbannedEvent(data?: Partial<UnbannedEvent>): void;
       protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
+      stakingRewardAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
+      feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
+      bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
+      bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
     }
 
     export interface Assertion {

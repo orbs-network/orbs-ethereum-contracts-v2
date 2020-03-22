@@ -1,5 +1,5 @@
 pragma solidity 0.5.16;
-import "./interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IContractRegistry.sol";
 
 contract ContractRegistry is IContractRegistry {
 

@@ -2,11 +2,14 @@ import Web3 from "web3";
 import * as _ from "lodash";
 import {SubscriptionChangedEvent} from "../typings/subscriptions-contract";
 import {compiledContracts} from "../compiled-contracts";
+import {FeesAddedToBucketEvent} from "../typings/fees-contract";
 
 const elections = compiledContracts["Elections"];
 const staking = compiledContracts["StakingContract"];
 const subscriptions = compiledContracts["Subscriptions"];
-const rewards = compiledContracts["Rewards"];
+const stakingRewards = compiledContracts["StakingRewards"];
+const bootstrapRewards = compiledContracts["BootstrapRewards"];
+const fees = compiledContracts["Fees"];
 const protocol = compiledContracts["Protocol"];
 const contractRegistry = compiledContracts["ContractRegistry"];
 
@@ -29,8 +32,12 @@ export const delegatedEvents = (txResult) => parseLogs(txResult, elections, "Del
 export const stakeChangedEvents = (txResult) => parseLogs(txResult, elections, "StakeChanged(address,uint256,uint256,uint256,uint256,uint256)");
 export const subscriptionChangedEvents = (txResult): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,uint256,uint256,string,string)");
 export const paymentEvents = (txResult) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)");
-export const feeAddedToBucketEvents = (txResult) => parseLogs(txResult, rewards, "FeeAddedToBucket(uint256,uint256,uint256)");
-export const rewardAssignedEvents = (txResult) => parseLogs(txResult, rewards, "RewardAssigned(address,uint256,uint256)");
+export const feesAddedToBucketEvents = (txResult): FeesAddedToBucketEvent[] => parseLogs(txResult, fees, "FeesAddedToBucket(uint256,uint256,uint256,string)");
+export const bootstrapRewardAssignedEvents = (txResult) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardAssigned(address,uint256,uint256)");
+export const stakingRewardAssignedEvents = (txResult) => parseLogs(txResult, stakingRewards, "StakingRewardAssigned(address,uint256,uint256)");
+export const feesAssignedEvents = (txResult) => parseLogs(txResult, fees, "FeesAssigned(address[],uint256[])");
+export const bootstrapRewardsAssignedEvents = (txResult) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardsAssigned(address[],uint256[])");
+export const bootstrapAddedToPoolEvents = (txResult) => parseLogs(txResult, bootstrapRewards, "BootstrapAddedToPool(uint256,uint256)");
 export const topologyChangedEvents = (txResult) => parseLogs(txResult, elections, "TopologyChanged(address[],bytes4[])");
 export const voteOutEvents = (txResult) => parseLogs(txResult, elections, "VoteOut(address,address)");
 export const votedOutOfCommitteeEvents = (txResult) => parseLogs(txResult, elections, "VotedOutOfCommittee(address)");
@@ -42,4 +49,3 @@ export const protocolChangedEvents = (txResult) => parseLogs(txResult, protocol,
 export const banningVoteEvents = (txResult) => parseLogs(txResult, elections, "BanningVote(address,address[])");
 export const electionsBanned = (txResult) => parseLogs(txResult, elections, "Banned(address)");
 export const electionsUnbanned = (txResult) => parseLogs(txResult, elections, "Unbanned(address)");
-export const electionsDebugEvents = (txResult) => parseLogs(txResult, elections, "Debug(string,uint256)");

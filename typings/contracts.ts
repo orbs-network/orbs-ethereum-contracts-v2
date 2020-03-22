@@ -1,6 +1,8 @@
 import { ContractRegistryContract } from "./contract-registry-contract";
 import { ERC20Contract } from "./erc20-contract";
-import { RewardsContract } from "./rewards-contract";
+import { StakingRewardsContract } from "./staking-rewards-contract";
+import { BootstrapRewardsContract } from "./bootstrap-rewards-contract";
+import { FeesContract } from "./fees-contract";
 import { ElectionsContract } from "./elections-contract";
 import { SubscriptionsContract } from "./subscriptions-contract";
 import { ProtocolContract } from "./protocol-contract";
@@ -15,7 +17,9 @@ import { Contract } from "../eth";
 export type Contracts = {
     ContractRegistry: ContractRegistryContract & Contract;
     TestingERC20: ERC20Contract & Contract;
-    Rewards: RewardsContract & Contract;
+    StakingRewards: StakingRewardsContract & Contract;
+    BootstrapRewards: BootstrapRewardsContract & Contract;
+    Fees: FeesContract & Contract;
     Elections: ElectionsContract & Contract;
     Subscriptions: SubscriptionsContract & Contract;
     Protocol: ProtocolContract & Contract;

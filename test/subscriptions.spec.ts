@@ -70,7 +70,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(subscriber.address)).is.bignumber.equal('0');
     expect(await d.erc20.balanceOf(d.subscriptions.address)).is.bignumber.equal('0');
 
-    expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
+    expect(await d.erc20.balanceOf(d.fees.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
   it('registers subsciber only by owner', async () => {
