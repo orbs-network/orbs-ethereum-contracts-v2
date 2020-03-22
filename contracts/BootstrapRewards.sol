@@ -39,6 +39,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         require(address(_externalToken) != address(0), "externalToken must not be 0");
 
         externalToken = _externalToken;
+        // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastPayedAt = now;
         rewardsGovernor = _rewardsGovernor;
     }
