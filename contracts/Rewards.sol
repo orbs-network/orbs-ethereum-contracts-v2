@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "./IStakingContract.sol";
 import "./interfaces/ICommitteeListener.sol";
 import "./interfaces/IRewards.sol";
-import "./interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IContractRegistry.sol";
 
 contract Rewards is IRewards, ICommitteeListener, Ownable {
     using SafeMath for uint256;
@@ -224,7 +224,7 @@ contract Rewards is IRewards, ICommitteeListener, Ownable {
         uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - now % bucketTimePeriod).div(bucketTimePeriod));
         feePoolBuckets[bucket] = feePoolBuckets[bucket].add(bucketAmount);
         _amount = _amount.sub(bucketAmount);
-        emit FeeAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
+        emit FeesAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
 
         // following buckets are added with the monthly rate
         while (_amount > 0) {
@@ -232,7 +232,7 @@ contract Rewards is IRewards, ICommitteeListener, Ownable {
             bucketAmount = Math.min(monthlyRate, _amount);
             feePoolBuckets[bucket] = feePoolBuckets[bucket].add(bucketAmount);
             _amount = _amount.sub(bucketAmount);
-            emit FeeAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
+            emit FeesAddedToBucket(bucket, bucketAmount, feePoolBuckets[bucket]);
         }
 
         assert(_amount == 0);

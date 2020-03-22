@@ -64,12 +64,16 @@ describe('contract-registry-high-level-flows', async () => {
 
     const nonOwner = d.newParticipant();
     await expectRejected(d.elections.setContractRegistry(newAddr, {from: nonOwner.address}));
-    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: nonOwner.address}));
+    await expectRejected(d.bootstrapRewards.setContractRegistry(newAddr, {from: nonOwner.address}));
+    await expectRejected(d.stakingRewards.setContractRegistry(newAddr, {from: nonOwner.address}));
+    await expectRejected(d.fees.setContractRegistry(newAddr, {from: nonOwner.address}));
     await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: nonOwner.address}));
     await expectRejected(subscriber.setContractRegistry(newAddr, {from: nonOwner.address}));
 
     await d.elections.setContractRegistry(newAddr);
-    await d.rewards.setContractRegistry(newAddr);
+    await d.bootstrapRewards.setContractRegistry(newAddr);
+    await d.stakingRewards.setContractRegistry(newAddr);
+    await d.fees.setContractRegistry(newAddr);
     await d.subscriptions.setContractRegistry(newAddr);
     await subscriber.setContractRegistry(newAddr);
   });
