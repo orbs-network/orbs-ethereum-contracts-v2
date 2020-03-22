@@ -26,6 +26,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     IERC20 bootstrapToken;
     address rewardsGovernor;
 
+    // TODO - add functionality similar to ownable (transfer governance, etc)
     modifier onlyRewardsGovernor() {
         require(msg.sender == rewardsGovernor, "caller is not the rewards governor");
 
@@ -36,6 +37,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
 
         bootstrapToken = _bootstrapToken;
+        // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastPayedAt = now;
         rewardsGovernor = _rewardsGovernor;
     }
