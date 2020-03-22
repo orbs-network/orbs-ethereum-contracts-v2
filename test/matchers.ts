@@ -26,7 +26,6 @@ import {
   bootstrapAddedToPoolEvents,
   stakingRewardAssignedEvents,
   bootstrapRewardsAssignedEvents,
-  vcCreatedEvents,
   validatorConformanceUpdateEvents
 } from "./event-parsing";
 import * as _ from "lodash";
