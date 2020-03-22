@@ -11,7 +11,7 @@ import {Web3Driver} from "../eth";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
-const MONTH_IN_SECONDS = 30*24*60*60;
+const YEAR_IN_SECONDS = 365*24*60*60;
 
 async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
   return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
@@ -32,10 +32,10 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const g = d.rewardsGovernor;
 
-    const poolRate = 10000000;
-    const poolAmount = poolRate*12;
+    const annualAmount = 10000000;
+    const poolAmount = annualAmount*12;
 
-    let r = await d.bootstrapRewards.setPoolMonthlyRate(poolRate, {from: g.address});
+    let r = await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(annualAmount, {from: g.address});
     const startTime = await txTimestamp(d.web3, r);
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewards.address);
     r = await d.bootstrapRewards.topUpBootstrapPool(poolAmount, {from: g.address});
@@ -69,19 +69,15 @@ describe('bootstrap-rewards-level-flows', async () => {
     const nValidators = validators.length;
 
     await sleep(3000);
-    await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardsTxRes = await d.bootstrapRewards.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
-      const rewards = new BN(Math.floor(poolRate * elapsedTime / MONTH_IN_SECONDS));
-      const rewardsArr = validators.map(() => rewards.div(new BN(validators.length)));
-      const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
-      const remainderWinnerIdx = endTime % nValidators;
-      rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
-      return rewardsArr;
+      const rewards = new BN(Math.floor(annualAmount * elapsedTime / YEAR_IN_SECONDS));
+      return validators.map(() => rewards);
     };
 
     const totalExternalTokenRewardsArr = calcRewards();

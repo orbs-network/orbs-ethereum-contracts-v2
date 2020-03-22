@@ -30,10 +30,10 @@ interface IBootstrapRewards {
      */
 
     /// @dev Assigns rewards and sets a new monthly rate for the geenral commitee bootstrap.
-    function setGeneralCommitteeBootstrapMonthlyRate(uint256 rate) external;
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external;
 
     /// @dev Assigns rewards and sets a new monthly rate for the compliance commitee bootstrap.
-    function setComplianceCommitteeBootstrapMonthlyRate(uint256 rate) external;
+    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external;
 
     /*
      * General governance

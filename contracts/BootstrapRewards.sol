@@ -16,16 +16,14 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
 
     uint256 pool;
 
-    // TODO - should the fixed pool rate be a function of the committee size?
-    uint256 poolMonthlyRate; // todo - deprecate this
-    uint256 generalCommitteeMonthlyRate; // todo - apply this rate
-    uint256 complianceCommitteeMonthlyRate; // todo - apply this rate
+    uint256 generalCommitteeAnnualBootstrap;
+    uint256 complianceCommitteeAnnualBootstrap; // todo - assign rewards to compliance committee
 
     uint256 lastPayedAt;
 
-    mapping(address => uint256) externalTokenBalance;
+    mapping(address => uint256) bootstrapBalance;
 
-    IERC20 externalToken;
+    IERC20 bootstrapToken;
     address rewardsGovernor;
 
     modifier onlyRewardsGovernor() {
@@ -34,10 +32,10 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         _;
     }
 
-    constructor(IERC20 _externalToken, address _rewardsGovernor) public {
-        require(address(_externalToken) != address(0), "externalToken must not be 0");
+    constructor(IERC20 _bootstrapToken, address _rewardsGovernor) public {
+        require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
 
-        externalToken = _externalToken;
+        bootstrapToken = _bootstrapToken;
         lastPayedAt = now;
         rewardsGovernor = _rewardsGovernor;
     }
@@ -47,30 +45,24 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         contractRegistry = _contractRegistry;
     }
 
-    // todo - deprecate this, use setGeneralCommitteeBootstrapMonthlyRate and setComplianceCommitteeBootstrapMonthlyRate instead
-    function setPoolMonthlyRate(uint256 rate) external onlyRewardsGovernor {
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
         _assignRewards();
-        poolMonthlyRate = rate;
+        generalCommitteeAnnualBootstrap = annual_amount;
     }
 
-    function setGeneralCommitteeBootstrapMonthlyRate(uint256 rate) external {
+    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
         _assignRewards();
-        generalCommitteeMonthlyRate = rate;
-    }
-
-    function setComplianceCommitteeBootstrapMonthlyRate(uint256 rate) external {
-        _assignRewards();
-        complianceCommitteeMonthlyRate = rate;
+        complianceCommitteeAnnualBootstrap = annual_amount;
     }
 
     function topUpBootstrapPool(uint256 amount) external {
         pool = pool.add(amount);
-        require(externalToken.transferFrom(msg.sender, address(this), amount), "Rewards::topUpFixedPool - insufficient allowance");
+        require(bootstrapToken.transferFrom(msg.sender, address(this), amount), "Rewards::topUpFixedPool - insufficient allowance");
         emit BootstrapAddedToPool(amount, pool);
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
-        return externalTokenBalance[addr];
+        return bootstrapBalance[addr];
     }
 
     function getLastBootstrapAssignment() external view returns (uint256) {
@@ -82,51 +74,33 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     }
 
     function _assignRewards() private {
-        // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
-        // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-
         uint256 duration = now.sub(lastPayedAt);
 
-        uint256 amount = Math.min(poolMonthlyRate.mul(duration).div(30 days), pool);
-        pool = pool.sub(amount);
-        assignAmountFixed(amount);
+        address[] memory currentCommittee = _getCommittee(); //todo: also assign to compliance committee
+        if (currentCommittee.length > 0) {
+            uint256 amountPerValidator = Math.min(generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pool.div(currentCommittee.length));
+            pool = pool.sub(amountPerValidator * currentCommittee.length);
 
+            uint256[] memory assignedRewards = new uint256[](currentCommittee.length);
+
+            for (uint i = 0; i < currentCommittee.length; i++) {
+                addToBalance(currentCommittee[i], amountPerValidator);
+                assignedRewards[i] = amountPerValidator;
+            }
+
+            emit BootstrapRewardsAssigned(currentCommittee, assignedRewards);
+        }
         lastPayedAt = now;
     }
 
     function addToBalance(address addr, uint256 amount) private {
-        externalTokenBalance[addr] = externalTokenBalance[addr].add(amount);
-    }
-
-    function assignAmountFixed(uint256 amount) private {
-        address[] memory currentCommittee = _getCommittee();
-
-        uint256[] memory assignedRewards = new uint256[](currentCommittee.length);
-
-        uint256 totalAssigned = 0;
-
-        for (uint i = 0; i < currentCommittee.length; i++) {
-            uint256 curAmount = amount.div(currentCommittee.length);
-            assignedRewards[i] = curAmount;
-            totalAssigned = totalAssigned.add(curAmount);
-        }
-
-        uint256 remainder = amount.sub(totalAssigned);
-        if (remainder > 0 && currentCommittee.length > 0) {
-            uint ind = now % currentCommittee.length;
-            assignedRewards[ind] = assignedRewards[ind].add(remainder);
-        }
-
-        for (uint i = 0; i < currentCommittee.length; i++) {
-            addToBalance(currentCommittee[i], assignedRewards[i]);
-        }
-        emit BootstrapRewardsAssigned(currentCommittee, assignedRewards);
+        bootstrapBalance[addr] = bootstrapBalance[addr].add(amount);
     }
 
     function withdrawFunds() external {
-        uint256 amount = externalTokenBalance[msg.sender];
-        externalTokenBalance[msg.sender] = externalTokenBalance[msg.sender].sub(amount);
-        require(externalToken.transfer(msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
+        uint256 amount = bootstrapBalance[msg.sender];
+        bootstrapBalance[msg.sender] = bootstrapBalance[msg.sender].sub(amount);
+        require(bootstrapToken.transfer(msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
     function _getCommittee() private view returns (address[] memory) {
