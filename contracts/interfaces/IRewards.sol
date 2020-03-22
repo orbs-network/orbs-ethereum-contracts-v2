@@ -1,12 +1,12 @@
 pragma solidity 0.5.16;
 
 import "../IStakingContract.sol";
-import "./IContractRegistry.sol";
+import "../spec_interfaces/IContractRegistry.sol";
 
 /// @title Rewards contract interface
 interface IRewards {
     event RewardAssigned(address assignee, uint256 amount, uint256 balance);
-    event FeeAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
+    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
 
     /*
      *   External methods

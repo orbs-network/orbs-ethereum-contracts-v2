@@ -1,6 +1,6 @@
 pragma solidity 0.5.16;
 
-import "./IContractRegistry.sol";
+import "../spec_interfaces/IContractRegistry.sol";
 import "../IStakeChangeNotifier.sol";
 
 /// @title Elections contract interface
@@ -66,4 +66,6 @@ interface IElections /* is IStakeChangeNotifier */ {
 	 */
 
 	function getTopology() external view returns (address[] memory);
+
+	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights); // todo - temporary, remove
 }
