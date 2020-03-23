@@ -21,6 +21,8 @@ import {ProtocolContract} from "../typings/protocol-contract";
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
+export const CONFORMANCE_TYPE_GENERAL = "General";
+export const CONFORMANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
     maxCommitteeSize: number;

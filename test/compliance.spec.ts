@@ -2,7 +2,7 @@ import 'mocha';
 
 import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN, CONFORMANCE_TYPE_GENERAL, CONFORMANCE_TYPE_COMPLIANCE} from "./driver";
 import chai from "chai";
 import {bn, evmIncreaseTime} from "./helpers";
 import {TransactionReceipt} from "web3-core";
@@ -20,36 +20,33 @@ describe('compliance-contract', async () => {
 
         const d = await Driver.new();
 
-        const General = "General";
-        const Compliance = "Compliance";
-
         const v1 = d.newParticipant();
 
         // Get default
         const defaultCompliance = await d.compliance.getValidatorCompliance(v1.address);
-        expect(defaultCompliance).to.equal(General);
+        expect(defaultCompliance).to.equal(CONFORMANCE_TYPE_GENERAL);
 
         // Set
-        let r = await d.compliance.setValidatorCompliance(v1.address, Compliance);
+        let r = await d.compliance.setValidatorCompliance(v1.address, CONFORMANCE_TYPE_COMPLIANCE);
         expect(r).to.have.a.validatorConformanceUpdateEvent({
             validator: v1.address,
-            conformanceType: Compliance
+            conformanceType: CONFORMANCE_TYPE_COMPLIANCE
         });
 
         // Get after set
         let currentCompliance = await d.compliance.getValidatorCompliance(v1.address);
-        expect(currentCompliance).to.equal(Compliance);
+        expect(currentCompliance).to.equal(CONFORMANCE_TYPE_COMPLIANCE);
 
         // Update
-        r = await d.compliance.setValidatorCompliance(v1.address, General);
+        r = await d.compliance.setValidatorCompliance(v1.address, CONFORMANCE_TYPE_GENERAL);
         expect(r).to.have.a.validatorConformanceUpdateEvent({
             validator: v1.address,
-            conformanceType: General
+            conformanceType: CONFORMANCE_TYPE_GENERAL
         });
 
         // Get after update
         currentCompliance = await d.compliance.getValidatorCompliance(v1.address);
-        expect(currentCompliance).to.equal(General);
+        expect(currentCompliance).to.equal(CONFORMANCE_TYPE_GENERAL);
 
     })
 

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
 /// @title Elections contract interface
-interface ICompliance /* is Ownable */ {
+interface ICompliance /* is Ownable */ { // TODO rename to IValidatorIdentification? or make compliance API more generic?
 	event ValidatorConformanceUpdate(address validator, string conformanceType);
 
 	/*

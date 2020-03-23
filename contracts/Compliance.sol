@@ -5,7 +5,7 @@ import "./spec_interfaces/ICompliance.sol";
 
 contract Compliance is ICompliance, Ownable {
 
-    IContractRegistry contractRegistry;
+    IContractRegistry contractRegistry; // TODO move this (and logic) to a super class
 
     mapping (address => string) validatorCompliance;
 
