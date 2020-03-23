@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-import "./interfaces/ICommitteeListener.sol";
+import "./spec_interfaces/ICommitteeListener.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./IStakingContract.sol";
