@@ -1,7 +1,7 @@
 pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "./interfaces/IProtocol.sol";
+import "./spec_interfaces/IProtocol.sol";
 
 contract Protocol is IProtocol, Ownable {
 

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./interfaces/IRewards.sol";
 import "./spec_interfaces/IContractRegistry.sol";
-import "./interfaces/IProtocol.sol";
+import "./spec_interfaces/IProtocol.sol";
 import "./Fees.sol";
 
 contract Subscriptions is ISubscriptions, Ownable{
