@@ -39,11 +39,11 @@ interface IValidatorsRegistration {
 
     /// @dev Translates a list validators Ethereum addresses to Orbs addresses
     /// Used by the Election contract
-	function getOrbsAddresses(address[] calldata addrs) external view returns (address[] memory orbsAddr);
+	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddr);
 
 
 	/// @dev Translates a list validators Orbs addresses to Ethereum addresses
 	/// Used by the Election contract
-	function getEthereumAddresses(address[] calldata addrs) external view returns (address[] memory ethereumAddr);
+	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddr);
 
 }

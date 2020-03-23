@@ -167,7 +167,7 @@ export class Driver {
 
 }
 
-export class Participant {
+export class Participant { // TODO Consider implementing validator methods in a child class.
     public ip: string;
     private erc20: ERC20Contract;
     private externalToken: ERC20Contract;

@@ -14,18 +14,18 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	}
 
 	struct Validator {
-		bytes4 ip;
+		bytes4 ip; // TODO should we enforce uniqueness of IP address as we did in previous contract?
 		address orbsAddr;
 		string name;
 		string website;
 		string contact;
 		uint256 registrationTime;
 		uint256 lastUpdateTime;
+
+		mapping(string => string) validatorMetadata;
 	}
 	mapping (address => Validator) validators;
 	mapping (address => address) orbsAddressToEthereumAddress;
-
-	mapping (address => mapping(string => string)) validatorMetadata;
 
 	IContractRegistry contractRegistry;
 
@@ -51,28 +51,20 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
     function setMetadata(string calldata key, string calldata value) external onlyRegisteredValidator {
-		string memory oldValue = validatorMetadata[msg.sender][key];
-		validatorMetadata[msg.sender][key] = value;
+		string memory oldValue = validators[msg.sender].validatorMetadata[key];
+		validators[msg.sender].validatorMetadata[key] = value;
 		emit ValidatorMetadataChanged(msg.sender, key, value, oldValue);
 	}
 
 	function getMetadata(address addr, string calldata key) external view returns (string memory) {
 		require(isRegistered(addr), "Validator is not registered");
-		return validatorMetadata[addr][key];
+		return validators[addr].validatorMetadata[key];
 	}
 
 	/// @dev Called by a participant who wishes to unregister
 	function unregisterValidator() external onlyRegisteredValidator {
 		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
-		validators[msg.sender] =  Validator({
-			orbsAddr: address(0),
-			ip: bytes4(0),
-			name: "",
-			website: "",
-			contact: "",
-			registrationTime: 0,
-			lastUpdateTime: 0
-		});
+		delete validators[msg.sender];
 		emit ValidatorUnregistered(msg.sender);
 		// todo: notify elections contract?
 	}
@@ -91,20 +83,20 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 
     /// @dev Translates a list validators Ethereum addresses to Orbs addresses
     /// Used by the Election conract
-	function getOrbsAddresses(address[] calldata addrs) external view returns (address[] memory orbsAddrs) {
-		orbsAddrs = new address[](addrs.length);
-		for (uint i = 0; i < addrs.length; i++) {
-			require(isRegistered(addrs[i]), "Validator is not registered"); // todo: can be optimized, or maybe omit?
-			orbsAddrs[i] = validators[addrs[i]].orbsAddr;
+	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddrs) {
+		orbsAddrs = new address[](ethereumAddrs.length);
+		for (uint i = 0; i < ethereumAddrs.length; i++) {
+			require(isRegistered(ethereumAddrs[i]), "Validator is not registered"); // todo: can be optimized, or maybe omit?
+			orbsAddrs[i] = validators[ethereumAddrs[i]].orbsAddr;
 		}
 	}
 
 	/// @dev Translates a list validators Orbs addresses to Ethereum addresses
 	/// Used by the Election contract
-	function getEthereumAddresses(address[] calldata addrs) external view returns (address[] memory ethereumAddrs) {
-		ethereumAddrs = new address[](addrs.length);
-		for (uint i = 0; i < addrs.length; i++) {
-			ethereumAddrs[i] = orbsAddressToEthereumAddress[addrs[i]];
+	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddrs) {
+		ethereumAddrs = new address[](orbsAddrs.length);
+		for (uint i = 0; i < orbsAddrs.length; i++) {
+			ethereumAddrs[i] = orbsAddressToEthereumAddress[orbsAddrs[i]];
 			require(ethereumAddrs[i] != address(0), "Validator is not registered"); // todo: omit?
 		}
 	}
