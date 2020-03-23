@@ -4,14 +4,14 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 
 export interface SubscriptionChangedEvent {
-  vcid: number | BN;
+  vcid: string;
   genRef: number | BN;
   expiresAt: number | BN;
   tier: string;
 }
 
 export interface PaymentEvent {
-  vcid: number | BN;
+  vcid: string;
   by: string;
   amount: number | BN;
   tier: string;
@@ -19,19 +19,19 @@ export interface PaymentEvent {
 }
 
 export interface VcConfigRecordChangedEvent {
-  vcid: number | BN;
+  vcid: string;
   key: string,
   value: string
 }
 
 export interface VcOwnerChangedEvent {
-    vcid: number | BN;
+    vcid: string;
     previousOwner: string;
     newOwner: string;
 }
 
 export interface VcCreatedEvent {
-    vcid: number | BN;
+    vcid: string;
     owner: string;
 }
 
