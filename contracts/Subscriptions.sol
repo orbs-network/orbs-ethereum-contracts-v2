@@ -2,7 +2,7 @@ pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "./interfaces/ISubscriptions.sol";
+import "./spec_interfaces/ISubscriptions.sol";
 import "./interfaces/IRewards.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./interfaces/IProtocol.sol";
