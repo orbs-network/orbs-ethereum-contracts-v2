@@ -130,7 +130,6 @@ const containEvent = eventParser =>
 
 module.exports = function(chai) {
   chai.Assertion.overwriteMethod("delegatedEvent", containEvent(delegatedEvents));
-  chai.Assertion.overwriteMethod("validatorRegisteredEvent_deprecated", containEvent(validatorRegisteredEvents_deprecated));
   chai.Assertion.overwriteMethod("validatorRegisteredEvent", containEvent(validatorRegisteredEvents));
   chai.Assertion.overwriteMethod("validatorUnregisteredEvent", containEvent(validatorUnregisteredEvents));
   chai.Assertion.overwriteMethod("validatorDataUpdatedEvent", containEvent(validatorDataUpdatedEvents));

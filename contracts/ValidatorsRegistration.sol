@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
+import "./interfaces/IElections.sol";
 
 contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 
@@ -35,18 +36,19 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 
     /// @dev Called by a participant who wishes to register as a validator
 	function registerValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external {
-		require(!isRegistered(msg.sender), "Validator is already registered");
+		require(!isRegistered(msg.sender), "registerValidator: Validator is already registered");
 		validators[msg.sender].registrationTime = now;
 		_updateValidator(ip, orbsAddr, name, website, contact);
+
+		electionsContract().validatorRegistered(msg.sender);
+
 		emit ValidatorRegistered(msg.sender, ip, orbsAddr, name, website, contact);
-		// todo: notify elections contract?
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
 	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator {
 		_updateValidator(ip, orbsAddr, name, website, contact);
 		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
-		// todo: notify elections contract?
 	}
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
@@ -57,7 +59,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	}
 
 	function getMetadata(address addr, string calldata key) external view returns (string memory) {
-		require(isRegistered(addr), "Validator is not registered");
+		require(isRegistered(addr), "getMetadata: Validator is not registered");
 		return validators[addr].validatorMetadata[key];
 	}
 
@@ -65,16 +67,22 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	function unregisterValidator() external onlyRegisteredValidator {
 		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
 		delete validators[msg.sender];
+
+		electionsContract().validatorUnregistered(msg.sender);
+
 		emit ValidatorUnregistered(msg.sender);
-		// todo: notify elections contract?
 	}
 
     /// @dev Returns a validator's data
     /// Used also by the Election contract
 	function getValidatorData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time) {
-		require(isRegistered(addr), "Validator is not registered");
+		require(isRegistered(addr), "getValidatorData: Validator is not registered");
 		Validator memory v = validators[addr];
 		return (v.ip, v.orbsAddr, v.name, v.website, v.contact, v.registrationTime, v.lastUpdateTime);
+	}
+
+	function isRegistered(address addr) public view returns (bool) { // todo: should this be public?
+		return validators[addr].registrationTime != 0;
 	}
 
 	/*
@@ -86,7 +94,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddrs) {
 		orbsAddrs = new address[](ethereumAddrs.length);
 		for (uint i = 0; i < ethereumAddrs.length; i++) {
-			require(isRegistered(ethereumAddrs[i]), "Validator is not registered"); // todo: can be optimized, or maybe omit?
+			require(isRegistered(ethereumAddrs[i]), "getOrbsAddresses: Validator is not registered"); // todo: can be optimized, or maybe omit?
 			orbsAddrs[i] = validators[ethereumAddrs[i]].orbsAddr;
 		}
 	}
@@ -97,7 +105,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		ethereumAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {
 			ethereumAddrs[i] = orbsAddressToEthereumAddress[orbsAddrs[i]];
-			require(ethereumAddrs[i] != address(0), "Validator is not registered"); // todo: omit?
+			require(ethereumAddrs[i] != address(0), "getEthereumAddresses: Validator is not registered"); // todo: omit?
 		}
 	}
 
@@ -114,10 +122,6 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	 * Private methods
 	 */
 
-	function isRegistered(address addr) private view returns (bool) { // todo: should this be public?
-			return validators[addr].registrationTime != 0;
-	}
-
 	function _updateValidator(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
 		require(bytes(name).length != 0, "name must be given");
@@ -125,6 +129,9 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		// TODO which are mandatory?
 
 		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
+
+		bool ipChanged = ip != validators[msg.sender].ip;
+		bool orbsAddrChanged = orbsAddr != validators[msg.sender].orbsAddr;
 
 		validators[msg.sender].orbsAddr = orbsAddr;
 		validators[msg.sender].ip = ip;
@@ -135,7 +142,16 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 
 		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
-		// todo: update committees
+		IElections electionsContract = IElections(contractRegistry.get("elections"));
+		if (ipChanged) {
+			electionsContract.validatorIpChanged(msg.sender);
+		}
+		if (orbsAddrChanged) {
+			electionsContract.validatorOrbsAddressChanged(msg.sender);
+		}
 	}
 
+	function electionsContract() private view returns (IElections) {
+		return IElections(contractRegistry.get("elections"));
+	}
 }

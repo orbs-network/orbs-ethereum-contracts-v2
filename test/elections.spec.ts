@@ -53,7 +53,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakedEvent();
 
         r = await validatorStaked100.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
+        expect(r).to.have.a.validatorRegisteredEvent({
             addr: validatorStaked100.address,
             ip: validatorStaked100.ip
         });
@@ -75,7 +75,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakeChangedEvent({addr: validatorStaked200.address, committeeStake: stake200});
 
         r = await validatorStaked200.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
+        expect(r).to.have.a.validatorRegisteredEvent({
             addr: validatorStaked200.address,
             ip: validatorStaked200.ip,
         });
@@ -99,7 +99,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakedEvent();
 
         r = await validatorStaked300.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
+        expect(r).to.have.a.validatorRegisteredEvent({
             addr: validatorStaked300.address,
             ip: validatorStaked300.ip
         });
@@ -338,24 +338,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it('a validator should not be able to register twice', async () => {
-        const d = await Driver.new();
-
-        // Validator registers
-
-        const v = d.newParticipant();
-        await v.stake(100);
-
-        const r = await d.elections.registerValidator(v.ip, v.orbsAddress, {from: v.address});
-        expect(r).to.have.a.validatorRegisteredEvent_deprecated({
-            addr: v.address,
-            ip: v.ip
-        });
-
-        // The first validator attempts to register again - should not emit events
-        await expectRejected(d.elections.registerValidator(v.ip, v.orbsAddress, {from: v.address}));
-    });
-
     it('should only accept stake notifications from the staking contract', async () => {
         const d = await Driver.new();
 
@@ -560,39 +542,6 @@ describe('elections-high-level-flows', async () => {
         await newValidator2.notifyReadyForCommittee();
         r = await newValidator2.stake(defaultDriverOptions.minimumStake);
         expect(r).to.not.have.a.topologyChangedEvent();
-    });
-
-    it("updates validator metadata only for registered validators", async () => {
-        const d = await Driver.new();
-
-        const p = d.newParticipant();
-        await p.registerAsValidator();
-        let r = await p.stake(defaultDriverOptions.minimumStake);
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [p.orbsAddress]
-        });
-
-        const newIp = "0x11223344";
-        r = await d.elections.setValidatorIp(newIp, {from: p.address});
-        expect(r).to.have.a.topologyChangedEvent({
-            ips: [newIp]
-        });
-
-        await p.notifyReadyForCommittee();
-
-        const newAddr = d.newParticipant().address;
-        r = await d.elections.setValidatorOrbsAddress(newAddr, {from: p.address});
-        expect(r).to.have.a.topologyChangedEvent({
-            ips: [newIp],
-            orbsAddrs: [newAddr]
-        });
-        expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: [newAddr]
-        });
-
-        const nonRegistered = d.newParticipant();
-        await expectRejected(d.elections.setValidatorIp(newIp, {from: nonRegistered.address}));
-        await expectRejected(d.elections.setValidatorOrbsAddress(newAddr, {from: nonRegistered.address}));
     });
 
     it("performs a batch refresh of stakes", async () => {

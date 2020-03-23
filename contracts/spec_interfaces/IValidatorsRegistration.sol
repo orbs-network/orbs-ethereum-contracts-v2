@@ -29,9 +29,12 @@ interface IValidatorsRegistration {
 	function unregisterValidator() external;
 
     /// @dev Returns a validator's data
-    /// Used also by the Election conract
+    /// Used also by the Election contract
 	function getValidatorData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time);
 
+	/// @dev Returns true if the given address is of a registered validator
+	/// Used also by the Election contract
+	function isRegistered(address addr) external view returns (bool);
 
 	/*
      * Methods restricted to other Orbs contracts

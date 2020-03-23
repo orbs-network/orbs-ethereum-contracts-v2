@@ -46,11 +46,19 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
-	function validatorRegistred(address addr) external /* onlyValidatorsRegistrationContract */;
+	function validatorRegistered(address addr) external /* onlyValidatorsRegistrationContract */;
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
-	function validatorunegistred(address addr) external /* onlyValidatorsRegistrationContract */;
+	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
+
+	/// @dev Called by: validator registration contract
+	/// Notifies a validator's IP has been changed
+	function validatorIpChanged(address addr) external /*  onlyValidatorsRegistrationContract */;
+
+	/// @dev Called by: validator registration contract
+	/// Notifies a validator's Orbs address has been changed
+	function validatorOrbsAddressChanged(address addr) external /* onlyValidatorsRegistrationContract */;
 
 	/*
 	 * Governance
