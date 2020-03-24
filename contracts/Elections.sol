@@ -109,6 +109,9 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		(, bool isInTopology) = _findInTopology(addr);
 		if (isInTopology) {
 			_notifyTopologyChanged();
+			if (pos < committeeSize) {
+				_notifyCommitteeChanged();
+			}
 		}
 	}
 
