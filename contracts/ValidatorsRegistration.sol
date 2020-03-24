@@ -125,15 +125,14 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		// TODO which are mandatory?
 
 		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
+        orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
-		validators[msg.sender].orbsAddr = orbsAddr;
+        validators[msg.sender].orbsAddr = orbsAddr;
 		validators[msg.sender].ip = ip;
 		validators[msg.sender].name = name;
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
 		validators[msg.sender].lastUpdateTime = now;
-
-		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
 		// todo: update committees
 	}
