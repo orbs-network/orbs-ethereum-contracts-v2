@@ -25,9 +25,7 @@ import {
   bootstrapAddedToPoolEvents,
   stakingRewardAssignedEvents,
   bootstrapRewardsAssignedEvents,
-  validatorConformanceUpdateEvents
-  stakingRewardAssignedEvents,
-  bootstrapRewardsAssignedEvents,
+  validatorConformanceUpdateEvents,
   vcCreatedEvents,
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
