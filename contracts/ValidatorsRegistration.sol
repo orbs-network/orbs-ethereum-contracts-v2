@@ -23,7 +23,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		uint256 registrationTime;
 		uint256 lastUpdateTime;
 
-		mapping(string => string) validatorMetadata;
+		mapping(string => string) validatorMetadata; // TODO do we want this mapping here or in an external state entry?  How do we delete on unregister?
 	}
 	mapping (address => Validator) validators;
 	mapping (address => address) orbsAddressToEthereumAddress;
@@ -131,11 +131,11 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
         orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
-		bool ipChanged = ip != validators[msg.sender].ip;
-		bool orbsAddrChanged = orbsAddr != validators[msg.sender].orbsAddr;
+        bool ipChanged = ip != validators[msg.sender].ip;
+        bool orbsAddrChanged = orbsAddr != validators[msg.sender].orbsAddr;
 
-		validators[msg.sender].orbsAddr = orbsAddr;
-		validators[msg.sender].ip = ip;
+        validators[msg.sender].orbsAddr = orbsAddr; // TODO enforce uniqueness?
+		validators[msg.sender].ip = ip; // TODO enforce uniqueness?
 		validators[msg.sender].name = name;
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
