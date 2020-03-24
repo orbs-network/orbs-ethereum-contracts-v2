@@ -39,7 +39,7 @@ export interface TopologyChangedEvent {
   ips: string[];
 }
 
-export interface ValidatorRegisteredEvent {
+export interface ValidatorRegisteredEvent_deprecated {
   addr: string;
   ip: string;
 }

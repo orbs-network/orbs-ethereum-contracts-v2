@@ -5,6 +5,7 @@ import {compiledContracts} from "../compiled-contracts";
 import {FeesAddedToBucketEvent} from "../typings/fees-contract";
 
 const elections = compiledContracts["Elections"];
+const validatorsRegistration = compiledContracts["ValidatorsRegistration"];
 const compliance = compiledContracts["Compliance"];
 const staking = compiledContracts["StakingContract"];
 const subscriptions = compiledContracts["Subscriptions"];
@@ -26,7 +27,11 @@ function parseLogs(txResult, contract, eventSignature) {
 }
 
 export const committeeChangedEvents = (txResult) => parseLogs(txResult, elections, "CommitteeChanged(address[],address[],uint256[])");
-export const validatorRegisteredEvents = (txResult) => parseLogs(txResult, elections, "ValidatorRegistered(address,bytes4,address)");
+export const validatorRegisteredEvents_deprecated = (txResult) => parseLogs(txResult, elections, "ValidatorRegistered(address,bytes4,address)");
+export const validatorRegisteredEvents = (txResult) => parseLogs(txResult, validatorsRegistration, "ValidatorRegistered(address,bytes4,address,string,string,string)");
+export const validatorUnregisteredEvents = (txResult) => parseLogs(txResult, validatorsRegistration, "ValidatorUnregistered(addr)");
+export const validatorDataUpdatedEvents = (txResult) => parseLogs(txResult, validatorsRegistration, "ValidatorDataUpdated(address,bytes4,address,string,string,string)");
+export const validatorMetadataChangedEvents = (txResult) => parseLogs(txResult, validatorsRegistration, "ValidatorMetadataChanged(address,string,string,string)");
 export const stakedEvents = (txResult) => parseLogs(txResult, staking, "Staked(address,uint256,uint256)");
 export const unstakedEvents = (txResult) => parseLogs(txResult, staking, "Unstaked(address,uint256,uint256)");
 export const delegatedEvents = (txResult) => parseLogs(txResult, elections, "Delegated(address,address)");

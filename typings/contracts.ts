@@ -9,6 +9,7 @@ import { ProtocolContract } from "./protocol-contract";
 import { StakingContract } from "./staking-contract";
 import { MonthlySubscriptionPlanContract } from "./monthly-subscription-plan-contract";
 import { Contract } from "../eth";
+import {ValidatorsRegistrationContract} from "./validator-registration-contract";
 import {ComplianceContract} from "./compliance-contract";
 
 /**
@@ -27,4 +28,5 @@ export type Contracts = {
     StakingContract: StakingContract & Contract;
     MonthlySubscriptionPlan: MonthlySubscriptionPlanContract & Contract;
     Compliance: ComplianceContract & Contract;
+    ValidatorsRegistration: ValidatorsRegistrationContract & Contract;
 }
