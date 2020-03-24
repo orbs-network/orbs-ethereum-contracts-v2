@@ -65,7 +65,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 
 	/// @dev Called by a participant who wishes to unregister
 	function unregisterValidator() external onlyRegisteredValidator {
-		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
+		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
 		delete validators[msg.sender];
 
 		electionsContract().validatorUnregistered(msg.sender);
@@ -128,7 +128,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		require(bytes(contact).length != 0, "contact must be given");
 		// TODO which are mandatory?
 
-		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
+		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
         orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
 		bool ipChanged = ip != validators[msg.sender].ip;
