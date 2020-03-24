@@ -129,6 +129,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		// TODO which are mandatory?
 
 		orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr] = address(0);
+        orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
 		bool ipChanged = ip != validators[msg.sender].ip;
 		bool orbsAddrChanged = orbsAddr != validators[msg.sender].orbsAddr;
@@ -139,8 +140,6 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
 		validators[msg.sender].lastUpdateTime = now;
-
-		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
 		IElections electionsContract = IElections(contractRegistry.get("elections"));
 		if (ipChanged) {
