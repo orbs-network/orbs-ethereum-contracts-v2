@@ -50,7 +50,7 @@ import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
 import {StakingRewardAssignedEvent} from "../typings/staking-rewards-contract";
 import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/bootstrap-rewards-contract";
-import {FeesAssignedEvent} from "../typings/fees-contract";
+import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/fees-contract";
 import {ValidatorConformanceUpdateEvent} from "../typings/compliance-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
@@ -115,7 +115,7 @@ const containEvent = eventParser =>
           false,
           `No event with properties ${JSON.stringify(
             data
-          )} found. Events are ${JSON.stringify(logs)}`
+          )} found. Events are ${JSON.stringify(logs.map(l =>_.omitBy(l, (v, k) => /[0-9_]/.exec(k[0]))))}`
         ); // TODO make this log prettier
       }
     };
@@ -135,6 +135,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("bootstrapRewardAssignedEvent", containEvent(bootstrapRewardAssignedEvents));
   chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents));
   chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
+  chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents));
   chai.Assertion.overwriteMethod("topologyChangedEvent", containEvent(topologyChangedEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
@@ -177,6 +178,7 @@ declare global {
       validatorConformanceUpdateEvent(data?: Partial<ValidatorConformanceUpdateEvent>)
       stakingRewardAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
+      feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
     }
