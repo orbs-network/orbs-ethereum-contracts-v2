@@ -3,7 +3,7 @@ pragma solidity 0.5.16;
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/ICompliance.sol";
 
-contract Compliance is ICompliance, Ownable {
+contract Compliance is ICompliance, Ownable { // TODO consider renaming to something like 'ValidatorIdentification' or make more generic
 
     IContractRegistry contractRegistry; // TODO move this (and logic) to a super class
 
