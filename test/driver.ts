@@ -58,6 +58,7 @@ export class Driver {
         public stakingRewards: Contracts["StakingRewards"],
         public fees: Contracts["Fees"],
         public protocol: Contracts["Protocol"],
+        public validatorsRegistration: Contracts['ValidatorsRegistration'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
@@ -67,17 +68,18 @@ export class Driver {
         Driver.web3DriversCache.set(web3Provider, web3);
         const accounts = await web3.eth.getAccounts();
 
-        const contractRegistry: ContractRegistryContract = await web3.deploy( 'ContractRegistry',[accounts[0]]);
-        const externalToken: ERC20Contract = await web3.deploy( 'TestingERC20', []);
-        const erc20: ERC20Contract = await web3.deploy( 'TestingERC20', []);
+        const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]]);
+        const externalToken = await web3.deploy( 'TestingERC20', []);
+        const erc20 = await web3.deploy( 'TestingERC20', []);
         const bootstrapRewards: BootstrapRewardsContract = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
         const stakingRewards: StakingRewardsContract = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
         const fees: FeesContract = await web3.deploy( 'Fees', [erc20.address]);
-        const elections: ElectionsContract = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
+        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
             voteOutThreshold, voteOutTimeout, banningThreshold]);
-        const staking: StakingContract = await Driver.newStakingContract(web3, elections.address, erc20.address);
-        const subscriptions: SubscriptionsContract = await web3.deploy( 'Subscriptions', [erc20.address] );
-        const protocol: ProtocolContract = await web3.deploy('Protocol', []);
+        const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
+        const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
+        const protocol = await web3.deploy('Protocol', []);
+        const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);
         await contractRegistry.set("bootstrapRewards", bootstrapRewards.address);
@@ -86,16 +88,31 @@ export class Driver {
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
+        await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
 
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
         await stakingRewards.setContractRegistry(contractRegistry.address);
         await fees.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
+        await validatorsRegistration.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
 
-        return new Driver(web3, accounts, elections, erc20, externalToken, staking, subscriptions, bootstrapRewards, stakingRewards, fees, protocol, contractRegistry);
+        return new Driver(web3,
+            accounts,
+            elections,
+            erc20,
+            externalToken,
+            staking,
+            subscriptions,
+            bootstrapRewards,
+            stakingRewards,
+            fees,
+            protocol,
+            validatorsRegistration,
+            contractRegistry
+        );
     }
 
     static async newContractRegistry(web3: Web3Driver, governorAddr: string): Promise<ContractRegistryContract> {
@@ -119,7 +136,7 @@ export class Driver {
     }
 
     get rewardsGovernor(): Participant {
-        return new Participant(this.accounts[0], this.accounts[0], this);
+        return new Participant("rewards-governor", "rewards-governor-website", "rewards-governor-contact", this.accounts[0], this.accounts[0], this);
     }
 
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
@@ -131,9 +148,15 @@ export class Driver {
 
     newParticipant(): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
         const RESERVED_ACCOUNTS = 2;
-        const v = new Participant(this.accounts[RESERVED_ACCOUNTS + this.participants.length*2], this.accounts[RESERVED_ACCOUNTS + this.participants.length*2+1], this);
+        const v = new Participant(
+            `Validator${this.participants.length}-name`,
+            `Validator${this.participants.length}-website`,
+            `Validator${this.participants.length}-contact`,
+            this.accounts[RESERVED_ACCOUNTS + this.participants.length*2],
+            this.accounts[RESERVED_ACCOUNTS + this.participants.length*2+1],
+            this);
         this.participants.push(v);
-        return v
+        return v;
     }
 
     async delegateMoreStake(amount:number|BN, delegatee: Participant) {
@@ -144,14 +167,20 @@ export class Driver {
 
 }
 
-export class Participant {
+export class Participant { // TODO Consider implementing validator methods in a child class.
     public ip: string;
     private erc20: ERC20Contract;
     private externalToken: ERC20Contract;
     private staking: StakingContract;
     private elections: ElectionsContract;
 
-    constructor(public address: string, public orbsAddress: string, driver: Driver) {
+    constructor(public name: string,
+                public website: string,
+                public contact: string,
+                public address: string,
+                public orbsAddress: string,
+                driver: Driver) {
+        this.name = name;
         this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify
         this.erc20 = driver.erc20;
         this.externalToken = driver.externalToken;

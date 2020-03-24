@@ -5,7 +5,7 @@ import {
   delegatedEvents,
   stakedEvents,
   stakeChangedEvents,
-  validatorRegisteredEvents,
+  validatorRegisteredEvents_deprecated,
   subscriptionChangedEvents,
   paymentEvents,
   feesAddedToBucketEvents,
@@ -20,11 +20,16 @@ import {
   electionsBanned,
   electionsUnbanned,
   vcOwnerChangedEvents,
-  vcCreatedEvents,
   bootstrapRewardAssignedEvents,
   feesAssignedEvents,
   bootstrapAddedToPoolEvents,
-  stakingRewardAssignedEvents, bootstrapRewardsAssignedEvents
+  stakingRewardAssignedEvents,
+  bootstrapRewardsAssignedEvents,
+  vcCreatedEvents,
+  validatorRegisteredEvents,
+  validatorUnregisteredEvents,
+  validatorDataUpdatedEvents,
+  validatorMetadataChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import {
@@ -35,7 +40,7 @@ import {
   DelegatedEvent,
   CommitteeChangedEvent,
   TopologyChangedEvent,
-  ValidatorRegisteredEvent,
+  ValidatorRegisteredEvent_deprecated,
   StakeChangeEvent,
   VoteOutEvent,
   VotedOutOfCommitteeEvent,
@@ -49,6 +54,11 @@ import {ProtocolChangedEvent} from "../typings/protocol-contract";
 import {StakingRewardAssignedEvent} from "../typings/staking-rewards-contract";
 import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/bootstrap-rewards-contract";
 import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/fees-contract";
+import {
+  ValidatorDataUpdatedEvent, ValidatorMetadataChangedEvent,
+  ValidatorRegisteredEvent,
+  ValidatorUnregisteredEvent
+} from "../typings/validator-registration-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -120,7 +130,11 @@ const containEvent = eventParser =>
 
 module.exports = function(chai) {
   chai.Assertion.overwriteMethod("delegatedEvent", containEvent(delegatedEvents));
+  chai.Assertion.overwriteMethod("validatorRegisteredEvent_deprecated", containEvent(validatorRegisteredEvents_deprecated));
   chai.Assertion.overwriteMethod("validatorRegisteredEvent", containEvent(validatorRegisteredEvents));
+  chai.Assertion.overwriteMethod("validatorUnregisteredEvent", containEvent(validatorUnregisteredEvents));
+  chai.Assertion.overwriteMethod("validatorDataUpdatedEvent", containEvent(validatorDataUpdatedEvents));
+  chai.Assertion.overwriteMethod("validatorMetadataChangedEvent", containEvent(validatorMetadataChangedEvents));
   chai.Assertion.overwriteMethod("committeeChangedEvent", containEvent(committeeChangedEvents));
   chai.Assertion.overwriteMethod("stakeChangedEvent", containEvent(stakeChangedEvents));
   chai.Assertion.overwriteMethod("stakedEvent", containEvent(stakedEvents));
@@ -155,7 +169,11 @@ declare global {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       committeeChangedEvent(data?: Partial<CommitteeChangedEvent>): void;
       topologyChangedEvent(data?: Partial<TopologyChangedEvent>): void;
+      validatorRegisteredEvent_deprecated(data?: Partial<ValidatorRegisteredEvent_deprecated>): void;
       validatorRegisteredEvent(data?: Partial<ValidatorRegisteredEvent>): void;
+      validatorMetadataChangedEvent(data?: Partial<ValidatorMetadataChangedEvent>): void;
+      validatorUnregisteredEvent(data?: Partial<ValidatorUnregisteredEvent>): void;
+      validatorDataUpdatedEvent(data?: Partial<ValidatorDataUpdatedEvent>): void;
       stakeChangedEvent(data?: Partial<StakeChangeEvent>): void;
       stakedEvent(data?: Partial<StakedEvent>): void;
       unstakedEvent(data?: Partial<UnstakedEvent>): void;
