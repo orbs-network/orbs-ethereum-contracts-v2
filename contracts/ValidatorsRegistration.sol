@@ -81,6 +81,16 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		return (v.ip, v.orbsAddr, v.name, v.website, v.contact, v.registrationTime, v.lastUpdateTime);
 	}
 
+	function getValidatorOrbsAddress(address addr) external view returns (address orbsAddr) {
+		require(isRegistered(addr), "getValidatorData: Validator is not registered");
+		return validators[addr].orbsAddr;
+	}
+
+	function getValidatorIp(address addr) external view returns (bytes4 ip) {
+		require(isRegistered(addr), "getValidatorData: Validator is not registered");
+		return validators[addr].ip;
+	}
+
 	function isRegistered(address addr) public view returns (bool) { // todo: should this be public?
 		return validators[addr].registrationTime != 0;
 	}

@@ -32,6 +32,18 @@ interface IValidatorsRegistration {
     /// Used also by the Election contract
 	function getValidatorData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time);
 
+
+	// TODO added the following two getters for the elections contract which only needs ip and orbs address. Using getValidatorData caused "Unused Variables" warnings.
+
+	/// @dev Returns a validator's orbs address
+	/// Used also by the Election contract
+	function getValidatorOrbsAddress(address addr) external view returns (address orbsAddr);
+
+	/// @dev Returns a validator's ip
+	/// Used also by the Election contract
+	function getValidatorIp(address addr) external view returns (bytes4 ip);
+
+
 	/// @dev Returns true if the given address is of a registered validator
 	/// Used also by the Election contract
 	function isRegistered(address addr) external view returns (bool);

@@ -386,10 +386,10 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		address[] memory topologyOrbsAddresses = new address[](topology.length);
 		bytes4[] memory ips = new bytes4[](topology.length);
 
+		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
 		for (uint i = 0; i < topologyOrbsAddresses.length; i++) {
-			(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time) = validatorsRegistration().getValidatorData(topology[i]);
-			topologyOrbsAddresses[i] = orbsAddr;
-			ips[i] = ip;
+			topologyOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(topology[i]);
+			ips[i] = validatorsRegistrationContract.getValidatorIp(topology[i]);
 		}
 		emit TopologyChanged(topologyOrbsAddresses, ips);
 	}
@@ -398,10 +398,11 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		uint256[] memory committeeStakes = _loadCommitteeStakes();
 		address[] memory committeeOrbsAddresses = new address[](committeeStakes.length);
 		address[] memory committeeAddresses = new address[](committeeStakes.length);
+
+		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
 		for (uint i = 0; i < committeeStakes.length; i++) {
-			(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time) = validatorsRegistration().getValidatorData(topology[i]);
-			committeeOrbsAddresses[i] = orbsAddr;
 			committeeAddresses[i] = topology[i];
+			committeeOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(committeeAddresses[i]);
 		}
 		emit CommitteeChanged(committeeAddresses, committeeOrbsAddresses, committeeStakes);
 	}
