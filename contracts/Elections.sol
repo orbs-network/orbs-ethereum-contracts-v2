@@ -106,7 +106,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	/// @dev Called by: validator registration contract
 	/// Notifies a validator's Orbs address has been changed
 	function validatorOrbsAddressChanged(address addr) external  onlyValidatorsRegistrationContract {
-		(, bool isInTopology) = _findInTopology(addr);
+		(uint pos, bool isInTopology) = _findInTopology(addr);
 		if (isInTopology) {
 			_notifyTopologyChanged();
 			if (pos < committeeSize) {
