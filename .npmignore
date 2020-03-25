@@ -1,0 +1,6 @@
+_out
+_reports
+.circleci
+.github
+.idea
+.git
