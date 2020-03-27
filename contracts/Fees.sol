@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./IStakingContract.sol";
-import "./interfaces/IElections.sol";
 import "./spec_interfaces/IFees.sol";
+import "./spec_interfaces/ICommittee.sol";
 
 contract Fees is IFees, Ownable {
     using SafeMath for uint256;
@@ -183,7 +183,7 @@ contract Fees is IFees, Ownable {
     function _getCommittee(CommitteeType committeeType) private view returns (address[] memory) {
         // todo - use committee contracts, for both general and kyc committees
         if (committeeType == CommitteeType.General) {
-            IElections e = IElections(contractRegistry.get("elections"));
+            ICommittee e = ICommittee(contractRegistry.get("committee-general"));
             (address[] memory validators, ) =  e.getCommittee();
             return validators;
         } else {

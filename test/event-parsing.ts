@@ -5,6 +5,7 @@ import {compiledContracts} from "../compiled-contracts";
 import {FeesAddedToBucketEvent} from "../typings/fees-contract";
 
 const elections = compiledContracts["Elections"];
+const committee = compiledContracts["Committee"];
 const validatorsRegistration = compiledContracts["ValidatorsRegistration"];
 const staking = compiledContracts["StakingContract"];
 const subscriptions = compiledContracts["Subscriptions"];
@@ -25,7 +26,8 @@ function parseLogs(txResult, contract, eventSignature) {
         .map(e => abi.decodeLog(inputs, e.data, e.topics.slice(1) /*assume all events are non-anonymous*/));
 }
 
-export const committeeChangedEvents = (txResult) => parseLogs(txResult, elections, "CommitteeChanged(address[],address[],uint256[])");
+export const committeeChangedEvents = (txResult) => parseLogs(txResult, committee, "CommitteeChanged(address[],address[],uint256[])");
+export const standbysChangedEvents = (txResult) => parseLogs(txResult, committee, "StandbysChanged(address[],address[],uint256[])");
 export const validatorRegisteredEvents_deprecated = (txResult) => parseLogs(txResult, elections, "ValidatorRegistered(address,bytes4,address)");
 export const validatorRegisteredEvents = (txResult) => parseLogs(txResult, validatorsRegistration, "ValidatorRegistered(address,bytes4,address,string,string,string)");
 export const validatorUnregisteredEvents = (txResult) => parseLogs(txResult, validatorsRegistration, "ValidatorUnregistered(addr)");
@@ -43,7 +45,6 @@ export const stakingRewardAssignedEvents = (txResult) => parseLogs(txResult, sta
 export const feesAssignedEvents = (txResult) => parseLogs(txResult, fees, "FeesAssigned(address[],uint256[])");
 export const bootstrapRewardsAssignedEvents = (txResult) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardsAssigned(address[],uint256[])");
 export const bootstrapAddedToPoolEvents = (txResult) => parseLogs(txResult, bootstrapRewards, "BootstrapAddedToPool(uint256,uint256)");
-export const topologyChangedEvents = (txResult) => parseLogs(txResult, elections, "TopologyChanged(address[],bytes4[])");
 export const voteOutEvents = (txResult) => parseLogs(txResult, elections, "VoteOut(address,address)");
 export const votedOutOfCommitteeEvents = (txResult) => parseLogs(txResult, elections, "VotedOutOfCommittee(address)");
 export const vcConfigRecordChangedEvents = (txResult) => parseLogs(txResult, subscriptions, "VcConfigRecordChanged(uint256,string,string)");

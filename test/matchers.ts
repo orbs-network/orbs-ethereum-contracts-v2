@@ -10,7 +10,6 @@ import {
   paymentEvents,
   feesAddedToBucketEvents,
   unstakedEvents,
-  topologyChangedEvents,
   voteOutEvents,
   votedOutOfCommitteeEvents,
   vcConfigRecordChangedEvents,
@@ -29,7 +28,7 @@ import {
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
   validatorDataUpdatedEvents,
-  validatorMetadataChangedEvents
+  validatorMetadataChangedEvents, standbysChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import {
@@ -38,9 +37,6 @@ import {
 } from "../typings/subscriptions-contract";
 import {
   DelegatedEvent,
-  CommitteeChangedEvent,
-  TopologyChangedEvent,
-  ValidatorRegisteredEvent_deprecated,
   StakeChangeEvent,
   VoteOutEvent,
   VotedOutOfCommitteeEvent,
@@ -59,6 +55,7 @@ import {
   ValidatorRegisteredEvent,
   ValidatorUnregisteredEvent
 } from "../typings/validator-registration-contract";
+import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -135,6 +132,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("validatorDataUpdatedEvent", containEvent(validatorDataUpdatedEvents));
   chai.Assertion.overwriteMethod("validatorMetadataChangedEvent", containEvent(validatorMetadataChangedEvents));
   chai.Assertion.overwriteMethod("committeeChangedEvent", containEvent(committeeChangedEvents));
+  chai.Assertion.overwriteMethod("standbysChangedEvent", containEvent(standbysChangedEvents));
   chai.Assertion.overwriteMethod("stakeChangedEvent", containEvent(stakeChangedEvents));
   chai.Assertion.overwriteMethod("stakedEvent", containEvent(stakedEvents));
   chai.Assertion.overwriteMethod("unstakedEvent", containEvent(unstakedEvents));
@@ -147,7 +145,6 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents));
-  chai.Assertion.overwriteMethod("topologyChangedEvent", containEvent(topologyChangedEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
   chai.Assertion.overwriteMethod("votedOutOfCommitteeEvent", containEvent(votedOutOfCommitteeEvents));
   chai.Assertion.overwriteMethod("banningVoteEvent", containEvent(banningVoteEvents));
@@ -167,8 +164,7 @@ declare global {
     export interface TypeComparison {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       committeeChangedEvent(data?: Partial<CommitteeChangedEvent>): void;
-      topologyChangedEvent(data?: Partial<TopologyChangedEvent>): void;
-      validatorRegisteredEvent_deprecated(data?: Partial<ValidatorRegisteredEvent_deprecated>): void;
+      standbysChangedEvent(data?: Partial<StandbysChangedEvent>): void;
       validatorRegisteredEvent(data?: Partial<ValidatorRegisteredEvent>): void;
       validatorMetadataChangedEvent(data?: Partial<ValidatorMetadataChangedEvent>): void;
       validatorUnregisteredEvent(data?: Partial<ValidatorUnregisteredEvent>): void;

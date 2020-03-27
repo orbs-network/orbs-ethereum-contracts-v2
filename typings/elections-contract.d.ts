@@ -8,7 +8,8 @@ export interface ElectionsContract extends Contract {
   stakeChangeBatch(stakeOwners: string[], amounts: number[], signs: boolean[], updatedStakes: number[])
   delegate( to: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
-  notifyReadyForCommittee( params?: TransactionConfig): Promise<TransactionReceipt>;
+  notifyReadyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
+  notifyReadyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
   voteOut(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -26,12 +27,6 @@ export interface ElectionsContract extends Contract {
 export interface DelegatedEvent {
   from: string;
   to: string;
-}
-
-export interface CommitteeChangedEvent {
-  addrs: string[];
-  orbsAddrs: string[];
-  stakes: (number | BN)[];
 }
 
 export interface TopologyChangedEvent {

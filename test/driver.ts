@@ -25,18 +25,16 @@ export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
 export type DriverOptions = {
     maxCommitteeSize: number;
-    maxTopologySize: number;
-    minimumStake:number|BN;
+    maxStandbys: number;
     maxDelegationRatio: number;
     voteOutThreshold: number;
     voteOutTimeout: number;
     banningThreshold: number;
     web3Provider : () => Web3;
 }
-export const defaultDriverOptions: Readonly<DriverOptions>  & {readonly minimumStake : number}= {
+export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize : 2,
-    maxTopologySize : 3,
-    minimumStake : 100,
+    maxStandbys : 2,
     maxDelegationRatio : 10,
     voteOutThreshold : 80,
     voteOutTimeout : 24 * 60 * 60,
@@ -60,11 +58,12 @@ export class Driver {
         public fees: Contracts["Fees"],
         public protocol: Contracts["Protocol"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
+        public committeeGeneral: Contracts['Committee'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
-        const {maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider} = Object.assign({}, defaultDriverOptions, options);
+        const {maxCommitteeSize, maxStandbys, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider} = Object.assign({}, defaultDriverOptions, options);
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
         const accounts = await web3.eth.getAccounts();
@@ -75,11 +74,12 @@ export class Driver {
         const bootstrapRewards: BootstrapRewardsContract = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
         const stakingRewards: StakingRewardsContract = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
         const fees: FeesContract = await web3.deploy( 'Fees', [erc20.address]);
-        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
+        const elections = await web3.deploy( "Elections", [maxDelegationRatio,
             voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
+        const committeeGeneral = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys]);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);
@@ -90,6 +90,7 @@ export class Driver {
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
+        await contractRegistry.set("committee-general", committeeGeneral.address);
 
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
@@ -97,6 +98,7 @@ export class Driver {
         await fees.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
+        await committeeGeneral.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
 
@@ -112,6 +114,7 @@ export class Driver {
             fees,
             protocol,
             validatorsRegistration,
+            committeeGeneral,
             contractRegistry
         );
     }
@@ -224,6 +227,10 @@ export class Participant { // TODO Consider implementing validator methods in a 
 
     async notifyReadyForCommittee() {
         return await this.elections.notifyReadyForCommittee({from: this.orbsAddress});
+    }
+
+    async notifyReadyToSync() {
+        return await this.elections.notifyReadyToSync({from: this.orbsAddress});
     }
 }
 

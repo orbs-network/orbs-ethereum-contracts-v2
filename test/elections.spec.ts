@@ -38,14 +38,14 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it('sorts committee by stake', async () => {
+    it ('sorts committee by stake', async () => {
         const stake100 = new BN(100);
         const stake200 = new BN(200);
         const stake300 = new BN(300);
         const stake500 = new BN(500);
         const stake1000 = new BN(1000);
 
-        const d = await Driver.new({maxCommitteeSize: 2, maxTopologySize: 4, minimumStake: stake100});
+        const d = await Driver.new({maxCommitteeSize: 2, maxStandbys: 2});
 
         // First validator registers
         const validatorStaked100 = d.newParticipant();
@@ -57,9 +57,11 @@ describe('elections-high-level-flows', async () => {
             addr: validatorStaked100.address,
             ip: validatorStaked100.ip
         });
-        expect(r).to.have.a.topologyChangedEvent({
+        r = await validatorStaked100.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked100.address],
             orbsAddrs: [validatorStaked100.orbsAddress],
-            ips: [validatorStaked100.ip]
+            weights: [stake100]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
 
@@ -67,7 +69,12 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address],
             orbsAddrs: [validatorStaked100.orbsAddress],
-            stakes: [stake100],
+            weights: [stake100],
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [],
+            orbsAddrs: [],
+            weights: []
         });
 
         const validatorStaked200 = d.newParticipant();
@@ -79,9 +86,12 @@ describe('elections-high-level-flows', async () => {
             addr: validatorStaked200.address,
             ip: validatorStaked200.ip,
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
-            ips: [validatorStaked100.ip, validatorStaked200.ip]
+
+        r = await validatorStaked200.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked200.address],
+            orbsAddrs: [validatorStaked200.orbsAddress],
+            weights: [stake200]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
 
@@ -89,7 +99,12 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked200.address, validatorStaked100.address],
             orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked100.orbsAddress],
-            stakes: [stake200, stake100]
+            weights: [stake200, stake100]
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [],
+            orbsAddrs: [],
+            weights: []
         });
 
         // A third validator registers high ranked
@@ -103,9 +118,11 @@ describe('elections-high-level-flows', async () => {
             addr: validatorStaked300.address,
             ip: validatorStaked300.ip
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked100.orbsAddress, validatorStaked300.orbsAddress],
-            ips: [validatorStaked200.ip, validatorStaked100.ip, validatorStaked300.ip]
+        r = await validatorStaked300.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked300.address],
+            orbsAddrs: [validatorStaked300.orbsAddress],
+            weights: [stake300]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
 
@@ -113,34 +130,45 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked300.address, validatorStaked200.address],
             orbsAddrs: [validatorStaked300.orbsAddress, validatorStaked200.orbsAddress],
-            stakes: [stake300, stake200]
+            weights: [stake300, stake200]
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked100.address],
+            orbsAddrs: [validatorStaked100.orbsAddress],
+            weights: [stake100]
         });
 
         r = await d.delegateMoreStake(stake300, validatorStaked200);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked200.address, validatorStaked300.address],
             orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked300.orbsAddress],
-            stakes: [stake200.add(stake300), stake300]
+            weights: [stake200.add(stake300), stake300]
         });
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
 
         r = await d.delegateMoreStake(stake500, validatorStaked100);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
             orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
-            stakes: [stake100.add(stake500), stake500]
+            weights: [stake100.add(stake500), stake500]
         });
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked300.address],
+            orbsAddrs: [validatorStaked300.orbsAddress],
+            weights: [stake300]
+        });
 
         // A new validator registers, stakes and enters the topology
 
         const inTopologyValidator = d.newParticipant();
         r = await inTopologyValidator.stake(stake100);
         expect(r).to.have.a.stakedEvent();
-        r = await inTopologyValidator.registerAsValidator();
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress, validatorStaked300.orbsAddress, inTopologyValidator.orbsAddress],
-            ips: [validatorStaked100.ip, validatorStaked200.ip, validatorStaked300.ip, inTopologyValidator.ip],
+        await inTopologyValidator.registerAsValidator();
+        r = await inTopologyValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked300.address, inTopologyValidator.address],
+            orbsAddrs: [validatorStaked300.orbsAddress, inTopologyValidator.orbsAddress],
+            weights: [stake300, stake100]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
 
@@ -148,21 +176,21 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         // The bottom validator in the topology delegates more stake and switches places with the second to last
-        // This does not change the committee nor the topology, so no event should be emitted
         r = await d.delegateMoreStake(201, inTopologyValidator);
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.topologyChangedEvent();
-
-        // make sure the order of validators really did change
-        r = await d.elections.getTopology();
-        expect(r).to.eql([validatorStaked100.address, validatorStaked200.address, inTopologyValidator.address, validatorStaked300.address]);
+        expect(r).to.not.have.a.committeeChangedEvent(); // no change in the committee
+        expect(r).to.have.a.standbysChangedEvent({ // standbys change order
+            addrs: [inTopologyValidator.address, validatorStaked300.address],
+            orbsAddrs: [inTopologyValidator.orbsAddress, validatorStaked300.orbsAddress],
+            weights: [stake100.addn(201), stake300]
+        });
 
         // A new validator registers and stakes but does not enter the topology
         const outOfTopologyValidator = d.newParticipant();
         r = await outOfTopologyValidator.stake(stake100);
         expect(r).to.have.a.stakedEvent();
         r = await outOfTopologyValidator.registerAsValidator();
-        expect(r).to.not.have.a.topologyChangedEvent();
+        r = await outOfTopologyValidator.notifyReadyToSync();
+        expect(r).to.not.have.a.standbysChangedEvent();
         r = await outOfTopologyValidator.notifyReadyForCommittee();
         expect(r).to.not.have.a.committeeChangedEvent();
 
@@ -174,15 +202,25 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validator.address, validatorStaked100.address],
             orbsAddrs: [validator.orbsAddress, validatorStaked100.orbsAddress],
-            stakes: [stake1000, stake100.add(stake500)]
+            weights: [stake1000, stake100.add(stake500)]
         });
-        r = await validator.unstake(501); // now out of committee but still in topology
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validatorStaked200.address, inTopologyValidator.address],
+            orbsAddrs: [validatorStaked200.orbsAddress, inTopologyValidator.orbsAddress],
+            weights: [stake500, stake100.addn(201)]
+        });
+
+        r = await validator.unstake(501); // becomes a standby
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
             orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
-            stakes: [stake100.add(stake500), stake500]
+            weights: [stake100.add(stake500), stake500]
         });
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [validator.address, inTopologyValidator.address],
+            orbsAddrs: [validator.orbsAddress, inTopologyValidator.orbsAddress],
+            weights: [bn(499), stake100.addn(201)]
+        });
     });
 
     it('votes out a committee member', async () => {
@@ -199,7 +237,7 @@ describe('elections-high-level-flows', async () => {
         const committeeSize = stakesPercentage.length;
         const thresholdCrossingIndex = 1;
 
-        const d = await Driver.new({maxCommitteeSize: committeeSize, maxTopologySize: committeeSize + 1});
+        const d = await Driver.new({maxCommitteeSize: committeeSize, maxStandbys: 1});
 
         let r;
         const committee: Participant[] = [];
@@ -207,7 +245,7 @@ describe('elections-high-level-flows', async () => {
             const v = d.newParticipant();
             await v.registerAsValidator();
             await v.notifyReadyForCommittee();
-            r = await v.stake(defaultDriverOptions.minimumStake * p);
+            r = await v.stake(100 * p);
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
@@ -240,14 +278,14 @@ describe('elections-high-level-flows', async () => {
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.filter(v => v != votedOutValidator).map(v => v.address)
             });
-            expect(r).to.not.have.a.topologyChangedEvent(); // should remain in topology
+            expect(r).to.not.have.a.standbysChangedEvent() // should not become a standby
 
             // voted-out validator re-joins by notifying ready-for-committee
             r = await votedOutValidator.notifyReadyForCommittee();
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.map(v => v.address)
             });
-            expect(r).to.not.have.a.topologyChangedEvent();
+            expect(r).to.not.have.a.standbysChangedEvent();
         }
     });
 
@@ -255,7 +293,7 @@ describe('elections-high-level-flows', async () => {
         assert(defaultDriverOptions.voteOutThreshold > 50); // so one out of two equal committee members does not cross the threshold
 
         const committeeSize = 2;
-        const d = await Driver.new({maxCommitteeSize: committeeSize, maxTopologySize: committeeSize + 1});
+        const d = await Driver.new({maxCommitteeSize: committeeSize, maxStandbys: 1});
 
         let r;
         const committee: Participant[] = [];
@@ -263,7 +301,7 @@ describe('elections-high-level-flows', async () => {
             const v = d.newParticipant();
             await v.registerAsValidator();
             await v.notifyReadyForCommittee();
-            r = await v.stake(defaultDriverOptions.minimumStake);
+            r = await v.stake(100);
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
@@ -299,33 +337,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [committee[0].address]
         });
-    });
-
-    it('should remove a validator with insufficient stake from committee', async () => {
-        const MIN_STAKE = new BN(100);
-        const d = await Driver.new({maxCommitteeSize: 10, maxTopologySize: 15, minimumStake: MIN_STAKE});
-
-        const v = d.newParticipant();
-        await v.stake(MIN_STAKE);
-
-        await v.registerAsValidator();
-        let r = await v.notifyReadyForCommittee();
-        expect(r).to.have.a.committeeChangedEvent({
-            addrs: [v.address],
-            stakes: [MIN_STAKE]
-        });
-
-        const unstakeAmount = MIN_STAKE.div(new BN(4));
-        r = await v.unstake(unstakeAmount);
-        expect(r).to.have.a.unstakedEvent({
-            stakeOwner: v.address,
-            amount: unstakeAmount,
-            totalStakedAmount: MIN_STAKE.sub(unstakeAmount)
-        });
-        expect(r).to.have.a.committeeChangedEvent({
-            addrs: [],
-            stakes: []
-        })
     });
 
     it('does not elect without registration', async () => {
@@ -392,7 +403,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('enforces effective stake limit of x-times the own stake', async () => {
-        const d = await Driver.new({maxCommitteeSize: 2, maxTopologySize: 3, minimumStake:100, maxDelegationRatio: 10});
+        const d = await Driver.new({maxCommitteeSize: 2, maxStandbys: 1, maxDelegationRatio: 10});
 
         const v1 = d.newParticipant();
         const v2 = d.newParticipant();
@@ -429,7 +440,7 @@ describe('elections-high-level-flows', async () => {
         });
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v1.address],
-            stakes: [new BN(1000)]
+            weights: [new BN(1000)]
         });
 
         r = await v1.stake(2);
@@ -439,7 +450,7 @@ describe('elections-high-level-flows', async () => {
         });
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v1.address],
-            stakes: [new BN(1012)]
+            weights: [new BN(1012)]
         });
 
         r = await v2.stake(30);
@@ -449,7 +460,7 @@ describe('elections-high-level-flows', async () => {
         });
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v1.address],
-            stakes: [new BN(1020)]
+            weights: [new BN(1020)]
         });
 
         r = await v1.stake(1);
@@ -459,7 +470,7 @@ describe('elections-high-level-flows', async () => {
         });
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v1.address],
-            stakes: [new BN(1030)]
+            weights: [new BN(1030)]
         });
     });
 
@@ -469,13 +480,13 @@ describe('elections-high-level-flows', async () => {
         const v2 = d.newParticipant();
 
         await v1.delegate(v2);
-        await v1.stake(defaultDriverOptions.minimumStake);
+        await v1.stake(100);
         await v1.registerAsValidator();
         await v1.notifyReadyForCommittee();
 
         await v2.registerAsValidator();
         await v2.notifyReadyForCommittee();
-        let r = await v2.stake(defaultDriverOptions.minimumStake);
+        let r = await v2.stake(100);
 
         expect(r).to.have.a.committeeChangedEvent({ // Make sure v1 does not enter the committee
             addrs: [v2.address],
@@ -485,31 +496,32 @@ describe('elections-high-level-flows', async () => {
     it('ensures a non-ready validator cannot join the committee even when owning enough stake', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
+        await v.stake(100);
         await v.registerAsValidator();
-        let r = await v.stake(defaultDriverOptions.minimumStake);
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [v.orbsAddress]
+        let r = await v.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [v.address],
         });
         expect(r).to.not.have.a.committeeChangedEvent();
 
         r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v.orbsAddress]
-        })
+        });
     });
 
     it('publishes a CommiteeChangedEvent when the commitee becomes empty', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
         await v.registerAsValidator();
-        await v.stake(defaultDriverOptions.minimumStake);
+        await v.stake(100);
 
         let r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v.address]
         });
 
-        r = await v.unstake(defaultDriverOptions.minimumStake);
+        r = await v.unstake(100);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: []
         });
@@ -519,73 +531,83 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
         let r;
 
-        const topology: Participant[] = await Promise.all(_.range(defaultDriverOptions.maxTopologySize, 0, -1).map(async i => {
+        const topology: Participant[] = [];
+        for (let i = defaultDriverOptions.maxStandbys + defaultDriverOptions.maxCommitteeSize; i > 0; i--) {
             const v = d.newParticipant();
             await v.registerAsValidator();
-            await v.notifyReadyForCommittee();
-            r = await v.stake(defaultDriverOptions.minimumStake * i);
-            return v;
-        }));
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: topology.map(v => v.orbsAddress)
+            await v.stake(100 * i);
+            r = await v.notifyReadyForCommittee();
+            topology.push(v);
+            if (topology.length == defaultDriverOptions.maxCommitteeSize) {
+                expect(r).to.have.a.committeeChangedEvent({
+                    addrs: topology.map(v => v.address)
+                });
+            }
+        }
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: topology.slice(defaultDriverOptions.maxCommitteeSize).map(v => v.address)
         });
 
         const newValidator = d.newParticipant();
-        await newValidator.registerAsValidator();
-        r = await newValidator.stake(defaultDriverOptions.minimumStake * 2);
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: topology.slice(0, defaultDriverOptions.maxTopologySize - 1).map(v => v.orbsAddress).concat(newValidator.orbsAddress)
+        r = await newValidator.registerAsValidator();
+        r = await newValidator.stake(100 * 2);
+        r = await newValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: topology.slice(defaultDriverOptions.maxCommitteeSize, topology.length - 1).map(v => v.address).concat(newValidator.address)
         });
 
         const newValidator2 = d.newParticipant();
         await newValidator2.registerAsValidator();
-        await newValidator2.notifyReadyForCommittee();
-        r = await newValidator2.stake(defaultDriverOptions.minimumStake);
-        expect(r).to.not.have.a.topologyChangedEvent();
+        await newValidator2.stake(100);
+        r = await newValidator2.notifyReadyForCommittee();
+        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
     });
 
     it("performs a batch refresh of stakes", async () => {
         const d = await Driver.new();
 
+        const baseStake = 100;
+
         const v1 = d.newParticipant();
         await v1.registerAsValidator();
         await v1.notifyReadyForCommittee();
-        await v1.stake(defaultDriverOptions.minimumStake * 2);
+        await v1.stake(baseStake * 2);
 
         const v2 = d.newParticipant();
         await v2.registerAsValidator();
         await v2.notifyReadyForCommittee();
-        await v2.stake(defaultDriverOptions.minimumStake);
+        await v2.stake(baseStake);
 
         const delegator = d.newParticipant();
-        await delegator.stake(defaultDriverOptions.minimumStake * 2);
+        await delegator.stake(baseStake * 2);
         let r = await delegator.delegate(v2);
 
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v2, v1].map(v => v.orbsAddress),
-            stakes: bn([defaultDriverOptions.minimumStake * 3, defaultDriverOptions.minimumStake * 2])
+            weights: bn([baseStake * 3, baseStake * 2])
         });
 
         // Create a new staking contract and stake different amounts
         const newStaking = await Driver.newStakingContract(d.web3, d.elections.address, d.erc20.address);
         await d.contractRegistry.set("staking", newStaking.address);
 
-        await v1.stake(defaultDriverOptions.minimumStake * 5, newStaking);
-        await v2.stake(defaultDriverOptions.minimumStake * 3, newStaking);
-        await delegator.stake(defaultDriverOptions.minimumStake, newStaking);
+        await v1.stake(baseStake * 5, newStaking);
+        await v2.stake(baseStake * 3, newStaking);
+        await delegator.stake(baseStake, newStaking);
 
         // refresh the stakes
         const anonymous = d.newParticipant();
         r = await d.elections.refreshStakes([v1.address, v2.address, delegator.address], {from: anonymous.address});
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v1, v2].map(v => v.orbsAddress),
-            stakes: bn([defaultDriverOptions.minimumStake * 5, defaultDriverOptions.minimumStake * 4])
+            weights: bn([baseStake * 5, baseStake * 4])
         })
 
     });
 
     it("allows voting only to 3 at a time", async () => {
-        const d = await Driver.new({minimumStake: 0});
+        const d = await Driver.new();
 
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
 
@@ -595,7 +617,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it("does not count delegators voting - because they don't have effective governance stake", async () => {
-        const d = await Driver.new({minimumStake: 0});
+        const d = await Driver.new();
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -607,13 +629,14 @@ describe('elections-high-level-flows', async () => {
                 voter: delegator.address,
                 against: [bannedValidator.address]
             });
-            expect(r).to.not.have.a.topologyChangedEvent();
+            expect(r).to.not.have.a.committeeChangedEvent();
+            expect(r).to.not.have.a.standbysChangedEvent();
             expect(r).to.not.have.a.bannedEvent();
         }
     });
 
     it("bans a validator only when accumulated votes stake reaches the threshold", async () => {
-        const d = await Driver.new({minimumStake: 0});
+        const d = await Driver.new();
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -627,7 +650,8 @@ describe('elections-high-level-flows', async () => {
                 voter: p.address,
                 against: [bannedValidator.address]
             });
-            expect(r).to.not.have.a.topologyChangedEvent();
+            expect(r).to.not.have.a.committeeChangedEvent();
+            expect(r).to.not.have.a.standbysChangedEvent();
             expect(r).to.not.have.a.bannedEvent();
             expect(r).to.not.have.a.unbannedEvent();
         }
@@ -642,13 +666,13 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: []
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: []
         });
     });
 
     it("can revoke a vote and unban a validator as a result", async () => {
-        const d = await Driver.new({minimumStake: 0});
+        const d = await Driver.new();
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -664,13 +688,14 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [bannedValidator.orbsAddress]
+        r = await bannedValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [bannedValidator.address]
         });
     });
 
     it("banning does not responds to changes in staking, delegating or voting after locking (one week)", async () => {
-        const d = await Driver.new({minimumStake: 0});
+        const d = await Driver.new();
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -687,29 +712,33 @@ describe('elections-high-level-flows', async () => {
 
         r = await d.elections.setBanningVotes([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is again uncrossed
         expect(r).to.not.have.a.unbannedEvent();
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
 
         // -------------- DELEGATOR UNSTAKES ---------------
 
         const tempStake = await d.staking.getStakeBalanceOf(delegators[thresholdCrossingIndex].address);
         r = await d.staking.unstake(tempStake, {from: delegators[thresholdCrossingIndex].address}); // threshold is un-crossed
         expect(r).to.not.have.a.unbannedEvent();
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
 
         // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES ---------------
 
         const dilutingParticipant = d.newParticipant();
-        const dilutingStake = defaultDriverOptions.minimumStake * defaultDriverOptions.banningThreshold * 200;
+        const dilutingStake = 100 * defaultDriverOptions.banningThreshold * 200;
         await dilutingParticipant.stake(dilutingStake);
         expect(r).to.not.have.a.unbannedEvent(); // because we need a trigger to detect the change
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
 
         // trigger - repeat an existing vote:
         const existingVotes = await d.elections.getBanningVotes(delegatees[0].address);
         r = await d.elections.setBanningVotes(existingVotes, {from: delegatees[0].address});
 
         expect(r).to.not.have.a.unbannedEvent();
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
 
         // -------------- ATTEMPT UNBAN BY DELEGATION - VALIDATOR --------------
         const tipValidator = delegatees[thresholdCrossingIndex];
@@ -717,18 +746,20 @@ describe('elections-high-level-flows', async () => {
         const other = d.newParticipant();
         r = await d.elections.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
 
         // -------------- ATTEMPT UNBAN BY DELEGATION - DELEGATOR --------------
         const tipDelegator = delegators[thresholdCrossingIndex];
 
         r = await d.elections.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
-        expect(r).to.not.have.a.topologyChangedEvent();
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
     });
 
     it("banning responds to changes in staking and delegating before locking", async () => {
-        const d = await Driver.new({minimumStake: 0});
+        const d = await Driver.new();
 
         let r;
         let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
@@ -741,41 +772,45 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [bannedValidator.orbsAddress]
+        r = await bannedValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [bannedValidator.address]
         });
 
         r = await d.staking.restake({from: delegators[thresholdCrossingIndex].address}); // threshold is crossed again
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: []
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: []
         });
 
         // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES, THEN UNSTAKES ---------------
 
         const originalTotalStake = await d.elections.getTotalGovernanceStake();
         const dilutingParticipant = d.newParticipant();
-        const dilutingStake = defaultDriverOptions.minimumStake * defaultDriverOptions.banningThreshold * 200;
+        const dilutingStake = 100 * defaultDriverOptions.banningThreshold * 200;
         r = await dilutingParticipant.stake(dilutingStake);
-        expect(r).to.not.have.a.topologyChangedEvent(); // because we need a trigger to detect the change
+        expect(r).to.not.have.a.standbysChangedEvent(); // because we need a trigger to detect the change
+        expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.not.have.a.bannedEvent();
         expect(r).to.not.have.a.unbannedEvent();
 
         // trigger - repeat an existing vote:
         const existingVotes = await d.elections.getBanningVotes(delegatees[0].address);
         r = await d.elections.setBanningVotes(existingVotes, {from: delegatees[0].address});
-
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [bannedValidator.orbsAddress]
+
+        r = await bannedValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [bannedValidator.address]
         });
 
         r = await d.staking.unstake(dilutingStake, {from: dilutingParticipant.address}); // threshold is again crossed
-        expect(r).to.not.have.a.topologyChangedEvent(); // because we need a trigger to detect the change
+        expect(r).to.not.have.a.committeeChangedEvent(); // because we need a trigger to detect the change
+        expect(r).to.not.have.a.standbysChangedEvent(); // because we need a trigger to detect the change
         expect(r).to.not.have.a.bannedEvent();
         expect(r).to.not.have.a.unbannedEvent();
 
@@ -785,8 +820,8 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: []
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: []
         });
 
         // -------------- UNBAN THEN BAN BY DELEGATION - VALIDATOR --------------
@@ -797,16 +832,18 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [bannedValidator.orbsAddress]
+
+        r = await bannedValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [bannedValidator.address]
         });
 
         r = await d.elections.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: []
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: []
         });
 
         // -------------- UNBAN THEN BAN BY DELEGATION - DELEGATOR --------------
@@ -816,16 +853,18 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: [bannedValidator.orbsAddress]
+
+        r = await bannedValidator.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [bannedValidator.address]
         });
 
         r = await d.elections.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.topologyChangedEvent({
-            orbsAddrs: []
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: []
         });
     });
 
@@ -850,7 +889,7 @@ async function banningScenario_setupDelegatorsAndValidators(driver) {
     for (const p of stakesPercentage) {
         // stake holders will not have own stake, only delegated - to test the use of governance stake
         const delegator = driver.newParticipant();
-        await delegator.stake(defaultDriverOptions.minimumStake * p);
+        await delegator.stake(100 * p);
         const v = driver.newParticipant();
         await delegator.delegate(v);
         delegatees.push(v);
@@ -858,9 +897,10 @@ async function banningScenario_setupDelegatorsAndValidators(driver) {
     }
 
     const bannedValidator = delegatees[delegatees.length - 1];
-    let r = await bannedValidator.registerAsValidator();
-    expect(r).to.have.a.topologyChangedEvent({
-        orbsAddrs: [bannedValidator.orbsAddress]
+    await bannedValidator.registerAsValidator();
+    let r = await bannedValidator.notifyReadyToSync();
+    expect(r).to.have.a.standbysChangedEvent({
+        addrs: [bannedValidator.address]
     });
     return {thresholdCrossingIndex, delegatees, delegators, bannedValidator};
 }
@@ -878,7 +918,7 @@ async function banningScenario_voteUntilThresholdReached(driver, thresholdCrossi
     expect(r).to.have.a.bannedEvent({
         validator: bannedValidator.address
     });
-    expect(r).to.have.a.topologyChangedEvent({
+    expect(r).to.have.a.standbysChangedEvent({
         orbsAddrs: []
     });
 }

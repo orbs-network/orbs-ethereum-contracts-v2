@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./spec_interfaces/IContractRegistry.sol";
-import "./interfaces/IElections.sol";
 import "./spec_interfaces/IBootstrapRewards.sol";
+import "./spec_interfaces/ICommittee.sol";
 
 contract BootstrapRewards is IBootstrapRewards, Ownable {
     using SafeMath for uint256;
@@ -107,8 +107,8 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
 
     function _getCommittee() private view returns (address[] memory) {
         // todo - use committee contracts, for both general and kyc committees
-        IElections e = IElections(contractRegistry.get("elections"));
-        (address[] memory validators, ) =  e.getCommittee();
+        ICommittee e = ICommittee(contractRegistry.get("committee-general"));
+        (address[] memory validators, uint256[] memory weights) = e.getCommittee();
         return validators;
     }
 

@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./IStakingContract.sol";
 import "./spec_interfaces/IContractRegistry.sol";
-import "./interfaces/IElections.sol";
 import "./spec_interfaces/IStakingRewards.sol";
+import "./spec_interfaces/ICommittee.sol";
 
 contract StakingRewards is IStakingRewards, Ownable {
     using SafeMath for uint256;
@@ -131,7 +131,7 @@ contract StakingRewards is IStakingRewards, Ownable {
 
     function _getCommittee() private view returns (address[] memory, uint256[] memory weights) {
         // todo - use committee contracts, for both general and kyc committees
-        IElections e = IElections(contractRegistry.get("elections"));
+        ICommittee e = ICommittee(contractRegistry.get("committee-general"));
         return e.getCommittee();
     }
 

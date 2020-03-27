@@ -82,12 +82,12 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	}
 
 	function getValidatorOrbsAddress(address addr) external view returns (address orbsAddr) {
-		require(isRegistered(addr), "getValidatorData: Validator is not registered");
+		require(isRegistered(addr), "getValidatorOrbsAddress: Validator is not registered");
 		return validators[addr].orbsAddr;
 	}
 
 	function getValidatorIp(address addr) external view returns (bytes4 ip) {
-		require(isRegistered(addr), "getValidatorData: Validator is not registered");
+		require(isRegistered(addr), "getValidatorIp: Validator is not registered");
 		return validators[addr].ip;
 	}
 
@@ -141,23 +141,12 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
         orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
-        bool ipChanged = ip != validators[msg.sender].ip;
-        bool orbsAddrChanged = orbsAddr != validators[msg.sender].orbsAddr;
-
         validators[msg.sender].orbsAddr = orbsAddr; // TODO enforce uniqueness?
 		validators[msg.sender].ip = ip; // TODO enforce uniqueness?
 		validators[msg.sender].name = name;
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
 		validators[msg.sender].lastUpdateTime = now;
-
-		IElections electionsContract = IElections(contractRegistry.get("elections"));
-		if (ipChanged) {
-			electionsContract.validatorIpChanged(msg.sender);
-		}
-		if (orbsAddrChanged) {
-			electionsContract.validatorOrbsAddressChanged(msg.sender);
-		}
 	}
 
 	function electionsContract() private view returns (IElections) {

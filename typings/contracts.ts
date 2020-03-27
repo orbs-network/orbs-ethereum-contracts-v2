@@ -10,6 +10,7 @@ import { StakingContract } from "./staking-contract";
 import { MonthlySubscriptionPlanContract } from "./monthly-subscription-plan-contract";
 import { Contract } from "../eth";
 import {ValidatorsRegistrationContract} from "./validator-registration-contract";
+import {CommitteeContract} from "./committee-contract";
 
 /**
  * Dictionary type
@@ -27,4 +28,5 @@ export type Contracts = {
     StakingContract: StakingContract & Contract;
     MonthlySubscriptionPlan: MonthlySubscriptionPlanContract & Contract;
     ValidatorsRegistration: ValidatorsRegistrationContract & Contract;
+    Committee: CommitteeContract & Contract;
 }
