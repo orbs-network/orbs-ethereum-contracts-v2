@@ -24,23 +24,29 @@ export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
 export type DriverOptions = {
+    minCommitteeSize: number,
     maxCommitteeSize: number;
+    generalCommitteeMinStake: number,
     maxStandbys: number;
     maxDelegationRatio: number;
     voteOutThreshold: number;
     voteOutTimeout: number;
+    readyToSyncTimeout: number;
     banningThreshold: number;
     web3Provider : () => Web3;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
-    maxCommitteeSize : 2,
+    minCommitteeSize: 0,
+    maxCommitteeSize: 2,
+    generalCommitteeMinStake: 0,
     maxStandbys : 2,
     maxDelegationRatio : 10,
     voteOutThreshold : 80,
     voteOutTimeout : 24 * 60 * 60,
+    readyToSyncTimeout: 7*24*60*60,
     banningThreshold : 80,
     web3Provider: defaultWeb3Provider,
-}
+};
 export class Driver {
     private static web3DriversCache = new WeakMap<DriverOptions['web3Provider'], Web3Driver>();
     private participants: Participant[] = [];
@@ -63,7 +69,11 @@ export class Driver {
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
-        const {maxCommitteeSize, maxStandbys, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider} = Object.assign({}, defaultDriverOptions, options);
+        const {
+            minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake, maxStandbys,
+            maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider,
+            readyToSyncTimeout
+        } = Object.assign({}, defaultDriverOptions, options);
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
         const accounts = await web3.eth.getAccounts();
@@ -79,7 +89,7 @@ export class Driver {
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
-        const committeeGeneral = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys]);
+        const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake, maxStandbys, readyToSyncTimeout]);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);

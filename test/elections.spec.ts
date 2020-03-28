@@ -278,7 +278,7 @@ describe('elections-high-level-flows', async () => {
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.filter(v => v != votedOutValidator).map(v => v.address)
             });
-            expect(r).to.not.have.a.standbysChangedEvent() // should not become a standby
+            expect(r).to.not.have.a.standbysChangedEvent(); // should not become a standby
 
             // voted-out validator re-joins by notifying ready-for-committee
             r = await votedOutValidator.notifyReadyForCommittee();

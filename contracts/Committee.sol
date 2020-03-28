@@ -12,16 +12,21 @@ contract Committee is ICommittee, Ownable {
 	struct Member {
 		bool member;
 		bool readyForCommittee;
-		bool readyToSync;
+		uint256 readyToSyncTimestamp;
 		uint256 weight;
 	}
 	mapping (address => Member) members;
 
+	uint minStake;
+	uint minCommitteeSize;
 	uint maxCommitteeSize;
 	uint maxStandbys;
+	uint readyToSyncTimeout;
 
+	// Derived properties
 	uint committeeSize;
 	uint readyForCommitteeCount;
+	uint oldestReadyToSyncStandbyPos;
 
 	modifier onlyElectionsContract() {
 		require(msg.sender == contractRegistry.get("elections"), "caller is not the elections");
@@ -29,11 +34,16 @@ contract Committee is ICommittee, Ownable {
 		_;
 	}
 
-	constructor(uint _maxCommitteeSize, uint _maxStandbys) public {
+	constructor(uint _minCommitteeSize, uint _maxCommitteeSize, uint _minStake, uint _maxStandbys, uint256 _readyToSyncTimeout) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
+		require(_readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
+		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
+		minCommitteeSize = _minCommitteeSize;
 		maxCommitteeSize = _maxCommitteeSize;
+		minStake = _minStake;
 		maxStandbys = _maxStandbys;
+		readyToSyncTimeout = _readyToSyncTimeout;
 	}
 
 	/*
@@ -56,7 +66,7 @@ contract Committee is ICommittee, Ownable {
 		committeeChanged = false;
 		standbysChanged = false;
 		if (isMember(addr)) {
-			members[addr].readyToSync = true;
+			members[addr].readyToSyncTimestamp = now;
 			return _rankValidator(addr);
 		}
 	}
@@ -65,7 +75,7 @@ contract Committee is ICommittee, Ownable {
 		committeeChanged = false;
 		standbysChanged = false;
 		if (isMember(addr)) {
-			members[addr].readyToSync = true;
+			members[addr].readyToSyncTimestamp = now;
 			members[addr].readyForCommittee = true;
 			return _rankValidator(addr);
 		}
@@ -75,7 +85,7 @@ contract Committee is ICommittee, Ownable {
 		committeeChanged = false;
 		standbysChanged = false;
 		if (isMember(addr)) {
-			members[addr].readyToSync = false;
+			members[addr].readyToSyncTimestamp = 0;
 			members[addr].readyForCommittee = false;
 			return _rankValidator(addr);
 		}
@@ -85,7 +95,7 @@ contract Committee is ICommittee, Ownable {
 		members[addr] = Member({
 			member: true,
 			readyForCommittee: false,
-			readyToSync: false,
+			readyToSyncTimestamp: 0,
 			weight: weight
 		});
 		return _rankValidator(addr);
@@ -158,6 +168,8 @@ contract Committee is ICommittee, Ownable {
 
 		// Modification
 		(uint pos, bool inTopology) = _findInTopology(validator);
+
+		// Modification
 		if (inTopology) {
 			return _adjustPositionInTopology(pos);
 		}
@@ -197,16 +209,18 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function _refreshCommitteeSize() private returns (uint, uint) {
+	function _refreshCommitteeSize() private returns (uint prevCommitteeSize, uint newCommitteeSize) {
 		uint newSize = committeeSize;
 		uint prevSize = newSize;
-		while (newSize > 0 && (topology.length < newSize || !isReadyForCommittee(topology[newSize - 1]) || getValidatorWeight(topology[newSize - 1]) == 0)) {
+		while (newSize > 0 && (topology.length < newSize || !isReadyForCommittee(topology[newSize - 1]) || getValidatorWeight(topology[newSize - 1]) == 0 || newSize - 1 >= minCommitteeSize && getValidatorWeight(topology[newSize - 1]) < minStake)) {
 			newSize--;
 		}
-		while (topology.length > newSize && newSize < maxCommitteeSize && isReadyForCommittee(topology[newSize]) && getValidatorWeight(topology[newSize]) > 0) {
+		while (topology.length > newSize && newSize < maxCommitteeSize && isReadyForCommittee(topology[newSize]) && getValidatorWeight(topology[newSize]) > 0 && (newSize < minCommitteeSize || getValidatorWeight(topology[newSize]) >= minStake)) {
 			newSize++;
 		}
 		committeeSize = newSize;
+		_refreshReadyForCommitteeCount();
+		_refreshOldestReadyToSyncStandbyPos();
 		return (prevSize, newSize);
 	}
 
@@ -221,6 +235,19 @@ contract Committee is ICommittee, Ownable {
 		}
 		readyForCommitteeCount = newCount;
 		return (prevCount, newCount);
+	}
+
+	function _refreshOldestReadyToSyncStandbyPos() private {
+		uint256 oldestTimestamp = uint(-1);
+		uint256 oldestPos;
+		for (uint i = committeeSize; i < topology.length; i++) {
+			uint t = members[topology[i]].readyToSyncTimestamp;
+			if (t < oldestTimestamp) {
+				oldestTimestamp = t;
+				oldestPos = i;
+			}
+		}
+		oldestReadyToSyncStandbyPos = oldestPos;
 	}
 
 	function _compareValidators(address v1, address v2) private  returns (int) {
@@ -255,7 +282,6 @@ contract Committee is ICommittee, Ownable {
 
 		newPos = memberPos;
 
-		_refreshReadyForCommitteeCount();
 		(prevCommitteeSize, newCommitteeSize) = _refreshCommitteeSize();
 
 		prevStandbySize = topologySize - prevCommitteeSize;
@@ -299,12 +325,11 @@ contract Committee is ICommittee, Ownable {
 		if (qualified) {
 			return (qualified, entryPos);
 		}
-		(qualified, entryPos) = _isQualifiedAsStandbyByRank(validator);
+		return _isQualifiedAsStandbyByRank(validator);
 	}
 
 	function _isQualifiedAsStandbyByRank(address validator) private view returns (bool qualified, uint entryPos) {
-		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
-		if (!isReadyToSync(validator)) {
+		if (isReadyToSyncStale(validator)) {
 			return (false, 0);
 		}
 
@@ -328,7 +353,11 @@ contract Committee is ICommittee, Ownable {
 
 	function _isQualifiedForCommitteeByRank(address validator) private view returns (bool qualified, uint entryPos) {
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
-		if (!isReadyForCommittee(validator) || !isReadyToSync(validator)) {
+		if (!isReadyForCommittee(validator) || isReadyToSyncStale(validator)) {
+			return (false, 0);
+		}
+
+		if (committeeSize >= minCommitteeSize && getValidatorWeight(validator) < minStake) {
 			return (false, 0);
 		}
 
@@ -340,7 +369,8 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function findTimedOutStandby() private view returns (bool found, uint pos) {
-		return (false, 0); // TODO
+		pos = oldestReadyToSyncStandbyPos;
+		found = pos >= committeeSize && pos < topology.length && isReadyToSyncStale(topology[pos]);
 	}
 
 	function findLowestWeightStandby() private view returns (bool found, uint pos, uint weight) {
@@ -453,8 +483,12 @@ contract Committee is ICommittee, Ownable {
 		return topology;
 	}
 
+	function isReadyToSyncStale(address addr) private view returns (bool) {
+		return members[addr].readyToSyncTimestamp <= now - readyToSyncTimeout;
+	}
+
 	function isReadyToSync(address addr) private view returns (bool) {
-		return members[addr].readyToSync; // todo timeout
+		return members[addr].readyToSyncTimestamp != 0;
 	}
 
 	function isReadyForCommittee(address addr) private view returns (bool) {
