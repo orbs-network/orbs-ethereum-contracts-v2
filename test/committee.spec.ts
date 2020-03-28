@@ -454,14 +454,14 @@ describe('committee', async () => {
         });
     });
 
-    // Min-Stake and Min-Committee
+    // Min-Weight and Min-Committee-Size
 
-    it('joins committee only if has min-stake (min-committee == 0)', async () => {
+    it('joins committee only if has min-weight (min-committee == 0)', async () => {
         const stake = 100;
-        const generalCommitteeMinStake = stake;
+        const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
         const maxCommitteeSize = 2;
-        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake});
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
 
         const standbys: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
@@ -478,12 +478,12 @@ describe('committee', async () => {
         }
     });
 
-    it('joins committee if current is smaller than min-committee even with less than min-stake', async () => {
+    it('joins committee if current is smaller than min-committee even with less than min-weight', async () => {
         const stake = 100;
-        const generalCommitteeMinStake = stake;
+        const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 2;
         const maxCommitteeSize = 3;
-        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake});
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
 
         const standbys: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
@@ -508,13 +508,13 @@ describe('committee', async () => {
         }
     });
 
-    it('evicts a committee member which unstaked below the min-stake threshold', async () => {
+    it('evicts a committee member which unstaked below the min-weight threshold', async () => {
         const stake = 100;
-        const generalCommitteeMinStake = stake;
+        const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
         const maxCommitteeSize = 2;
         const readyToSyncTimeout = 30*24*60*60;
-        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, readyToSyncTimeout, generalCommitteeMinStake});
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, readyToSyncTimeout, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
 
         const v = await d.newParticipant();
         await v.registerAsValidator();
@@ -537,12 +537,12 @@ describe('committee', async () => {
         });
     });
 
-    it('does not evict a committee member which unstaked below the min-stake threshold because of min-committee', async () => {
+    it('does not evict a committee member which unstaked below the min-weight threshold because of min-committee', async () => {
         const stake = 100;
-        const generalCommitteeMinStake = stake;
+        const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 1;
         const maxCommitteeSize = 2;
-        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake});
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
 
         const v = await d.newParticipant();
         await v.registerAsValidator();
@@ -557,6 +557,122 @@ describe('committee', async () => {
         r = await v.unstake(1);
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.have.a.committeeChangedEvent({ // due to weight change
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+    })
+
+    it('joins committee due to min-weight change', async () => {
+        const stake = 100;
+        const generalCommitteeMinimumWeight = stake;
+        const minCommitteeSize = 0;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
+
+        const v = await d.newParticipant();
+        await v.registerAsValidator();
+        await v.stake(stake - 1);
+        let r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+        expect(r).to.not.have.a.committeeChangedEvent();
+
+        await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
+        r = await d.committeeGeneral.setMinimumWeight(stake - 1, minCommitteeSize);
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [],
+            orbsAddrs: [],
+        });
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+    });
+
+    it('leaves committee due to min-weight change', async () => {
+        const stake = 100;
+        const generalCommitteeMinimumWeight = stake;
+        const minCommitteeSize = 0;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
+
+        const v = await d.newParticipant();
+        await v.registerAsValidator();
+        await v.stake(stake);
+        let r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
+        r = await d.committeeGeneral.setMinimumWeight(stake + 1, minCommitteeSize);
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [],
+            orbsAddrs: [],
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+    })
+
+    it('joins committee due to min-committee-size change', async () => {
+        const stake = 100;
+        const generalCommitteeMinimumWeight = stake;
+        const minCommitteeSize = 0;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
+
+        const v = await d.newParticipant();
+        await v.registerAsValidator();
+        await v.stake(stake - 1);
+        let r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+        expect(r).to.not.have.a.committeeChangedEvent();
+
+        await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
+        r = await d.committeeGeneral.setMinimumWeight(stake, minCommitteeSize + 1);
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [],
+            orbsAddrs: [],
+        });
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+    });
+
+    it('leaves committee due to min-committee-size change', async () => {
+        const stake = 100;
+        const generalCommitteeMinimumWeight = stake;
+        const minCommitteeSize = 1;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight: generalCommitteeMinimumWeight});
+
+        const v = await d.newParticipant();
+        await v.registerAsValidator();
+        await v.stake(stake - 1);
+        let r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+        });
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
+        r = await d.committeeGeneral.setMinimumWeight(stake, minCommitteeSize - 1);
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [],
+            orbsAddrs: [],
+        });
+        expect(r).to.have.a.standbysChangedEvent({
             addrs: [v.address],
             orbsAddrs: [v.orbsAddress],
         });

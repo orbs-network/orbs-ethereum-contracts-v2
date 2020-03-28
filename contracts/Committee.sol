@@ -17,7 +17,7 @@ contract Committee is ICommittee, Ownable {
 	}
 	mapping (address => Member) members;
 
-	uint minStake;
+	uint minimumWeight;
 	uint minCommitteeSize;
 	uint maxCommitteeSize;
 	uint maxStandbys;
@@ -34,14 +34,14 @@ contract Committee is ICommittee, Ownable {
 		_;
 	}
 
-	constructor(uint _minCommitteeSize, uint _maxCommitteeSize, uint _minStake, uint _maxStandbys, uint256 _readyToSyncTimeout) public {
+	constructor(uint _minCommitteeSize, uint _maxCommitteeSize, uint _minimumWeight, uint _maxStandbys, uint256 _readyToSyncTimeout) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
 		require(_readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
 		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
 		minCommitteeSize = _minCommitteeSize;
 		maxCommitteeSize = _maxCommitteeSize;
-		minStake = _minStake;
+		minimumWeight = _minimumWeight;
 		maxStandbys = _maxStandbys;
 		readyToSyncTimeout = _readyToSyncTimeout;
 	}
@@ -128,7 +128,16 @@ contract Committee is ICommittee, Ownable {
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal weight, and committee members
     /// Every member with sortingWeight >= mimimumWeight OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 mimimumWeight, uint minimumN) external /* onlyElectionsContract */ { revert("not implemented"); }
+	function setMinimumWeight(uint256 _mimimumWeight, uint _minCommitteeSize) external onlyElectionsContract {
+		minimumWeight = _mimimumWeight;
+		minCommitteeSize = _minCommitteeSize;
+
+		(uint prevCommitteeSize, uint newCommitteeSize) = _refreshCommitteeSize();
+		if (prevCommitteeSize != newCommitteeSize) {
+			_notifyCommitteeChanged();
+			_notifyStandbysChanged();
+		}
+	}
 
 	/*
 	 * Governance
@@ -212,10 +221,10 @@ contract Committee is ICommittee, Ownable {
 	function _refreshCommitteeSize() private returns (uint prevCommitteeSize, uint newCommitteeSize) {
 		uint newSize = committeeSize;
 		uint prevSize = newSize;
-		while (newSize > 0 && (topology.length < newSize || !isReadyForCommittee(topology[newSize - 1]) || getValidatorWeight(topology[newSize - 1]) == 0 || newSize - 1 >= minCommitteeSize && getValidatorWeight(topology[newSize - 1]) < minStake)) {
+		while (newSize > 0 && (topology.length < newSize || !isReadyForCommittee(topology[newSize - 1]) || getValidatorWeight(topology[newSize - 1]) == 0 || newSize - 1 >= minCommitteeSize && getValidatorWeight(topology[newSize - 1]) < minimumWeight)) {
 			newSize--;
 		}
-		while (topology.length > newSize && newSize < maxCommitteeSize && isReadyForCommittee(topology[newSize]) && getValidatorWeight(topology[newSize]) > 0 && (newSize < minCommitteeSize || getValidatorWeight(topology[newSize]) >= minStake)) {
+		while (topology.length > newSize && newSize < maxCommitteeSize && isReadyForCommittee(topology[newSize]) && getValidatorWeight(topology[newSize]) > 0 && (newSize < minCommitteeSize || getValidatorWeight(topology[newSize]) >= minimumWeight)) {
 			newSize++;
 		}
 		committeeSize = newSize;
@@ -357,7 +366,7 @@ contract Committee is ICommittee, Ownable {
 			return (false, 0);
 		}
 
-		if (committeeSize >= minCommitteeSize && getValidatorWeight(validator) < minStake) {
+		if (committeeSize >= minCommitteeSize && getValidatorWeight(validator) < minimumWeight) {
 			return (false, 0);
 		}
 

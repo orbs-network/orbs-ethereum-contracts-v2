@@ -26,7 +26,7 @@ export const DEPLOYMENT_SUBSET_CANARY = "canary";
 export type DriverOptions = {
     minCommitteeSize: number,
     maxCommitteeSize: number;
-    generalCommitteeMinStake: number,
+    generalCommitteeMinimumWeight: number,
     maxStandbys: number;
     maxDelegationRatio: number;
     voteOutThreshold: number;
@@ -38,7 +38,7 @@ export type DriverOptions = {
 export const defaultDriverOptions: Readonly<DriverOptions> = {
     minCommitteeSize: 0,
     maxCommitteeSize: 2,
-    generalCommitteeMinStake: 0,
+    generalCommitteeMinimumWeight: 0,
     maxStandbys : 2,
     maxDelegationRatio : 10,
     voteOutThreshold : 80,
@@ -70,7 +70,7 @@ export class Driver {
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
         const {
-            minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake, maxStandbys,
+            minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys,
             maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider,
             readyToSyncTimeout
         } = Object.assign({}, defaultDriverOptions, options);
@@ -89,7 +89,7 @@ export class Driver {
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
-        const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinStake, maxStandbys, readyToSyncTimeout]);
+        const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout]);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);
