@@ -7,7 +7,9 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/ICommitteeListener.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
+
 
 contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	using SafeMath for uint256;
@@ -20,14 +22,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 	address[] topology;
 
-	struct Validator {
-		bool registered;
-		bytes4 ip;
-		address orbsAddress;
-	}
-
 	// TODO consider using structs instead of multiple mappings
-	mapping (address => Validator) registeredValidators;
 	mapping (address => bool) readyValidators; // TODO if out-of-topology validators cannot be be ready-for-committee, this mapping can be replaced by a single uint
 
 	mapping (address => uint256) ownStakes;
@@ -38,7 +33,6 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	mapping (address => mapping (address => uint256)) voteOuts; // by => to => timestamp
 	mapping (address => address[]) banningVotes; // by => to[]]
 	mapping (address => uint256) accumulatedStakesForBanning; // addr => total stake
-	mapping (address => address) orbsAddressToMainAddress;
 	mapping (address => uint256) bannedValidators; // addr => timestamp
 
 	uint committeeSize; // TODO may be redundant if readyValidators mapping is present
@@ -53,6 +47,12 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 	modifier onlyStakingContract() {
 		require(msg.sender == contractRegistry.get("staking"), "caller is not the staking contract");
+
+		_;
+	}
+
+	modifier onlyValidatorsRegistrationContract() {
+		require(msg.sender == contractRegistry.get("validatorsRegistration"), "caller is not the validator registrations contract");
 
 		_;
 	}
@@ -82,35 +82,31 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return topology;
 	}
 
-	function registerValidator(bytes4 _ip, address _orbsAddress) external  {
-		require(registeredValidators[msg.sender].registered == false, "Validator is already registered");
-		require(_orbsAddress != address(0), "orbs address must be non zero");
-
-		registeredValidators[msg.sender] =  Validator({
-			registered: true,
-			orbsAddress: _orbsAddress,
-			ip: _ip
-		});
-
-		orbsAddressToMainAddress[_orbsAddress] = msg.sender;
-		emit ValidatorRegistered(msg.sender, _ip, _orbsAddress);
-
-		_rankValidator(msg.sender);
+	/// @dev Called by: validator registration contract
+	/// Notifies a new validator was registered
+	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
+		_rankValidator(addr);
 	}
 
-	function setValidatorIp(bytes4 ip) external {
-		require(registeredValidators[msg.sender].registered, "Validator is not registered");
-		registeredValidators[msg.sender].ip = ip;
-		(, bool isInTopology) = _findInTopology(msg.sender);
+	/// @dev Called by: validator registration contract
+	/// Notifies a new validator was unregistered
+	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
+		_rankValidator(addr);
+	}
+
+	/// @dev Called by: validator registration contract
+	/// Notifies a validator's IP has been changed
+	function validatorIpChanged(address addr) external  onlyValidatorsRegistrationContract {
+		(, bool isInTopology) = _findInTopology(addr);
 		if (isInTopology) {
 			_notifyTopologyChanged();
 		}
 	}
 
-	function setValidatorOrbsAddress(address orbsAddress) external {
-		require(registeredValidators[msg.sender].registered, "Validator is not registered");
-		registeredValidators[msg.sender].orbsAddress = orbsAddress;
-		(uint pos, bool isInTopology) = _findInTopology(msg.sender);
+	/// @dev Called by: validator registration contract
+	/// Notifies a validator's Orbs address has been changed
+	function validatorOrbsAddressChanged(address addr) external  onlyValidatorsRegistrationContract {
+		(uint pos, bool isInTopology) = _findInTopology(addr);
 		if (isInTopology) {
 			_notifyTopologyChanged();
 			if (pos < committeeSize) {
@@ -182,8 +178,6 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		require(validators.length <= 3, "up to 3 concurrent votes are supported");
 		for (uint i = 0; i < validators.length; i++) {
 			require(validators[i] != address(0), "all votes must non zero addresses");
-			// TODO - uncomment?
-			//require(registeredValidators[validators[i]].registered, "all votes must be of registered validators");
 		}
         _setBanningVotes(msg.sender, validators);
 		emit BanningVote(msg.sender, validators);
@@ -339,7 +333,9 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
-		address sender = orbsAddressToMainAddress[orbsAddr];
+		address[] memory orbsAddrArr = new address[](1);
+		orbsAddrArr[0] = orbsAddr;
+		address sender = validatorsRegistration().getEthereumAddresses(orbsAddrArr)[0];
 		require(sender != address(0), "unknown orbs address");
 		return sender;
 	}
@@ -356,7 +352,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 	function _satisfiesTopologyPrerequisites(address validator) private view returns (bool) {
 		bool isBanned = bannedValidators[validator] != 0;
-        return registeredValidators[validator].orbsAddress != address(0) &&    // validator must be registered
+        return validatorsRegistration().isRegistered(validator) &&    // validator must be registered
 			   !isBanned &&
 			   _isSelfDelegating(validator) &&
 		       _holdsMinimumStake(validator);
@@ -393,10 +389,10 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		address[] memory topologyOrbsAddresses = new address[](topology.length);
 		bytes4[] memory ips = new bytes4[](topology.length);
 
+		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
 		for (uint i = 0; i < topologyOrbsAddresses.length; i++) {
-			Validator storage val = registeredValidators[topology[i]];
-			topologyOrbsAddresses[i] = val.orbsAddress;
-			ips[i] = val.ip;
+			topologyOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(topology[i]);
+			ips[i] = validatorsRegistrationContract.getValidatorIp(topology[i]);
 		}
 		emit TopologyChanged(topologyOrbsAddresses, ips);
 	}
@@ -405,10 +401,11 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		uint256[] memory committeeStakes = _loadCommitteeStakes();
 		address[] memory committeeOrbsAddresses = new address[](committeeStakes.length);
 		address[] memory committeeAddresses = new address[](committeeStakes.length);
+
+		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
 		for (uint i = 0; i < committeeStakes.length; i++) {
-			Validator storage val = registeredValidators[topology[i]];
-			committeeOrbsAddresses[i] = val.orbsAddress;
 			committeeAddresses[i] = topology[i];
+			committeeOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(committeeAddresses[i]);
 		}
 		emit CommitteeChanged(committeeAddresses, committeeOrbsAddresses, committeeStakes);
 	}
@@ -573,5 +570,9 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		for (uint i = 0; i < weights.length; i++) {
 			validators[i] = topology[i];
 		}
+	}
+
+	function validatorsRegistration() private view returns (IValidatorsRegistration) {
+		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
 	}
 }

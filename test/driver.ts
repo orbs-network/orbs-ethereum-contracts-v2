@@ -12,9 +12,7 @@ import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import { Contracts } from "../typings/contracts";
 import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
-import {BootstrapRewardsContract} from "../typings/bootstrap-rewards-contract";
-import {StakingRewardsContract} from "../typings/staking-rewards-contract";
-import {FeesContract} from "../typings/fees-contract";
+import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -178,6 +176,7 @@ export class Participant { // TODO Consider implementing validator methods in a 
     private externalToken: ERC20Contract;
     private staking: StakingContract;
     private elections: ElectionsContract;
+    private validatorsRegistration: ValidatorsRegistrationContract;
 
     constructor(public name: string,
                 public website: string,
@@ -191,6 +190,7 @@ export class Participant { // TODO Consider implementing validator methods in a 
         this.externalToken = driver.externalToken;
         this.staking = driver.staking;
         this.elections = driver.elections;
+        this.validatorsRegistration = driver.validatorsRegistration;
     }
 
     async stake(amount: number|BN, staking?: StakingContract) {
@@ -221,7 +221,7 @@ export class Participant { // TODO Consider implementing validator methods in a 
     }
 
     async registerAsValidator() {
-        return await this.elections.registerValidator(this.ip, this.orbsAddress, {from: this.address});
+        return await this.validatorsRegistration.registerValidator(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
     }
 
     async notifyReadyForCommittee() {
