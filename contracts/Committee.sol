@@ -109,7 +109,7 @@ contract Committee is ICommittee, Ownable {
 
 	/// @dev Called by: Elections contract
 	/// Returns the weight of
-	function getWeight(uint N) external view returns (uint256 weight) { revert("not implemented"); }
+	function getWeight(uint N) external view returns (uint256 weight) { revert("not implemented"); } // TODO
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
@@ -122,7 +122,7 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	/// @dev Returns the standy (out of commiteee) members and their weights
-	function getStandbys(uint N) external view returns (address[] memory addrs, uint256[] memory weights) { revert("not implemented"); }
+	function getStandbys(uint N) external view returns (address[] memory addrs, uint256[] memory weights) { revert("not implemented"); } // TODO
 
 	/// @dev Called by: Elections contract
 	/// Sets the minimal weight, and committee members
@@ -156,10 +156,10 @@ contract Committee is ICommittee, Ownable {
 
     /// @dev returns the current committee
     /// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips) { revert("not implemented"); }
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips) { revert("not implemented"); } // TODO
 
     /// @dev returns the current standbys (out of commiteee) topology
-	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips) { revert("not implemented"); }
+	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips) { revert("not implemented"); } // TODO
 
 	/*
 	 * Private
