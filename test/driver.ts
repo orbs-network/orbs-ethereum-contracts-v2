@@ -12,16 +12,12 @@ import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import { Contracts } from "../typings/contracts";
 import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
-import {BootstrapRewardsContract} from "../typings/bootstrap-rewards-contract";
-import {StakingRewardsContract} from "../typings/staking-rewards-contract";
-import {FeesContract} from "../typings/fees-contract";
-import {SubscriptionsContract} from "../typings/subscriptions-contract";
-import {ProtocolContract} from "../typings/protocol-contract";
-import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
+export const CONFORMANCE_TYPE_GENERAL = "General";
+export const CONFORMANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
     maxCommitteeSize: number;
@@ -59,6 +55,7 @@ export class Driver {
         public stakingRewards: Contracts["StakingRewards"],
         public fees: Contracts["Fees"],
         public protocol: Contracts["Protocol"],
+        public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
@@ -72,14 +69,15 @@ export class Driver {
         const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]]);
         const externalToken = await web3.deploy( 'TestingERC20', []);
         const erc20 = await web3.deploy( 'TestingERC20', []);
-        const bootstrapRewards: BootstrapRewardsContract = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
-        const stakingRewards: StakingRewardsContract = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
-        const fees: FeesContract = await web3.deploy( 'Fees', [erc20.address]);
+        const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
+        const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
+        const fees = await web3.deploy( 'Fees', [erc20.address]);
         const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
             voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
+        const compliance = await web3.deploy('Compliance', []);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);
@@ -89,6 +87,7 @@ export class Driver {
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
+        await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
 
         await elections.setContractRegistry(contractRegistry.address);
@@ -96,6 +95,7 @@ export class Driver {
         await stakingRewards.setContractRegistry(contractRegistry.address);
         await fees.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
+        await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
@@ -111,6 +111,7 @@ export class Driver {
             stakingRewards,
             fees,
             protocol,
+            compliance,
             validatorsRegistration,
             contractRegistry
         );
