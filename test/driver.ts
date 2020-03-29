@@ -22,6 +22,8 @@ import {ValidatorsRegistrationContract} from "../typings/validator-registration-
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
+export const CONFORMANCE_TYPE_GENERAL = "General";
+export const CONFORMANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
     minCommitteeSize: number,
@@ -63,6 +65,7 @@ export class Driver {
         public stakingRewards: Contracts["StakingRewards"],
         public fees: Contracts["Fees"],
         public protocol: Contracts["Protocol"],
+        public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
         public committeeGeneral: Contracts['Committee'],
         public contractRegistry: Contracts["ContractRegistry"],
@@ -81,14 +84,15 @@ export class Driver {
         const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]]);
         const externalToken = await web3.deploy( 'TestingERC20', []);
         const erc20 = await web3.deploy( 'TestingERC20', []);
-        const bootstrapRewards: BootstrapRewardsContract = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
-        const stakingRewards: StakingRewardsContract = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
-        const fees: FeesContract = await web3.deploy( 'Fees', [erc20.address]);
-        const elections = await web3.deploy( "Elections", [maxDelegationRatio,
+        const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
+        const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
+        const fees = await web3.deploy( 'Fees', [erc20.address]);
+        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
             voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
+        const compliance = await web3.deploy('Compliance', []);
         const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout]);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
@@ -99,6 +103,7 @@ export class Driver {
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
+        await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
         await contractRegistry.set("committee-general", committeeGeneral.address);
 
@@ -107,6 +112,7 @@ export class Driver {
         await stakingRewards.setContractRegistry(contractRegistry.address);
         await fees.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
+        await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
         await committeeGeneral.setContractRegistry(contractRegistry.address);
 
@@ -123,6 +129,7 @@ export class Driver {
             stakingRewards,
             fees,
             protocol,
+            compliance,
             validatorsRegistration,
             committeeGeneral,
             contractRegistry

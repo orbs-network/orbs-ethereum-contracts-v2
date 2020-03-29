@@ -7,6 +7,7 @@ import {FeesAddedToBucketEvent} from "../typings/fees-contract";
 const elections = compiledContracts["Elections"];
 const committee = compiledContracts["Committee"];
 const validatorsRegistration = compiledContracts["ValidatorsRegistration"];
+const compliance = compiledContracts["Compliance"];
 const staking = compiledContracts["StakingContract"];
 const subscriptions = compiledContracts["Subscriptions"];
 const stakingRewards = compiledContracts["StakingRewards"];
@@ -55,3 +56,4 @@ export const protocolChangedEvents = (txResult) => parseLogs(txResult, protocol,
 export const banningVoteEvents = (txResult) => parseLogs(txResult, elections, "BanningVote(address,address[])");
 export const electionsBanned = (txResult) => parseLogs(txResult, elections, "Banned(address)");
 export const electionsUnbanned = (txResult) => parseLogs(txResult, elections, "Unbanned(address)");
+export const validatorConformanceUpdateEvents = (txResult) => parseLogs(txResult, compliance, "ValidatorConformanceUpdate(address,string)");
