@@ -87,8 +87,7 @@ export class Driver {
         const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
         const fees = await web3.deploy( 'Fees', [erc20.address]);
-        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
-            voteOutThreshold, voteOutTimeout, banningThreshold]);
+        const elections = await web3.deploy( "Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
