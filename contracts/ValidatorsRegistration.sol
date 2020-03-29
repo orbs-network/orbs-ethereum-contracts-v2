@@ -40,9 +40,8 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		validators[msg.sender].registrationTime = now;
 		_updateValidator(ip, orbsAddr, name, website, contact);
 
-		electionsContract().validatorRegistered(msg.sender);
-
 		emit ValidatorRegistered(msg.sender, ip, orbsAddr, name, website, contact);
+		electionsContract().validatorRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
