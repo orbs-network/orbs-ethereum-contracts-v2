@@ -22,6 +22,7 @@ const assert = chai.assert;
 import {bn, evmIncreaseTime} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
 
+const baseStake = 100;
 
 describe('elections-high-level-flows', async () => {
 
@@ -245,7 +246,7 @@ describe('elections-high-level-flows', async () => {
             const v = d.newParticipant();
             await v.registerAsValidator();
             await v.notifyReadyForCommittee();
-            r = await v.stake(100 * p);
+            r = await v.stake(baseStake * p);
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
@@ -480,13 +481,13 @@ describe('elections-high-level-flows', async () => {
         const v2 = d.newParticipant();
 
         await v1.delegate(v2);
-        await v1.stake(100);
+        await v1.stake(baseStake);
         await v1.registerAsValidator();
         await v1.notifyReadyForCommittee();
 
         await v2.registerAsValidator();
         await v2.notifyReadyForCommittee();
-        let r = await v2.stake(100);
+        let r = await v2.stake(baseStake);
 
         expect(r).to.have.a.committeeChangedEvent({ // Make sure v1 does not enter the committee
             addrs: [v2.address],
@@ -496,7 +497,7 @@ describe('elections-high-level-flows', async () => {
     it('ensures a non-ready validator cannot join the committee even when owning enough stake', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
-        await v.stake(100);
+        await v.stake(baseStake);
         await v.registerAsValidator();
         let r = await v.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
@@ -514,14 +515,14 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
         await v.registerAsValidator();
-        await v.stake(100);
+        await v.stake(baseStake);
 
         let r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [v.address]
         });
 
-        r = await v.unstake(100);
+        r = await v.unstake(baseStake);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: []
         });
@@ -535,7 +536,7 @@ describe('elections-high-level-flows', async () => {
         for (let i = defaultDriverOptions.maxStandbys + defaultDriverOptions.maxCommitteeSize; i > 0; i--) {
             const v = d.newParticipant();
             await v.registerAsValidator();
-            await v.stake(100 * i);
+            await v.stake(baseStake * i);
             r = await v.notifyReadyForCommittee();
             topology.push(v);
             if (topology.length == defaultDriverOptions.maxCommitteeSize) {
@@ -550,7 +551,7 @@ describe('elections-high-level-flows', async () => {
 
         const newValidator = d.newParticipant();
         r = await newValidator.registerAsValidator();
-        r = await newValidator.stake(100 * 2);
+        r = await newValidator.stake(baseStake * 2);
         r = await newValidator.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: topology.slice(defaultDriverOptions.maxCommitteeSize, topology.length - 1).map(v => v.address).concat(newValidator.address)
@@ -558,7 +559,7 @@ describe('elections-high-level-flows', async () => {
 
         const newValidator2 = d.newParticipant();
         await newValidator2.registerAsValidator();
-        await newValidator2.stake(100);
+        await newValidator2.stake(baseStake);
         r = await newValidator2.notifyReadyForCommittee();
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -566,8 +567,6 @@ describe('elections-high-level-flows', async () => {
 
     it("performs a batch refresh of stakes", async () => {
         const d = await Driver.new();
-
-        const baseStake = 100;
 
         const v1 = d.newParticipant();
         await v1.registerAsValidator();
@@ -602,7 +601,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v1, v2].map(v => v.orbsAddress),
             weights: bn([baseStake * 5, baseStake * 4])
-        })
+        });
 
     });
 
@@ -789,7 +788,7 @@ describe('elections-high-level-flows', async () => {
 
         const originalTotalStake = await d.elections.getTotalGovernanceStake();
         const dilutingParticipant = d.newParticipant();
-        const dilutingStake = 100 * defaultDriverOptions.banningThreshold * 200;
+        const dilutingStake = baseStake * defaultDriverOptions.banningThreshold * 200;
         r = await dilutingParticipant.stake(dilutingStake);
         expect(r).to.not.have.a.standbysChangedEvent(); // because we need a trigger to detect the change
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -889,7 +888,7 @@ async function banningScenario_setupDelegatorsAndValidators(driver) {
     for (const p of stakesPercentage) {
         // stake holders will not have own stake, only delegated - to test the use of governance stake
         const delegator = driver.newParticipant();
-        await delegator.stake(100 * p);
+        await delegator.stake(baseStake * p);
         const v = driver.newParticipant();
         await delegator.delegate(v);
         delegatees.push(v);

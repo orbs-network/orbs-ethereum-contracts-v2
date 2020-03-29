@@ -70,13 +70,11 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 	function notifyReadyForCommittee() external {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		generalCommittee().addMember(sender, getCommitteeEffectiveStake(sender)); // TODO remove
 		generalCommittee().memberReadyForCommittee(sender);
 	}
 
 	function notifyReadyToSync() external {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		generalCommittee().addMember(sender, getCommitteeEffectiveStake(sender)); // TODO remove
 		generalCommittee().memberReadyToSync(sender);
 	}
 

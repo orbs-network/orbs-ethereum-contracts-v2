@@ -17,5 +17,6 @@ export interface StandbysChangedEvent {
 export interface CommitteeContract extends Contract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     setMinimumWeight(minimumWeight: number, minCommitteeSize: number, params?: TransactionConfig): Promise<TransactionReceipt>;
+    memberNotReadyToSync(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getTopology(): Promise<TransactionReceipt>;
 }

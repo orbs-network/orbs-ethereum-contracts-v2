@@ -54,51 +54,50 @@ contract Committee is ICommittee, Ownable {
 	/// Notifies a weight change for sorting to a relevant committee member.
     /// weight = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
 	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = false;
-		standbysChanged = false;
 		if (isMember(addr)) {
 			members[addr].weight = weight;
 			return _rankValidator(addr);
 		}
+		return (false, false);
 	}
 
 	function memberReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = false;
-		standbysChanged = false;
 		if (isMember(addr)) {
 			members[addr].readyToSyncTimestamp = now;
 			return _rankValidator(addr);
 		}
+		return (false, false);
 	}
 
 	function memberReadyForCommittee(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = false;
-		standbysChanged = false;
 		if (isMember(addr)) {
 			members[addr].readyToSyncTimestamp = now;
 			members[addr].readyForCommittee = true;
 			return _rankValidator(addr);
 		}
+		return (false, false);
 	}
 
 	function memberNotReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = false;
-		standbysChanged = false;
 		if (isMember(addr)) {
 			members[addr].readyToSyncTimestamp = 0;
 			members[addr].readyForCommittee = false;
 			return _rankValidator(addr);
 		}
+		return (false, false);
 	}
 
 	function addMember(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		members[addr] = Member({
-			member: true,
-			readyForCommittee: false,
-			readyToSyncTimestamp: 0,
-			weight: weight
-		});
-		return _rankValidator(addr);
+		if (!isMember(addr)) {
+			members[addr] = Member({
+				member: true,
+				readyForCommittee: false,
+				readyToSyncTimestamp: 0,
+				weight: weight
+				});
+			return _rankValidator(addr);
+		}
+		return (false, false);
 	}
 
 	/// @dev Called by: Elections contract
@@ -126,13 +125,13 @@ contract Committee is ICommittee, Ownable {
 	function getStandbys(uint N) external view returns (address[] memory addrs, uint256[] memory weights) { revert("not implemented"); }
 
 	/// @dev Called by: Elections contract
-	/// Sets the mimimal weight, and committee members
+	/// Sets the minimal weight, and committee members
     /// Every member with sortingWeight >= mimimumWeight OR in top minimumN is included in the committee
 	function setMinimumWeight(uint256 _mimimumWeight, uint _minCommitteeSize) external onlyElectionsContract {
 		minimumWeight = _mimimumWeight;
 		minCommitteeSize = _minCommitteeSize;
 
-		(uint prevCommitteeSize, uint newCommitteeSize) = _refreshCommitteeSize();
+		(uint prevCommitteeSize, uint newCommitteeSize) = _onTopologyModification();
 		if (prevCommitteeSize != newCommitteeSize) {
 			_notifyCommitteeChanged();
 			_notifyStandbysChanged();
@@ -165,9 +164,6 @@ contract Committee is ICommittee, Ownable {
 	/*
 	 * Private
 	 */
-
-	event Debug(string s);
-	event Debug2(int256 n);
 
 	function _rankValidator(address validator) private returns (bool committeeChanged, bool standbysChanged) {
 		// Removal
@@ -218,7 +214,7 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function _refreshCommitteeSize() private returns (uint prevCommitteeSize, uint newCommitteeSize) {
+	function _onTopologyModification() private returns (uint prevCommitteeSize, uint newCommitteeSize) {
 		uint newSize = committeeSize;
 		uint prevSize = newSize;
 		while (newSize > 0 && (topology.length < newSize || !isReadyForCommittee(topology[newSize - 1]) || getValidatorWeight(topology[newSize - 1]) == 0 || newSize - 1 >= minCommitteeSize && getValidatorWeight(topology[newSize - 1]) < minimumWeight)) {
@@ -291,7 +287,7 @@ contract Committee is ICommittee, Ownable {
 
 		newPos = memberPos;
 
-		(prevCommitteeSize, newCommitteeSize) = _refreshCommitteeSize();
+		(prevCommitteeSize, newCommitteeSize) = _onTopologyModification();
 
 		prevStandbySize = topologySize - prevCommitteeSize;
 		if (prevStandbySize > maxStandbys){
@@ -300,10 +296,16 @@ contract Committee is ICommittee, Ownable {
 
 		newStandbySize = topologySize - newCommitteeSize;
 		if (newStandbySize > maxStandbys){
+			// need to evict exactly one standby - todo assert?
+			(bool found, uint timedOutStandbyPos) = findTimedOutStandby();
+			if (found) {
+				_evict(timedOutStandbyPos); // evict timed-out
+			} else {
+				_evict(topology.length - 1); // evict lowest weight
+			}
+			_onTopologyModification();
 			newStandbySize = maxStandbys;
 		}
-
-		topology.length = newCommitteeSize + newStandbySize;
 	}
 
 	function _adjustPositionInTopology(uint pos) private returns (bool committeeChanged, bool standbysChanged) {
@@ -417,17 +419,11 @@ contract Committee is ICommittee, Ownable {
 		committeeChanged = false;
 		(uint pos, bool inTopology) = _findInTopology(addr);
 		if (inTopology) {
-			assert(topology.length > 0);
-			assert(pos < topology.length);
+			_evict(pos);
 
-			for (uint p = pos; p < topology.length - 1; p++) {
-				topology[p] = topology[p + 1];
-			}
+			(uint prevCommitteeSize, uint currentCommitteeSize) = _onTopologyModification();
 
-			topology.length = topology.length - 1;
-			(uint prevSize, uint currentSize) = _refreshCommitteeSize();
-
-			if (prevSize != currentSize || pos < currentSize) { // was in committee
+			if (prevCommitteeSize != currentCommitteeSize || pos < currentCommitteeSize) { // was in committee
 				committeeChanged = true;
 				_notifyCommitteeChanged();
 			} else { // was a standby
@@ -435,6 +431,17 @@ contract Committee is ICommittee, Ownable {
 				_notifyStandbysChanged();
 			}
 		}
+	}
+
+	function _evict(uint pos) private {
+		assert(topology.length > 0);
+		assert(pos < topology.length);
+
+		for (uint p = pos; p < topology.length - 1; p++) {
+			topology[p] = topology[p + 1];
+		}
+
+		topology.length = topology.length - 1;
 	}
 
 	function _notifyStandbysChanged() private {
