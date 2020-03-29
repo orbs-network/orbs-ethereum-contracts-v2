@@ -12,11 +12,6 @@ import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import { Contracts } from "../typings/contracts";
 import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
-import {BootstrapRewardsContract} from "../typings/bootstrap-rewards-contract";
-import {StakingRewardsContract} from "../typings/staking-rewards-contract";
-import {FeesContract} from "../typings/fees-contract";
-import {SubscriptionsContract} from "../typings/subscriptions-contract";
-import {ProtocolContract} from "../typings/protocol-contract";
 import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
