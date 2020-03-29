@@ -201,15 +201,13 @@ contract Committee is ICommittee, Ownable {
 		bool joinedStandbys = !joinedCommittee && newPos < topology.length;
 		bool previousCommitteeFull = prevCommitteeSize == maxCommitteeSize;
 
-		committeeChanged = false;
-		if (joinedCommittee) {
-			committeeChanged = true;
+		committeeChanged = joinedCommittee;
+		if (committeeChanged) {
 			_notifyCommitteeChanged();
 		}
 
-		standbysChanged = false;
-		if (joinedStandbys || joinedCommittee && previousCommitteeFull) {
-			standbysChanged = true;
+		standbysChanged = joinedStandbys || joinedCommittee && previousCommitteeFull;
+		if (standbysChanged) {
 			_notifyStandbysChanged();
 		}
 	}
@@ -297,11 +295,12 @@ contract Committee is ICommittee, Ownable {
 		newStandbySize = topologySize - newCommitteeSize;
 		if (newStandbySize > maxStandbys){
 			// need to evict exactly one standby - todo assert?
-			(bool found, uint timedOutStandbyPos) = findTimedOutStandby();
+			(bool found, uint pos) = findTimedOutStandby();
 			if (found) {
-				_evict(timedOutStandbyPos); // evict timed-out
+				_evict(pos); // evict timed-out
 			} else {
-				_evict(topology.length - 1); // evict lowest weight
+				(bool found, uint pos, uint256 weight) = findLowestWeightStandby();
+				_evict(pos); // evict lowest weight
 			}
 			_onTopologyModification();
 			newStandbySize = maxStandbys;
@@ -317,15 +316,13 @@ contract Committee is ICommittee, Ownable {
 		bool inCommitteeAfter = newPos < newCommitteeSize;
 		bool inStandbyAfter = !inCommitteeAfter;
 
-		committeeChanged = false;
-		if (inCommitteeBefore || inCommitteeAfter) {
-			committeeChanged = true;
+		committeeChanged = inCommitteeBefore || inCommitteeAfter;
+		if (committeeChanged) {
 			_notifyCommitteeChanged();
 		}
 
-		standbysChanged = false;
-		if (inStandbyBefore || inStandbyAfter) {
-			standbysChanged = true;
+		standbysChanged = inStandbyBefore || inStandbyAfter;
+		if (standbysChanged) {
 			_notifyStandbysChanged();
 		}
 	}
@@ -334,7 +331,7 @@ contract Committee is ICommittee, Ownable {
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
 		(qualified, entryPos) = _isQualifiedForCommitteeByRank(validator);
 		if (qualified) {
-			return (qualified, entryPos);
+			return (true, entryPos);
 		}
 		return _isQualifiedAsStandbyByRank(validator);
 	}
