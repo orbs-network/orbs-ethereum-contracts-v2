@@ -48,7 +48,7 @@ interface ICommittee {
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights);
 
 	/// @dev Returns the standy (out of commiteee) members and their weights
-	function getStandbys(uint N) external view returns (address[] memory addrs, uint256[] memory weights);
+	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights);
 
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal weight, and committee members
@@ -68,9 +68,9 @@ interface ICommittee {
 
     /// @dev returns the current committee
     /// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips);
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips);
 
     /// @dev returns the current standbys (out of commiteee) topology
-	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips);
+	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips);
 
 }

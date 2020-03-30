@@ -726,7 +726,7 @@ describe('committee', async () => {
             addrs: [v.address],
             orbsAddrs: [v.orbsAddress],
         });
-    })
+    });
 
     it('joins committee due to min-weight change', async () => {
         const stake = 100;
@@ -888,6 +888,81 @@ describe('committee', async () => {
         r = await d.committeeGeneral.setMinimumWeight(0, minCommitteeSize + 1);
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
+    });
+
+    it('returns committee and standbys using getters', async () => {
+        const maxStandbys = 2;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({maxStandbys, maxCommitteeSize});
+
+        const stake = 100;
+
+        const committee: Participant[] = [];
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const v = await d.newParticipant();
+            committee.push(v);
+
+            await v.registerAsValidator();
+            await v.stake(stake*(maxCommitteeSize - i));
+            let r = await v.notifyReadyForCommittee();
+            expect(r).to.have.a.committeeChangedEvent({
+                addrs: committee.map(s => s.address),
+                orbsAddrs: committee.map(s => s.orbsAddress),
+            });
+            expect(r).to.not.have.a.standbysChangedEvent();
+        }
+
+        const standbys: Participant[] = [];
+        for (let i = 0; i < maxStandbys; i++) {
+            const v = await d.newParticipant();
+            standbys.push(v);
+
+            await v.registerAsValidator();
+            await v.stake(stake*(maxStandbys - i));
+            let r = await v.notifyReadyToSync();
+            expect(r).to.have.a.standbysChangedEvent({
+                addrs: standbys.map(s => s.address),
+                orbsAddrs: standbys.map(s => s.orbsAddress),
+            });
+            expect(r).to.not.have.a.committeeChangedEvent();
+        }
+
+        let r: any = await d.committeeGeneral.getCommittee();
+        expect([r[0], r[1]]).to.deep.equal(
+            [
+                committee.map(v => v.address),
+                committee.map((v, i) => (stake * (maxCommitteeSize - i)).toString()),
+            ]
+        );
+
+        r = await d.committeeGeneral.getCommitteeInfo();
+        expect([r[0], r[1], r[2], r[3]]).to.deep.equal(
+            [
+                committee.map(v => v.address),
+                committee.map((v, i) => (stake * (maxCommitteeSize - i)).toString()),
+                committee.map(v => v.orbsAddress),
+                committee.map(v => v.ip),
+            ]
+        );
+
+        r = await d.committeeGeneral.getStandbys();
+        expect([r[0], r[1]]).to.deep.equal(
+            [
+                standbys.map(v => v.address),
+                standbys.map((v, i) => (stake * (maxStandbys - i)).toString()),
+            ]
+        );
+
+        r = await d.committeeGeneral.getStandbysInfo();
+        expect([r[0], r[1], r[2], r[3]]).to.deep.equal(
+            [
+                standbys.map(v => v.address),
+                standbys.map((v, i) => (stake * (maxStandbys - i)).toString()),
+                standbys.map(v => v.orbsAddress),
+                standbys.map(v => v.ip),
+            ]
+        );
+
     });
 
 });

@@ -114,15 +114,15 @@ contract Committee is ICommittee, Ownable {
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights) {
-		weights = _loadCommitteeWeights();
-		addrs = new address[](weights.length);
-		for (uint i = 0; i < weights.length; i++) {
-			addrs[i] = topology[i];
-		}
+		address[] memory committee = _loadCommittee();
+		return (committee, _loadWeights(committee));
 	}
 
-	/// @dev Returns the standy (out of commiteee) members and their weights
-	function getStandbys(uint N) external view returns (address[] memory addrs, uint256[] memory weights) { revert("not implemented"); } // TODO
+	/// @dev Returns the standy (out of committee) members and their weights
+	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights) {
+		address[] memory standbys = _loadStandbys();
+		return (standbys, _loadWeights(standbys));
+	}
 
 	/// @dev Called by: Elections contract
 	/// Sets the minimal weight, and committee members
@@ -156,10 +156,16 @@ contract Committee is ICommittee, Ownable {
 
     /// @dev returns the current committee
     /// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips) { revert("not implemented"); } // TODO
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) {
+		address[] memory committee = _loadCommittee();
+		return (committee, _loadWeights(committee), _loadOrbsAddresses(committee), _loadIps(committee));
+	}
 
     /// @dev returns the current standbys (out of commiteee) topology
-	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, uint32[] memory ips) { revert("not implemented"); } // TODO
+	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) {
+		address[] memory standbys = _loadStandbys();
+		return (standbys, _loadWeights(standbys), _loadOrbsAddresses(standbys), _loadIps(standbys));
+	}
 
 	/*
 	 * Private
@@ -308,6 +314,7 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function _adjustPositionInTopology(uint pos) private returns (bool committeeChanged, bool standbysChanged) {
+		// TODO if a validator leaves committee it may be replaced by a timed-out, ready-for-committee standby
 		(uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint prevStandbySize, uint newStandbySize) = _repositionTopologyMember(pos);
 
 		bool inCommitteeBefore = pos < prevCommitteeSize;
@@ -442,46 +449,58 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function _notifyStandbysChanged() private {
-		uint256[] memory standbysWeights = _loadStandbysWeights();
-		address[] memory standbysOrbsAddresses = new address[](standbysWeights.length);
-		address[] memory standbys = new address[](standbysWeights.length);
-
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
-		uint _committeeSize = committeeSize;
-		for (uint i = 0; i < standbysWeights.length; i++) {
-			standbys[i] = topology[_committeeSize + i];
-			standbysOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(standbys[i]);
-		}
-		emit StandbysChanged(standbys, standbysOrbsAddresses, standbysWeights);
+		address[] memory standbys = _loadStandbys();
+		emit StandbysChanged(standbys, _loadOrbsAddresses(standbys), _loadWeights(standbys));
 	}
 
 	function _notifyCommitteeChanged() private {
-		uint256[] memory committeeWeights = _loadCommitteeWeights();
-		address[] memory committeeOrbsAddresses = new address[](committeeWeights.length);
-		address[] memory committee = new address[](committeeWeights.length);
-
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
-		for (uint i = 0; i < committeeWeights.length; i++) {
-			committee[i] = topology[i];
-			committeeOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(committee[i]);
-		}
-		emit CommitteeChanged(committee, committeeOrbsAddresses, committeeWeights);
+		address[] memory committee = _loadCommittee();
+		emit CommitteeChanged(committee, _loadOrbsAddresses(committee), _loadWeights(committee));
 	}
 
-	function _loadWeights(uint offset, uint limit) private view returns (uint256[] memory) {
-		uint256[] memory weights = new uint256[](limit);
-		for (uint i = 0; i < limit; i++) {
-			weights[i] = getValidatorWeight(topology[offset + i]);
+	function _loadWeights(address[] memory addrs) private view returns (uint256[] memory) {
+		uint256[] memory weights = new uint256[](addrs.length);
+		for (uint i = 0; i < addrs.length; i++) {
+			weights[i] = getValidatorWeight(addrs[i]);
 		}
 		return weights;
 	}
 
-	function _loadStandbysWeights() private view returns (uint256[] memory) {
-		return _loadWeights(committeeSize, topology.length - committeeSize);
+	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
+		address[] memory orbsAddresses = new address[](addrs.length);
+		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
+		for (uint i = 0; i < addrs.length; i++) {
+			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
+		}
+		return orbsAddresses;
 	}
 
-	function _loadCommitteeWeights() private view returns (uint256[] memory) {
-		return _loadWeights(0, committeeSize);
+	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
+		bytes4[] memory ips = new bytes4[](addrs.length);
+		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
+		for (uint i = 0; i < addrs.length; i++) {
+			ips[i] = validatorsRegistrationContract.getValidatorIp(addrs[i]);
+		}
+		return ips;
+	}
+
+	function _loadStandbys() private view returns (address[] memory) {
+		uint _committeeSize = committeeSize;
+		uint standbysCount = topology.length - _committeeSize;
+		address[] memory standbys = new address[](standbysCount);
+		for (uint i = 0; i < standbysCount; i++) {
+			standbys[i] = topology[_committeeSize + i];
+		}
+		return standbys;
+	}
+
+	function _loadCommittee() private view returns (address[] memory) {
+		uint _committeeSize = committeeSize;
+		address[] memory committee = new address[](_committeeSize);
+		for (uint i = 0; i < _committeeSize; i++) {
+			committee[i] = topology[i];
+		}
+		return committee;
 	}
 
 	function getValidatorWeight(address addr) private view returns (uint256 weight) {
