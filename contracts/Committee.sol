@@ -108,8 +108,13 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	/// @dev Called by: Elections contract
-	/// Returns the weight of
-	function getWeight(uint N) external view returns (uint256 weight) { revert("not implemented"); } // TODO
+	/// Returns the weight of the committee member with the lowest weight
+	function getMinCommitteeWeight() external view returns (uint256 weight) {
+		if (committeeSize == 0) {
+			return 0;
+		}
+		return getValidatorWeight(topology[committeeSize - 1]);
+	}
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights

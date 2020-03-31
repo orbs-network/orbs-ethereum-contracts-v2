@@ -18,6 +18,7 @@ export interface CommitteeContract extends Contract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     setMinimumWeight(minimumWeight: number, minCommitteeSize: number, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberNotReadyToSync(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+    getMinCommitteeWeight(params?: TransactionConfig): Promise<number|BN>;
     getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
     getStandbys(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
     getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;

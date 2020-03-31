@@ -40,8 +40,8 @@ interface ICommittee {
 	function addMember(address addr, uint256 weight) external returns (bool committeeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
-	/// Returns the weight of
-	function getWeight(uint N) external view returns (uint256 weight);
+	/// Returns the weight of the committee member with the lowest weight
+	function getMinCommitteeWeight() external view returns (uint256 weight);
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights

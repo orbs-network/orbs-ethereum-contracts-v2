@@ -965,4 +965,46 @@ describe('committee', async () => {
 
     });
 
+    it('returns weight of committee member with lowest stake', async () => {
+        const maxStandbys = 2;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({maxStandbys, maxCommitteeSize});
+
+        const stake = 100;
+
+        const committee: Participant[] = [];
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const v = await d.newParticipant();
+            committee.push(v);
+
+            await v.registerAsValidator();
+            await v.stake(stake*(maxStandbys + maxCommitteeSize - i));
+            let r = await v.notifyReadyForCommittee();
+            expect(r).to.have.a.committeeChangedEvent({
+                addrs: committee.map(s => s.address),
+                orbsAddrs: committee.map(s => s.orbsAddress),
+            });
+            expect(r).to.not.have.a.standbysChangedEvent();
+        }
+
+        const standbys: Participant[] = [];
+        for (let i = 0; i < maxStandbys; i++) {
+            const v = await d.newParticipant();
+            standbys.push(v);
+
+            await v.registerAsValidator();
+            await v.stake(stake*(maxStandbys - i));
+            let r = await v.notifyReadyToSync();
+            expect(r).to.have.a.standbysChangedEvent({
+                addrs: standbys.map(s => s.address),
+                orbsAddrs: standbys.map(s => s.orbsAddress),
+            });
+            expect(r).to.not.have.a.committeeChangedEvent();
+        }
+
+        expect(await d.committeeGeneral.getMinCommitteeWeight()).to.equal((stake*(maxStandbys + 1)).toString());
+
+
+    });
+
 });
