@@ -10,7 +10,7 @@ import {
     BANNING_LOCK_TIMEOUT,
     Driver,
     expectRejected,
-    Participant
+    Participant, ZERO_ADDR
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
@@ -160,7 +160,7 @@ describe('committee', async () => {
 
         const v = await d.newParticipant();
         await v.registerAsValidator();
-        await v.stake(stake);
+        await v.stake(stake - 1);
         let r = await v.notifyReadyForCommittee();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.have.a.standbysChangedEvent({
@@ -227,19 +227,19 @@ describe('committee', async () => {
             committee.push(v);
 
             await v.registerAsValidator();
-            await v.stake(stake);
+            await v.stake(stake + i);
             let r = await v.notifyReadyForCommittee();
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
                 orbsAddrs: committee.map(s => s.orbsAddress),
-                weights: committee.map(s => bn(stake))
+                weights: committee.map((s, i) => bn(stake + i))
             });
             expect(r).to.not.have.a.standbysChangedEvent();
         }
 
         const v = await d.newParticipant();
         await v.registerAsValidator();
-        await v.stake(stake);
+        await v.stake(stake - 1);
         let r = await v.notifyReadyForCommittee();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.have.a.standbysChangedEvent({
@@ -248,10 +248,10 @@ describe('committee', async () => {
 
         r = await v.stake(stake);
         expect(r).to.have.a.committeeChangedEvent({
-            addrs: [v].concat(committee.slice(0, committee.length - 1)).map(s => s.address),
+            addrs: [v].concat(committee.slice(1)).map(s => s.address),
         });
         expect(r).to.have.a.standbysChangedEvent({
-            addrs: [committee[committee.length - 1].address],
+            addrs: [committee[0].address],
         });
 
     });
@@ -656,7 +656,7 @@ describe('committee', async () => {
             const v = await d.newParticipant();
             standbys.push(v);
             await v.registerAsValidator();
-            await v.stake(stake - 1);
+            await v.stake(stake - 1 - i);
             let r = await v.notifyReadyForCommittee();
             if (i != maxCommitteeSize - 1) {
                 expect(r).to.have.a.committeeChangedEvent({
@@ -746,7 +746,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake - 1, minCommitteeSize);
+        r = await d.committeeGeneral.setMinimumWeight(stake - 1, ZERO_ADDR, minCommitteeSize);
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -775,7 +775,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake + 1, minCommitteeSize);
+        r = await d.committeeGeneral.setMinimumWeight(stake + 1, ZERO_ADDR, minCommitteeSize);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -804,7 +804,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake - 2, minCommitteeSize);
+        r = await d.committeeGeneral.setMinimumWeight(stake - 2, ZERO_ADDR, minCommitteeSize);
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
     });
@@ -827,7 +827,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake, minCommitteeSize + 1);
+        r = await d.committeeGeneral.setMinimumWeight(stake, ZERO_ADDR, minCommitteeSize + 1);
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -856,7 +856,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake, minCommitteeSize - 1);
+        r = await d.committeeGeneral.setMinimumWeight(stake, ZERO_ADDR, minCommitteeSize - 1);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -885,7 +885,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(0, minCommitteeSize + 1);
+        r = await d.committeeGeneral.setMinimumWeight(0, ZERO_ADDR, minCommitteeSize + 1);
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
     });
@@ -965,7 +965,7 @@ describe('committee', async () => {
 
     });
 
-    it('returns weight of committee member with lowest stake', async () => {
+    it('returns address of committee member with lowest stake', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
         const d = await Driver.new({maxStandbys, maxCommitteeSize});
@@ -1002,8 +1002,7 @@ describe('committee', async () => {
             expect(r).to.not.have.a.committeeChangedEvent();
         }
 
-        expect(await d.committeeGeneral.getMinCommitteeWeight()).to.equal((stake*(maxStandbys + 1)).toString());
-
+        expect(await d.committeeGeneral.getLowestCommitteeMember()).to.equal(committee[maxCommitteeSize - 1].address);
 
     });
 

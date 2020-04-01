@@ -18,6 +18,7 @@ contract Committee is ICommittee, Ownable {
 	mapping (address => Member) members;
 
 	uint minimumWeight;
+	address minimumAddress;
 	uint minCommitteeSize;
 	uint maxCommitteeSize;
 	uint maxStandbys;
@@ -109,11 +110,11 @@ contract Committee is ICommittee, Ownable {
 
 	/// @dev Called by: Elections contract
 	/// Returns the weight of the committee member with the lowest weight
-	function getMinCommitteeWeight() external view returns (uint256 weight) {
+	function getLowestCommitteeMember() external view returns (address addr) {
 		if (committeeSize == 0) {
-			return 0;
+			return address(0);
 		}
-		return getValidatorWeight(topology[committeeSize - 1]);
+		return topology[committeeSize - 1];
 	}
 
 	/// @dev Called by: Elections contract
@@ -132,8 +133,11 @@ contract Committee is ICommittee, Ownable {
 	/// @dev Called by: Elections contract
 	/// Sets the minimal weight, and committee members
     /// Every member with sortingWeight >= mimimumWeight OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 _mimimumWeight, uint _minCommitteeSize) external onlyElectionsContract {
+	function setMinimumWeight(uint256 _mimimumWeight, address _minimumAddress, uint _minCommitteeSize) external onlyElectionsContract {
+//		emit Debug2("cccccc", _minimumAddress);
+
 		minimumWeight = _mimimumWeight;
+		minimumAddress = _minimumAddress;
 		minCommitteeSize = _minCommitteeSize;
 
 		(uint prevCommitteeSize, uint newCommitteeSize) = _onTopologyModification();
@@ -184,8 +188,6 @@ contract Committee is ICommittee, Ownable {
 
 		// Modification
 		(uint pos, bool inTopology) = _findInTopology(validator);
-
-		// Modification
 		if (inTopology) {
 			return _adjustPositionInTopology(pos);
 		}
@@ -224,18 +226,21 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function _onTopologyModification() private returns (uint prevCommitteeSize, uint newCommitteeSize) {
-		uint newSize = committeeSize;
-		uint prevSize = newSize;
-		while (newSize > 0 && (topology.length < newSize || !isReadyForCommittee(topology[newSize - 1]) || getValidatorWeight(topology[newSize - 1]) == 0 || newSize - 1 >= minCommitteeSize && getValidatorWeight(topology[newSize - 1]) < minimumWeight)) {
-			newSize--;
+		uint newCommitteeSize = committeeSize;
+		uint prevCommitteeSize = newCommitteeSize;
+		emit Debug("bbbbb");
+		while (newCommitteeSize > 0 && (topology.length < newCommitteeSize || !isReadyForCommittee(topology[newCommitteeSize - 1]) || getValidatorWeight(topology[newCommitteeSize - 1]) == 0 || newCommitteeSize - 1 >= minCommitteeSize && (getValidatorWeight(topology[newCommitteeSize - 1]) < minimumWeight || getValidatorWeight(topology[newCommitteeSize - 1]) == minimumWeight && uint256(topology[newCommitteeSize - 1]) < uint256(minimumAddress)))) {
+			newCommitteeSize--;
+			emit Debug("ccccc");
 		}
-		while (topology.length > newSize && newSize < maxCommitteeSize && isReadyForCommittee(topology[newSize]) && getValidatorWeight(topology[newSize]) > 0 && (newSize < minCommitteeSize || getValidatorWeight(topology[newSize]) >= minimumWeight)) {
-			newSize++;
+		while (topology.length > newCommitteeSize && newCommitteeSize < maxCommitteeSize && isReadyForCommittee(topology[newCommitteeSize]) && getValidatorWeight(topology[newCommitteeSize]) > 0 && (newCommitteeSize < minCommitteeSize || getValidatorWeight(topology[newCommitteeSize]) > minimumWeight || getValidatorWeight(topology[newCommitteeSize]) == minimumWeight && uint256(topology[newCommitteeSize]) >= uint256(minimumAddress))) {
+			newCommitteeSize++;
+			emit Debug("ddddd");
 		}
-		committeeSize = newSize;
+		committeeSize = newCommitteeSize;
 		_refreshReadyForCommitteeCount();
 		_refreshOldestReadyToSyncStandbyPos();
-		return (prevSize, newSize);
+		return (prevCommitteeSize, newCommitteeSize);
 	}
 
 	function _refreshReadyForCommitteeCount() private returns (uint, uint) {
@@ -264,14 +269,16 @@ contract Committee is ICommittee, Ownable {
 		oldestReadyToSyncStandbyPos = oldestPos;
 	}
 
-	function _compareValidators(address v1, address v2) private  returns (int) {
+	function _compareValidators(address v1, address v2) private view returns (int) {
 		bool v1Ready = isReadyForCommittee(v1);
 		uint256 v1Weight = getValidatorWeight(v1);
 		bool v2Ready = isReadyForCommittee(v2);
 		uint256 v2Weight = getValidatorWeight(v2);
 
 		return v1Ready && !v2Ready ||
-				v1Ready == v2Ready  && v1Weight > v2Weight ? int(1) : -1;
+				v1Ready == v2Ready  && v1Weight > v2Weight ||
+				v1Ready == v2Ready  && v1Weight == v2Weight && uint256(v1) > uint256(v2)
+		? int(1) : -1;
 	}
 
 	function _replace(uint p1, uint p2) private {
@@ -339,49 +346,61 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function _isQualifiedForTopologyByRank(address validator) private view returns (bool qualified, uint entryPos) {
+	event Debug(string s);
+	function _isQualifiedForTopologyByRank(address validator) private  returns (bool qualified, uint entryPos) {
+		emit Debug("baaa");
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
 		(qualified, entryPos) = _isQualifiedForCommitteeByRank(validator);
 		if (qualified) {
+			emit Debug("caaa");
 			return (true, entryPos);
 		}
+		emit Debug("daaa");
 		return _isQualifiedAsStandbyByRank(validator);
 	}
 
-	function _isQualifiedAsStandbyByRank(address validator) private view returns (bool qualified, uint entryPos) {
+	function _isQualifiedAsStandbyByRank(address validator) private  returns (bool qualified, uint entryPos) {
+//		emit Debug("aaa");
 		if (isReadyToSyncStale(validator)) {
+//			emit Debug("bbb");
 			return (false, 0);
 		}
 
 		(bool found, uint atPos) = findTimedOutStandby();
 		if (found) {
+//			emit Debug("ccc");
 			return (true, atPos);
 		}
 
 		uint standbyCount = topology.length - committeeSize;
 		if (standbyCount < maxStandbys) {
+//			emit Debug("ddd");
 			return (true, topology.length);
 		}
 
 		(bool foundLowest, uint lowestRankedStandbyPos, uint lowestRankedStandbyWeight) = findLowestWeightStandby();
 		if (foundLowest && lowestRankedStandbyWeight < getValidatorWeight(validator)) {
+//			emit Debug("eee");
 			return (true, lowestRankedStandbyPos);
 		}
 
+//		emit Debug("ffff");
 		return (false, 0);
 	}
 
-	function _isQualifiedForCommitteeByRank(address validator) private view returns (bool qualified, uint entryPos) {
+	event Debug2(string s, address a);
+	function _isQualifiedForCommitteeByRank(address validator) private  returns (bool qualified, uint entryPos) {
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
 		if (!isReadyForCommittee(validator) || isReadyToSyncStale(validator)) {
 			return (false, 0);
 		}
 
-		if (committeeSize >= minCommitteeSize && getValidatorWeight(validator) < minimumWeight) {
+//		emit Debug2("bababa", minimumAddress);
+		if (committeeSize >= minCommitteeSize && getValidatorWeight(validator) < minimumWeight || getValidatorWeight(validator) == minimumWeight && uint256(validator) < uint256(minimumAddress)) {
 			return (false, 0);
 		}
 
-		if (committeeSize < maxCommitteeSize || getValidatorWeight(validator) > getValidatorWeight(topology[committeeSize - 1])) {
+		if (committeeSize < maxCommitteeSize || getValidatorWeight(validator) > getValidatorWeight(topology[committeeSize - 1]) || getValidatorWeight(validator) == getValidatorWeight(topology[committeeSize - 1]) && uint256(validator) > uint256(topology[committeeSize - 1])) {
 			return (true, topology.length);
 		}
 

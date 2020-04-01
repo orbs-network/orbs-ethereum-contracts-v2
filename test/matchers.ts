@@ -1,11 +1,9 @@
 import BN from "bn.js";
 
 import {
-  committeeChangedEvents,
   delegatedEvents,
   stakedEvents,
   stakeChangedEvents,
-  validatorRegisteredEvents_deprecated,
   subscriptionChangedEvents,
   paymentEvents,
   feesAddedToBucketEvents,
@@ -29,9 +27,10 @@ import {
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
   validatorDataUpdatedEvents,
-  validatorMetadataChangedEvents, standbysChangedEvents
+  validatorMetadataChangedEvents, committeeChangedEvents, standbysChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
+import chai from "chai";
 import {
   SubscriptionChangedEvent,
   PaymentEvent, VcConfigRecordChangedEvent, VcOwnerChangedEvent, VcCreatedEvent
@@ -58,6 +57,7 @@ import {
 } from "../typings/validator-registration-contract";
 import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
 import {ValidatorConformanceUpdateEvent} from "../typings/compliance-contract";
+import {Contract} from "../eth";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -66,7 +66,7 @@ export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   );
 }
 
-function compare(a: any, b: any): boolean {
+function comparePrimitive(a: any, b: any): boolean {
   if (BN.isBN(a) || BN.isBN(b)) {
     return new BN(a).eq(new BN(b));
   } else {
@@ -80,12 +80,57 @@ function compare(a: any, b: any): boolean {
   }
 }
 
-const containEvent = eventParser =>
+function transpose(obj, key, fields?) {
+  if (Object.keys(obj || {}).length == 0) {
+    return {}
+  }
+  const transposed: {[key: string]: any} = [];
+  const n = _.values(obj)[0].length;
+  fields = fields || Object.keys(obj);
+  for (let i = 0; i < n; i++) {
+    const item = {};
+    for (let k of fields) {
+      item[k] = obj[k][i];
+    }
+    transposed[item[key]] = item;
+  }
+  return transposed;
+}
+
+function objectMatches(obj, against): boolean {
+    if (obj == null || against == null) return false;
+
+    for (const k in against) {
+      if (!comparePrimitive(obj[k], against[k])) {
+        return false;
+      }
+    }
+    return true;
+}
+
+function compare(event: any, against: any, transposed?: boolean, key?: string): boolean {
+  if (transposed) {
+    const fields = Object.keys(against);
+    event = transpose(event, key, fields);
+    against = transpose(against, key);
+    return  Object.keys(against).length == Object.keys(event).length &&
+        Object.keys(against).find(key => !objectMatches(event[key], against[key])) == null;
+  } else {
+    return objectMatches(event, against);
+  }
+}
+
+function stripEvent(event) {
+  return _.pickBy(event, (v, k) => /[_0-9]/.exec(k[0]) == null);
+}
+
+const containEvent = (eventParser, transposed?: boolean, key?: string) =>
   function(_super) {
     return function(this: any, data) {
       data = data || {};
 
-      const logs = eventParser(this._obj);
+      const contractAddress = chai.util.flag(this, "contractAddress");
+      const logs = eventParser(this._obj, contractAddress).map(stripEvent);
 
       this.assert(
         logs.length != 0,
@@ -95,27 +140,37 @@ const containEvent = eventParser =>
 
       if (logs.length == 1) {
         const log = logs.pop();
-        for (const k in data) {
-          this.assert(
-            compare(data[k], log[k]),
+        this.assert(
+            compare(log, data, transposed, key),
             "expected #{this} to be #{exp} but got #{act}",
             "expected #{this} to not be #{act}",
-            data[k], // expected
-            log[k] // actual
-          );
-        }
+            data, // expected
+            log // actual
+        );
+        // for (const k in data) {
+        //   this.assert(
+        //     comparePrimitive(data[k], log[k]),
+        //     "expected #{this} to be #{exp} but got #{act}",
+        //     "expected #{this} to not be #{act}",
+        //     data[k], // expected
+        //     log[k] // actual
+        //   );
+        // }
       } else {
         for (const log of logs) {
-          let foundDiff = false;
-          for (const k in data) {
-            if (!compare(data[k], log[k])) {
-              foundDiff = true;
-              break;
-            }
-          }
-          if (!foundDiff) {
+          if (compare(log, data, transposed, key)) {
             return;
           }
+        //   let foundDiff = false;
+        //   for (const k in data) {
+        //     if (!comparePrimitive(data[k], log[k])) {
+        //       foundDiff = true;
+        //       break;
+        //     }
+        //   }
+        //   if (!foundDiff) {
+        //     return;
+        //   }
         }
         this.assert(
           false,
@@ -133,8 +188,8 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("validatorUnregisteredEvent", containEvent(validatorUnregisteredEvents));
   chai.Assertion.overwriteMethod("validatorDataUpdatedEvent", containEvent(validatorDataUpdatedEvents));
   chai.Assertion.overwriteMethod("validatorMetadataChangedEvent", containEvent(validatorMetadataChangedEvents));
-  chai.Assertion.overwriteMethod("committeeChangedEvent", containEvent(committeeChangedEvents));
-  chai.Assertion.overwriteMethod("standbysChangedEvent", containEvent(standbysChangedEvents));
+  chai.Assertion.overwriteMethod("committeeChangedEvent", containEvent(committeeChangedEvents, true, 'addrs'));
+  chai.Assertion.overwriteMethod("standbysChangedEvent", containEvent(standbysChangedEvents, true, 'addrs'));
   chai.Assertion.overwriteMethod("stakeChangedEvent", containEvent(stakeChangedEvents));
   chai.Assertion.overwriteMethod("stakedEvent", containEvent(stakedEvents));
   chai.Assertion.overwriteMethod("unstakedEvent", containEvent(unstakedEvents));
@@ -160,6 +215,10 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("validatorConformanceUpdateEvent", containEvent(validatorConformanceUpdateEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
+
+  chai.Assertion.addChainableMethod("withinContract", function (this: any, contract: Contract) {
+    chai.util.flag(this, "contractAddress", contract.address);
+  })
 };
 
 declare global {
@@ -193,6 +252,7 @@ declare global {
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
+      withinContract(contract: Contract): Assertion;
     }
 
     export interface Assertion {

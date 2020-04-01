@@ -13,6 +13,7 @@ import { Contracts } from "../typings/contracts";
 import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
 import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
+import {ComplianceContract} from "../typings/compliance-contract";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -63,6 +64,7 @@ export class Driver {
         public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
         public committeeGeneral: Contracts['Committee'],
+        public committeeCompliance: Contracts['Committee'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
@@ -82,12 +84,13 @@ export class Driver {
         const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
         const fees = await web3.deploy( 'Fees', [erc20.address]);
-        const elections = await web3.deploy( "Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold]);
+        const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
         const compliance = await web3.deploy('Compliance', []);
         const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout]);
+        const committeeCompliance = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, 0, maxStandbys, readyToSyncTimeout]);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);
@@ -100,6 +103,7 @@ export class Driver {
         await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
         await contractRegistry.set("committee-general", committeeGeneral.address);
+        await contractRegistry.set("committee-compliance", committeeCompliance.address);
 
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
@@ -109,6 +113,7 @@ export class Driver {
         await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
         await committeeGeneral.setContractRegistry(contractRegistry.address);
+        await committeeCompliance.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
 
@@ -126,6 +131,7 @@ export class Driver {
             compliance,
             validatorsRegistration,
             committeeGeneral,
+            committeeCompliance,
             contractRegistry
         );
     }
@@ -189,6 +195,7 @@ export class Participant { // TODO Consider implementing validator methods in a 
     private staking: StakingContract;
     private elections: ElectionsContract;
     private validatorsRegistration: ValidatorsRegistrationContract;
+    private compliance: ComplianceContract;
 
     constructor(public name: string,
                 public website: string,
@@ -203,6 +210,7 @@ export class Participant { // TODO Consider implementing validator methods in a 
         this.staking = driver.staking;
         this.elections = driver.elections;
         this.validatorsRegistration = driver.validatorsRegistration;
+        this.compliance = driver.compliance;
     }
 
     async stake(amount: number|BN, staking?: StakingContract) {
@@ -242,6 +250,14 @@ export class Participant { // TODO Consider implementing validator methods in a 
 
     async notifyReadyToSync() {
         return await this.elections.notifyReadyToSync({from: this.orbsAddress});
+    }
+
+    async becomeComplianceType() {
+        return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_COMPLIANCE);
+    }
+
+    async becomeGeneralType() {
+        return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_GENERAL);
     }
 }
 

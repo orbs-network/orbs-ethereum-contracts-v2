@@ -40,8 +40,8 @@ interface ICommittee {
 	function addMember(address addr, uint256 weight) external returns (bool committeeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
-	/// Returns the weight of the committee member with the lowest weight
-	function getMinCommitteeWeight() external view returns (uint256 weight);
+	/// Returns the committee member with the lowest weight
+	function getLowestCommitteeMember() external view returns (address addr);
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
@@ -53,7 +53,7 @@ interface ICommittee {
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal weight, and committee members
     /// Every member with sortingStake >= mimimumStake OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 mimimumWeight, uint minimumN) external /* onlyElectionContract */;
+	function setMinimumWeight(uint256 _mimimumWeight, address _minimumAddress, uint _minCommitteeSize) external /* onlyElectionsContract */;
 
 	/*
 	 * Governance

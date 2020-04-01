@@ -10,6 +10,7 @@ import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
+import "./spec_interfaces/ICompliance.sol";
 
 
 contract Elections is IElections, IStakeChangeNotifier, Ownable {
@@ -28,6 +29,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	mapping (address => uint256) accumulatedStakesForBanning; // addr => total stake
 	mapping (address => uint256) bannedValidators; // addr => timestamp
 
+	uint minCommitteeSize; // TODO only used as an argument to committee.setMinimumWeight(), should probably not be here
 	uint maxDelegationRatio; // TODO consider using a hardcoded constant instead.
 	uint8 voteOutPercentageThreshold;
 	uint256 voteOutTimeoutSeconds;
@@ -45,11 +47,24 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		_;
 	}
 
-	constructor(uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
+	modifier onlyComplianceContract() {
+		require(msg.sender == contractRegistry.get("compliance"), "caller is not the validator registrations contract");
+
+		_;
+	}
+
+	modifier onlyNotBanned() {
+		require(!_isBanned(msg.sender), "caller is a banned validator");
+
+		_;
+	}
+
+	constructor(uint _minCommitteeSize, uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
 		require(_banningPercentageThreshold >= 0 && _banningPercentageThreshold <= 100, "banningPercentageThreshold must be between 0 and 100");
 
+		minCommitteeSize = _minCommitteeSize;
 	    maxDelegationRatio = _maxDelegationRatio;
 		voteOutPercentageThreshold = _voteOutPercentageThreshold;
 		voteOutTimeoutSeconds = _voteOutTimeoutSeconds;
@@ -59,23 +74,60 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
 	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
-		generalCommittee().addMember(addr, getCommitteeEffectiveStake(addr));
+		if (_isBanned(addr)) {
+			return;
+		}
+		string memory compliance = complianceContract().getValidatorCompliance(addr);
+		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+
+		if (compareStrings(compliance, "Compliance")) {
+			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		}
 	}
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		generalCommittee().removeMember(addr);
+		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().removeMember(addr);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().removeMember(addr);
 	}
 
-	function notifyReadyForCommittee() external {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		generalCommittee().memberReadyForCommittee(sender);
+	/// @dev Called by: validator registration contract
+	/// Notifies on a validator compliance change
+	function validatorConformanceChanged(address addr, string calldata conformanceType) external onlyComplianceContract {
+		if (_isBanned(addr)) {
+			return;
+		}
+
+		if (compareStrings(conformanceType, "Compliance")) {
+			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		} else {
+			complianceCommitteeContract().removeMember(addr);
+		}
 	}
 
-	function notifyReadyToSync() external {
+	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		generalCommittee().memberReadyToSync(sender);
+		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberReadyForCommittee(sender);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().memberReadyForCommittee(sender);
+	}
+
+	function notifyReadyToSync() external onlyNotBanned {
+		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberReadyToSync(sender);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().memberReadyToSync(sender);
 	}
 
 	function delegate(address to) external {
@@ -104,7 +156,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
 
-		(address[] memory committee, uint256[] memory weights) = generalCommittee().getCommittee();
+		(address[] memory committee, uint256[] memory weights) = generalCommitteeContract().getCommittee();
 
 		voteOuts[sender][addr] = now;
 		for (uint i = 0; i < committee.length; i++) {
@@ -125,8 +177,13 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 			for (uint i = 0; i < committee.length; i++) {
 				voteOuts[committee[i]][addr] = 0; // clear vote-outs
 			}
-			generalCommittee().memberNotReadyToSync(addr);
 			emit VotedOutOfCommittee(addr);
+
+			(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberNotReadyToSync(addr);
+			if (committeeChanged) {
+				updateComplianceCommitteeMinimumWeight();
+			}
+			complianceCommitteeContract().memberNotReadyToSync(addr);
 		}
 
 	}
@@ -200,6 +257,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		}
     }
 
+	event AccForBan(uint256 acc, uint256 total);
     function _applyBanningVotesFor(address addr) private {
         uint256 banningTimestamp = bannedValidators[addr];
         bool isBanned = banningTimestamp != 0;
@@ -209,21 +267,35 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
         }
 
         uint256 banningStake = accumulatedStakesForBanning[addr];
-
+		emit AccForBan(banningStake, totalGovernanceStake);
         bool shouldBan = totalGovernanceStake > 0 && banningStake.mul(100).div(totalGovernanceStake) >= banningPercentageThreshold;
 
         if (isBanned != shouldBan) {
 			if (shouldBan) {
                 bannedValidators[addr] = now;
-				generalCommittee().removeMember(addr);
 				emit Banned(addr);
+
+				(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().removeMember(addr);
+				if (committeeChanged) {
+					updateComplianceCommitteeMinimumWeight();
+				}
+				complianceCommitteeContract().removeMember(addr);
 			} else {
                 bannedValidators[addr] = 0;
-				generalCommittee().addMember(addr, getCommitteeEffectiveStake(addr));
 				emit Unbanned(addr);
+
+				(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+				if (committeeChanged) {
+					updateComplianceCommitteeMinimumWeight();
+				}
+				complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 			}
         }
     }
+
+	function _isBanned(address addr) private view returns (bool){
+		return bannedValidators[addr] != 0;
+	}
 
     function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs,
 		uint256[] calldata _updatedStakes) external onlyStakingContract {
@@ -310,7 +382,12 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 		emit StakeChanged(addr, ownStakes[addr], newStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
 
-		generalCommittee().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
@@ -334,14 +411,27 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return uncappedStakes[v];
 	}
 
+	function updateComplianceCommitteeMinimumWeight() private {
+		address lowestMember = generalCommitteeContract().getLowestCommitteeMember();
+		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
+		complianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
+	}
+
 	function validatorsRegistration() private view returns (IValidatorsRegistration) {
 		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
 	}
 
-	function generalCommittee() private view returns (ICommittee) {
+	function generalCommitteeContract() private view returns (ICommittee) {
 		return ICommittee(contractRegistry.get("committee-general"));
 	}
 
+	function complianceCommitteeContract() private view returns (ICommittee) {
+		return ICommittee(contractRegistry.get("committee-compliance"));
+	}
+
+	function complianceContract() private view returns (ICompliance) {
+		return ICompliance(contractRegistry.get("compliance"));
+	}
 
 	IContractRegistry contractRegistry;
 
@@ -351,4 +441,8 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		contractRegistry = _contractRegistry;
 	}
 
+	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
+		return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))) );
+
+	}
 }

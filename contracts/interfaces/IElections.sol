@@ -62,6 +62,10 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
 
+	/// @dev Called by: validator registration contract
+	/// Notifies on a validator compliance change
+	function validatorConformanceChanged(address addr, string calldata conformanceType) external /* onlyComplianceContract */;
+
 	/*
 	 * Governance
 	 */

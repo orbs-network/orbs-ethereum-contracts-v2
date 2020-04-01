@@ -250,7 +250,7 @@ describe('elections-high-level-flows', async () => {
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: committee.map(v => v.orbsAddress)
+            addrs: committee.map(v => v.address)
         });
 
         // A committee member is voted out, rejoins, and voted-out again. This makes sure that once voted-out, the
@@ -665,7 +665,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
             addrs: []
         });
     });
@@ -869,7 +869,7 @@ describe('elections-high-level-flows', async () => {
 
 });
 
-async function banningScenario_setupDelegatorsAndValidators(driver) {
+export async function banningScenario_setupDelegatorsAndValidators(driver: Driver) {
     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
 
@@ -880,7 +880,6 @@ async function banningScenario_setupDelegatorsAndValidators(driver) {
         Math.floor(defaultDriverOptions.banningThreshold / 2),
         98 - defaultDriverOptions.banningThreshold,
         1,
-        1
     ];
     const thresholdCrossingIndex = 1;
     const delegatees: Participant[] = [];
@@ -897,14 +896,15 @@ async function banningScenario_setupDelegatorsAndValidators(driver) {
 
     const bannedValidator = delegatees[delegatees.length - 1];
     await bannedValidator.registerAsValidator();
-    let r = await bannedValidator.notifyReadyToSync();
-    expect(r).to.have.a.standbysChangedEvent({
+    await bannedValidator.stake(baseStake);
+    let r = await bannedValidator.notifyReadyForCommittee();
+    expect(r).to.have.a.committeeChangedEvent({
         addrs: [bannedValidator.address]
     });
     return {thresholdCrossingIndex, delegatees, delegators, bannedValidator};
 }
 
-async function banningScenario_voteUntilThresholdReached(driver, thresholdCrossingIndex, delegatees, bannedValidator) {
+export async function banningScenario_voteUntilThresholdReached(driver: Driver, thresholdCrossingIndex, delegatees, bannedValidator) {
     let r;
     for (let i = 0; i <= thresholdCrossingIndex; i++) {
         const p = delegatees[i];
@@ -917,7 +917,8 @@ async function banningScenario_voteUntilThresholdReached(driver, thresholdCrossi
     expect(r).to.have.a.bannedEvent({
         validator: bannedValidator.address
     });
-    expect(r).to.have.a.standbysChangedEvent({
+    expect(r).to.withinContract(driver.committeeGeneral).have.a.committeeChangedEvent({
         orbsAddrs: []
     });
+    return r;
 }
