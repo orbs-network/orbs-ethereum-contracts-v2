@@ -461,7 +461,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	}
 
 	function isComplianceType(string memory compliance) private view returns (bool) {
-		return compareStrings(compliance, "Compliance");
+		return compareStrings(compliance, "Compliance"); // TODO where should this constant be?
 	}
 
 	function isComplianceValidator(address addr) private view returns (bool) {

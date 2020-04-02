@@ -37,57 +37,31 @@ describe('elections-compliance', async () => {
         const stake = 100;
 
         const committee: Participant[] = [];
-        const committeeStakes: number[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = await d.newParticipant();
+            const {v, r} = await d.newValidator(stake + i, i % 2 == 0, false, true);
             committee.push(v);
-
-            await v.registerAsValidator();
-            if (i % 2 == 0) {
-                await v.becomeComplianceType();
-            }
-            await v.stake(stake + i);
-            committeeStakes.push(stake + i);
-
-            let r = await v.notifyReadyForCommittee();
             expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
-                orbsAddrs: committee.map(s => s.orbsAddress),
-                weights: committeeStakes.map(bn)
             });
             if (i % 2 == 0){
                 expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
                     addrs: committee.filter((v, i) => i % 2 == 0).map(s => s.address),
-                    orbsAddrs: committee.filter((v, i) => i % 2 == 0).map(s => s.orbsAddress),
-                    weights: committeeStakes.filter((v, i) => i % 2 == 0).map(bn)
                 });
             }
             expect(r).to.not.have.a.standbysChangedEvent();
         }
 
         const standbys: Participant[] = [];
-        const standbysStakes: number[] = [];
         for (let i = 0; i < maxStandbys; i++) {
-            const v = await d.newParticipant();
+            const {v, r} = await d.newValidator(stake - i - 1, i % 2 == 0, false, true);
             standbys.push(v);
 
-            await v.registerAsValidator();
-            if (i % 2 == 0) {
-                await v.becomeComplianceType();
-            }
-            await v.stake(stake - i - 1);
-            standbysStakes.push(stake - i - 1);
-            let r = await v.notifyReadyForCommittee();
             expect(r).to.have.withinContract(d.committeeGeneral).a.standbysChangedEvent({
                 addrs: standbys.map(s => s.address),
-                orbsAddrs: standbys.map(s => s.orbsAddress),
-                weights: standbysStakes.map(bn)
             });
             if (i % 2 == 0){
                 expect(r).to.have.withinContract(d.committeeCompliance).a.standbysChangedEvent({
                     addrs: standbys.filter((v, i) => i % 2 == 0).map(s => s.address),
-                    orbsAddrs: standbys.filter((v, i) => i % 2 == 0).map(s => s.orbsAddress),
-                    weights: standbysStakes.filter((v, i) => i % 2 == 0).map(bn)
                 });
             }
             expect(r).to.not.have.a.committeeChangedEvent();
@@ -106,32 +80,20 @@ describe('elections-compliance', async () => {
         const committee = validators.filter(x => x != standby);
         for (let i = 0; i < maxCommitteeSize; i++) {
             const v = committee[i];
-            await v.registerAsValidator();
-            if (i % 2 == 0) {
-                await v.becomeComplianceType();
-            }
-            await v.stake(stake);
-            let r = await v.notifyReadyForCommittee();
+            let r = await v.becomeValidator(stake, i % 2 == 0, false, true);
             const committeeSoFar = committee.slice(0, i + 1);
             expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
                 addrs: committeeSoFar.map(s => s.address),
-                orbsAddrs: committeeSoFar.map(s => s.orbsAddress),
-                weights: committeeSoFar.map(s => bn(stake))
             });
             if (i % 2 == 0){
                 expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
                     addrs: committeeSoFar.filter((v, i) => i % 2 == 0).map(s => s.address),
-                    orbsAddrs: committeeSoFar.filter((v, i) => i % 2 == 0).map(s => s.orbsAddress),
-                    weights: committeeSoFar.filter((v, i) => i % 2 == 0).map(() => bn(stake))
                 });
             }
             expect(r).to.not.have.a.standbysChangedEvent();
         }
 
-        await standby.registerAsValidator();
-        await standby.becomeComplianceType();
-        await standby.stake(stake);
-        let r = await standby.notifyReadyForCommittee();
+        let r = await standby.becomeValidator(stake, true, false, true);
         expect(r).to.not.have.committeeChangedEvent();
         expect(r).to.have.withinContract(d.committeeGeneral).a.standbysChangedEvent({
             addrs: [standby.address],
@@ -154,15 +116,10 @@ describe('elections-compliance', async () => {
 
         const committee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = d.newParticipant();
+            const {v, r} = await d.newValidator(stake, false, false, true);
             committee.push(v);
-            await v.registerAsValidator();
-            await v.stake(stake);
-            let r = await v.notifyReadyForCommittee();
             expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
-                orbsAddrs: committee.map(s => s.orbsAddress),
-                weights: committee.map(s => bn(stake))
             });
             expect(r).to.not.have.withinContract(d.committeeCompliance).a.committeeChangedEvent();
             expect(r).to.not.have.a.standbysChangedEvent();
@@ -172,13 +129,9 @@ describe('elections-compliance', async () => {
         let r = await committee[0].notifyReadyForCommittee();
         expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
             addrs: [committee[0].address],
-            orbsAddrs: [committee[0].orbsAddress],
-            weights: [bn(stake)]
         });
         expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
             addrs: committee.map(s => s.address),
-            orbsAddrs: committee.map(s => s.orbsAddress),
-            weights: committee.map(s => bn(stake))
         });
         expect(r).to.not.have.a.standbysChangedEvent();
     });
@@ -192,21 +145,13 @@ describe('elections-compliance', async () => {
 
         const committee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = d.newParticipant();
+            const {v, r} = await d.newValidator(stake, true, false, true);
             committee.push(v);
-            await v.becomeComplianceType();
-            await v.registerAsValidator();
-            await v.stake(stake);
-            let r = await v.notifyReadyForCommittee();
             expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
-                orbsAddrs: committee.map(s => s.orbsAddress),
-                weights: committee.map(s => bn(stake))
             });
             expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
-                orbsAddrs: committee.map(s => s.orbsAddress),
-                weights: committee.map(s => bn(stake))
             });
             expect(r).to.not.have.a.standbysChangedEvent();
         }
@@ -214,8 +159,6 @@ describe('elections-compliance', async () => {
         let r = await committee[0].becomeGeneralType();
         expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
             addrs: committee.slice(1).map(s => s.address),
-            orbsAddrs: committee.slice(1).map(s => s.orbsAddress),
-            weights: committee.slice(1).map(s => bn(stake))
         });
         expect(r).to.not.have.withinContract(d.committeeGeneral).a.committeeChangedEvent();
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -284,15 +227,11 @@ describe('elections-compliance', async () => {
         const generalCommittee: Participant[] = [];
         const complianceCommittee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = d.newParticipant();
-            await v.stake(100);
-            await v.registerAsValidator();
+            const {v} = await d.newValidator(100, i % 2 == 0, false, true);
+            generalCommittee.push(v);
             if (i % 2 == 0) {
-                await v.becomeComplianceType();
                 complianceCommittee.push(v);
             }
-            await v.notifyReadyForCommittee();
-            generalCommittee.push(v);
         }
 
         let r;
@@ -320,14 +259,10 @@ describe('elections-compliance', async () => {
         const generalCommittee: Participant[] = [];
         const complianceCommittee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = d.newParticipant();
-            await v.stake(i == maxCommitteeSize - 1 ? 100 : 1);
-            await v.registerAsValidator();
+            const {v} = await d.newValidator(i == maxCommitteeSize - 1 ? 100 : 1, i % 2 == 0, false, true);
             if (i % 2 == 0) {
-                await v.becomeComplianceType();
                 complianceCommittee.push(v);
             }
-            await v.notifyReadyForCommittee();
             generalCommittee.push(v);
         }
 
@@ -356,14 +291,10 @@ describe('elections-compliance', async () => {
         const generalCommittee: Participant[] = [];
         const complianceCommittee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = d.newParticipant();
-            await v.stake(100);
-            await v.registerAsValidator();
+            const {v} = await d.newValidator(100, i % 2 == 0, false, true);
             if (i % 2 == 0) {
-                await v.becomeComplianceType();
                 complianceCommittee.push(v);
             }
-            await v.notifyReadyForCommittee();
             generalCommittee.push(v);
         }
 

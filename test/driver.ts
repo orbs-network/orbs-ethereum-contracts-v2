@@ -14,6 +14,7 @@ import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
 import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
 import {ComplianceContract} from "../typings/compliance-contract";
+import {TransactionReceipt} from "web3-core";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -180,6 +181,12 @@ export class Driver {
         return v;
     }
 
+    async newValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<{v: Participant, r: TransactionReceipt}> {
+        const v = await this.newParticipant();
+        const r = await v.becomeValidator(stake, compliance, signalReadyToSync, signalReadyForCommittee);
+        return {v, r}
+    }
+
     async delegateMoreStake(amount:number|BN, delegatee: Participant) {
         const delegator = this.newParticipant();
         await delegator.stake(new BN(amount));
@@ -188,7 +195,8 @@ export class Driver {
 
 }
 
-export class Participant { // TODO Consider implementing validator methods in a child class.
+export class Participant {
+    // TODO Consider implementing validator methods in a child class.
     public ip: string;
     private erc20: ERC20Contract;
     private externalToken: ERC20Contract;
@@ -258,6 +266,22 @@ export class Participant { // TODO Consider implementing validator methods in a 
 
     async becomeGeneralType() {
         return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_GENERAL);
+    }
+
+    async becomeValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
+        let r;
+        await this.registerAsValidator();
+        if (compliance) {
+            await this.becomeComplianceType();
+        }
+        r = await this.stake(stake);
+        if (signalReadyToSync) {
+            r = await this.notifyReadyForCommittee();
+        }
+        if (signalReadyForCommittee) {
+            r = await this.notifyReadyForCommittee();
+        }
+        return r;
     }
 }
 
