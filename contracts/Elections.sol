@@ -77,25 +77,13 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		if (_isBanned(addr)) {
 			return;
 		}
-		string memory compliance = complianceContract().getValidatorCompliance(addr);
-		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
-		}
-
-		if (compareStrings(compliance, "Compliance")) {
-			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-		}
+		addMemberToCommittees(addr);
 	}
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().removeMember(addr);
-		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
-		}
-		complianceCommitteeContract().removeMember(addr);
+		removeMemberFromCommittees(addr);
 	}
 
 	/// @dev Called by: validator registration contract
@@ -105,7 +93,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 			return;
 		}
 
-		if (compareStrings(conformanceType, "Compliance")) {
+		if (isComplianceType(conformanceType)) {
 			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		} else {
 			complianceCommitteeContract().removeMember(addr);
@@ -114,7 +102,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberReadyForCommittee(sender);
+		(bool committeeChanged,) = generalCommitteeContract().memberReadyForCommittee(sender);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
@@ -123,7 +111,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberReadyToSync(sender);
+		(bool committeeChanged,) = generalCommitteeContract().memberReadyToSync(sender);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
@@ -151,41 +139,58 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		_applyStakesToBanningBy(to, prevGovStakeNewDelegatee);
 	}
 
-	function voteOut(address addr) external {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
+	function clearCommitteeVoteOuts(address[] memory committee, address votee) private {
+		for (uint i = 0; i < committee.length; i++) {
+			voteOuts[committee[i]][votee] = 0; // clear vote-outs
+		}
+	}
+
+	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, address votee) private  returns (bool) {
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
 
-		(address[] memory committee, uint256[] memory weights) = generalCommitteeContract().getCommittee();
-
-		voteOuts[sender][addr] = now;
 		for (uint i = 0; i < committee.length; i++) {
 			address member = committee[i];
 			uint256 memberStake = weights[i];
 
 			totalCommitteeStake = totalCommitteeStake.add(memberStake);
-			uint256 votedAt = voteOuts[member][addr];
+			uint256 votedAt = voteOuts[member][votee];
 			if (votedAt != 0 && now.sub(votedAt) < voteOutTimeoutSeconds) {
 				totalVoteOutStake = totalVoteOutStake.add(memberStake);
 			}
 			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
+		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold);
+	}
+
+	function voteOut(address addr) external {
+		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		if (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold) {
-			for (uint i = 0; i < committee.length; i++) {
-				voteOuts[committee[i]][addr] = 0; // clear vote-outs
+		(address[] memory generalCommittee, uint256[] memory generalWeights) = generalCommitteeContract().getCommittee();
+
+		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
+		if (votedOut) {
+			clearCommitteeVoteOuts(generalCommittee, addr);
+		} else if (isComplianceValidator(addr)) {
+			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = complianceCommitteeContract().getCommittee();
+			votedOut = isCommitteeVoteOutThresholdReached(complianceCommittee, complianceWeights, addr);
+			if (votedOut) {
+				clearCommitteeVoteOuts(complianceCommittee, addr);
 			}
+		}
+
+		if (votedOut) {
 			emit VotedOutOfCommittee(addr);
 
-			(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberNotReadyToSync(addr);
+			(bool committeeChanged,) = generalCommitteeContract().memberNotReadyToSync(addr);
 			if (committeeChanged) {
 				updateComplianceCommitteeMinimumWeight();
 			}
 			complianceCommitteeContract().memberNotReadyToSync(addr);
 		}
-
 	}
 
 	function setBanningVotes(address[] calldata validators) external {
@@ -275,20 +280,12 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
                 bannedValidators[addr] = now;
 				emit Banned(addr);
 
-				(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().removeMember(addr);
-				if (committeeChanged) {
-					updateComplianceCommitteeMinimumWeight();
-				}
-				complianceCommitteeContract().removeMember(addr);
+				removeMemberFromCommittees(addr);
 			} else {
                 bannedValidators[addr] = 0;
 				emit Unbanned(addr);
 
-				(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-				if (committeeChanged) {
-					updateComplianceCommitteeMinimumWeight();
-				}
-				complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+				addMemberToCommittees(addr);
 			}
         }
     }
@@ -382,7 +379,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 		emit StakeChanged(addr, ownStakes[addr], newStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
 
-		(bool committeeChanged, bool standbysChanged) = generalCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = generalCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
@@ -409,6 +406,24 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 			return 0;
 		}
 		return uncappedStakes[v];
+	}
+
+	function removeMemberFromCommittees(address addr) private {
+		(bool committeeChanged,) = generalCommitteeContract().removeMember(addr);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().removeMember(addr);
+	}
+
+	function addMemberToCommittees(address addr) private {
+		(bool committeeChanged,) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		if (isComplianceValidator(addr)) {
+			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		}
 	}
 
 	function updateComplianceCommitteeMinimumWeight() private {
@@ -442,7 +457,16 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	}
 
 	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
-		return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))) );
-
+		return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
 	}
+
+	function isComplianceType(string memory compliance) private view returns (bool) {
+		return compareStrings(compliance, "Compliance");
+	}
+
+	function isComplianceValidator(address addr) private view returns (bool) {
+		string memory compliance = complianceContract().getValidatorCompliance(addr);
+		return isComplianceType(compliance);
+	}
+
 }

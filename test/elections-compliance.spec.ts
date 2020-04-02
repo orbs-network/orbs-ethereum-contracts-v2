@@ -240,5 +240,139 @@ describe('elections-compliance', async () => {
             addrs: []
         });
 
+    });
+
+    it('can join all committees when unbanned', async () => {
+        const d = await Driver.new();
+
+        let {delegatees, bannedValidator, thresholdCrossingIndex} = await banningScenario_setupDelegatorsAndValidators(d);
+
+        await bannedValidator.becomeComplianceType();
+        let r = await bannedValidator.notifyReadyForCommittee();
+        expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
+            addrs: [bannedValidator.address]
+        });
+
+        r = await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, bannedValidator);
+        expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
+            addrs: []
+        });
+        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
+            addrs: []
+        });
+
+        r = await d.elections.setBanningVotes([], {from: delegatees[thresholdCrossingIndex].address});
+        expect(r).to.have.a.unbannedEvent({
+           validator: bannedValidator.address
+        });
+
+        r = await bannedValidator.notifyReadyForCommittee();
+        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
+            addrs: [bannedValidator.address]
+        });
+        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
+            addrs: [bannedValidator.address]
+        });
     })
+
+    it('votes out a compliance committee member from both committees when threshold is reached in compliance committee', async () => {
+        const voteOutThreshold = 80;
+        const maxCommitteeSize = 10;
+
+        const d = await Driver.new({maxCommitteeSize, voteOutThreshold});
+
+        const generalCommittee: Participant[] = [];
+        const complianceCommittee: Participant[] = [];
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const v = d.newParticipant();
+            await v.stake(100);
+            await v.registerAsValidator();
+            if (i % 2 == 0) {
+                await v.becomeComplianceType();
+                complianceCommittee.push(v);
+            }
+            await v.notifyReadyForCommittee();
+            generalCommittee.push(v);
+        }
+
+        let r;
+        for (const v of complianceCommittee.slice(1)) {
+            r = await d.elections.voteOut(complianceCommittee[0].address, {from: v.orbsAddress});
+        }
+        expect(r).to.have.a.votedOutOfCommitteeEvent({
+            addr: complianceCommittee[0].address
+        });
+        expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
+            addrs: complianceCommittee.slice(1).map(v => v.address)
+        });
+        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
+            addrs: generalCommittee.slice(1).map(v => v.address)
+        });
+        expect(r).to.not.have.a.standbysChangedEvent();
+    });
+
+    it('votes out a compliance committee member from both committees when threshold is reached in general committee but not in compliance committee', async () => {
+        const voteOutThreshold = 80;
+        const maxCommitteeSize = 10;
+
+        const d = await Driver.new({maxCommitteeSize, voteOutThreshold});
+
+        const generalCommittee: Participant[] = [];
+        const complianceCommittee: Participant[] = [];
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const v = d.newParticipant();
+            await v.stake(i == maxCommitteeSize - 1 ? 100 : 1);
+            await v.registerAsValidator();
+            if (i % 2 == 0) {
+                await v.becomeComplianceType();
+                complianceCommittee.push(v);
+            }
+            await v.notifyReadyForCommittee();
+            generalCommittee.push(v);
+        }
+
+        let r;
+        for (const v of generalCommittee.filter((v, i) => i % 2 == 1)) {
+            r = await d.elections.voteOut(complianceCommittee[0].address, {from: v.orbsAddress});
+        }
+        expect(r).to.have.a.votedOutOfCommitteeEvent({
+            addr: complianceCommittee[0].address
+        });
+        expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
+            addrs: complianceCommittee.slice(1).map(v => v.address)
+        });
+        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
+            addrs: generalCommittee.slice(1).map(v => v.address)
+        });
+        expect(r).to.not.have.a.standbysChangedEvent();
+    });
+
+    it('compliance committee cannot vote out a general committee member', async () => {
+        const voteOutThreshold = 80;
+        const maxCommitteeSize = 10;
+
+        const d = await Driver.new({maxCommitteeSize, voteOutThreshold});
+
+        const generalCommittee: Participant[] = [];
+        const complianceCommittee: Participant[] = [];
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const v = d.newParticipant();
+            await v.stake(100);
+            await v.registerAsValidator();
+            if (i % 2 == 0) {
+                await v.becomeComplianceType();
+                complianceCommittee.push(v);
+            }
+            await v.notifyReadyForCommittee();
+            generalCommittee.push(v);
+        }
+
+        for (const v of complianceCommittee) {
+            let r = await d.elections.voteOut(generalCommittee[1].address, {from: v.orbsAddress});
+            expect(r).to.not.have.a.votedOutOfCommitteeEvent();
+            expect(r).to.not.have.a.committeeChangedEvent();
+            expect(r).to.not.have.a.standbysChangedEvent();
+        }
+    });
+
 });
