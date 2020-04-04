@@ -181,14 +181,15 @@ contract Fees is IFees, Ownable {
     }
 
     function _getCommittee(CommitteeType committeeType) private view returns (address[] memory) {
-        // todo - use committee contracts, for both general and kyc committees
+        string memory contractName;
         if (committeeType == CommitteeType.General) {
-            ICommittee e = ICommittee(contractRegistry.get("committee-general"));
-            (address[] memory validators, ) =  e.getCommittee();
-            return validators;
+            contractName = "committee-general";
         } else {
-            return new address[](0);
+            contractName = "committee-compliance";
         }
+        ICommittee e = ICommittee(contractRegistry.get(contractName));
+        (address[] memory validators, ) =  e.getCommittee();
+        return validators;
     }
 
 }

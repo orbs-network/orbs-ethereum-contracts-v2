@@ -25,7 +25,7 @@ async function sleep(ms): Promise<void> {
 
 describe('staking-rewards-level-flows', async () => {
 
-  it('should distribute staking rewards to validators in committee', async () => {
+  it('should distribute staking rewards to validators in general committee', async () => {
     const d = await Driver.new();
 
     /* top up staking rewards pool */
@@ -35,7 +35,7 @@ describe('staking-rewards-level-flows', async () => {
     const poolAmount = 2000000000;
     const annualCap = poolAmount;
 
-    let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
+    let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address});
     const startTime = await txTimestamp(d.web3, r);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, {from: g.address});

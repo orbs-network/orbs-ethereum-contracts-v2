@@ -17,7 +17,6 @@ import {
   electionsBanned,
   electionsUnbanned,
   vcOwnerChangedEvents,
-  bootstrapRewardAssignedEvents,
   feesAssignedEvents,
   bootstrapAddedToPoolEvents,
   stakingRewardAssignedEvents,
@@ -197,11 +196,10 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("paymentEvent", containEvent(paymentEvents));
   chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
-  chai.Assertion.overwriteMethod("bootstrapRewardAssignedEvent", containEvent(bootstrapRewardAssignedEvents));
-  chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents));
-  chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
+  chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents, true, 'assignees'));
+  chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents, true, 'assignees'));
+  chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents, true, 'assignees'));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
-  chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
   chai.Assertion.overwriteMethod("votedOutOfCommitteeEvent", containEvent(votedOutOfCommitteeEvents));
   chai.Assertion.overwriteMethod("banningVoteEvent", containEvent(banningVoteEvents));

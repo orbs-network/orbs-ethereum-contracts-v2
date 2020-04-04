@@ -72,37 +72,37 @@ contract StakingRewards is IStakingRewards, Ownable {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
-        (address[] memory validators, uint256[] memory stakes) = _getCommittee();
+        (address[] memory committee, uint256[] memory weights) = _getGeneralCommittee();
 
         uint256 totalAssigned = 0;
-        uint256 totalStake = 0;
-        for (uint i = 0; i < validators.length; i++) {
-            totalStake = totalStake.add(stakes[i]);
+        uint256 totalWeight = 0;
+        for (uint i = 0; i < committee.length; i++) {
+            totalWeight = totalWeight.add(weights[i]);
         }
 
-        if (totalStake > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
+        if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastPayedAt);
 
-            uint256 annualAmount = Math.min(annualRateInPercentMille.mul(totalStake).div(100000), annualCap);
+            uint256 annualAmount = Math.min(annualRateInPercentMille.mul(totalWeight).div(100000), annualCap);
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pool);
             pool = pool.sub(amount);
 
-            uint256[] memory assignedRewards = new uint256[](validators.length);
+            uint256[] memory assignedRewards = new uint256[](committee.length);
 
-            for (uint i = 0; i < validators.length; i++) {
-                uint256 curAmount = amount.mul(stakes[i]).div(totalStake);
+            for (uint i = 0; i < committee.length; i++) {
+                uint256 curAmount = amount.mul(weights[i]).div(totalWeight);
                 assignedRewards[i] = curAmount;
                 totalAssigned = totalAssigned.add(curAmount);
             }
 
             uint256 remainder = amount.sub(totalAssigned);
-            if (remainder > 0 && validators.length > 0) {
-                uint ind = now % validators.length;
+            if (remainder > 0 && committee.length > 0) {
+                uint ind = now % committee.length;
                 assignedRewards[ind] = assignedRewards[ind].add(remainder);
             }
 
-            for (uint i = 0; i < validators.length; i++) {
-                addToBalance(validators[i], assignedRewards[i]);
+            for (uint i = 0; i < committee.length; i++) {
+                addToBalance(committee[i], assignedRewards[i]);
             }
         }
 
@@ -111,7 +111,7 @@ contract StakingRewards is IStakingRewards, Ownable {
 
     function addToBalance(address addr, uint256 amount) private {
         orbsBalance[addr] = orbsBalance[addr].add(amount);
-        emit StakingRewardAssigned(addr, amount, orbsBalance[addr]);
+        emit StakingRewardAssigned(addr, amount, orbsBalance[addr]); // TODO event per committee?
     }
 
     function distributeOrbsTokenRewards(address[] calldata to, uint256[] calldata amounts) external {
@@ -129,8 +129,7 @@ contract StakingRewards is IStakingRewards, Ownable {
         stakingContract.distributeRewards(totalAmount, to, amounts);
     }
 
-    function _getCommittee() private view returns (address[] memory, uint256[] memory weights) {
-        // todo - use committee contracts, for both general and kyc committees
+    function _getGeneralCommittee() private view returns (address[] memory validators, uint256[] memory weights) {
         ICommittee e = ICommittee(contractRegistry.get("committee-general"));
         return e.getCommittee();
     }
