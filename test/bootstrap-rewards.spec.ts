@@ -53,8 +53,8 @@ describe('bootstrap-rewards-level-flows', async () => {
     const initStakeLarger = 21000;
 
     const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
-    const {v: v2} = await d.newValidator(initStakeLesser, false, false, true);
-    const {v: v3} = await d.newValidator(initStakeLarger, true, false, true);
+    const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
+    const {v: v3} = await d.newValidator(initStakeLesser, true, false, true);
     const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
 
     const generalCommittee: Participant[] = [v1, v2, v3, v4];

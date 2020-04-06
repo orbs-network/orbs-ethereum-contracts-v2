@@ -12,6 +12,11 @@ contract Subscriptions is ISubscriptions, Ownable{
 
     IContractRegistry contractRegistry;
 
+    enum CommitteeType {
+        General,
+        Compliance
+    }
+
     struct VirtualChain {
         string tier;
         uint256 rate;
@@ -19,6 +24,7 @@ contract Subscriptions is ISubscriptions, Ownable{
         uint genRef;
         address owner;
         string deploymentSubset;
+        CommitteeType committeeType;
 
         mapping (string => string) configRecords;
     }
@@ -58,7 +64,7 @@ contract Subscriptions is ISubscriptions, Ownable{
         authorizedSubscribers[addr] = true;
     }
 
-    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, string calldata deploymentSubset) external returns (uint, uint) {
+    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, string calldata compliance, string calldata deploymentSubset) external returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         require(IProtocol(contractRegistry.get("protocol")).deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
 
@@ -69,7 +75,8 @@ contract Subscriptions is ISubscriptions, Ownable{
             owner: owner,
             tier: tier,
             rate: rate,
-            deploymentSubset: deploymentSubset
+            deploymentSubset: deploymentSubset,
+            committeeType: _complianceToCommitteeType(compliance)
         });
         virtualChains[vcid] = vc;
 
@@ -95,11 +102,38 @@ contract Subscriptions is ISubscriptions, Ownable{
 
         Fees feesContract = Fees(contractRegistry.get("fees"));
         require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
-        feesContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt); // todo - buckets to fill depend on the vc type (kyc/general)
+        if (vc.committeeType == CommitteeType.General) {
+            feesContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
+        } else {
+            assert(vc.committeeType == CommitteeType.Compliance);
+            feesContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
+        }
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
         emit SubscriptionChanged(vcid, vc.genRef, vc.expiresAt, vc.tier, vc.deploymentSubset);
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
+    }
+
+    function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
+        return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
+    }
+
+    function isComplianceType(string memory compliance) private pure returns (bool) {
+        return compareStrings(compliance, "Compliance"); // TODO where should this constant be?
+    }
+
+    function isGeneralType(string memory compliance) private pure returns (bool) {
+        return compareStrings(compliance, "General"); // TODO where should this constant be?
+    }
+
+    function _complianceToCommitteeType(string memory compliance) private pure returns (CommitteeType) {
+        if (isComplianceType(compliance)) {
+            return CommitteeType.Compliance;
+        } else if (isGeneralType(compliance)) {
+            return CommitteeType.General; // TODO assert
+        }
+
+        revert("Unknown compliance type");
     }
 
 }

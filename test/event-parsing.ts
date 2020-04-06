@@ -1,6 +1,6 @@
 import Web3 from "web3";
 import * as _ from "lodash";
-import {SubscriptionChangedEvent} from "../typings/subscriptions-contract";
+import {SubscriptionChangedEvent, VcCreatedEvent} from "../typings/subscriptions-contract";
 import {compiledContracts} from "../compiled-contracts";
 import {FeesAddedToBucketEvent} from "../typings/fees-contract";
 
@@ -49,7 +49,7 @@ export const voteOutEvents = (txResult, contractAddress?: string) => parseLogs(t
 export const votedOutOfCommitteeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VotedOutOfCommittee(address)", contractAddress);
 export const vcConfigRecordChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "VcConfigRecordChanged(uint256,string,string)", contractAddress);
 export const vcOwnerChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "VcOwnerChanged(uint256,address,address)", contractAddress);
-export const vcCreatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "VcCreated(uint256,address)", contractAddress);
+export const vcCreatedEvents = (txResult, contractAddress?: string): VcCreatedEvent[] => parseLogs(txResult, subscriptions, "VcCreated(uint256,address)", contractAddress);
 export const contractAddressUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, contractRegistry, "ContractAddressUpdated(string,address)", contractAddress);
 export const protocolChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "ProtocolVersionChanged(string,uint256,uint256)", contractAddress);
 export const banningVoteEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningVote(address,address[])", contractAddress);
