@@ -402,6 +402,52 @@ describe('committee', async () => {
 
     });
 
+    it('notifies StandbysChanged when a committee member leaves and a standby joins the committee', async () => {
+        const maxStandbys = 2;
+        const maxCommitteeSize = 2;
+        const d = await Driver.new({maxStandbys, maxCommitteeSize});
+
+        const stake = 100;
+
+        const committee: Participant[] = [];
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const v = await d.newParticipant();
+            committee.push(v);
+
+            await v.registerAsValidator();
+            await v.stake(stake + maxStandbys + i);
+            let r = await v.notifyReadyForCommittee();
+            expect(r).to.have.a.committeeChangedEvent({
+                addrs: committee.map(s => s.address),
+                orbsAddrs: committee.map(s => s.orbsAddress),
+            });
+            expect(r).to.not.have.a.standbysChangedEvent();
+        }
+
+        const standbys: Participant[] = [];
+        for (let i = 0; i < maxStandbys; i++) {
+            const v = await d.newParticipant();
+            standbys.push(v);
+
+            await v.registerAsValidator();
+            await v.stake(stake + i);
+            let r = await v.notifyReadyForCommittee();
+            expect(r).to.have.a.standbysChangedEvent({
+                addrs: standbys.map(s => s.address),
+                orbsAddrs: standbys.map(s => s.orbsAddress),
+            });
+            expect(r).to.not.have.a.committeeChangedEvent();
+        }
+
+        let r = await committee[0].unregisterAsValidator();
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: committee.slice(1).concat([standbys[standbys.length - 1]]).map(v => v.address)
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: standbys.slice(0, standbys.length - 1).map(v => v.address)
+        });
+    });
+
     // Ready-To-Sync timeout related tests
 
     it('two ready-for-sync with less stake can overtake two timed-out standbys', async () => {

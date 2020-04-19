@@ -283,6 +283,10 @@ export class Participant {
         }
         return r;
     }
+
+    async unregisterAsValidator() {
+        return await this.validatorsRegistration.unregisterValidator({from: this.address});
+    }
 }
 
 export async function expectRejected(promise: Promise<any>, msg?: string) {

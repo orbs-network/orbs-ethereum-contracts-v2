@@ -429,21 +429,27 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function _removeFromTopology(address addr) private returns (bool committeeChanged, bool standbysChanged) {
-		standbysChanged = false;
-		committeeChanged = false;
 		(uint pos, bool inTopology) = _findInTopology(addr);
-		if (inTopology) {
-			_evict(pos);
+		if (!inTopology) {
+			return (false, false);
+		}
 
-			(uint prevCommitteeSize, uint currentCommitteeSize) = _onTopologyModification();
+		_evict(pos);
 
-			if (prevCommitteeSize != currentCommitteeSize || pos < currentCommitteeSize) { // was in committee
-				committeeChanged = true;
-				_notifyCommitteeChanged();
-			} else { // was a standby
-				standbysChanged = true;
-				_notifyStandbysChanged();
-			}
+		(uint prevCommitteeSize, uint currentCommitteeSize) = _onTopologyModification();
+
+		bool committeeSizeChanged = prevCommitteeSize != currentCommitteeSize;
+		bool wasInCommittee = committeeSizeChanged || pos < prevCommitteeSize;
+		bool standbyJoinedCommittee = wasInCommittee && !committeeSizeChanged;
+
+		committeeChanged = wasInCommittee;
+		if (committeeChanged) {
+			_notifyCommitteeChanged();
+		}
+
+		standbysChanged = !wasInCommittee || standbyJoinedCommittee;
+		if (standbysChanged) {
+			_notifyStandbysChanged();
 		}
 	}
 
