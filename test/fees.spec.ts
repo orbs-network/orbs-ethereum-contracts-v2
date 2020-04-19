@@ -109,8 +109,6 @@ describe('fees-contract', async () => {
       return rewardsArr;
     };
 
-    console.log(`time diff ${complianceStartTime - generalStartTime}`);
-
     if (complianceStartTime > generalStartTime) {
       // the creation of the second VC triggered reward calculaton for the general committee, need to fix the buckets
       calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, generalCommittee);

@@ -145,7 +145,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		}
 	}
 
-	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, address votee) private  returns (bool) {
+	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, address votee) private view returns (bool) {
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
 
@@ -460,7 +460,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
 	}
 
-	function isComplianceType(string memory compliance) private view returns (bool) {
+	function isComplianceType(string memory compliance) private pure returns (bool) {
 		return compareStrings(compliance, "Compliance"); // TODO where should this constant be?
 	}
 

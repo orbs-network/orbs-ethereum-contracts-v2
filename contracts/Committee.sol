@@ -265,7 +265,7 @@ contract Committee is ICommittee, Ownable {
 		oldestReadyToSyncStandbyPos = oldestPos;
 	}
 
-	function _compareValidatorsByData(address v1, uint256 v1Weight, bool v1Ready, address v2, uint256 v2Weight, bool v2Ready) private view returns (int) {
+	function _compareValidatorsByData(address v1, uint256 v1Weight, bool v1Ready, address v2, uint256 v2Weight, bool v2Ready) private pure returns (int) {
 		return v1Ready && !v2Ready ||
 				v1Ready == v2Ready  && v1Weight > v2Weight ||
 				v1Ready == v2Ready  && v1Weight == v2Weight && uint256(v1) > uint256(v2)
@@ -316,8 +316,8 @@ contract Committee is ICommittee, Ownable {
 			if (found) {
 				_evict(pos); // evict timed-out
 			} else {
-				(bool found, uint pos, uint256 weight) = findLowestWeightStandby();
-				_evict(pos); // evict lowest weight
+				(bool lowestWeightFound, uint lowestWeightPos, uint256 lowestWeight) = findLowestWeightStandby();
+				_evict(lowestWeightPos); // evict lowest weight
 			}
 			_onTopologyModification();
 			newStandbySize = maxStandbys;
@@ -345,7 +345,7 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function _isQualifiedForTopologyByRank(address validator) private  returns (bool qualified, uint entryPos) {
+	function _isQualifiedForTopologyByRank(address validator) private view returns (bool qualified, uint entryPos) {
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
 		(qualified, entryPos) = _isQualifiedForCommitteeByRank(validator);
 		if (qualified) {
@@ -354,7 +354,7 @@ contract Committee is ICommittee, Ownable {
 		return _isQualifiedAsStandbyByRank(validator);
 	}
 
-	function _isQualifiedAsStandbyByRank(address validator) private  returns (bool qualified, uint entryPos) {
+	function _isQualifiedAsStandbyByRank(address validator) private view returns (bool qualified, uint entryPos) {
 		if (isReadyToSyncStale(validator)) {
 			return (false, 0);
 		}
@@ -381,7 +381,7 @@ contract Committee is ICommittee, Ownable {
 		return _compareValidatorsByData(minimumAddress, minimumWeight, true, validator, getValidatorWeight(validator), true) < 1;
 	}
 
-	function _isQualifiedForCommitteeByRank(address validator) private  returns (bool qualified, uint entryPos) {
+	function _isQualifiedForCommitteeByRank(address validator) private view returns (bool qualified, uint entryPos) {
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
 		if (!isReadyForCommittee(validator) || isReadyToSyncStale(validator)) {
 			return (false, 0);
