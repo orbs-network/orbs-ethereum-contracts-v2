@@ -276,7 +276,7 @@ export class Participant {
         }
         r = await this.stake(stake);
         if (signalReadyToSync) {
-            r = await this.notifyReadyForCommittee();
+            r = await this.notifyReadyToSync();
         }
         if (signalReadyForCommittee) {
             r = await this.notifyReadyForCommittee();

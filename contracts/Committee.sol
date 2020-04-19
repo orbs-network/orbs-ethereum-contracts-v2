@@ -211,14 +211,14 @@ contract Committee is ICommittee, Ownable {
 
 		bool joinedCommittee = newPos < newCommitteeSize;
 		bool joinedStandbys = !joinedCommittee && newPos < topology.length;
-		bool previousCommitteeFull = prevCommitteeSize == maxCommitteeSize;
+		bool otherCommitteeMemberBecameStandby = joinedCommittee && prevCommitteeSize == newCommitteeSize;
 
 		committeeChanged = joinedCommittee;
 		if (committeeChanged) {
 			_notifyCommitteeChanged();
 		}
 
-		standbysChanged = joinedStandbys || joinedCommittee && previousCommitteeFull;
+		standbysChanged = joinedStandbys || otherCommitteeMemberBecameStandby;
 		if (standbysChanged) {
 			_notifyStandbysChanged();
 		}
@@ -324,27 +324,25 @@ contract Committee is ICommittee, Ownable {
 		(uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint newStandbySize) = _repositionTopologyMember(pos);
 
 		bool inCommitteeBefore = pos < prevCommitteeSize;
-		bool inStandbyBefore = !inCommitteeBefore;
+		bool isStandbyBefore = !inCommitteeBefore;
 
 		bool inCommitteeAfter = newPos < newCommitteeSize;
-		bool inStandbyAfter = !inCommitteeAfter;
+		bool isStandbyAfter = !inCommitteeAfter;
 
 		committeeChanged = inCommitteeBefore || inCommitteeAfter;
 		if (committeeChanged) {
 			_notifyCommitteeChanged();
 		}
 
-		standbysChanged = inStandbyBefore || inStandbyAfter;
+		standbysChanged = isStandbyBefore || isStandbyAfter;
 		if (standbysChanged) {
 			_notifyStandbysChanged();
 		}
 	}
 
 	function _isQualifiedForTopologyByRank(address validator) private view returns (bool qualified, uint entryPos) {
-		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
-		(qualified, entryPos) = _isQualifiedForCommitteeByRank(validator);
-		if (qualified) {
-			return (true, entryPos);
+		if (_isQualifiedForCommitteeByRank(validator)) {
+			return (true, topology.length);
 		}
 		return _isQualifiedAsStandbyByRank(validator);
 	}
@@ -376,21 +374,17 @@ contract Committee is ICommittee, Ownable {
 		return _compareValidatorsByData(minimumAddress, minimumWeight, true, validator, getValidatorWeight(validator), true) < 1;
 	}
 
-	function _isQualifiedForCommitteeByRank(address validator) private view returns (bool qualified, uint entryPos) {
+	function _isQualifiedForCommitteeByRank(address validator) private view returns (bool qualified) {
 		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
-		if (!isReadyForCommittee(validator) || isReadyToSyncStale(validator)) {
-			return (false, 0);
+		if (isReadyForCommittee(validator) && !isReadyToSyncStale(validator) && (
+			minCommitteeSize > 0 && committeeSize < minCommitteeSize ||
+			committeeSize < maxCommitteeSize && isAboveCommitteeEntryThreshold(validator) ||
+			committeeSize > 0 && _compareValidators(topology[committeeSize - 1], validator) < 0
+		)) {
+			return true;
 		}
 
-		if (committeeSize >= minCommitteeSize && !isAboveCommitteeEntryThreshold(validator)) {
-			return (false, 0);
-		}
-
-		if (committeeSize < maxCommitteeSize || _compareValidators(topology[committeeSize - 1], validator) < 0) {
-			return (true, topology.length);
-		}
-
-		return (false, 0);
+		return false;
 	}
 
 	function findTimedOutStandby() private view returns (bool found, uint pos) {

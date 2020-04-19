@@ -936,6 +936,104 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
+    it('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (join committee directly, standbys not full)', async () => {
+        const generalCommitteeMinimumWeight = 100;
+        const minCommitteeSize = 2;
+        const maxCommitteeSize = 4;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight});
+
+        // Two validators join the committee because of min-committee-size
+
+        let {v: v1, r: r1} = await d.newValidator(generalCommitteeMinimumWeight - 3, false, false, true);
+        expect(r1).to.have.a.committeeChangedEvent({
+            addrs: [v1.address]
+        });
+
+        let {v: v2, r: r2} = await d.newValidator(generalCommitteeMinimumWeight - 2, false, false, true);
+        expect(r2).to.have.a.committeeChangedEvent({
+            addrs: [v2.address, v1.address]
+        });
+
+        // Third validator will overtake the validator with lowest stake which becomes a standby as there are already min-committee-size members
+
+        let {v: v3, r: r3} = await d.newValidator(generalCommitteeMinimumWeight - 1, false, false, true);
+        expect(r3).to.have.a.committeeChangedEvent({
+            addrs: [v3.address, v2.address]
+        });
+        expect(r3).to.have.a.standbysChangedEvent({
+            addrs: [v1.address]
+        });
+
+    });
+
+    it('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (join committee directly, standbys full)', async () => {
+        const generalCommitteeMinimumWeight = 100;
+        const maxStandbys = 1;
+        const minCommitteeSize = 2;
+        const maxCommitteeSize = 4;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, maxStandbys, generalCommitteeMinimumWeight});
+
+        // Two validators join the committee because of min-committee-size
+
+        let {v: v1, r: r1} = await d.newValidator(generalCommitteeMinimumWeight - 5, false, false, true);
+        expect(r1).to.have.a.committeeChangedEvent({
+            addrs: [v1.address]
+        });
+
+        let {v: v2, r: r2} = await d.newValidator(generalCommitteeMinimumWeight - 4, false, false, true);
+        expect(r2).to.have.a.committeeChangedEvent({
+            addrs: [v2.address, v1.address]
+        });
+
+        // Another becomes standbys, filling the standby list completely
+        let {v: v3, r: r3} = await d.newValidator(generalCommitteeMinimumWeight - 1, false, true, false);
+        expect(r3).to.not.have.a.committeeChangedEvent();
+        expect(r3).to.have.a.standbysChangedEvent({
+            addrs: [v3.address]
+        });
+
+        // Third validator will overtake the validator with lowest stake which becomes a standby as there are already min-committee-size members
+
+        let {v: v4, r: r4} = await d.newValidator(generalCommitteeMinimumWeight - 3, false, false, true);
+        expect(r4).to.have.a.committeeChangedEvent({
+            addrs: [v4.address, v2.address]
+        });
+        expect(r4).to.have.a.standbysChangedEvent({
+            addrs: [v3.address]
+        });
+
+    });
+
+    it('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (become standby first)', async () => {
+        const generalCommitteeMinimumWeight = 100;
+        const minCommitteeSize = 2;
+        const maxCommitteeSize = 4;
+        const d = await Driver.new({minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight});
+
+        // Two validators join the committee because of min-committee-size
+
+        let {v: v1, r: r1} = await d.newValidator(generalCommitteeMinimumWeight - 3, false, false, true);
+        expect(r1).to.have.a.committeeChangedEvent({
+            addrs: [v1.address]
+        });
+
+        let {v: v2, r: r2} = await d.newValidator(generalCommitteeMinimumWeight - 2, false, false, true);
+        expect(r2).to.have.a.committeeChangedEvent({
+            addrs: [v2.address, v1.address]
+        });
+
+        // Third validator will overtake the validator with lowest stake which becomes a standby as there are already min-committee-size members
+
+        let {v: v3, r: r3} = await d.newValidator(generalCommitteeMinimumWeight - 1, false, true, true);
+        expect(r3).to.have.a.committeeChangedEvent({
+            addrs: [v3.address, v2.address]
+        });
+        expect(r3).to.have.a.standbysChangedEvent({
+            addrs: [v1.address]
+        });
+
+    });
+
     it('returns committee and standbys using getters', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
