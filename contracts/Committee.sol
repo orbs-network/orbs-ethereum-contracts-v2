@@ -27,7 +27,7 @@ contract Committee is ICommittee, Ownable {
 	// Derived properties
 	uint committeeSize;
 	uint readyForCommitteeCount;
-	uint oldestReadyToSyncStandbyPos;
+	int oldestReadyToSyncStandbyPos;
 
 	modifier onlyElectionsContract() {
 		require(msg.sender == contractRegistry.get("elections"), "caller is not the elections");
@@ -254,7 +254,7 @@ contract Committee is ICommittee, Ownable {
 
 	function _refreshOldestReadyToSyncStandbyPos() private {
 		uint256 oldestTimestamp = uint(-1);
-		uint256 oldestPos;
+		uint oldestPos = uint(-1);
 		for (uint i = committeeSize; i < topology.length; i++) {
 			uint t = members[topology[i]].readyToSyncTimestamp;
 			if (t < oldestTimestamp) {
@@ -262,7 +262,7 @@ contract Committee is ICommittee, Ownable {
 				oldestPos = i;
 			}
 		}
-		oldestReadyToSyncStandbyPos = oldestPos;
+		oldestReadyToSyncStandbyPos = int(oldestPos);
 	}
 
 	function _compareValidatorsByData(address v1, uint256 v1Weight, bool v1Ready, address v2, uint256 v2Weight, bool v2Ready) private pure returns (int) {
@@ -388,8 +388,8 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function findTimedOutStandby() private view returns (bool found, uint pos) {
-		pos = oldestReadyToSyncStandbyPos;
-		found = pos >= committeeSize && pos < topology.length && isReadyToSyncStale(topology[pos]);
+		pos = uint(oldestReadyToSyncStandbyPos);
+		found = int(pos) >= 0 && pos < topology.length && isReadyToSyncStale(topology[pos]);
 	}
 
 	function findLowestWeightStandby() private view returns (bool found, uint pos, uint weight) {
