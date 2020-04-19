@@ -207,7 +207,7 @@ contract Committee is ICommittee, Ownable {
 		}
 		topology[entryPos] = validator;
 
-		(uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint prevStandbySize, uint newStandbySize) = _repositionTopologyMember(entryPos);
+		(uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint newStandbySize) = _repositionTopologyMember(entryPos);
 
 		bool joinedCommittee = newPos < newCommitteeSize;
 		bool joinedStandbys = !joinedCommittee && newPos < topology.length;
@@ -286,7 +286,7 @@ contract Committee is ICommittee, Ownable {
 		topology[p2] = tempValidator;
 	}
 
-	function _repositionTopologyMember(uint memberPos) private returns (uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint prevStandbySize, uint newStandbySize) {
+	function _repositionTopologyMember(uint memberPos) private returns (uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint newStandbySize) {
 		uint topologySize = topology.length;
 		assert(topologySize > memberPos);
 
@@ -303,11 +303,6 @@ contract Committee is ICommittee, Ownable {
 		newPos = memberPos;
 
 		(prevCommitteeSize, newCommitteeSize) = _onTopologyModification();
-
-		prevStandbySize = topologySize - prevCommitteeSize;
-		if (prevStandbySize > maxStandbys){
-			prevStandbySize = maxStandbys;
-		}
 
 		newStandbySize = topologySize - newCommitteeSize;
 		if (newStandbySize > maxStandbys){
@@ -326,7 +321,7 @@ contract Committee is ICommittee, Ownable {
 
 	function _adjustPositionInTopology(uint pos) private returns (bool committeeChanged, bool standbysChanged) {
 		// TODO if a validator leaves committee it may be replaced by a timed-out, ready-for-committee standby
-		(uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint prevStandbySize, uint newStandbySize) = _repositionTopologyMember(pos);
+		(uint newPos, uint prevCommitteeSize, uint newCommitteeSize, uint newStandbySize) = _repositionTopologyMember(pos);
 
 		bool inCommitteeBefore = pos < prevCommitteeSize;
 		bool inStandbyBefore = !inCommitteeBefore;
