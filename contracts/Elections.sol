@@ -262,7 +262,6 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		}
     }
 
-	event AccForBan(uint256 acc, uint256 total);
     function _applyBanningVotesFor(address addr) private {
         uint256 banningTimestamp = bannedValidators[addr];
         bool isBanned = banningTimestamp != 0;
@@ -272,7 +271,6 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
         }
 
         uint256 banningStake = accumulatedStakesForBanning[addr];
-		emit AccForBan(banningStake, totalGovernanceStake);
         bool shouldBan = totalGovernanceStake > 0 && banningStake.mul(100).div(totalGovernanceStake) >= banningPercentageThreshold;
 
         if (isBanned != shouldBan) {

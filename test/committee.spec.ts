@@ -720,7 +720,7 @@ describe('committee', async () => {
         }
     });
 
-    it('evicts a committee member which unstaked below the min-weight threshold', async () => {
+    it('evicts a committee member which unstaked below the min-weight threshold, if member position is above min-committee', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -749,7 +749,7 @@ describe('committee', async () => {
         });
     });
 
-    it('does not evict a committee member which unstaked below the min-weight threshold because of min-committee', async () => {
+    it('does not evict a committee member which unstaked below the min-weight threshold if member position is below min-committee', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 1;
