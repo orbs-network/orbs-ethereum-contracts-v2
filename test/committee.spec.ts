@@ -192,6 +192,54 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
     });
 
+    it('evicts a committee member which became not-ready-for-committee because it sent ready-to-sync', async () => {
+        const d = await Driver.new();
+
+        const stake = 100;
+        const v = await d.newParticipant();
+
+        await v.registerAsValidator();
+        await v.stake(stake);
+        let r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+            weights: [bn(stake)]
+        });
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        r = await v.notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [v.address],
+            orbsAddrs: [v.orbsAddress],
+            weights: [bn(stake)]
+        });
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: []
+        });
+    });
+
+    it('does not allow a non-ready standby to join committee even if was ready previously', async () => {
+        const d = await Driver.new({maxCommitteeSize: 1});
+
+        const stake = 100;
+        const {v: v1, r: r1} = await d.newValidator(stake, false, false, true); // committee now full
+        expect(r1).to.have.a.committeeChangedEvent({
+            addrs: [v1.address]
+        });
+
+        const {v: v2, r: r2} = await d.newValidator(stake - 1, false, false, true); // a ready standby
+        expect(r2).to.have.a.standbysChangedEvent({
+            addrs: [v2.address]
+        });
+
+        let r = await v2.notifyReadyToSync(); // should now become not ready-for-committee
+        expect(r).to.not.have.a.committeeChangedEvent();
+
+        r = await v2.stake(2); // now has more stake than committee member, but not ready so should not enter committee
+        expect(r).to.not.have.committeeChangedEvent();
+    });
+
     it('evicts a standby which explicitly became not-ready-to-sync', async () => {
         const d = await Driver.new();
 
@@ -637,7 +685,7 @@ describe('committee', async () => {
         }
 
         await evmIncreaseTime(d.web3, readyToSyncTimeout);
-        let r = await committee[1].notifyReadyToSync(); // so when removed from committee, will remain a standby
+        let r = await committee[1].notifyReadyForCommittee(); // so when removed from committee, will remain a standby
         expect(r).to.have.a.committeeChangedEvent({ // no change in committee order
             addrs: committee.map(v => v.address)
         });

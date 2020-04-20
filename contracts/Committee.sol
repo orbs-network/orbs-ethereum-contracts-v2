@@ -65,6 +65,7 @@ contract Committee is ICommittee, Ownable {
 	function memberReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
 		if (isMember(addr)) {
 			members[addr].readyToSyncTimestamp = now;
+			members[addr].readyForCommittee = false;
 			return _rankValidator(addr);
 		}
 		return (false, false);
