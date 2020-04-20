@@ -146,30 +146,11 @@ const containEvent = (eventParser, transposed?: boolean, key?: string) =>
             data, // expected
             log // actual
         );
-        // for (const k in data) {
-        //   this.assert(
-        //     comparePrimitive(data[k], log[k]),
-        //     "expected #{this} to be #{exp} but got #{act}",
-        //     "expected #{this} to not be #{act}",
-        //     data[k], // expected
-        //     log[k] // actual
-        //   );
-        // }
       } else {
         for (const log of logs) {
           if (compare(log, data, transposed, key)) {
             return;
           }
-        //   let foundDiff = false;
-        //   for (const k in data) {
-        //     if (!comparePrimitive(data[k], log[k])) {
-        //       foundDiff = true;
-        //       break;
-        //     }
-        //   }
-        //   if (!foundDiff) {
-        //     return;
-        //   }
         }
         this.assert(
           false,
