@@ -27,6 +27,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	}
 	mapping (address => Validator) validators;
 	mapping (address => address) orbsAddressToEthereumAddress;
+	mapping (bytes4 => address) ipToValidator;
 
 	IContractRegistry contractRegistry;
 
@@ -65,6 +66,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	/// @dev Called by a participant who wishes to unregister
 	function unregisterValidator() external onlyRegisteredValidator {
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
+		delete ipToValidator[validators[msg.sender].ip];
 		delete validators[msg.sender];
 
 		electionsContract().validatorUnregistered(msg.sender);
@@ -137,15 +139,24 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		require(bytes(contact).length != 0, "contact must be given");
 		// TODO which are mandatory?
 
-		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
-        orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
+		require(_zeroOrSender(ipToValidator[ip]), "ip is already in use");
+		delete ipToValidator[validators[msg.sender].ip];
+		ipToValidator[ip] = msg.sender;
 
-        validators[msg.sender].orbsAddr = orbsAddr; // TODO enforce uniqueness?
-		validators[msg.sender].ip = ip; // TODO enforce uniqueness?
+		require(_zeroOrSender(orbsAddressToEthereumAddress[orbsAddr]), "orbs address is already in use");
+		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
+		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
+
+		validators[msg.sender].orbsAddr = orbsAddr;
+		validators[msg.sender].ip = ip;
 		validators[msg.sender].name = name;
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
 		validators[msg.sender].lastUpdateTime = now;
+	}
+
+	function _zeroOrSender(address addr) private view returns (bool) {
+		return addr == address(0) || addr == msg.sender;
 	}
 
 	function electionsContract() private view returns (IElections) {
