@@ -17,7 +17,7 @@ contract StakingRewards is IStakingRewards, Ownable {
 
     uint256 pool;
     uint256 annualRateInPercentMille;
-    uint256 annualCap; // todo - apply this cap
+    uint256 annualCap;
 
     uint256 lastPayedAt;
 

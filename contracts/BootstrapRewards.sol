@@ -17,7 +17,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     uint256 pool;
 
     uint256 generalCommitteeAnnualBootstrap;
-    uint256 complianceCommitteeAnnualBootstrap; // todo - assign rewards to compliance committee
+    uint256 complianceCommitteeAnnualBootstrap;
 
     uint256 lastPayedAt;
 
@@ -111,7 +111,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
 
     function _getCommittee(string memory committeeContract) private view returns (address[] memory) {
         ICommittee e = ICommittee(contractRegistry.get(committeeContract));
-        (address[] memory validators, uint256[] memory weights) = e.getCommittee();
+        (address[] memory validators,) = e.getCommittee();
         return validators;
     }
 
