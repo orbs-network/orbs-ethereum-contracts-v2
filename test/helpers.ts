@@ -1,5 +1,6 @@
 import Web3 from "web3";
 import BN from "bn.js";
+import * as _ from "lodash";
 import { Web3Driver } from "../eth";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
@@ -15,6 +16,14 @@ export const evmIncreaseTime = async (web3: Web3Driver, seconds: number) => new 
             (err, res) => err ? reject(err) : resolve(res)
         )
 );
+
+export const evmMine = async (web3: Web3Driver, blocks: number) => Promise.all(_.range(blocks).map(() => new Promise(
+    (resolve, reject) =>
+        (web3.currentProvider as any).send(
+            {method: "evm_mine", params: []},
+            (err, res) => err ? reject(err) : resolve(res)
+        )
+)));
 
 export function bn(x: string|BN|number|Array<string|BN|number>) {
     if (Array.isArray(x)) {

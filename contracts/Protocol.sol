@@ -9,8 +9,9 @@ contract Protocol is IProtocol, Ownable {
 
     struct DeploymentSubset {
         bool exists;
-        uint version;
+        uint nextVersion;
         uint asOfBlock;
+        uint currentVersion;
     }
 
     mapping (string => DeploymentSubset) deploymentSubsets;
@@ -20,15 +21,22 @@ contract Protocol is IProtocol, Ownable {
     }
 
     function setProtocolVersion(string calldata deploymentSubset, uint256 protocolVersion, uint256 asOfBlock) external onlyOwner {
-        if (deploymentSubsets[deploymentSubset].version == 0) {
+        if (!deploymentSubsets[deploymentSubset].exists) {
             require(asOfBlock == 0, "initial protocol version must be from block 0");
+            deploymentSubsets[deploymentSubset].currentVersion = protocolVersion;
         } else {
+            uint currentAsOfBlock = deploymentSubsets[deploymentSubset].asOfBlock;
+            uint currentNextVersion = deploymentSubsets[deploymentSubset].nextVersion;
+            if (currentAsOfBlock <= block.number) {
+                deploymentSubsets[deploymentSubset].currentVersion = currentNextVersion;
+            }
+
             require(asOfBlock > block.number, "protocol update can only take place in the future");
-            require(asOfBlock > deploymentSubsets[deploymentSubset].asOfBlock, "protocol upgrade can only take place after the previous protocol update");
-            require(protocolVersion > deploymentSubsets[deploymentSubset].version, "protocol downgrade is not supported");
+            require(asOfBlock > currentAsOfBlock || currentAsOfBlock > block.number, "protocol upgrade can only take place after the previous protocol update, unless previous upgrade is in the future");
+            require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol downgrade is not supported");
         }
 
-        deploymentSubsets[deploymentSubset].version = protocolVersion;
+        deploymentSubsets[deploymentSubset].nextVersion = protocolVersion;
         deploymentSubsets[deploymentSubset].asOfBlock = asOfBlock;
         deploymentSubsets[deploymentSubset].exists = true;
 
