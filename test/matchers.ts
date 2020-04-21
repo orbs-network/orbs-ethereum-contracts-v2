@@ -21,7 +21,7 @@ import {
   bootstrapAddedToPoolEvents,
   stakingRewardAssignedEvents,
   bootstrapRewardsAssignedEvents,
-  validatorConformanceUpdateEvents,
+  validatorComplianceUpdateEvents,
   vcCreatedEvents,
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
@@ -55,7 +55,7 @@ import {
   ValidatorUnregisteredEvent
 } from "../typings/validator-registration-contract";
 import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
-import {ValidatorConformanceUpdateEvent} from "../typings/compliance-contract";
+import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
@@ -191,7 +191,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("vcCreatedEvent", containEvent(vcCreatedEvents));
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
-  chai.Assertion.overwriteMethod("validatorConformanceUpdateEvent", containEvent(validatorConformanceUpdateEvents));
+  chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -225,7 +225,7 @@ declare global {
       bannedEvent(data?: Partial<BannedEvent>): void;
       unbannedEvent(data?: Partial<UnbannedEvent>): void;
       protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
-      validatorConformanceUpdateEvent(data?: Partial<ValidatorConformanceUpdateEvent>)
+      validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
       stakingRewardAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);

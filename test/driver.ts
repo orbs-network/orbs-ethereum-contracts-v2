@@ -19,8 +19,8 @@ import {TransactionReceipt} from "web3-core";
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
-export const CONFORMANCE_TYPE_GENERAL = "General";
-export const CONFORMANCE_TYPE_COMPLIANCE = "Compliance";
+export const COMPLIANCE_TYPE_GENERAL = "General";
+export const COMPLIANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
     minCommitteeSize: number,
@@ -261,11 +261,11 @@ export class Participant {
     }
 
     async becomeComplianceType() {
-        return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_COMPLIANCE);
+        return await this.compliance.setValidatorCompliance(this.address, COMPLIANCE_TYPE_COMPLIANCE);
     }
 
     async becomeGeneralType() {
-        return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_GENERAL);
+        return await this.compliance.setValidatorCompliance(this.address, COMPLIANCE_TYPE_GENERAL);
     }
 
     async becomeValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {

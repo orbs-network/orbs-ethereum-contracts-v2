@@ -307,7 +307,6 @@ contract Committee is ICommittee, Ownable {
 
 		newStandbySize = topologySize - newCommitteeSize;
 		if (newStandbySize > maxStandbys){
-			// need to evict exactly one standby - todo assert?
 			(bool found, uint pos) = findTimedOutStandby();
 			if (found) {
 				_evict(pos); // evict timed-out
@@ -515,10 +514,6 @@ contract Committee is ICommittee, Ownable {
 
 	function validatorsRegistration() private view returns (IValidatorsRegistration) {
 		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
-	}
-
-	function getTopology() external view returns (address[] memory) { // TODO remove
-		return topology;
 	}
 
 	function isReadyToSyncStale(address addr) private view returns (bool) {
