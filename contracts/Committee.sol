@@ -291,6 +291,8 @@ contract Committee is ICommittee, Ownable {
 		uint topologySize = topology.length;
 		assert(topologySize > memberPos);
 
+		uint oldPos = memberPos;
+
 		while (memberPos > 0 && _compareValidators(topology[memberPos], topology[memberPos - 1]) > 0) {
 			_replace(memberPos-1, memberPos);
 			memberPos--;
@@ -318,6 +320,28 @@ contract Committee is ICommittee, Ownable {
 			_onTopologyModification();
 			newStandbySize = maxStandbys;
 		}
+
+		// Automatically set HB timestamp for a committee member which became standby
+		bool inCommitteeBefore = oldPos < prevCommitteeSize;
+		bool isStandbyAfter = newPos >= newCommitteeSize && newPos < topologySize;
+
+		address leftCommitteeBecameStandby = address(0);
+		if (inCommitteeBefore && isStandbyAfter) {
+			leftCommitteeBecameStandby = topology[newPos];
+		} else {
+			bool inCommitteeAfter = newPos < newCommitteeSize;
+			bool joinedCommittee = !inCommitteeBefore && inCommitteeAfter;
+
+			if (joinedCommittee && prevCommitteeSize == newCommitteeSize && newStandbySize > 0) {
+				// a standby joined a full committee, meaning the the first standby was previously a committee member
+				leftCommitteeBecameStandby = topology[committeeSize];
+			}
+		}
+		if (leftCommitteeBecameStandby != address(0)) {
+			members[leftCommitteeBecameStandby].readyToSyncTimestamp = now;
+			_refreshOldestReadyToSyncStandbyPos();
+		}
+
 	}
 
 	function _adjustPositionInTopology(uint pos) private returns (bool committeeChanged, bool standbysChanged) {
