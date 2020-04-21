@@ -15,7 +15,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	}
 
 	struct Validator {
-		bytes4 ip; // TODO should we enforce uniqueness of IP address as we did in previous contract?
+		bytes4 ip;
 		address orbsAddr;
 		string name;
 		string website;
