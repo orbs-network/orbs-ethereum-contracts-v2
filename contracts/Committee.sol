@@ -376,16 +376,11 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function _isQualifiedForCommitteeByRank(address validator) private view returns (bool qualified) {
-		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
-		if (isReadyForCommittee(validator) && !isReadyToSyncStale(validator) && (
+		return (isReadyForCommittee(validator) && !isReadyToSyncStale(validator) && (
 			minCommitteeSize > 0 && committeeSize < minCommitteeSize ||
 			committeeSize < maxCommitteeSize && isAboveCommitteeEntryThreshold(validator) ||
 			committeeSize > 0 && _compareValidators(topology[committeeSize - 1], validator) < 0
-		)) {
-			return true;
-		}
-
-		return false;
+		));
 	}
 
 	function findTimedOutStandby() private view returns (bool found, uint pos) {
