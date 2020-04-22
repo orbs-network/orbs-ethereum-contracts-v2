@@ -39,7 +39,8 @@ export const defaultDriverOptions: Readonly<DriverOptions>  & {readonly minimumS
     voteOutTimeout : 24 * 60 * 60,
     banningThreshold : 80,
     web3Provider: defaultWeb3Provider,
-}
+};
+
 export class Driver {
     private static web3DriversCache = new WeakMap<DriverOptions['web3Provider'], Web3Driver>();
     private participants: Participant[] = [];
@@ -63,8 +64,7 @@ export class Driver {
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
         const {maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider} = Object.assign({}, defaultDriverOptions, options);
-        const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
-        Driver.web3DriversCache.set(web3Provider, web3);
+        const web3 = new Web3Driver(web3Provider);
         const accounts = await web3.eth.getAccounts();
 
         const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]]);
@@ -149,10 +149,11 @@ export class Driver {
         return subscriber;
     }
 
-    newParticipant(): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
+    newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
+        name = name || `Validator${this.participants.length}-name`;
         const RESERVED_ACCOUNTS = 2;
         const v = new Participant(
-            `Validator${this.participants.length}-name`,
+            name,
             `Validator${this.participants.length}-website`,
             `Validator${this.participants.length}-contact`,
             this.accounts[RESERVED_ACCOUNTS + this.participants.length*2],
@@ -166,6 +167,18 @@ export class Driver {
         const delegator = this.newParticipant();
         await delegator.stake(new BN(amount));
         return await delegator.delegate(delegatee);
+    }
+
+    logGasUsageSummary(scenarioName: string) {
+        console.log(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`);
+        console.log(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`.replace(/./g, '-'));
+
+        const logFor = (address: string, name: string) => console.log(`${name} (${address}): ${this.web3.gasRecorder.gasUsedBy(address)}`);
+
+        logFor(this.accounts[0], "Root Account");
+        for (const p of this.participants) {
+            logFor(p.address, p.name);
+        }
     }
 
 }

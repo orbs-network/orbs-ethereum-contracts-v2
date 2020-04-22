@@ -4,6 +4,7 @@ import { Contract as Web3Contract } from "web3-eth-contract";
 import BN from "bn.js";
 import { Contracts } from "./typings/contracts";
 import {TransactionReceipt} from "web3-core";
+import {GasRecorder} from "./gas-recorder";
 const HDWalletProvider = require("truffle-hdwallet-provider");
 
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
@@ -24,6 +25,8 @@ type ContractEntry = {
 export class Web3Driver{
     private web3 : Web3;
     private contracts = new Map<string, ContractEntry>();
+    public readonly gasRecorder = new GasRecorder();
+
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
         this.web3 = this.web3Provider();
     }
@@ -106,7 +109,10 @@ export class Contract {
                 from: accounts[0],
                 gas: 6700000,
                 ...opts
-            }); // if we return directly, it will not throw the exceptions but return a rejected promise
+            });
+            if (action == "send") {
+                this.web3.gasRecorder.record(ret);
+            }
             return ret;
         } catch(e) {
             this.web3.refresh();
