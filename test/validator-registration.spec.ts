@@ -228,7 +228,7 @@ describe('validator-registration', async () => {
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact,
+        "",
         {from: v.address}));
   });
 
