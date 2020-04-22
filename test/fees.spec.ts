@@ -2,12 +2,14 @@ import 'mocha';
 
 import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
-import {feesAddedToBucketEvents, subscriptionChangedEvents} from "./event-parsing";
+import {feesAddedToBucketEvents, subscriptionChangedEvents, vcCreatedEvents} from "./event-parsing";
 import {bn, evmIncreaseTime} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
+import {FeesAddedToBucketEvent} from "../typings/fees-contract";
+import {ComplianceType} from "../typings/compliance-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -26,80 +28,66 @@ async function sleep(ms): Promise<void> {
 
 describe('fees-contract', async () => {
 
-  it('should distribute fees to validators in committee', async () => {
-    const d = await Driver.new();
+  it('should distribute fees to validators in general and compliance committees', async () => {
+    const d = await Driver.new({maxCommitteeSize: 4});
 
     // create committee
 
-    const initStakeLesser = new BN(17000);
-    const v1 = d.newParticipant();
-    await v1.stake(initStakeLesser);
-    await v1.registerAsValidator();
-    await v1.notifyReadyForCommittee();
+    const initStakeLesser = 17000;
+    const initStakeLarger = 21000;
 
-    const initStakeLarger = new BN(21000);
-    const v2 = d.newParticipant();
-    await v2.stake(initStakeLarger);
-    await v2.registerAsValidator();
-    await v2.notifyReadyForCommittee();
+    const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
+    const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
+    const {v: v3} = await d.newValidator(initStakeLesser, true, false, true);
+    const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
 
-    const validators = [{
-      v: v2,
-      stake: initStakeLarger
-    }, {
-      v: v1,
-      stake: initStakeLesser
-    }];
+    const generalCommittee = [v1, v2, v3, v4];
+    const complianceCommittee = [v1, v3];
 
-    const nValidators = validators.length;
+    // create a VCs
 
-    // create a new VC
+    const createVc = async (vcRate: number, compliance: ComplianceType, payment: number): Promise<{vcid: string, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
+      const subs = await d.newSubscriber('tier', vcRate);
 
-    const vcRate = 3000000000;
-    const subs = await d.newSubscriber('tier', vcRate);
+      const appOwner = d.newParticipant();
+      await d.erc20.assign(appOwner.address, payment);
+      await d.erc20.approve(subs.address, payment, {from: appOwner.address});
 
-    const appOwner = d.newParticipant();
-    const payment = 12 * vcRate;
-    await d.erc20.assign(appOwner.address, payment);
-    await d.erc20.approve(subs.address, payment, {from: appOwner.address});
+      let r = await subs.createVC(payment, compliance, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+      const vcid = vcCreatedEvents(r)[0].vcid;
+      let startTime = await txTimestamp(d.web3, r);
 
-    let r = await subs.createVC(payment, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
-    let startTime = await txTimestamp(d.web3, r);
+      const feeBuckets = feesAddedToBucketEvents(r);
 
-    const feeBuckets = feesAddedToBucketEvents(r);
+      // all the payed rewards were added to a bucket
+      const totalAdded = feeBuckets.reduce((t, l) => t.add(new BN(l.added)), new BN(0));
+      expect(totalAdded).to.be.bignumber.equal(new BN(payment));
 
-    // all the payed rewards were added to a bucket
-    const totalAdded = feeBuckets.reduce((t, l) => t.add(new BN(l.added)), new BN(0));
-    expect(totalAdded).to.be.bignumber.equal(new BN(payment));
+      // the first bucket was added to with proportion to the remaining time
+      const secondsInFirstMonth = parseInt(feeBuckets[1].bucketId as string) - startTime;
+      expect(parseInt(feeBuckets[0].added as string)).to.equal(Math.floor(secondsInFirstMonth * vcRate / MONTH_IN_SECONDS));
 
-    // the first bucket was added to with proportion to the remaining time
-    const secondsInFirstMonth = parseInt(feeBuckets[1].bucketId as string) - startTime;
-    expect(parseInt(feeBuckets[0].added as string)).to.equal(Math.floor(secondsInFirstMonth * vcRate / MONTH_IN_SECONDS));
+      // all middle buckets were added to by the monthly rate
+      const middleBuckets = feeBuckets.filter((l, i) => i > 0 && i < feeBuckets.length - 1);
+      expect(middleBuckets).to.have.length(feeBuckets.length - 2);
+      middleBuckets.forEach(l => {
+        expect(l.added).to.be.bignumber.equal(new BN(vcRate));
+      });
 
-    // all middle buckets were added to by the monthly rate
-    const middleBuckets = feeBuckets.filter((l, i) => i > 0 && i < feeBuckets.length - 1);
-    expect(middleBuckets).to.have.length(feeBuckets.length - 2);
-    middleBuckets.forEach(l => {
-      expect(l.added).to.be.bignumber.equal(new BN(vcRate));
-    });
+      expect(await d.fees.getLastFeesAssignment()).to.be.bignumber.equal(new BN(startTime));
 
-    expect(await d.fees.getLastFeesAssignment()).to.be.bignumber.equal(new BN(startTime));
+      return {
+        vcid,
+        startTime,
+        appOwner,
+        feeBuckets
+      }
+    };
 
-    // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
-    // and subtract it afterwards
+    const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(3000000000, "General", 12 * 3000000000);
+    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(6000000000, "Compliance", 12 * 3000000000);
 
-    const initialOrbsBalances:BN[] = [];
-    for (const v of validators) {
-      initialOrbsBalances.push(new BN(await d.fees.getOrbsBalance(v.v.address)));
-    }
-
-    await sleep(3000);
-    await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
-
-    const assignFeesTxRes = await d.fees.assignFees();
-    const endTime = await txTimestamp(d.web3, assignFeesTxRes);
-
-    const calcFeeRewards = () => {
+    const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[]) => {
       let rewards = 0;
       for (const bucket of feeBuckets) {
         const bucketStartTime = Math.max(parseInt(bucket.bucketId as string), startTime);
@@ -109,37 +97,67 @@ describe('fees-contract', async () => {
         if (bucketStartTime < endTime) {
           const payedDuration = Math.min(endTime, bucketEndTime) - bucketStartTime;
           const amount = Math.floor(bucketAmount * payedDuration / bucketRemainingTime);
+          bucket.added = (parseInt(bucket.added as string) - amount).toString();
+          bucket.total = (parseInt(bucket.total as string) - amount).toString();
           rewards += amount;
         }
       }
-      const rewardsArr = validators.map(() => Math.floor(rewards / validators.length));
+      const rewardsArr = committee.map(() => Math.floor(rewards / committee.length));
       const remainder = rewards - _.sum(rewardsArr);
-      const remainderWinnerIdx = endTime % nValidators;
+      const remainderWinnerIdx = endTime % committee.length;
       rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx] + remainder;
-      return rewardsArr.map(x => new BN(x));
+      return rewardsArr;
     };
 
+    if (complianceStartTime > generalStartTime) {
+      // the creation of the second VC triggered reward calculaton for the general committee, need to fix the buckets
+      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, generalCommittee);
+    }
+
+    // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
+    // and subtract it afterwards
+
+    const initialOrbsBalances:BN[] = [];
+    for (const v of generalCommittee) {
+      initialOrbsBalances.push(new BN(await d.fees.getOrbsBalance(v.address)));
+    }
+
+    await sleep(3000);
+    await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
+
+    const assignFeesTxRes = await d.fees.assignFees();
+    const endTime = await txTimestamp(d.web3, assignFeesTxRes);
+
     // Calculate expected rewards from VC fees
-    const totalOrbsRewardsArr = calcFeeRewards();
+
+    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, generalCommittee);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      assignees: validators.map(v => v.v.address),
-      orbs_amounts: totalOrbsRewardsArr
+      assignees: generalCommittee.map(v => v.address),
+      orbs_amounts: generalCommitteeRewardsArr.map(x => x.toString())
+    });
+
+    const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
+    expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
+      assignees: complianceCommittee.map(v => v.address),
+      orbs_amounts: complianceCommitteeRewardsArr.map(x => x.toString())
     });
 
     const orbsBalances:BN[] = [];
-    for (const v of validators) {
-      orbsBalances.push(new BN(await d.fees.getOrbsBalance(v.v.address)));
+    for (const v of generalCommittee) {
+      orbsBalances.push(new BN(await d.fees.getOrbsBalance(v.address)));
     }
 
-    for (const v of validators) {
-      const i = validators.indexOf(v);
-      let orbsBalance = orbsBalances[i].sub(initialOrbsBalances[i]);
-      expect(orbsBalance).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
+
+    for (const v of generalCommittee) {
+      const i = generalCommittee.indexOf(v);
+      const totalExpectedRewards = generalCommitteeRewardsArr[i] + (i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2] : 0);
+      const expectedBalance = bn(totalExpectedRewards).add(initialOrbsBalances[i]);
+      expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
-      await d.fees.withdrawFunds({from: v.v.address});
-      const actualBalance = await d.erc20.balanceOf(v.v.address);
-      expect(new BN(actualBalance)).to.bignumber.equal(new BN(orbsBalances[i]));
+      await d.fees.withdrawFunds({from: v.address});
+      const actualBalance = await d.erc20.balanceOf(v.address);
+      expect(new BN(actualBalance)).to.bignumber.equal(expectedBalance);
     }
 
   });
@@ -157,12 +175,12 @@ describe('fees-contract', async () => {
     await d.erc20.assign(appOwner.address, firstPayment);
     await d.erc20.approve(subs.address, firstPayment, {from: appOwner.address});
 
-    let r = await subs.createVC(firstPayment, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+    let r = await subs.createVC(firstPayment, "General", DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
     let startTime = await txTimestamp(d.web3, r);
     expect(r).to.have.a.subscriptionChangedEvent({
       expiresAt: bn(startTime + MONTH_IN_SECONDS * initialDurationInMonths)
     });
-    const vcid = subscriptionChangedEvents(r)[0].vcid;
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
 
     const extensionInMonths = 2;
     const secondPayment = extensionInMonths * vcRate;

@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./spec_interfaces/IContractRegistry.sol";
-import "./interfaces/IElections.sol";
 import "./spec_interfaces/IBootstrapRewards.sol";
+import "./spec_interfaces/ICommittee.sol";
 
 contract BootstrapRewards is IBootstrapRewards, Ownable {
     using SafeMath for uint256;
@@ -17,7 +17,7 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     uint256 pool;
 
     uint256 generalCommitteeAnnualBootstrap;
-    uint256 complianceCommitteeAnnualBootstrap; // todo - assign rewards to compliance committee
+    uint256 complianceCommitteeAnnualBootstrap;
 
     uint256 lastPayedAt;
 
@@ -76,23 +76,27 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     }
 
     function _assignRewards() private {
-        uint256 duration = now.sub(lastPayedAt);
+        _assignRewardsToCommittee(_getGeneralCommittee(), generalCommitteeAnnualBootstrap);
+        _assignRewardsToCommittee(_getComplianceCommittee(), complianceCommitteeAnnualBootstrap);
 
-        address[] memory currentCommittee = _getCommittee(); //todo: also assign to compliance committee
-        if (currentCommittee.length > 0) {
-            uint256 amountPerValidator = Math.min(generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pool.div(currentCommittee.length));
-            pool = pool.sub(amountPerValidator * currentCommittee.length);
+        lastPayedAt = now;
+    }
 
-            uint256[] memory assignedRewards = new uint256[](currentCommittee.length);
+    function _assignRewardsToCommittee(address[] memory committee, uint256 annualBootstrapRewards) private {
+        if (committee.length > 0) {
+            uint256 duration = now.sub(lastPayedAt);
+            uint256 amountPerValidator = Math.min(annualBootstrapRewards.mul(duration).div(365 days), pool.div(committee.length));
+            pool = pool.sub(amountPerValidator * committee.length);
 
-            for (uint i = 0; i < currentCommittee.length; i++) {
-                addToBalance(currentCommittee[i], amountPerValidator);
+            uint256[] memory assignedRewards = new uint256[](committee.length);
+
+            for (uint i = 0; i < committee.length; i++) {
+                addToBalance(committee[i], amountPerValidator);
                 assignedRewards[i] = amountPerValidator;
             }
 
-            emit BootstrapRewardsAssigned(currentCommittee, assignedRewards);
+            emit BootstrapRewardsAssigned(committee, assignedRewards); // TODO separate event per committee?
         }
-        lastPayedAt = now;
     }
 
     function addToBalance(address addr, uint256 amount) private {
@@ -105,11 +109,18 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         require(bootstrapToken.transfer(msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
-    function _getCommittee() private view returns (address[] memory) {
-        // todo - use committee contracts, for both general and kyc committees
-        IElections e = IElections(contractRegistry.get("elections"));
-        (address[] memory validators, ) =  e.getCommittee();
+    function _getCommittee(string memory committeeContract) private view returns (address[] memory) {
+        ICommittee e = ICommittee(contractRegistry.get(committeeContract));
+        (address[] memory validators,) = e.getCommittee();
         return validators;
+    }
+
+    function _getGeneralCommittee() private view returns (address[] memory) {
+        return _getCommittee("committee-general");
+    }
+
+    function _getComplianceCommittee() private view returns (address[] memory) {
+        return _getCommittee("committee-compliance");
     }
 
 }

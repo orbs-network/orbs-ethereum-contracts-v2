@@ -9,22 +9,16 @@ import "./interfaces/IElections.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
+import "./spec_interfaces/ICommittee.sol";
+import "./spec_interfaces/ICompliance.sol";
 
 
 contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	using SafeMath for uint256;
 
-	IContractRegistry contractRegistry;
-
-	event Debug(string,uint256);
-
     uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;
 
-	address[] topology;
-
 	// TODO consider using structs instead of multiple mappings
-	mapping (address => bool) readyValidators; // TODO if out-of-topology validators cannot be be ready-for-committee, this mapping can be replaced by a single uint
-
 	mapping (address => uint256) ownStakes;
 	mapping (address => uint256) uncappedStakes;
 	uint256 totalGovernanceStake;
@@ -35,11 +29,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	mapping (address => uint256) accumulatedStakesForBanning; // addr => total stake
 	mapping (address => uint256) bannedValidators; // addr => timestamp
 
-	uint committeeSize; // TODO may be redundant if readyValidators mapping is present
-
-	uint minimumStake;
-	uint maxCommitteeSize;
-	uint maxTopologySize;
+	uint minCommitteeSize; // TODO only used as an argument to committee.setMinimumWeight(), should probably not be here
 	uint maxDelegationRatio; // TODO consider using a hardcoded constant instead.
 	uint8 voteOutPercentageThreshold;
 	uint256 voteOutTimeoutSeconds;
@@ -57,68 +47,75 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		_;
 	}
 
-	constructor(uint _maxCommitteeSize, uint _maxTopologySize, uint _minimumStake /* TODO remove, feature not needed */, uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
-		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(_maxTopologySize > _maxCommitteeSize, "topology must be larger than a full committee");
+	modifier onlyComplianceContract() {
+		require(msg.sender == contractRegistry.get("compliance"), "caller is not the validator registrations contract");
+
+		_;
+	}
+
+	modifier onlyNotBanned() {
+		require(!_isBanned(msg.sender), "caller is a banned validator");
+
+		_;
+	}
+
+	constructor(uint _minCommitteeSize, uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
 		require(_banningPercentageThreshold >= 0 && _banningPercentageThreshold <= 100, "banningPercentageThreshold must be between 0 and 100");
 
-		minimumStake = _minimumStake;
-		maxCommitteeSize = _maxCommitteeSize;
-		maxTopologySize = _maxTopologySize;
+		minCommitteeSize = _minCommitteeSize;
 	    maxDelegationRatio = _maxDelegationRatio;
 		voteOutPercentageThreshold = _voteOutPercentageThreshold;
 		voteOutTimeoutSeconds = _voteOutTimeoutSeconds;
 		banningPercentageThreshold = _banningPercentageThreshold;
 	}
 
-	function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-		require(_contractRegistry != IContractRegistry(0), "contractRegistry must not be 0");
-		contractRegistry = _contractRegistry;
-	}
-
-	function getTopology() external view returns (address[] memory) {
-		return topology;
-	}
-
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
 	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
-		_rankValidator(addr);
+		if (_isBanned(addr)) {
+			return;
+		}
+		addMemberToCommittees(addr);
 	}
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		_rankValidator(addr);
+		removeMemberFromCommittees(addr);
 	}
 
 	/// @dev Called by: validator registration contract
-	/// Notifies a validator's IP has been changed
-	function validatorIpChanged(address addr) external  onlyValidatorsRegistrationContract {
-		(, bool isInTopology) = _findInTopology(addr);
-		if (isInTopology) {
-			_notifyTopologyChanged();
+	/// Notifies on a validator compliance change
+	function validatorConformanceChanged(address addr, string calldata conformanceType) external onlyComplianceContract {
+		if (_isBanned(addr)) {
+			return;
+		}
+
+		if (isComplianceType(conformanceType)) {
+			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		} else {
+			complianceCommitteeContract().removeMember(addr);
 		}
 	}
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a validator's Orbs address has been changed
-	function validatorOrbsAddressChanged(address addr) external  onlyValidatorsRegistrationContract {
-		(uint pos, bool isInTopology) = _findInTopology(addr);
-		if (isInTopology) {
-			_notifyTopologyChanged();
-			if (pos < committeeSize) {
-				_notifyCommitteeChanged();
-			}
-		}
-	}
-
-	function notifyReadyForCommittee() external {
+	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		readyValidators[sender] = true;
-		_rankValidator(sender);
+		(bool committeeChanged,) = generalCommitteeContract().memberReadyForCommittee(sender);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().memberReadyForCommittee(sender);
+	}
+
+	function notifyReadyToSync() external onlyNotBanned {
+		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		(bool committeeChanged,) = generalCommitteeContract().memberReadyToSync(sender);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		complianceCommitteeContract().memberReadyToSync(sender);
 	}
 
 	function delegate(address to) external {
@@ -142,36 +139,58 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		_applyStakesToBanningBy(to, prevGovStakeNewDelegatee);
 	}
 
-	function voteOut(address addr) external {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
+	function clearCommitteeVoteOuts(address[] memory committee, address votee) private {
+		for (uint i = 0; i < committee.length; i++) {
+			voteOuts[committee[i]][votee] = 0; // clear vote-outs
+		}
+	}
+
+	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, address votee) private view returns (bool) {
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
 
-		voteOuts[sender][addr] = now;
-		for (uint i = 0; i < committeeSize; i++) {
-			address member = topology[i];
-			uint256 memberStake = getCommitteeEffectiveStake(member);
+		for (uint i = 0; i < committee.length; i++) {
+			address member = committee[i];
+			uint256 memberStake = weights[i];
 
 			totalCommitteeStake = totalCommitteeStake.add(memberStake);
-			uint256 votedAt = voteOuts[member][addr];
+			uint256 votedAt = voteOuts[member][votee];
 			if (votedAt != 0 && now.sub(votedAt) < voteOutTimeoutSeconds) {
 				totalVoteOutStake = totalVoteOutStake.add(memberStake);
 			}
 			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
+		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold);
+	}
+
+	function voteOut(address addr) external {
+		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		if (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold) {
-			for (uint i = 0; i < committeeSize; i++) {
-				voteOuts[topology[i]][addr] = 0; // clear vote-outs
-			}
-			readyValidators[addr] = false;
-			_rankValidator(addr);
+		(address[] memory generalCommittee, uint256[] memory generalWeights) = generalCommitteeContract().getCommittee();
 
-			emit VotedOutOfCommittee(addr);
+		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
+		if (votedOut) {
+			clearCommitteeVoteOuts(generalCommittee, addr);
+		} else if (isComplianceValidator(addr)) {
+			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = complianceCommitteeContract().getCommittee();
+			votedOut = isCommitteeVoteOutThresholdReached(complianceCommittee, complianceWeights, addr);
+			if (votedOut) {
+				clearCommitteeVoteOuts(complianceCommittee, addr);
+			}
 		}
 
+		if (votedOut) {
+			emit VotedOutOfCommittee(addr);
+
+			(bool committeeChanged,) = generalCommitteeContract().memberNotReadyToSync(addr);
+			if (committeeChanged) {
+				updateComplianceCommitteeMinimumWeight();
+			}
+			complianceCommitteeContract().memberNotReadyToSync(addr);
+		}
 	}
 
 	function setBanningVotes(address[] calldata validators) external {
@@ -252,20 +271,26 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
         }
 
         uint256 banningStake = accumulatedStakesForBanning[addr];
-
         bool shouldBan = totalGovernanceStake > 0 && banningStake.mul(100).div(totalGovernanceStake) >= banningPercentageThreshold;
 
         if (isBanned != shouldBan) {
 			if (shouldBan) {
                 bannedValidators[addr] = now;
 				emit Banned(addr);
+
+				removeMemberFromCommittees(addr);
 			} else {
                 bannedValidators[addr] = 0;
 				emit Unbanned(addr);
+
+				addMemberToCommittees(addr);
 			}
-            _rankValidator(addr);
         }
     }
+
+	function _isBanned(address addr) private view returns (bool){
+		return bannedValidators[addr] != 0;
+	}
 
     function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs,
 		uint256[] calldata _updatedStakes) external onlyStakingContract {
@@ -340,186 +365,8 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return sender;
 	}
 
-	// TODO what is the requirement? should an absolute minimum stake be enforced?
-	function _holdsMinimumStake(address validator) private view returns (bool) {
-		return minimumStake <= ownStakes[validator] && // validator must hold the minimum required stake (own)
-		       minimumStake <= getCommitteeEffectiveStake(validator); // validator must hold the minimum required stake (effective)
-	}
-
 	function _isSelfDelegating(address validator) private view returns (bool) {
 		return delegations[validator] == address(0) || delegations[validator] == validator;
-	}
-
-	function _satisfiesTopologyPrerequisites(address validator) private view returns (bool) {
-		bool isBanned = bannedValidators[validator] != 0;
-        return validatorsRegistration().isRegistered(validator) &&    // validator must be registered
-			   !isBanned &&
-			   _isSelfDelegating(validator) &&
-		       _holdsMinimumStake(validator);
-	}
-
-	function _isQualifiedForTopologyByRank(address validator) private view returns (bool) {
-		// this assumes maxTopologySize > maxCommitteeSize, otherwise a non ready-for-committee validator may override one that is ready.
-		return topology.length < maxTopologySize || // topology is not full
-				getCommitteeEffectiveStake(validator) > getCommitteeEffectiveStake(topology[topology.length-1]); // validator has more stake the the bottom topology validator
-	}
-
-	function _loadStakes(uint limit) private view returns (uint256[] memory) {
-		assert(limit <= maxTopologySize);
-		if (limit > topology.length) {
-			limit = topology.length;
-		}
-		uint256[] memory stakes = new uint256[](limit);
-		for (uint i=0; i < limit && i < topology.length; i++) {
-			stakes[i] = getCommitteeEffectiveStake(topology[i]);
-		}
-		return stakes;
-	}
-
-	function _loadTopologyStakes() private view returns (uint256[] memory) {
-		return _loadStakes(maxTopologySize);
-	}
-
-	function _loadCommitteeStakes() private view returns (uint256[] memory) {
-		return _loadStakes(committeeSize);
-	}
-
-	function _notifyTopologyChanged() private {
-		assert(topology.length <= maxTopologySize);
-		address[] memory topologyOrbsAddresses = new address[](topology.length);
-		bytes4[] memory ips = new bytes4[](topology.length);
-
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
-		for (uint i = 0; i < topologyOrbsAddresses.length; i++) {
-			topologyOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(topology[i]);
-			ips[i] = validatorsRegistrationContract.getValidatorIp(topology[i]);
-		}
-		emit TopologyChanged(topologyOrbsAddresses, ips);
-	}
-
-	function _notifyCommitteeChanged() private {
-		uint256[] memory committeeStakes = _loadCommitteeStakes();
-		address[] memory committeeOrbsAddresses = new address[](committeeStakes.length);
-		address[] memory committeeAddresses = new address[](committeeStakes.length);
-
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
-		for (uint i = 0; i < committeeStakes.length; i++) {
-			committeeAddresses[i] = topology[i];
-			committeeOrbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(committeeAddresses[i]);
-		}
-		emit CommitteeChanged(committeeAddresses, committeeOrbsAddresses, committeeStakes);
-	}
-
-	function _refreshCommitteeSize() private returns (uint, uint) {
-		uint newSize = committeeSize;
-		uint prevSize = newSize;
-		while (newSize > 0 && (topology.length < newSize || !readyValidators[topology[newSize - 1]])) {
-			newSize--;
-		}
-		while (topology.length > newSize && readyValidators[topology[newSize]] && newSize < maxCommitteeSize){
-			newSize++;
-		}
-		committeeSize = newSize;
-		return (prevSize, newSize);
-	}
-
-	function _removeFromTopology(uint pos) private {
-		assert(topology.length > 0);
-		assert(pos < topology.length);
-
-		for (uint p = pos; p < topology.length - 1; p++) {
-			topology[p] = topology[p + 1];
-		}
-
-		topology.length = topology.length - 1;
-		(uint prevSize, uint currentSize) = _refreshCommitteeSize();
-
-		if (prevSize != currentSize || pos < currentSize) {
-			_notifyCommitteeChanged();
-		}
-
-		_notifyTopologyChanged();
-	}
-
-	function _appendToTopology(address validator) private {
-		uint pos = topology.length - 1; // current last
-
-		if (topology.length < maxTopologySize) { // extend topology
-			topology.length++;
-			pos++;
-		}
-
-		topology[pos] = validator;
-
-		pos = _repositionTopologyMember(pos);
-		(uint prevSize, uint currentSize) = _refreshCommitteeSize();
-
-		if (prevSize != currentSize || pos < currentSize) {
-			_notifyCommitteeChanged();
-		}
-
-		_notifyTopologyChanged();
-	}
-
-	function _adjustPositionInTopology(uint pos) private {
-		uint newPos = _repositionTopologyMember(pos);
-		(uint prevSize, uint currentSize) = _refreshCommitteeSize();
-
-		if (prevSize != currentSize || pos < currentSize || newPos < currentSize) {
-			_notifyCommitteeChanged();
-		}
-	}
-
-	function _rankValidator(address validator) private {
-		(uint pos, bool inTopology) = _findInTopology(validator);
-
-		if (inTopology && !_satisfiesTopologyPrerequisites(validator)) {
-			_removeFromTopology(pos);
-			return;
-		}
-
-		if (inTopology) {
-			_adjustPositionInTopology(pos);
-			return;
-		}
-
-		if (_satisfiesTopologyPrerequisites(validator) && _isQualifiedForTopologyByRank(validator)) {
-			_appendToTopology(validator);
-			return;
-		}
-	}
-
-	function _compareValidators(uint v1pos, uint v2pos) private view returns (int) {
-		address v1 = topology[v1pos];
-		bool v1Ready = readyValidators[v1];
-		uint256 v1Stake = getCommitteeEffectiveStake(v1);
-		address v2 = topology[v2pos];
-		bool v2Ready = readyValidators[v2];
-		uint256 v2Stake = getCommitteeEffectiveStake(v2);
-		return v1Ready && !v2Ready || v1Ready == v2Ready && v1Stake > v2Stake ? int(1) : -1;
-	}
-
-	function _repositionTopologyMember(uint memberPos) private returns (uint) {
-        uint topologySize = topology.length;
-		assert(topologySize > memberPos);
-
-		while (memberPos > 0 && _compareValidators(memberPos, memberPos - 1) > 0) {
-			_replace(memberPos-1, memberPos);
-			memberPos--;
-		}
-
-		while (memberPos < topologySize - 1 && _compareValidators(memberPos, memberPos + 1) < 0) {
-			_replace(memberPos, memberPos+1);
-			memberPos++;
-		}
-
-		return memberPos;
-	}
-
-	function _replace(uint p1, uint p2) private {
-		address tempValidator = topology[p1];
-		topology[p1] = topology[p2];
-		topology[p2] = tempValidator;
 	}
 
 	function _applyDelegatedStake(address addr, uint256 newStake, uint256 prevGovStake) private {
@@ -530,17 +377,12 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 		emit StakeChanged(addr, ownStakes[addr], newStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
 
-		_rankValidator(addr);
-	}
-
-	function _findInTopology(address v) private view returns (uint, bool) {
-		uint l =  topology.length;
-		for (uint i=0; i < l; i++) {
-			if (topology[i] == v) {
-				return (i, true);
-			}
+		(bool committeeChanged,) = generalCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
 		}
-		return (0, false);
+		complianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
@@ -564,15 +406,65 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		return uncappedStakes[v];
 	}
 
-	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights) { // todo - temporary, remove. Should be replaced by committee contracts
-		weights = _loadCommitteeStakes();
-		validators = new address[](weights.length);
-		for (uint i = 0; i < weights.length; i++) {
-			validators[i] = topology[i];
+	function removeMemberFromCommittees(address addr) private {
+		(bool committeeChanged,) = generalCommitteeContract().removeMember(addr);
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
 		}
+		complianceCommitteeContract().removeMember(addr);
+	}
+
+	function addMemberToCommittees(address addr) private {
+		(bool committeeChanged,) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		if (committeeChanged) {
+			updateComplianceCommitteeMinimumWeight();
+		}
+		if (isComplianceValidator(addr)) {
+			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		}
+	}
+
+	function updateComplianceCommitteeMinimumWeight() private {
+		address lowestMember = generalCommitteeContract().getLowestCommitteeMember();
+		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
+		complianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
 	}
 
 	function validatorsRegistration() private view returns (IValidatorsRegistration) {
 		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
 	}
+
+	function generalCommitteeContract() private view returns (ICommittee) {
+		return ICommittee(contractRegistry.get("committee-general"));
+	}
+
+	function complianceCommitteeContract() private view returns (ICommittee) {
+		return ICommittee(contractRegistry.get("committee-compliance"));
+	}
+
+	function complianceContract() private view returns (ICompliance) {
+		return ICompliance(contractRegistry.get("compliance"));
+	}
+
+	IContractRegistry contractRegistry;
+
+	/// @dev Updates the address calldata of the contract registry
+	function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
+		require(_contractRegistry != IContractRegistry(0), "contractRegistry must not be 0");
+		contractRegistry = _contractRegistry;
+	}
+
+	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
+		return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
+	}
+
+	function isComplianceType(string memory compliance) private pure returns (bool) {
+		return compareStrings(compliance, "Compliance"); // TODO where should this constant be?
+	}
+
+	function isComplianceValidator(address addr) private view returns (bool) {
+		string memory compliance = complianceContract().getValidatorCompliance(addr);
+		return isComplianceType(compliance);
+	}
+
 }

@@ -14,7 +14,7 @@ export async function createVC(d : Driver) {
         from: appOwner.address
     });
 
-    return subscriber.createVC(firstPayment, DEPLOYMENT_SUBSET_MAIN, {
+    return subscriber.createVC(firstPayment, "General", DEPLOYMENT_SUBSET_MAIN, {
         from: appOwner.address
     });
 }

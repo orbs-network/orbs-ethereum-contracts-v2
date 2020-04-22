@@ -19,6 +19,9 @@ interface IElections /* is IStakeChangeNotifier */ {
 	 *   External methods
 	 */
 
+	/// @dev Called by a validator when ready to start syncing with other nodes
+	function notifyReadyToSync() external;
+
 	/// @dev Called by a validator when ready to join the committee, typically after syncing is complete or after being voted out
 	function notifyReadyForCommittee() external;
 
@@ -60,12 +63,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
 
 	/// @dev Called by: validator registration contract
-	/// Notifies a validator's IP has been changed
-    function validatorIpChanged(address addr) external /*  onlyValidatorsRegistrationContract */;
-
-	/// @dev Called by: validator registration contract
-	/// Notifies a validator's Orbs address has been changed
-	function validatorOrbsAddressChanged(address addr) external /* onlyValidatorsRegistrationContract */;
+	/// Notifies on a validator compliance change
+	function validatorConformanceChanged(address addr, string calldata conformanceType) external /* onlyComplianceContract */;
 
 	/*
 	 * Governance
@@ -74,11 +73,4 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
 
-	/*
-	 *   Test helpers
-	 */
-
-	function getTopology() external view returns (address[] memory);
-
-	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights); // todo - temporary, remove
 }
