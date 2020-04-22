@@ -5,7 +5,7 @@
   "main": "./release/test/test-kit.js",
   "repository": "https://github.com/orbs-network/orbs-ethereum-contracts-v2",
   "scripts": {
-    "test": "npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/*.spec.ts --timeout 20000",
+    "test": "npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/*.spec.ts --timeout 60000",
     "coverage": "solidity-coverage",
     "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
     "migrate": "truffle migrate --reset",
