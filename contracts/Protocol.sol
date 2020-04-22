@@ -5,8 +5,6 @@ import "./spec_interfaces/IProtocol.sol";
 
 contract Protocol is IProtocol, Ownable {
 
-    // TODO - allow amending future upgrades - see https://github.com/orbs-network/orbs-ethereum-contracts/pull/192#discussion_r391179003
-
     struct DeploymentSubset {
         bool exists;
         uint nextVersion;
