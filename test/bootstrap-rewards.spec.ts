@@ -2,7 +2,7 @@ import 'mocha';
 
 import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
+import {Driver, Participant} from "./driver";
 import chai from "chai";
 import {bn, evmIncreaseTime} from "./helpers";
 import {TransactionReceipt} from "web3-core";
@@ -26,17 +26,20 @@ async function sleep(ms): Promise<void> {
 describe('bootstrap-rewards-level-flows', async () => {
 
   it('should distribute bootstrap rewards to validators in committee', async () => {
-    const d = await Driver.new();
+    const d = await Driver.new({maxCommitteeSize: 4});
 
     /* top up bootstrap reward  pool */
 
     const g = d.rewardsGovernor;
 
-    const annualAmount = 10000000;
-    const poolAmount = annualAmount*12;
+    const annualAmountGeneral = 10000000;
+    const annualAmountCompliance = 20000000;
+    const poolAmount = (annualAmountGeneral + annualAmountCompliance) * 6 * 12;
 
-    let r = await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(annualAmount, {from: g.address});
+    await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
+    let r = await d.bootstrapRewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
     const startTime = await txTimestamp(d.web3, r);
+
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewards.address);
     r = await d.bootstrapRewards.topUpBootstrapPool(poolAmount, {from: g.address});
     expect(r).to.have.a.bootstrapAddedToPoolEvent({
@@ -46,27 +49,16 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     // create committee
 
-    const initStakeLesser = new BN(17000);
-    const v1 = d.newParticipant();
-    await v1.stake(initStakeLesser);
-    await v1.registerAsValidator();
-    await v1.notifyReadyForCommittee();
+    const initStakeLesser = 17000;
+    const initStakeLarger = 21000;
 
-    const initStakeLarger = new BN(21000);
-    const v2 = d.newParticipant();
-    await v2.stake(initStakeLarger);
-    await v2.registerAsValidator();
-    await v2.notifyReadyForCommittee();
+    const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
+    const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
+    const {v: v3} = await d.newValidator(initStakeLesser, true, false, true);
+    const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
 
-    const validators = [{
-      v: v2,
-      stake: initStakeLarger
-    }, {
-      v: v1,
-      stake: initStakeLesser
-    }];
-
-    const nValidators = validators.length;
+    const generalCommittee: Participant[] = [v1, v2, v3, v4];
+    const complianceCommittee: Participant[] = [v1, v3];
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
@@ -75,33 +67,35 @@ describe('bootstrap-rewards-level-flows', async () => {
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
-    const calcRewards = () => {
-      const rewards = new BN(Math.floor(annualAmount * elapsedTime / YEAR_IN_SECONDS));
-      return validators.map(() => rewards);
-    };
+    const calcRewards = (annualRate) => Math.floor(annualRate * elapsedTime / YEAR_IN_SECONDS);
 
-    const totalExternalTokenRewardsArr = calcRewards();
+    const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
-      assignees: validators.map(v => v.v.address),
-      amounts: totalExternalTokenRewardsArr
+      assignees: generalCommittee.map(v => v.address),
+      amounts: generalCommittee.map(() => expectedGeneralCommitteeRewards.toString())
     });
 
-    const externalBalances:BN[] = [];
-    for (const v of validators) {
-      externalBalances.push(new BN(await d.bootstrapRewards.getBootstrapBalance(v.v.address)));
+    const expectedComplianceCommitteeRewards = calcRewards(annualAmountCompliance);
+    expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
+      assignees: complianceCommittee.map(v => v.address),
+      amounts: complianceCommittee.map(() => expectedComplianceCommitteeRewards.toString())
+    });
+
+    const tokenBalances:BN[] = [];
+    for (const v of generalCommittee) {
+      tokenBalances.push(new BN(await d.bootstrapRewards.getBootstrapBalance(v.address)));
     }
 
-    for (const v of validators) {
-      const i = validators.indexOf(v);
+    for (const v of generalCommittee) {
+      const i = generalCommittee.indexOf(v);
 
-      expect(externalBalances[i]).to.be.bignumber.equal(new BN(totalExternalTokenRewardsArr[i]));
+      const expectedBalance = expectedGeneralCommitteeRewards + ((i % 2 == 0) ? expectedComplianceCommitteeRewards : 0);
+      expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds
-      const expectedBalance = parseInt(await d.bootstrapRewards.getBootstrapBalance(v.v.address));
-      expect(expectedBalance).to.be.equal(externalBalances[i].toNumber());
-      await d.bootstrapRewards.withdrawFunds({from: v.v.address});
-      const externalBalance = await d.externalToken.balanceOf(v.v.address);
-      expect(new BN(externalBalance)).to.bignumber.equal(new BN(expectedBalance));
+      await d.bootstrapRewards.withdrawFunds({from: v.address});
+      const tokenBalance = await d.externalToken.balanceOf(v.address);
+      expect(new BN(tokenBalance)).to.bignumber.equal(new BN(expectedBalance));
     }
 
   })

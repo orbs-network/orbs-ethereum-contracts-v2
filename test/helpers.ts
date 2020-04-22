@@ -22,3 +22,12 @@ export function bn(x: string|BN|number|Array<string|BN|number>) {
     }
     return new BN(x);
 }
+
+
+export function minAddress(addrs: string[]): string {
+    const toBn = addr => new BN(addr.slice(2), 16);
+    const minBn = addrs
+        .map(toBn)
+        .reduce((m, x) => BN.min(m, x), toBn(addrs[0]));
+    return addrs.find(addr => toBn(addr).eq(minBn)) as string
+}

@@ -13,6 +13,8 @@ import { Contracts } from "../typings/contracts";
 import { Web3Driver, defaultWeb3Provider } from "../eth";
 import Web3 from "web3";
 import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
+import {ComplianceContract} from "../typings/compliance-contract";
+import {TransactionReceipt} from "web3-core";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -21,25 +23,29 @@ export const CONFORMANCE_TYPE_GENERAL = "General";
 export const CONFORMANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
+    minCommitteeSize: number,
     maxCommitteeSize: number;
-    maxTopologySize: number;
-    minimumStake:number|BN;
+    generalCommitteeMinimumWeight: number,
+    maxStandbys: number;
     maxDelegationRatio: number;
     voteOutThreshold: number;
     voteOutTimeout: number;
+    readyToSyncTimeout: number;
     banningThreshold: number;
     web3Provider : () => Web3;
 }
-export const defaultDriverOptions: Readonly<DriverOptions>  & {readonly minimumStake : number}= {
-    maxCommitteeSize : 2,
-    maxTopologySize : 3,
-    minimumStake : 100,
+export const defaultDriverOptions: Readonly<DriverOptions> = {
+    minCommitteeSize: 0,
+    maxCommitteeSize: 2,
+    generalCommitteeMinimumWeight: 0,
+    maxStandbys : 2,
     maxDelegationRatio : 10,
     voteOutThreshold : 80,
     voteOutTimeout : 24 * 60 * 60,
+    readyToSyncTimeout: 7*24*60*60,
     banningThreshold : 80,
     web3Provider: defaultWeb3Provider,
-}
+};
 export class Driver {
     private static web3DriversCache = new WeakMap<DriverOptions['web3Provider'], Web3Driver>();
     private participants: Participant[] = [];
@@ -58,11 +64,17 @@ export class Driver {
         public protocol: Contracts["Protocol"],
         public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
+        public committeeGeneral: Contracts['Committee'],
+        public committeeCompliance: Contracts['Committee'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
-        const {maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider} = Object.assign({}, defaultDriverOptions, options);
+        const {
+            minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys,
+            maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider,
+            readyToSyncTimeout
+        } = Object.assign({}, defaultDriverOptions, options);
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
         const accounts = await web3.eth.getAccounts();
@@ -73,12 +85,13 @@ export class Driver {
         const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]]);
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]]);
         const fees = await web3.deploy( 'Fees', [erc20.address]);
-        const elections = await web3.deploy( "Elections", [maxCommitteeSize, maxTopologySize, minimumStake, maxDelegationRatio,
-            voteOutThreshold, voteOutTimeout, banningThreshold]);
+        const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold]);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] );
         const protocol = await web3.deploy('Protocol', []);
         const compliance = await web3.deploy('Compliance', []);
+        const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout]);
+        const committeeCompliance = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, 0, maxStandbys, readyToSyncTimeout]);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', []);
 
         await contractRegistry.set("staking", staking.address);
@@ -90,6 +103,8 @@ export class Driver {
         await contractRegistry.set("protocol", protocol.address);
         await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
+        await contractRegistry.set("committee-general", committeeGeneral.address);
+        await contractRegistry.set("committee-compliance", committeeCompliance.address);
 
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
@@ -98,6 +113,8 @@ export class Driver {
         await subscriptions.setContractRegistry(contractRegistry.address);
         await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
+        await committeeGeneral.setContractRegistry(contractRegistry.address);
+        await committeeCompliance.setContractRegistry(contractRegistry.address);
 
         await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
 
@@ -114,6 +131,8 @@ export class Driver {
             protocol,
             compliance,
             validatorsRegistration,
+            committeeGeneral,
+            committeeCompliance,
             contractRegistry
         );
     }
@@ -162,6 +181,12 @@ export class Driver {
         return v;
     }
 
+    async newValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<{v: Participant, r: TransactionReceipt}> {
+        const v = await this.newParticipant();
+        const r = await v.becomeValidator(stake, compliance, signalReadyToSync, signalReadyForCommittee);
+        return {v, r}
+    }
+
     async delegateMoreStake(amount:number|BN, delegatee: Participant) {
         const delegator = this.newParticipant();
         await delegator.stake(new BN(amount));
@@ -170,13 +195,15 @@ export class Driver {
 
 }
 
-export class Participant { // TODO Consider implementing validator methods in a child class.
+export class Participant {
+    // TODO Consider implementing validator methods in a child class.
     public ip: string;
     private erc20: ERC20Contract;
     private externalToken: ERC20Contract;
     private staking: StakingContract;
     private elections: ElectionsContract;
     private validatorsRegistration: ValidatorsRegistrationContract;
+    private compliance: ComplianceContract;
 
     constructor(public name: string,
                 public website: string,
@@ -191,6 +218,7 @@ export class Participant { // TODO Consider implementing validator methods in a 
         this.staking = driver.staking;
         this.elections = driver.elections;
         this.validatorsRegistration = driver.validatorsRegistration;
+        this.compliance = driver.compliance;
     }
 
     async stake(amount: number|BN, staking?: StakingContract) {
@@ -226,6 +254,38 @@ export class Participant { // TODO Consider implementing validator methods in a 
 
     async notifyReadyForCommittee() {
         return await this.elections.notifyReadyForCommittee({from: this.orbsAddress});
+    }
+
+    async notifyReadyToSync() {
+        return await this.elections.notifyReadyToSync({from: this.orbsAddress});
+    }
+
+    async becomeComplianceType() {
+        return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_COMPLIANCE);
+    }
+
+    async becomeGeneralType() {
+        return await this.compliance.setValidatorCompliance(this.address, CONFORMANCE_TYPE_GENERAL);
+    }
+
+    async becomeValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
+        let r;
+        await this.registerAsValidator();
+        if (compliance) {
+            await this.becomeComplianceType();
+        }
+        r = await this.stake(stake);
+        if (signalReadyToSync) {
+            r = await this.notifyReadyToSync();
+        }
+        if (signalReadyForCommittee) {
+            r = await this.notifyReadyForCommittee();
+        }
+        return r;
+    }
+
+    async unregisterAsValidator() {
+        return await this.validatorsRegistration.unregisterValidator({from: this.address});
     }
 }
 
