@@ -1,12 +1,11 @@
 pragma solidity 0.5.16;
 
-import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "./spec_interfaces/IValidatorsRegistration.sol";
+import "./ContractAccessor.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, Ownable {
+contract Committee is ICommittee, ContractAccessor {
 	address[] topology;
 
 	struct Member {
@@ -30,7 +29,7 @@ contract Committee is ICommittee, Ownable {
 	int oldestReadyToSyncStandbyPos;
 
 	modifier onlyElectionsContract() {
-		require(msg.sender == contractRegistry.get("elections"), "caller is not the elections");
+		require(msg.sender == address(getElectionsContract()), "caller is not the elections");
 
 		_;
 	}
@@ -145,18 +144,6 @@ contract Committee is ICommittee, Ownable {
 			_notifyCommitteeChanged();
 			_notifyStandbysChanged();
 		}
-	}
-
-	/*
-	 * Governance
-	 */
-
-	IContractRegistry contractRegistry;
-
-    /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-		require(_contractRegistry != IContractRegistry(0), "contractRegistry must not be 0");
-		contractRegistry = _contractRegistry;
 	}
 
 	/*
@@ -474,7 +461,7 @@ contract Committee is ICommittee, Ownable {
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
 		address[] memory orbsAddresses = new address[](addrs.length);
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
+		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
 		for (uint i = 0; i < addrs.length; i++) {
 			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
 		}
@@ -483,7 +470,7 @@ contract Committee is ICommittee, Ownable {
 
 	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
 		bytes4[] memory ips = new bytes4[](addrs.length);
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
+		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
 		for (uint i = 0; i < addrs.length; i++) {
 			ips[i] = validatorsRegistrationContract.getValidatorIp(addrs[i]);
 		}
@@ -511,10 +498,6 @@ contract Committee is ICommittee, Ownable {
 
 	function getValidatorWeight(address addr) private view returns (uint256 weight) {
 		return members[addr].weight;
-	}
-
-	function validatorsRegistration() private view returns (IValidatorsRegistration) {
-		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
 	}
 
 	function getTopology() external view returns (address[] memory) { // TODO remove

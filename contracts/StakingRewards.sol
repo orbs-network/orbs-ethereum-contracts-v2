@@ -9,11 +9,10 @@ import "./IStakingContract.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IStakingRewards.sol";
 import "./spec_interfaces/ICommittee.sol";
+import "./ContractAccessor.sol";
 
-contract StakingRewards is IStakingRewards, Ownable {
+contract StakingRewards is IStakingRewards, ContractAccessor {
     using SafeMath for uint256;
-
-    IContractRegistry contractRegistry;
 
     uint256 pool;
     uint256 annualRateInPercentMille;
@@ -38,11 +37,6 @@ contract StakingRewards is IStakingRewards, Ownable {
         erc20 = _erc20;
         lastPayedAt = now;
         rewardsGovernor = _rewardsGovernor;
-    }
-
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-        require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
-        contractRegistry = _contractRegistry;
     }
 
     function setAnnualRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
@@ -72,7 +66,7 @@ contract StakingRewards is IStakingRewards, Ownable {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
-        (address[] memory committee, uint256[] memory weights) = _getGeneralCommittee();
+        (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee();
 
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
@@ -124,14 +118,9 @@ contract StakingRewards is IStakingRewards, Ownable {
         require(totalAmount <= orbsBalance[msg.sender], "not enough balance for this distribution");
         orbsBalance[msg.sender] = orbsBalance[msg.sender].sub(totalAmount);
 
-        IStakingContract stakingContract = IStakingContract(contractRegistry.get("staking"));
+        IStakingContract stakingContract = getStakingContract();
         erc20.approve(address(stakingContract), totalAmount);
         stakingContract.distributeRewards(totalAmount, to, amounts);
-    }
-
-    function _getGeneralCommittee() private view returns (address[] memory validators, uint256[] memory weights) {
-        ICommittee e = ICommittee(contractRegistry.get("committee-general"));
-        return e.getCommittee();
     }
 
 }

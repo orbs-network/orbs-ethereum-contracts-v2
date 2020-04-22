@@ -6,11 +6,10 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./Fees.sol";
+import "./ContractAccessor.sol";
 
-contract Subscriptions is ISubscriptions, Ownable{
+contract Subscriptions is ISubscriptions, ContractAccessor {
     using SafeMath for uint256;
-
-    IContractRegistry contractRegistry;
 
     enum CommitteeType {
         General,
@@ -43,11 +42,6 @@ contract Subscriptions is ISubscriptions, Ownable{
         erc20 = _erc20;
     }
 
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-        require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
-        contractRegistry = _contractRegistry;
-    }
-
     function setVcConfigRecord(uint256 vcid, string calldata key, string calldata value) external {
         require(msg.sender == virtualChains[vcid].owner, "only vc owner can set a vc config record");
         virtualChains[vcid].configRecords[key] = value;
@@ -66,7 +60,7 @@ contract Subscriptions is ISubscriptions, Ownable{
 
     function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, string calldata compliance, string calldata deploymentSubset) external returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
-        require(IProtocol(contractRegistry.get("protocol")).deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
+        require(getProtocolContract().deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
 
         uint vcid = nextVcid++;
         VirtualChain memory vc = VirtualChain({
@@ -100,7 +94,7 @@ contract Subscriptions is ISubscriptions, Ownable{
     function _extendSubscription(uint256 vcid, uint256 amount, address payer) private {
         VirtualChain storage vc = virtualChains[vcid];
 
-        Fees feesContract = Fees(contractRegistry.get("fees"));
+        IFees feesContract = getFeesContract();
         require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
         if (vc.committeeType == CommitteeType.General) {
             feesContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
