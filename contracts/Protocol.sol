@@ -31,12 +31,12 @@ contract Protocol is IProtocol, Ownable {
 
     function setProtocolVersion(string calldata deploymentSubset, uint256 protocolVersion, uint256 asOfBlock) external onlyOwner {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
-        require(asOfBlock > block.number, "protocol update can only take place in the future");
+        require(asOfBlock > block.number, "protocol update can only be scheduled for a future block");
 
         if (deploymentSubsets[deploymentSubset].asOfBlock <= block.number) {
             deploymentSubsets[deploymentSubset].currentVersion = deploymentSubsets[deploymentSubset].nextVersion;
         }
-        require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol downgrade is not supported");
+        require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol version must be later than current version");
 
         deploymentSubsets[deploymentSubset].nextVersion = protocolVersion;
         deploymentSubsets[deploymentSubset].asOfBlock = asOfBlock;
