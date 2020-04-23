@@ -30,7 +30,6 @@ contract Protocol is IProtocol, Ownable {
             }
 
             require(asOfBlock > block.number, "protocol update can only take place in the future");
-            require(asOfBlock > currentAsOfBlock || currentAsOfBlock > block.number, "protocol upgrade can only take place after the previous protocol update, unless previous upgrade is in the future");
             require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol downgrade is not supported");
         }
 
