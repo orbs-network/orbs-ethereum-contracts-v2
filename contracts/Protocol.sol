@@ -29,8 +29,8 @@ contract Protocol is IProtocol, Ownable {
                 deploymentSubsets[deploymentSubset].currentVersion = deploymentSubsets[deploymentSubset].nextVersion;
             }
 
-            require(asOfBlock > block.number, "protocol update can only take place in the future");
-            require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol downgrade is not supported");
+            require(asOfBlock > block.number, "protocol update can only be scheduled for a future block");
+            require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol version must be later than current version");
         }
 
         deploymentSubsets[deploymentSubset].nextVersion = protocolVersion;
