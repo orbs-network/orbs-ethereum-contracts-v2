@@ -7,9 +7,9 @@ contract Protocol is IProtocol, Ownable {
 
     struct DeploymentSubset {
         bool exists;
-        uint nextVersion;
+        uint256 nextVersion;
         uint asOfBlock;
-        uint currentVersion;
+        uint256 currentVersion;
     }
 
     mapping (string => DeploymentSubset) deploymentSubsets;
