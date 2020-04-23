@@ -14,24 +14,29 @@ contract Protocol is IProtocol, Ownable {
 
     mapping (string => DeploymentSubset) deploymentSubsets;
 
-    function deploymentSubsetExists(string memory deploymentSubset) public view returns (bool) {
+    function deploymentSubsetExists(string calldata deploymentSubset) external view returns (bool) {
         return deploymentSubsets[deploymentSubset].exists;
     }
 
-    function setProtocolVersion(string calldata deploymentSubset, uint256 protocolVersion, uint256 asOfBlock) external onlyOwner {
-        if (!deploymentSubsets[deploymentSubset].exists) {
-            require(asOfBlock == 0, "initial protocol version must be from block 0");
-            deploymentSubsets[deploymentSubset].currentVersion = protocolVersion;
-            deploymentSubsets[deploymentSubset].exists = true;
-        } else {
-            uint currentAsOfBlock = deploymentSubsets[deploymentSubset].asOfBlock;
-            if (currentAsOfBlock <= block.number) {
-                deploymentSubsets[deploymentSubset].currentVersion = deploymentSubsets[deploymentSubset].nextVersion;
-            }
+    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyOwner {
+        require(!deploymentSubsets[deploymentSubset].exists, "deployment subset already exists");
 
-            require(asOfBlock > block.number, "protocol update can only take place in the future");
-            require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol downgrade is not supported");
+        deploymentSubsets[deploymentSubset].currentVersion = initialProtocolVersion;
+        deploymentSubsets[deploymentSubset].nextVersion = initialProtocolVersion;
+        deploymentSubsets[deploymentSubset].asOfBlock = block.number;
+        deploymentSubsets[deploymentSubset].exists = true;
+
+        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, block.number); // TODO different event?
+    }
+
+    function setProtocolVersion(string calldata deploymentSubset, uint256 protocolVersion, uint256 asOfBlock) external onlyOwner {
+        require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
+        require(asOfBlock > block.number, "protocol update can only take place in the future");
+
+        if (deploymentSubsets[deploymentSubset].asOfBlock <= block.number) {
+            deploymentSubsets[deploymentSubset].currentVersion = deploymentSubsets[deploymentSubset].nextVersion;
         }
+        require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol downgrade is not supported");
 
         deploymentSubsets[deploymentSubset].nextVersion = protocolVersion;
         deploymentSubsets[deploymentSubset].asOfBlock = asOfBlock;

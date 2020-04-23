@@ -25,11 +25,11 @@ describe('protocol-contract', async () => {
       asOfBlock: bn(curBlockNumber + 100)
     });
 
-    r = await d.protocol.setProtocolVersion("canary", 2, 0);
+    r = await d.protocol.createDeploymentSubset("canary", 2);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: "canary",
       protocolVersion: bn(2),
-      asOfBlock: bn(0)
+      asOfBlock: bn(r.blockNumber)
     });
 
     r = await d.protocol.setProtocolVersion("canary", 3, curBlockNumber + 100);
