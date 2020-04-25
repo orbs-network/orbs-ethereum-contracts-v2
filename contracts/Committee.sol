@@ -18,12 +18,17 @@ contract Committee is ICommittee, Ownable {
 		bool isStandby;
 		bool inCommittee;
 	}
-	mapping (address => MemberData) members;
+	mapping (address => MemberData) membersData;
 
 	struct Member {
 		address addr;
 		MemberData data;
-		int pos;
+	}
+
+	struct Participant {
+		address addr;
+		MemberData data;
+		uint pos;
 	} // Never in state, only in memory
 
 	struct Settings { // can be reduced to 2-3 state entries
@@ -82,47 +87,59 @@ contract Committee is ICommittee, Ownable {
 	/// Notifies a weight change for sorting to a relevant committee member.
     /// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
 	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		Member memory member = loadMember(addr);
-		if (member.data.isMember) {
-			member.data.weight = weight;
-			return _rankAndUpdateMember(member);
+		MemberData memory memberData = membersData[addr];
+		if (memberData.isMember) {
+			memberData.weight = weight;
+			return _rankAndUpdateMember(Member({
+				addr: addr,
+				data: memberData
+			}));
 		}
 		return (false, false);
 	}
 
 	function memberReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		Member memory member = loadMember(addr);
-		if (member.data.isMember) {
-			member.data.readyToSyncTimestamp = now;
-			member.data.readyForCommittee = false;
-			return _rankAndUpdateMember(member);
+		MemberData memory memberData = membersData[addr];
+		if (memberData.isMember) {
+			memberData.readyToSyncTimestamp = now;
+			memberData.readyForCommittee = false;
+			return _rankAndUpdateMember(Member({
+				addr: addr,
+				data: memberData
+			}));
 		}
 		return (false, false);
 	}
 
 	function memberReadyForCommittee(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		Member memory member = loadMember(addr);
-		if (member.data.isMember) {
-			member.data.readyToSyncTimestamp = now;
-			member.data.readyForCommittee = true;
-			return _rankAndUpdateMember(member);
+		MemberData memory memberData = membersData[addr];
+		if (memberData.isMember) {
+			memberData.readyToSyncTimestamp = now;
+			memberData.readyForCommittee = true;
+			return _rankAndUpdateMember(Member({
+				addr: addr,
+				data: memberData
+			}));
 		}
 		return (false, false);
 	}
 
 	function memberNotReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		Member memory member = loadMember(addr);
-		if (member.data.isMember) {
-			member.data.readyToSyncTimestamp = 0;
-			member.data.readyForCommittee = false;
-			return _rankAndUpdateMember(member);
+		MemberData memory memberData = membersData[addr];
+		if (memberData.isMember) {
+			memberData.readyToSyncTimestamp = 0;
+			memberData.readyForCommittee = false;
+			return _rankAndUpdateMember(Member({
+				addr: addr,
+				data: memberData
+			}));
 		}
 		return (false, false);
 	}
 
 	function addMember(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		if (!members[addr].isMember) {
-			Member memory member = Member({
+		if (!membersData[addr].isMember) {
+			return _rankAndUpdateMember(Member({
 				addr: addr,
 				data: MemberData({
 					isMember: true,
@@ -131,10 +148,8 @@ contract Committee is ICommittee, Ownable {
 					weight: weight,
 					isStandby: false,
 					inCommittee: false
-				}),
-				pos: -1
-			});
-			return _rankAndUpdateMember(member);
+				})
+			}));
 		}
 		return (false, false);
 	}
@@ -142,10 +157,13 @@ contract Committee is ICommittee, Ownable {
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
 	function removeMember(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
-		Member memory member = loadMember(addr);
-		member.data.isMember = false;
-		(committeeChanged, standbysChanged) = _rankAndUpdateMember(member);
-		delete members[addr];
+		MemberData memory memberData = membersData[addr];
+		memberData.isMember = false;
+		(committeeChanged, standbysChanged) = _rankAndUpdateMember(Member({
+			addr: addr,
+			data: memberData
+		}));
+		delete membersData[addr];
 	}
 
 	/// @dev Called by: Elections contract
@@ -173,8 +191,8 @@ contract Committee is ICommittee, Ownable {
 		Settings memory _settings = settings;
 		address[] memory _participants = participants;
 
-		(Member[] memory _members,) = loadMembers(_participants, NullMember());
-		Member[] memory committee = computeCommitteeAndStandbys(_members, _settings).committee;
+		(Participant[] memory _members,) = loadParticipants(_participants, NullMember());
+		Participant[] memory committee = computeCommitteeAndStandbys(_members, _settings).committee;
 
 		addrs = new address[](committee.length);
 		weights = new uint[](committee.length);
@@ -190,8 +208,8 @@ contract Committee is ICommittee, Ownable {
 		Settings memory _settings = settings;
 		address[] memory _participants = participants;
 
-		(Member[] memory _members,) = loadMembers(_participants, NullMember());
-		Member[] memory standbys = computeCommitteeAndStandbys(_members, _settings).standbys;
+		(Participant[] memory _members,) = loadParticipants(_participants, NullMember());
+		Participant[] memory standbys = computeCommitteeAndStandbys(_members, _settings).standbys;
 
 		addrs = new address[](standbys.length);
 		weights = new uint[](standbys.length);
@@ -210,7 +228,7 @@ contract Committee is ICommittee, Ownable {
 		settings.minimumAddress = _minimumAddress;
 		settings.minCommitteeSize = _minCommitteeSize;
 
-		updateOnParticipantChange(NullMember());
+		updateOnMemberChange(NullMember());
 	}
 
 	/*
@@ -249,7 +267,6 @@ contract Committee is ICommittee, Ownable {
 	function NullMember() private pure returns (Member memory nullMember) {
 		return Member({
 			addr: address(0),
-			pos: -1,
 			data: MemberData({
 				isMember: false,
 				readyForCommittee: false,
@@ -283,38 +300,30 @@ contract Committee is ICommittee, Ownable {
 		return ips;
 	}
 
-	function loadMember(address addr) private view returns (Member memory) {
-		return Member({
-			addr: addr,
-			data: members[addr],
-			pos: -1 // TODO inconsistent as it may be in participants list
-		});
-	}
-
 	function _rankAndUpdateMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
 		(committeeChanged, standbysChanged) = _rankMember(member);
-//		writeMemberDataToState(member);
+		membersData[member.addr] = member.data;
 	}
 
 	function _rankMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
 		bool isParticipant = member.data.inCommittee || member.data.isStandby;
 		if (!isParticipant) {
 			if (!qualifiedToJoin(member)) {
-				writeMemberDataToState(member);
+				membersData[member.addr] = member.data;
 				return (false, false);
 			}
-			joinParticipant(member);
+			joinMemberAsParticipant(member);
 		}
 
-		return updateOnParticipantChange(member);
+		return updateOnMemberChange(member);
 	}
 
 	function qualifiedToJoin(Member memory member) private view returns (bool) {
 		return qualifiedToJoinAsStandby(member) || qualifiedToJoinCommittee(member);
 	}
 
-	function isReadyToSyncStale(Member memory member, Settings memory _settings) private view returns (bool) {
-		return member.data.readyToSyncTimestamp <= now - _settings.readyToSyncTimeout;
+	function isReadyToSyncStale(uint256 timestamp, Settings memory _settings) private view returns (bool) {
+		return timestamp <= now - _settings.readyToSyncTimeout;
 	}
 
 	function qualifiedToJoinAsStandby(Member memory member) private view returns (bool) {
@@ -324,7 +333,7 @@ contract Committee is ICommittee, Ownable {
 			return false;
 		}
 
-		if (isReadyToSyncStale(member, _settings)) {
+		if (isReadyToSyncStale(member.data.readyToSyncTimestamp, _settings)) {
 			return false;
 		}
 
@@ -385,7 +394,7 @@ contract Committee is ICommittee, Ownable {
 
 	function outranksLowestCommitteeMember(Member memory member, CommitteeInfo memory _committeeInfo, Settings memory _settings) private view returns (bool) {
 		return _compareMembersDataByCommitteeCriteria(
-			member.addr, member.data, isReadyToSyncStale(member, _settings), // TODO - in current usages member is never stale here, isReadyToSyncStale is redundant
+			member.addr, member.data, isReadyToSyncStale(member.data.readyToSyncTimestamp, _settings), // TODO - in current usages member is never stale here, isReadyToSyncStale is redundant
 			_committeeInfo.minCommitteeMemberAddress, MemberData({
 				isMember: true,
 				readyForCommittee: true,
@@ -404,7 +413,7 @@ contract Committee is ICommittee, Ownable {
 
 		Settings memory _settings = settings;
 
-		if (isReadyToSyncStale(member, _settings)) {
+		if (isReadyToSyncStale(member.data.readyToSyncTimestamp, _settings)) {
 			return false;
 		}
 
@@ -426,30 +435,24 @@ contract Committee is ICommittee, Ownable {
 		return false;
 	}
 
-	function joinParticipant(Member memory member) private {
+	function joinMemberAsParticipant(Member memory member) private {
 		CommitteeInfo memory _committeeInfo = committeeInfo; // TODO get as argument?
 		if (_committeeInfo.freeParticipantSlotPos >= participants.length) {
 			participants.length++;
 		}
 		require(_committeeInfo.freeParticipantSlotPos < participants.length, "freeParticipantSlotPos out of range");
 		participants[_committeeInfo.freeParticipantSlotPos] = member.addr;
-		member.pos = int(_committeeInfo.freeParticipantSlotPos);
 	}
 
-	function removeParticipant(Member memory member) private returns (bool removed) {
-		if (member.pos == -1) {
-			return false;
-		}
-		participants[uint(member.pos)] = address(0);
-		member.pos = -1;
-		return true;
+	function removeParticipant(Participant memory participant) private {
+		participants[participant.pos] = address(0);
 	}
 
-	function writeMemberDataToState(Member memory member) private {
-		members[member.addr] = member.data;
+	function writeParticipantDataToState(Participant memory member) private {
+		membersData[member.addr] = member.data;
 	}
 
-	function updateOnParticipantChange(Member memory member) private returns (bool committeeChanged, bool standbysChanged) { // TODO this is sometimes called with a member with address 0 indicating no member changed
+	function updateOnMemberChange(Member memory member) private returns (bool committeeChanged, bool standbysChanged) { // TODO this is sometimes called with a member with address 0 indicating no member changed
 		// TODO in all the state writes below, can skip the write for the given member as it will be written anyway
 
 		committeeChanged = false;
@@ -458,7 +461,7 @@ contract Committee is ICommittee, Ownable {
 		Settings memory _settings = settings;
 		address[] memory _participants = participants;
 
-		(Member[] memory _members, uint firstFreeSlot) = loadMembers(_participants, member);
+		(Participant[] memory _members, uint firstFreeSlot) = loadParticipants(_participants, member);
 		(CommitteeAndStandbys memory o) = computeCommitteeAndStandbys(_members, _settings);
 
 		uint256 minCommitteeMemberWeight = uint256(-1);
@@ -473,7 +476,7 @@ contract Committee is ICommittee, Ownable {
 					standbysChanged = true;
 				}
 
-				writeMemberDataToState(o.committee[i]); // TODO we write the entire struct under the assumption that it takes one entry, if it doesn't it can be optimized
+				writeParticipantDataToState(o.committee[i]); // TODO we write the entire struct under the assumption that it takes one entry, if it doesn't it can be optimized
 			}
 
 			if (o.committee[i].data.weight < minCommitteeMemberWeight) {
@@ -483,8 +486,8 @@ contract Committee is ICommittee, Ownable {
 				minCommitteeMemberAddress = o.committee[i].addr;
 			}
 
-			if (uint(o.committee[i].pos + 1) >= newParticipantsLength) {
-				newParticipantsLength = uint(o.committee[i].pos + 1);
+			if (o.committee[i].pos + 1 >= newParticipantsLength) {
+				newParticipantsLength = o.committee[i].pos + 1;
 			}
 		}
 
@@ -500,7 +503,7 @@ contract Committee is ICommittee, Ownable {
 					o.standbys[i].data.readyToSyncTimestamp = now;
 					committeeChanged = true;
 				}
-				writeMemberDataToState(o.standbys[i]); // TODO we write the entire struct under the assumption that it takes one entry, if it doesn't it can be optimized
+				writeParticipantDataToState(o.standbys[i]); // TODO we write the entire struct under the assumption that it takes one entry, if it doesn't it can be optimized
 			}
 
 			if (o.standbys[i].data.readyToSyncTimestamp < minStandbyTimestamp) {
@@ -514,8 +517,8 @@ contract Committee is ICommittee, Ownable {
 				minStandbyAddress = o.standbys[i].addr;
 			}
 
-			if (uint(o.standbys[i].pos + 1) >= newParticipantsLength) {
-				newParticipantsLength = uint(o.standbys[i].pos + 1);
+			if (o.standbys[i].pos + 1 >= newParticipantsLength) {
+				newParticipantsLength = o.standbys[i].pos + 1;
 			}
 		}
 
@@ -533,14 +536,14 @@ contract Committee is ICommittee, Ownable {
 				changed = true;
 			}
 
-			if (uint(o.evicted[i].pos) < firstFreeSlot) {
-				firstFreeSlot = uint(o.evicted[i].pos);
+			if (o.evicted[i].pos < firstFreeSlot) {
+				firstFreeSlot = o.evicted[i].pos;
 			}
 
-			bool removed = removeParticipant(o.evicted[i]);
-			changed = changed || removed;
+			removeParticipant(o.evicted[i]);
+
 			if (changed) {
-				writeMemberDataToState(o.evicted[i]); // TODO we write the entire struct under the assumption that it takes one entry, if it doesn't it can be optimized
+				writeParticipantDataToState(o.evicted[i]); // TODO we write the entire struct under the assumption that it takes one entry, if it doesn't it can be optimized
 			}
 		}
 
@@ -566,7 +569,6 @@ contract Committee is ICommittee, Ownable {
 		if (!isNullMember(member)) {
 			committeeChanged = committeeChanged || member.data.inCommittee;
 			standbysChanged = standbysChanged || member.data.isStandby;
-			writeMemberDataToState(member);
 		}
 
 		if (committeeChanged) {
@@ -578,50 +580,49 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function loadMembers(address[] memory _participants, Member memory preloadedMember) private view returns (Member[] memory _members, uint firstFreeSlot) {
-		uint nMembers = 0;
-		for (uint i = 0; i < _participants.length; i++) { // TODO can be replaced by getting number from committee info (which is read anyway)
-			if (_participants[i] != address(0)) {
-				nMembers++;
+	function loadParticipants(address[] memory participantsAddrs, Member memory preloadedMember) private view returns (Participant[] memory _participants, uint firstFreeSlot) {
+		uint nParticipants = 0;
+		for (uint i = 0; i < participantsAddrs.length; i++) { // TODO can be replaced by getting number from committee info (which is read anyway)
+			if (participantsAddrs[i] != address(0)) {
+				nParticipants++;
 			}
 		}
 
-		firstFreeSlot = _participants.length;
-		_members = new Member[](nMembers);
+		firstFreeSlot = participantsAddrs.length;
+		_participants = new Participant[](nParticipants);
 		uint mInd = 0;
-		for (uint i = 0; i < _participants.length; i++) {
-			address addr = _participants[i];
+		for (uint i = 0; i < participantsAddrs.length; i++) {
+			address addr = participantsAddrs[i];
 			if (addr != address(0)) {
+				MemberData memory data;
 				if (!isNullMember(preloadedMember) && addr == preloadedMember.addr) {
-					_members[mInd] = preloadedMember;
-					preloadedMember.pos = int(i); // TODO ugly hack - when we load it, we don't know where it is in the participants list
+					data = preloadedMember.data;
 				} else {
-					_members[mInd] = Member({
-						addr: addr,
-						data: members[addr],
-						pos: int(i)
-					});
+					data = membersData[addr];
 				}
+				_participants[mInd] = Participant({
+					addr: addr,
+					data: data,
+					pos: i
+				});
 				mInd++;
-			} else {
-				if (firstFreeSlot == 0) {
-					firstFreeSlot = i;
-				}
+			} else if (firstFreeSlot == 0) {
+				firstFreeSlot = i;
 			}
 		}
 	}
 
 	struct CommitteeAndStandbys {
-		Member[] committee;
-		Member[] standbys;
-		Member[] evicted;
+		Participant[] committee;
+		Participant[] standbys;
+		Participant[] evicted;
 	}
 
-	function computeCommitteeAndStandbys(Member[] memory _members, Settings memory _settings) private view returns (CommitteeAndStandbys memory out) {
+	function computeCommitteeAndStandbys(Participant[] memory _participants, Settings memory _settings) private view returns (CommitteeAndStandbys memory out) {
 
-		Member[] memory list = new Member[](_members.length);
+		Participant[] memory list = new Participant[](_participants.length);
 		for (uint i = 0; i < list.length; i++) {
-			list[i] = _members[i];
+			list[i] = _participants[i];
 		}
 
 		quickSortPerCommitteeCriteria(list, _settings);
@@ -632,9 +633,9 @@ contract Committee is ICommittee, Ownable {
 		for (uint i = 0; i < list.length; i++) {
 			MemberData memory data = list[i].data;
 			if (data.isMember && data.readyForCommittee && data.readyToSyncTimestamp != 0 && data.weight > 0 &&
-				(data.inCommittee || !isReadyToSyncStale(list[i], _settings)) &&
+				(data.inCommittee || !isReadyToSyncStale(list[i].data.readyToSyncTimestamp, _settings)) &&
 				(committeeSize < _settings.minCommitteeSize || (
-					committeeSize < _settings.maxCommitteeSize && isAboveCommitteeEntryThreshold(list[i], _settings)
+					committeeSize < _settings.maxCommitteeSize && isAboveCommitteeEntryThreshold(Member({addr: list[i].addr, data: list[i].data}), _settings)
 				))
 			) {
 				committeeSize++;
@@ -656,17 +657,17 @@ contract Committee is ICommittee, Ownable {
 
 		uint nEvicted = list.length - nStandbys - committeeSize;
 
-		Member[] memory committee = new Member[](committeeSize);
+		Participant[] memory committee = new Participant[](committeeSize);
 		for (uint i = 0; i < committeeSize; i++) {
 			committee[i] = list[i];
 		}
 
-		Member[] memory standbys = new Member[](nStandbys);
+		Participant[] memory standbys = new Participant[](nStandbys);
 		for (uint i = 0; i < nStandbys; i++) {
 			standbys[i] = list[committeeSize + i];
 		}
 
-		Member[] memory evicted = new Member[](nEvicted);
+		Participant[] memory evicted = new Participant[](nEvicted);
 		for (uint i = 0; i < nEvicted; i++) {
 			evicted[i] = list[committeeSize + nStandbys + i];
 		}
@@ -683,19 +684,19 @@ contract Committee is ICommittee, Ownable {
 		Standbys
 	}
 
-	function quickSortPerCommitteeCriteria(Member[] memory list, Settings memory _settings) private view {
+	function quickSortPerCommitteeCriteria(Participant[] memory list, Settings memory _settings) private view {
 		quickSort(list, int(0), int(list.length - 1), _settings, Comparator.Committee);
 	}
 
-	function quickSortPerStandbysCriteria(Member[] memory list, Settings memory _settings, int from, int to) private view {
+	function quickSortPerStandbysCriteria(Participant[] memory list, Settings memory _settings, int from, int to) private view {
 		quickSort(list, int(from), int(to), _settings, Comparator.Standbys);
 	}
 
-	function quickSort(Member[] memory arr, int left, int right, Settings memory _settings, Comparator comparator) private view {
+	function quickSort(Participant[] memory arr, int left, int right, Settings memory _settings, Comparator comparator) private view {
 		int i = left;
 		int j = right;
 		if(i>=j) return;
-		Member memory pivot = arr[uint(left + (right - left) / 2)];
+		Participant memory pivot = arr[uint(left + (right - left) / 2)];
 		while (i <= j) {
 			while (compareMembers(arr[uint(i)], pivot, _settings, comparator) > 0) i++;
 			while (compareMembers(pivot, arr[uint(j)], _settings, comparator) > 0) j--;
@@ -711,7 +712,7 @@ contract Committee is ICommittee, Ownable {
 			quickSort(arr, i, right, _settings, comparator);
 	}
 
-	function compareMembers(Member memory a, Member memory b, Settings memory _settings, Comparator comparator) private view returns (int) {
+	function compareMembers(Participant memory a, Participant memory b, Settings memory _settings, Comparator comparator) private view returns (int) {
 		if (comparator == Comparator.Committee) {
 			return compareMembersPerCommitteeCriteria(a, b, _settings);
 		} else {
@@ -719,16 +720,16 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function compareMembersPerCommitteeCriteria(Member memory a, Member memory b, Settings memory _settings) private view returns (int) {
+	function compareMembersPerCommitteeCriteria(Participant memory a, Participant memory b, Settings memory _settings) private view returns (int) {
 		return _compareMembersDataByCommitteeCriteria(
-			a.addr, a.data, isReadyToSyncStale(a, _settings),
-			b.addr, b.data, isReadyToSyncStale(b, _settings)
+			a.addr, a.data, isReadyToSyncStale(a.data.readyToSyncTimestamp, _settings),
+			b.addr, b.data, isReadyToSyncStale(b.data.readyToSyncTimestamp, _settings)
 		);
 	}
 
-	function compareMembersPerStandbyCriteria(Member memory v1, Member memory v2, Settings memory _settings) private view returns (int) {
-		bool v1TimedOut = isReadyToSyncStale(v1, _settings);
-		bool v2TimedOut = isReadyToSyncStale(v2, _settings);
+	function compareMembersPerStandbyCriteria(Participant memory v1, Participant memory v2, Settings memory _settings) private view returns (int) {
+		bool v1TimedOut = isReadyToSyncStale(v1.data.readyToSyncTimestamp, _settings);
+		bool v2TimedOut = isReadyToSyncStale(v2.data.readyToSyncTimestamp, _settings);
 
 		bool v1Member = v1.data.isMember && v1.data.weight != 0 && v1.data.readyToSyncTimestamp != 0;
 		bool v2Member = v2.data.isMember && v2.data.weight != 0 && v2.data.readyToSyncTimestamp != 0;
@@ -742,7 +743,7 @@ contract Committee is ICommittee, Ownable {
 		: int(-1);
 	}
 
-	function _notifyStandbysChanged(Member[] memory standbys) private {
+	function _notifyStandbysChanged(Participant[] memory standbys) private {
 		address[] memory standbysAddrs = new address[](standbys.length);
 		uint[] memory weights = new uint[](standbys.length);
 		for (uint i = 0; i < standbys.length; i++) {
@@ -752,7 +753,7 @@ contract Committee is ICommittee, Ownable {
 		emit StandbysChanged(standbysAddrs, _loadOrbsAddresses(standbysAddrs), weights);
 	}
 
-	function _notifyCommitteeChanged(Member[] memory committee) private {
+	function _notifyCommitteeChanged(Participant[] memory committee) private {
 		address[] memory committeeAddrs = new address[](committee.length);
 		uint[] memory weights = new uint[](committee.length);
 		for (uint i = 0; i < committee.length; i++) {
@@ -760,6 +761,10 @@ contract Committee is ICommittee, Ownable {
 			weights[i] = committee[i].data.weight;
 		}
 		emit CommitteeChanged(committeeAddrs, _loadOrbsAddresses(committeeAddrs), weights);
+	}
+
+	function validatorsRegistration() private view returns (IValidatorsRegistration) {
+		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
 	}
 
 }
