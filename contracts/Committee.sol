@@ -367,11 +367,12 @@ contract Committee is ICommittee, Ownable {
 		bool v1Member = v1Data.isMember && v1Data.weight != 0 && v1Data.readyToSyncTimestamp != 0;
 		bool v2Member = v2Data.isMember && v2Data.weight != 0 && v2Data.readyToSyncTimestamp != 0;
 
-		return v1Member && !v2Member ||
-		v1Member == v2Member && v1Data.readyForCommittee && !v2Data.readyForCommittee ||
-		v1Member == v2Member && v1Data.readyForCommittee == v2Data.readyForCommittee && !v1TimedOut && v2TimedOut ||
-		v1Member == v2Member && v1Data.readyForCommittee == v2Data.readyForCommittee && v1TimedOut == v2TimedOut && v1Data.weight > v2Data.weight ||
-		v1Member == v2Member && v1Data.readyForCommittee == v2Data.readyForCommittee && v1TimedOut == v2TimedOut && v1Data.weight == v2Data.weight && uint256(v1) > uint256(v2)
+		return v1Member && !v2Member || v1Member == v2Member && (
+			v1Data.readyForCommittee && !v2Data.readyForCommittee || v1Data.readyForCommittee == v2Data.readyForCommittee && (
+				!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
+					v1Data.weight > v2Data.weight || v1Data.weight == v2Data.weight && (
+						uint256(v1) > uint256(v2)
+		))))
 		? int(1) :
 			v1Member == v2Member && v1Data.readyForCommittee == v2Data.readyForCommittee && v1TimedOut == v2TimedOut && v1Data.weight == v2Data.weight && uint256(v1) == uint256(v2) ? int(0)
 		: int(-1);
@@ -715,9 +716,7 @@ contract Committee is ICommittee, Ownable {
 					!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
 						v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
 							uint256(v1.addr) > uint256(v2.addr)
-						)
-					)
-			) ? int(1)
+		))) ? int(1)
 		: v1Member == v2Member && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && v1.addr == v2.addr ? int(0)
 		: int(-1);
 	}
