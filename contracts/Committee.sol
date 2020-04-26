@@ -309,7 +309,6 @@ contract Committee is ICommittee, Ownable {
 		bool isParticipant = member.data.inCommittee || member.data.isStandby;
 		if (!isParticipant) {
 			if (!qualifiedToJoin(member)) {
-				membersData[member.addr] = member.data;
 				return (false, false);
 			}
 			joinMemberAsParticipant(member);
