@@ -10,7 +10,7 @@ contract Committee is ICommittee, Ownable {
 	address[] participants;
 
 	struct MemberData { // can be reduced to 1 state entry
-		bool isMember;
+		bool isMember; // exists
 		bool readyForCommittee;
 		uint256 readyToSyncTimestamp;
 		uint256 weight;
@@ -23,7 +23,7 @@ contract Committee is ICommittee, Ownable {
 	struct Member {
 		address addr;
 		MemberData data;
-	}
+	} // Never in state, only in memory
 
 	struct Participant {
 		address addr;
@@ -46,7 +46,7 @@ contract Committee is ICommittee, Ownable {
 		uint freeParticipantSlotPos;
 
 		// Standby entry barrier
-		uint oldestStandbyReadyToSyncStandbyTimestamp;
+		uint oldestStandbyReadyToSyncStandbyTimestamp; // todo 4 bytes?
 		uint minStandbyWeight;
 		address minStandbyAddress;
 		uint standbysCount;
@@ -461,7 +461,7 @@ contract Committee is ICommittee, Ownable {
 		Settings memory _settings = settings;
 		address[] memory _participants = participants;
 
-		(Participant[] memory _members, uint firstFreeSlot) = loadParticipants(_participants, member);
+		(Participant[] memory _members, uint firstFreeSlot) = loadParticipants(_participants, member); // override stored member with preloaded one
 		(CommitteeAndStandbys memory o) = computeCommitteeAndStandbys(_members, _settings);
 
 		uint256 minCommitteeMemberWeight = uint256(-1);
