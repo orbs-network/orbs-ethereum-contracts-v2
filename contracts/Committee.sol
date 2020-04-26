@@ -594,15 +594,9 @@ contract Committee is ICommittee, Ownable {
 		for (uint i = 0; i < participantsAddrs.length; i++) {
 			address addr = participantsAddrs[i];
 			if (addr != address(0)) {
-				MemberData memory data;
-				if (!isNullMember(preloadedMember) && addr == preloadedMember.addr) {
-					data = preloadedMember.data;
-				} else {
-					data = membersData[addr];
-				}
 				_participants[mInd] = Participant({
 					addr: addr,
-					data: data,
+					data: addr == preloadedMember.addr ? preloadedMember.data : membersData[addr],
 					pos: i
 				});
 				mInd++;
@@ -620,10 +614,7 @@ contract Committee is ICommittee, Ownable {
 
 	function computeCommitteeAndStandbys(Participant[] memory _participants, Settings memory _settings) private view returns (CommitteeAndStandbys memory out) {
 
-		Participant[] memory list = new Participant[](_participants.length);
-		for (uint i = 0; i < list.length; i++) {
-			list[i] = _participants[i];
-		}
+		Participant[] memory list = slice(_participants, 0, _participants.length); // TODO can be omitted?
 
 		quickSortPerCommitteeCriteria(list, _settings);
 
@@ -657,20 +648,9 @@ contract Committee is ICommittee, Ownable {
 
 		uint nEvicted = list.length - nStandbys - committeeSize;
 
-		Participant[] memory committee = new Participant[](committeeSize);
-		for (uint i = 0; i < committeeSize; i++) {
-			committee[i] = list[i];
-		}
-
-		Participant[] memory standbys = new Participant[](nStandbys);
-		for (uint i = 0; i < nStandbys; i++) {
-			standbys[i] = list[committeeSize + i];
-		}
-
-		Participant[] memory evicted = new Participant[](nEvicted);
-		for (uint i = 0; i < nEvicted; i++) {
-			evicted[i] = list[committeeSize + nStandbys + i];
-		}
+		Participant[] memory committee = slice(list, 0, committeeSize);
+		Participant[] memory standbys = slice(list, committeeSize, nStandbys);
+		Participant[] memory evicted = slice(list, committeeSize + nStandbys, nEvicted);
 
 		return CommitteeAndStandbys({
 			committee: committee,
@@ -679,10 +659,7 @@ contract Committee is ICommittee, Ownable {
 		});
 	}
 
-	enum Comparator {
-		Committee,
-		Standbys
-	}
+	enum Comparator {Committee, Standbys}
 
 	function quickSortPerCommitteeCriteria(Participant[] memory list, Settings memory _settings) private view {
 		quickSort(list, int(0), int(list.length - 1), _settings, Comparator.Committee);
@@ -734,37 +711,45 @@ contract Committee is ICommittee, Ownable {
 		bool v1Member = v1.data.isMember && v1.data.weight != 0 && v1.data.readyToSyncTimestamp != 0;
 		bool v2Member = v2.data.isMember && v2.data.weight != 0 && v2.data.readyToSyncTimestamp != 0;
 
-		return v1Member && !v2Member ||
-		v1Member == v2Member && !v1TimedOut && v2TimedOut ||
-		v1Member == v2Member && v1TimedOut == v2TimedOut && v1.data.weight > v2.data.weight ||
-		v1Member == v2Member && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && uint256(v1.addr) > uint256(v2.addr)
-		? int(1) :
-		v1Member == v2Member && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && uint256(v1.addr) == uint256(v2.addr) ? int(0)
+		return v1Member && !v2Member || v1Member == v2Member && (
+					!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
+						v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
+							uint256(v1.addr) > uint256(v2.addr)
+						)
+					)
+			) ? int(1)
+		: v1Member == v2Member && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && v1.addr == v2.addr ? int(0)
 		: int(-1);
 	}
 
 	function _notifyStandbysChanged(Participant[] memory standbys) private {
-		address[] memory standbysAddrs = new address[](standbys.length);
-		uint[] memory weights = new uint[](standbys.length);
-		for (uint i = 0; i < standbys.length; i++) {
-			standbysAddrs[i] = standbys[i].addr;
-			weights[i] = standbys[i].data.weight;
-		}
-		emit StandbysChanged(standbysAddrs, _loadOrbsAddresses(standbysAddrs), weights);
+		(address[] memory addrs, uint256[] memory weights) = toAddrsWeights(standbys);
+		emit StandbysChanged(addrs, _loadOrbsAddresses(addrs), weights);
 	}
 
 	function _notifyCommitteeChanged(Participant[] memory committee) private {
-		address[] memory committeeAddrs = new address[](committee.length);
-		uint[] memory weights = new uint[](committee.length);
-		for (uint i = 0; i < committee.length; i++) {
-			committeeAddrs[i] = committee[i].addr;
-			weights[i] = committee[i].data.weight;
+		(address[] memory addrs, uint256[] memory weights) = toAddrsWeights(committee);
+		emit CommitteeChanged(addrs, _loadOrbsAddresses(addrs), weights);
+	}
+
+	function toAddrsWeights(Participant[] memory list) private pure returns (address[] memory addrs, uint256[] memory weights) {
+		addrs = new address[](list.length);
+		weights = new uint256[](list.length);
+		for (uint i = 0; i < list.length; i++) {
+			addrs[i] = list[i].addr;
+			weights[i] = list[i].data.weight;
 		}
-		emit CommitteeChanged(committeeAddrs, _loadOrbsAddresses(committeeAddrs), weights);
 	}
 
 	function validatorsRegistration() private view returns (IValidatorsRegistration) {
 		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
+	}
+
+	function slice(Participant[] memory list, uint from, uint count) private pure returns (Participant[] memory sliced) {
+		sliced = new Participant[](count);
+		for (uint i = 0; i < count; i++) {
+			sliced[i] = list[from + i];
+		}
 	}
 
 }
