@@ -533,9 +533,6 @@ describe('committee', async () => {
         await v1.stake(stake - 1);
         let r = await v1.notifyReadyToSync();
         expect(r).to.not.have.a.committeeChangedEvent();
-        // expect(r).to.have.a.standbysChangedEvent({
-        //     addrs: [standbys[1], v1].map(s => s.address)
-        // });
 
         const v2 = await d.newParticipant();
         await v2.registerAsValidator();
@@ -718,6 +715,68 @@ describe('committee', async () => {
             addrs: [committee[1], standbys[1]].map(s => s.address)
         });
 
+    });
+
+    it('sets last ready-to-sync timestamp to now for a validator who left the committee by unstaking and became a standby', async () => {
+        const maxStandbys = 1;
+        const maxCommitteeSize = 1;
+        const readyToSyncTimeout = 30*24*60*60;
+        const d = await Driver.new({maxStandbys, maxCommitteeSize, readyToSyncTimeout});
+
+        const stake = 100;
+        const {v: v1, r: r1} = await d.newValidator(stake, false, false, true);
+        expect(r1).to.have.a.committeeChangedEvent({
+            addrs: [v1.address]
+        });
+
+        await evmIncreaseTime(d.web3, readyToSyncTimeout + 1); // v1's timestamp is now stale
+
+        const {v: v2, r: r2} = await d.newValidator(stake - 1, false, false, true);
+        expect(r2).to.not.have.a.committeeChangedEvent();
+        expect(r2).to.have.a.standbysChangedEvent({
+            addrs: [v2.address]
+        });
+
+        let r = await v1.unstake(2); // now have less stake than v2 hence becoming a standby and v2 joins committee
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: [v2.address]
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [v1.address]
+        });
+
+        // v1's timestamp should be recent, so a now validator with less stake will not overtake it
+        const {r: r3} = await d.newValidator(stake - 3, false, true, false);
+        expect(r3).to.not.have.a.committeeChangedEvent();
+        expect(r3).to.not.have.a.standbysChangedEvent();
+    });
+
+    it('sets last ready-to-sync timestamp to now for a validator who left the committee to became a standby by being outranked', async () => {
+        const maxStandbys = 1;
+        const maxCommitteeSize = 1;
+        const readyToSyncTimeout = 30*24*60*60;
+        const d = await Driver.new({maxStandbys, maxCommitteeSize, readyToSyncTimeout});
+
+        const stake = 100;
+        const {v: v1, r: r1} = await d.newValidator(stake, false, false, true);
+        expect(r1).to.have.a.committeeChangedEvent({
+            addrs: [v1.address]
+        });
+
+        await evmIncreaseTime(d.web3, readyToSyncTimeout + 1); // v1's timestamp is now stale
+
+        const {v: v2, r: r2} = await d.newValidator(stake + 1, false, false, true);
+        expect(r2).to.have.a.committeeChangedEvent({
+            addrs: [v2.address]
+        });
+        expect(r2).to.have.a.standbysChangedEvent({
+            addrs: [v1.address]
+        });
+
+        // v1's timestamp should be recent, so a now validator with less stake will not overtake it
+        const {r: r3} = await d.newValidator(stake - 3, false, true, false);
+        expect(r3).to.not.have.a.committeeChangedEvent();
+        expect(r3).to.not.have.a.standbysChangedEvent();
     });
 
     // Min-Weight and Min-Committee-Size
