@@ -10,6 +10,10 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
+export class Web3Session {
+     gasRecorder: GasRecorder = new GasRecorder();
+}
+
 export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     ETHEREUM_MNEMONIC,
     ETHEREUM_URL,
@@ -25,7 +29,7 @@ type ContractEntry = {
 export class Web3Driver{
     private web3 : Web3;
     private contracts = new Map<string, ContractEntry>();
-    public readonly gasRecorder = new GasRecorder();
+    private defaultSession = new Web3Session();
 
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
         this.web3 = this.web3Provider();
@@ -38,7 +42,8 @@ export class Web3Driver{
         return this.web3.currentProvider;
     }
 
-    async deploy<N extends keyof Contracts>(contractName: N, args: any[], options?: any) {
+    async deploy<N extends keyof Contracts>(contractName: N, args: any[], options?: any, session?: Web3Session) {
+        session = session || this.defaultSession;
         try {
             const abi = compiledContracts[contractName].abi;
             const accounts = await this.web3.eth.getAccounts();
@@ -50,7 +55,7 @@ export class Web3Driver{
                 ...(options || {})
             });
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
-            return new Contract(this, abi, web3Contract.options.address) as Contracts[N];
+            return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
         } catch (e) {
             this.refresh();
             throw e;
@@ -77,11 +82,16 @@ export class Web3Driver{
             entry.web3Contract = null;
         }
     }
+
+    newSession(): Web3Session {
+        return new Web3Session();
+    }
+
 }
 
 export class Contract {
 
-    constructor(public web3: Web3Driver, abi: any, public address: string) {
+    constructor(public web3: Web3Driver, private session: Web3Session, abi: any, public address: string) {
         Object.keys(this.web3Contract.methods)
             .filter(x => x[0] != '0')
             .forEach(m => {
@@ -111,7 +121,7 @@ export class Contract {
                 ...opts
             });
             if (action == "send") {
-                this.web3.gasRecorder.record(ret);
+                this.session.gasRecorder.record(ret);
             }
             return ret;
         } catch(e) {

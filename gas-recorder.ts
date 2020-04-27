@@ -9,6 +9,10 @@ export class GasRecorder {
         this.gasByAccount[addr] = (this.gasByAccount[addr] || 0) + txReceipt.gasUsed;
     }
 
+    reset() {
+        this.gasByAccount = {};
+    }
+
     gasUsedBy(account: string): number {
         return this.gasByAccount[account.toLowerCase()] || 0;
     }
