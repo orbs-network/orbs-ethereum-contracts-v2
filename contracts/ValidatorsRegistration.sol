@@ -139,12 +139,12 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		require(bytes(contact).length != 0, "contact must be given");
 		// TODO which are mandatory?
 
-		require(_zeroOrSender(ipToValidator[ip]), "ip is already in use");
 		delete ipToValidator[validators[msg.sender].ip];
+		require(ipToValidator[ip] == address(0), "ip is already in use");
 		ipToValidator[ip] = msg.sender;
 
-		require(_zeroOrSender(orbsAddressToEthereumAddress[orbsAddr]), "orbs address is already in use");
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
+		require(orbsAddressToEthereumAddress[orbsAddr] == address(0), "orbs address is already in use");
 		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
 
 		validators[msg.sender].orbsAddr = orbsAddr;
@@ -153,10 +153,6 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
 		validators[msg.sender].lastUpdateTime = now;
-	}
-
-	function _zeroOrSender(address addr) private view returns (bool) {
-		return addr == address(0) || addr == msg.sender;
 	}
 
 	function electionsContract() private view returns (IElections) {
