@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 contract Committee is ICommittee, Ownable {
 	address[] participants;
 
-	struct MemberData { // can be reduced to 1 state entry
+	struct MemberData { // TODO can be reduced to 1 state entry
 		bool isMember; // exists
 		bool readyForCommittee;
 		uint256 readyToSyncTimestamp;
@@ -32,7 +32,7 @@ contract Committee is ICommittee, Ownable {
 		uint pos;
 	} // Never in state, only in memory
 
-	struct Settings { // can be reduced to 2-3 state entries
+	struct Settings { // TODO can be reduced to 2-3 state entries
 		address minimumAddress;
 		uint minimumWeight;
 		uint minCommitteeSize;
@@ -42,7 +42,7 @@ contract Committee is ICommittee, Ownable {
 	}
 	Settings settings;
 
-	// Derived properties (can be reduced to 2-3 state entries)
+	// Derived properties (TODO can be reduced to 2-3 state entries)
 	struct CommitteeInfo {
 		uint freeParticipantSlotPos;
 
@@ -548,7 +548,7 @@ contract Committee is ICommittee, Ownable {
 		sortByCommitteeCriteria(list, _settings);
 
 		uint i = 0;
-		uint committeeSize = i;
+		uint committeeSize = 0;
 
 		while (
 			i < list.length &&
@@ -647,17 +647,17 @@ contract Committee is ICommittee, Ownable {
 		bool v1TimedOut = isReadyToSyncStale(v1.data.readyToSyncTimestamp, v1.data.inCommittee, _settings);
 		bool v2TimedOut = isReadyToSyncStale(v2.data.readyToSyncTimestamp, v2.data.inCommittee, _settings);
 
-		bool v1Member = v1.data.isMember && v1.data.weight != 0 && v1.data.readyToSyncTimestamp != 0;
-		bool v2Member = v2.data.isMember && v2.data.weight != 0 && v2.data.readyToSyncTimestamp != 0;
+		bool v1Qualified = qualifiesAsStandby(v1);
+		bool v2Qualified = qualifiesAsStandby(v2);
 
-		return v1Member && !v2Member || v1Member == v2Member && (
+		return v1Qualified && !v2Qualified || v1Qualified == v2Qualified && (
 			v1.data.readyForCommittee && !v2.data.readyForCommittee || v1.data.readyForCommittee == v2.data.readyForCommittee && (
 				!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
 					v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
 						uint256(v1.addr) > uint256(v2.addr)
 		))))
 		? int(1) :
-		v1Member == v2Member && v1.data.readyForCommittee == v2.data.readyForCommittee && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && uint256(v1.addr) == uint256(v2.addr) ? int(0)
+		v1Qualified == v2Qualified && v1.data.readyForCommittee == v2.data.readyForCommittee && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && uint256(v1.addr) == uint256(v2.addr) ? int(0)
 		: int(-1);
 
 	}
@@ -666,15 +666,15 @@ contract Committee is ICommittee, Ownable {
 		bool v1TimedOut = isReadyToSyncStale(v1.data.readyToSyncTimestamp, v1.data.inCommittee, _settings);
 		bool v2TimedOut = isReadyToSyncStale(v2.data.readyToSyncTimestamp, v2.data.inCommittee, _settings);
 
-		bool v1Member = v1.data.isMember && v1.data.weight != 0 && v1.data.readyToSyncTimestamp != 0;
-		bool v2Member = v2.data.isMember && v2.data.weight != 0 && v2.data.readyToSyncTimestamp != 0;
+		bool v1Qualified = qualifiesAsStandby(v1);
+		bool v2Qualified = qualifiesAsStandby(v2);
 
-		return v1Member && !v2Member || v1Member == v2Member && (
+		return v1Qualified && !v2Qualified || v1Qualified == v2Qualified && (
 					!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
 						v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
 							uint256(v1.addr) > uint256(v2.addr)
 		))) ? int(1)
-		: v1Member == v2Member && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && v1.addr == v2.addr ? int(0)
+		: v1Qualified == v2Qualified && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && v1.addr == v2.addr ? int(0)
 		: int(-1);
 	}
 
