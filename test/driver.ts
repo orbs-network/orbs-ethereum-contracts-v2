@@ -201,16 +201,19 @@ export class Driver {
         return await delegator.delegate(delegatee);
     }
 
-    logGasUsageSummary(scenarioName: string) {
+    logGasUsageSummary(scenarioName: string, participants?: Participant[]) {
         console.log(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`);
         console.log(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`.replace(/./g, '-'));
 
-        console.log(`Root Account (${this.accounts[0]}): ${this.session.gasRecorder.gasUsedBy(this.accounts[0])}`);
-        for (const p of this.participants) {
+        if (!participants) console.log(`Root Account (${this.accounts[0]}): ${this.session.gasRecorder.gasUsedBy(this.accounts[0])}`);
+        for (const p of (participants || this.participants)) {
             console.log(`${p.name} (${p.address};${p.orbsAddress}): ${p.gasUsed()}`);
         }
     }
 
+    resetGasRecording() {
+        this.session.gasRecorder.reset();
+    }
 }
 
 export class Participant {

@@ -1,20 +1,27 @@
 
 import BN from 'bn.js';
-import { Driver, DEPLOYMENT_SUBSET_MAIN } from './driver';
+import {
+    Driver,
+    DEPLOYMENT_SUBSET_MAIN,
+    Participant,
+    CONFORMANCE_TYPE_GENERAL,
+    CONFORMANCE_TYPE_COMPLIANCE
+} from './driver';
+import {MonthlySubscriptionPlanContract} from "../typings/monthly-subscription-plan-contract";
 
-export async function createVC(d : Driver) {
-    const monthlyRate = new BN(1000);
-    const firstPayment = monthlyRate.mul(new BN(2));
+export async function createVC(d : Driver, compliance?: typeof CONFORMANCE_TYPE_GENERAL | typeof CONFORMANCE_TYPE_COMPLIANCE, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number, appOwner?: Participant) {
+    monthlyRate = monthlyRate != null ? monthlyRate : 1000;
+    const firstPayment = monthlyRate * 2;
 
-    const subscriber = await d.newSubscriber('defaultTier', monthlyRate);
+    subscriber = subscriber || await d.newSubscriber('defaultTier', monthlyRate);
     // buy subscription for a new VC
-    const appOwner = d.newParticipant();
+    appOwner =  appOwner || d.newParticipant();
     await d.erc20.assign(appOwner.address, firstPayment);
     await d.erc20.approve(subscriber.address, firstPayment, {
         from: appOwner.address
     });
 
-    return subscriber.createVC(firstPayment, "General", DEPLOYMENT_SUBSET_MAIN, {
+    return subscriber.createVC(firstPayment, compliance || CONFORMANCE_TYPE_GENERAL, DEPLOYMENT_SUBSET_MAIN, {
         from: appOwner.address
     });
 }
