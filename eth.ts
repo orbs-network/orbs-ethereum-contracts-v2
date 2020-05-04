@@ -53,6 +53,13 @@ export class Web3Driver{
             throw e;
         }
     }
+    
+    getExisting<N extends keyof Contracts>(contractName: N, contractAddress: string) {
+        const abi = compiledContracts[contractName].abi;
+        const web3Contract = new this.web3.eth.Contract(abi, contractAddress);
+        this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName});
+        return new Contract(this, abi, web3Contract.options.address) as Contracts[N];
+    }
 
     async txTimestamp(r: TransactionReceipt): Promise<number> {
         return (await this.eth.getBlock(r.blockNumber)).timestamp as number;
