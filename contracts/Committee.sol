@@ -112,7 +112,7 @@ contract Committee is ICommittee, Ownable {
 		return (false, false);
 	}
 
-	function memberReadyForCommittee(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function memberReadyForCommittee(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) { // TODO consider removing this and passing a boolean to readyToSync instead
 		MemberData memory memberData = membersData[addr];
 		if (memberData.isMember) {
 			memberData.readyToSyncTimestamp = now;
@@ -261,10 +261,6 @@ contract Committee is ICommittee, Ownable {
 		});
 	}
 
-	function isNullMember(Member memory member) private pure returns (bool) {
-		return member.addr == address(0);
-	}
-
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
 		address[] memory orbsAddresses = new address[](addrs.length);
 		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
@@ -312,7 +308,7 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	function qualifiesAsStandby(Member memory member) private pure returns (bool) {
-		return member.data.isMember && member.data.readyToSyncTimestamp != 0 && member.data.weight != 0;
+		return member.data.isMember && member.data.readyToSyncTimestamp != 0 && member.data.weight != 0; // TODO should we check for isReadyToSyncStale instead? this means that timed-out nodes are evicted on any change, instead of only when being replaced.
 	}
 
 	function qualifiedToJoinAsStandby(Member memory member, Settings memory _settings, CommitteeInfo memory _committeeInfo) private view returns (bool) {
@@ -424,6 +420,8 @@ contract Committee is ICommittee, Ownable {
 		address[] memory _participants = participants;
 		Participant[] memory _members;
 		uint maxPos;
+
+		// TODO consider modifying computeCommittee to return one list with labels and make a single pass here
 
 		(_members, ci.freeParticipantSlotPos) = loadParticipants(_participants, member); // override stored member with preloaded one
 		CommitteeComputationResults memory o = computeCommittee(_members, _settings);
