@@ -20,16 +20,12 @@ interface ICommittee {
 	function memberWeightChange(address addr, uint256 weight) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
-	/// Notifies a validator sent a readyToSynx signal
-	function memberReadyToSync(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
+	/// Notifies a validator sent a readyToSynx signal, with a flag indicating whether the validator is ready to join the committee
+	function memberReadyToSync(address addr, bool readyForCommittee) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a validator is no longer ready to sync
 	function memberNotReadyToSync(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
-
-	/// @dev Called by: Elections contract
-	/// Notifies a validator sent a readyForCommittee signal
-	function memberReadyForCommittee(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready

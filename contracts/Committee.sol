@@ -99,24 +99,11 @@ contract Committee is ICommittee, Ownable {
 		return (false, false);
 	}
 
-	function memberReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (memberData.isMember) {
 			memberData.readyToSyncTimestamp = now;
-			memberData.readyForCommittee = false;
-			return _rankAndUpdateMember(Member({
-				addr: addr,
-				data: memberData
-			}));
-		}
-		return (false, false);
-	}
-
-	function memberReadyForCommittee(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) { // TODO consider removing this and passing a boolean to readyToSync instead
-		MemberData memory memberData = membersData[addr];
-		if (memberData.isMember) {
-			memberData.readyToSyncTimestamp = now;
-			memberData.readyForCommittee = true;
+			memberData.readyForCommittee = readyForCommittee;
 			return _rankAndUpdateMember(Member({
 				addr: addr,
 				data: memberData
@@ -648,17 +635,32 @@ contract Committee is ICommittee, Ownable {
 		bool v1Qualified = qualifiesAsStandby(v1);
 		bool v2Qualified = qualifiesAsStandby(v2);
 
-		// TODO consider refactoring for readability
-		return v1Qualified && !v2Qualified || v1Qualified == v2Qualified && (
-			v1.data.readyForCommittee && !v2.data.readyForCommittee || v1.data.readyForCommittee == v2.data.readyForCommittee && (
-				!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
-					v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
-						uint256(v1.addr) > uint256(v2.addr)
-		))))
-		? int(1) :
-		v1Qualified == v2Qualified && v1.data.readyForCommittee == v2.data.readyForCommittee && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && uint256(v1.addr) == uint256(v2.addr) ? int(0)
-		: int(-1);
+		if (v1Qualified && !v2Qualified) return 1;
+		if (!v1Qualified && v2Qualified) return -1;
 
+		// v1Qualified == v2Qualified
+
+		if (v1.data.readyForCommittee && !v2.data.readyForCommittee) return 1;
+		if (!v1.data.readyForCommittee && v2.data.readyForCommittee) return -1;
+
+		// v1.data.readyForCommittee == !v2.data.readyForCommittee
+
+		if (!v1TimedOut && v2TimedOut) return 1;
+		if (v1TimedOut && !v2TimedOut) return -1;
+
+		// v1TimedOut == v2TimedOut
+
+		if (v1.data.weight > v2.data.weight) return 1;
+		if (v1.data.weight < v2.data.weight) return -1;
+
+		// v1.data.weight == v2.data.weight
+
+		if (uint256(v1.addr) > uint256(v2.addr)) return 1;
+		if (uint256(v1.addr) < uint256(v2.addr)) return -1;
+
+		// v1.addr == v2.addr
+
+		return 0;
 	}
 
 	function compareMembersPerStandbyCriteria(Member memory v1, Member memory v2, Settings memory _settings) private view returns (int) {
@@ -668,14 +670,27 @@ contract Committee is ICommittee, Ownable {
 		bool v1Qualified = qualifiesAsStandby(v1);
 		bool v2Qualified = qualifiesAsStandby(v2);
 
-		// TODO consider refactoring for readability
-		return v1Qualified && !v2Qualified || v1Qualified == v2Qualified && (
-					!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
-						v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
-							uint256(v1.addr) > uint256(v2.addr)
-		))) ? int(1)
-		: v1Qualified == v2Qualified && v1TimedOut == v2TimedOut && v1.data.weight == v2.data.weight && v1.addr == v2.addr ? int(0)
-		: int(-1);
+		if (v1Qualified && !v2Qualified) return 1;
+		if (!v1Qualified && v2Qualified) return -1;
+
+		// v1Qualified == v2Qualified
+
+		if (!v1TimedOut && v2TimedOut) return 1;
+		if (v1TimedOut && !v2TimedOut) return -1;
+
+		// v1TimedOut == v2TimedOut
+
+		if (v1.data.weight > v2.data.weight) return 1;
+		if (v1.data.weight < v2.data.weight) return -1;
+
+		// v1.data.weight == v2.data.weight
+
+		if (uint256(v1.addr) > uint256(v2.addr)) return 1;
+		if (uint256(v1.addr) < uint256(v2.addr)) return -1;
+
+		// v1.addr == v2.addr
+
+		return 0;
 	}
 
 	function _notifyStandbysChanged(Participant[] memory standbys) private {
