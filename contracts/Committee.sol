@@ -47,7 +47,7 @@ contract Committee is ICommittee, Ownable {
 		uint freeParticipantSlotPos;
 
 		// Standby entry barrier
-		uint oldestStandbyReadyToSyncStandbyTimestamp; // todo 4 bytes?
+		uint oldestReadyToSyncStandbyTimestamp; // todo 4 bytes?
 		uint minStandbyWeight;
 		address minStandbyAddress;
 		uint standbysCount;
@@ -321,7 +321,7 @@ contract Committee is ICommittee, Ownable {
 		}
 
 		return _committeeInfo.standbysCount < _settings.maxStandbys || // Room in standbys
-			_committeeInfo.standbysCount > 0 && member.data.readyToSyncTimestamp > _committeeInfo.oldestStandbyReadyToSyncStandbyTimestamp || // A standby timed out
+			_committeeInfo.standbysCount > 0 && member.data.readyToSyncTimestamp > _committeeInfo.oldestReadyToSyncStandbyTimestamp || // A standby timed out
 			outranksLowestStandby(member, _committeeInfo, _settings); // A standby can be outranked by weight
 	}
 
@@ -389,7 +389,7 @@ contract Committee is ICommittee, Ownable {
 			!isReadyToSyncStale(member.data.readyToSyncTimestamp, member.data.inCommittee, _settings) &&
 			(
 				_outranksLowestCommitteeMember ||
-				_settings.minCommitteeSize > 0 && committeeSize < _settings.minCommitteeSize ||
+				committeeSize < _settings.minCommitteeSize ||
 				committeeSize < _settings.maxCommitteeSize && isAboveCommitteeEntryThreshold(member, _settings)
 			)
 		);
@@ -409,7 +409,7 @@ contract Committee is ICommittee, Ownable {
 
 		CommitteeInfo memory ci = CommitteeInfo({
 			freeParticipantSlotPos: 0,
-			oldestStandbyReadyToSyncStandbyTimestamp: 0,
+			oldestReadyToSyncStandbyTimestamp: 0,
 			minStandbyWeight: 0,
 			minStandbyAddress: address(0),
 			standbysCount: 0,
@@ -435,7 +435,7 @@ contract Committee is ICommittee, Ownable {
 
 		r = UpdateAndAnalyzeParticipantSet(o.standbys, false, true, member.addr);
 		(committeeChanged, standbysChanged) = (committeeChanged || r.committeeChanged, standbysChanged || r.standbysChanged);
-		(ci.minStandbyWeight, ci.minStandbyAddress, ci.oldestStandbyReadyToSyncStandbyTimestamp) = (r.minWeight, r.minAddr, r.minTimestamp);
+		(ci.minStandbyWeight, ci.minStandbyAddress, ci.oldestReadyToSyncStandbyTimestamp) = (r.minWeight, r.minAddr, r.minTimestamp);
 		maxPos = Math.max(maxPos, r.maxPos);
 
 		r = UpdateAndAnalyzeParticipantSet(o.evicted, false, false, member.addr);
@@ -508,7 +508,7 @@ contract Committee is ICommittee, Ownable {
 		}
 	}
 
-	function loadParticipants(address[] memory participantsAddrs, Member memory preloadedMember) private view returns (Participant[] memory _participants, uint firstFreeSlot) {
+	function loadParticipants(address[] memory participantsAddrs, Member memory overrideMember) private view returns (Participant[] memory _participants, uint firstFreeSlot) {
 		uint nParticipants = 0;
 		firstFreeSlot = participantsAddrs.length;
 
@@ -527,7 +527,7 @@ contract Committee is ICommittee, Ownable {
 			if (addr != address(0)) {
 				_participants[mInd] = Participant({
 					addr: addr,
-					data: addr == preloadedMember.addr ? preloadedMember.data : membersData[addr],
+					data: addr == overrideMember.addr ? overrideMember.data : membersData[addr], // load data unless overridden
 					pos: i
 				});
 				mInd++;
