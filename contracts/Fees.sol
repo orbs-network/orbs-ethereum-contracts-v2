@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./IStakingContract.sol";
 import "./spec_interfaces/IFees.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./ContractRegistryAccessor.sol";
