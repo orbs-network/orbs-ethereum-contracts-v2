@@ -97,6 +97,5 @@ describe('bootstrap-rewards-level-flows', async () => {
       const tokenBalance = await d.externalToken.balanceOf(v.address);
       expect(new BN(tokenBalance)).to.bignumber.equal(new BN(expectedBalance));
     }
-
   })
 });
