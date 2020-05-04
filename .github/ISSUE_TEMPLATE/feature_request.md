@@ -4,7 +4,7 @@ about: Suggest an idea for this project
 title: ''
 labels: enhancement
 assignees: ''
-milestones: 'V2'
+milestone: 'V2'
 
 ---
 
