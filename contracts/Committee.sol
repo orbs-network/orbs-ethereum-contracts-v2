@@ -648,6 +648,7 @@ contract Committee is ICommittee, Ownable {
 		bool v1Qualified = qualifiesAsStandby(v1);
 		bool v2Qualified = qualifiesAsStandby(v2);
 
+		// TODO consider refactoring for readability
 		return v1Qualified && !v2Qualified || v1Qualified == v2Qualified && (
 			v1.data.readyForCommittee && !v2.data.readyForCommittee || v1.data.readyForCommittee == v2.data.readyForCommittee && (
 				!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
@@ -667,6 +668,7 @@ contract Committee is ICommittee, Ownable {
 		bool v1Qualified = qualifiesAsStandby(v1);
 		bool v2Qualified = qualifiesAsStandby(v2);
 
+		// TODO consider refactoring for readability
 		return v1Qualified && !v2Qualified || v1Qualified == v2Qualified && (
 					!v1TimedOut && v2TimedOut || v1TimedOut == v2TimedOut && (
 						v1.data.weight > v2.data.weight || v1.data.weight == v2.data.weight && (
