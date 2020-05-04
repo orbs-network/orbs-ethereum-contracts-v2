@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./IStakingContract.sol";
-import "./interfaces/IElections.sol";
 import "./spec_interfaces/IFees.sol";
+import "./spec_interfaces/ICommittee.sol";
 
 contract Fees is IFees, Ownable {
     using SafeMath for uint256;
@@ -123,12 +123,12 @@ contract Fees is IFees, Ownable {
         orbsBalance[addr] = orbsBalance[addr].add(amount);
     }
 
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate) external {
-        fillFeeBuckets(amount, monthlyRate, CommitteeType.General);
+    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
+        fillFeeBuckets(amount, monthlyRate, fromTimestamp, CommitteeType.General);
     }
 
-    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate) external {
-        fillFeeBuckets(amount, monthlyRate, CommitteeType.Compliance);
+    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
+        fillFeeBuckets(amount, monthlyRate, fromTimestamp, CommitteeType.Compliance);
     }
 
     function fillBucket(uint256 bucketId, uint256 amount, CommitteeType complianceType) private {
@@ -148,14 +148,14 @@ contract Fees is IFees, Ownable {
         emit FeesAddedToBucket(bucketId, amount, total, complianceStr);
     }
 
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, CommitteeType complianceType) private {
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, CommitteeType complianceType) private {
         _assignFees(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
-        uint256 bucket = _bucketTime(now);
+        uint256 bucket = _bucketTime(fromTimestamp);
         uint256 _amount = amount;
 
         // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - now % bucketTimePeriod).div(bucketTimePeriod));
+        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - fromTimestamp % bucketTimePeriod).div(bucketTimePeriod));
         fillBucket(bucket, bucketAmount, complianceType);
         _amount = _amount.sub(bucketAmount);
 
@@ -181,14 +181,15 @@ contract Fees is IFees, Ownable {
     }
 
     function _getCommittee(CommitteeType committeeType) private view returns (address[] memory) {
-        // todo - use committee contracts, for both general and kyc committees
+        string memory contractName;
         if (committeeType == CommitteeType.General) {
-            IElections e = IElections(contractRegistry.get("elections"));
-            (address[] memory validators, ) =  e.getCommittee();
-            return validators;
+            contractName = "committee-general";
         } else {
-            return new address[](0);
+            contractName = "committee-compliance";
         }
+        ICommittee e = ICommittee(contractRegistry.get(contractName));
+        (address[] memory validators, ) =  e.getCommittee();
+        return validators;
     }
 
 }

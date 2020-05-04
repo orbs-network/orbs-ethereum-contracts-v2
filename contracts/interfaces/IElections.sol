@@ -5,7 +5,6 @@ import "../IStakeChangeNotifier.sol";
 
 /// @title Elections contract interface
 interface IElections /* is IStakeChangeNotifier */ {
-	event ValidatorRegistered(address addr, bytes4 ip, address orbsAddr);
 	event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] stakes);
 	event TopologyChanged(address[] orbsAddrs, bytes4[] ips);
 	event VoteOut(address voter, address against);
@@ -20,8 +19,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	 *   External methods
 	 */
 
-	/// @dev Called by a participant who wishes to register as a validator
-	function registerValidator(bytes4 _ip, address _orbsAddress) external;
+	/// @dev Called by a validator when ready to start syncing with other nodes
+	function notifyReadyToSync() external;
 
 	/// @dev Called by a validator when ready to join the committee, typically after syncing is complete or after being voted out
 	function notifyReadyForCommittee() external;
@@ -55,17 +54,23 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies an stake migration event
 	function stakeMigration(address _stakeOwner, uint256 _amount) external /* onlyStakingContract */;
 
+	/// @dev Called by: validator registration contract
+	/// Notifies a new validator was registered
+	function validatorRegistered(address addr) external /* onlyValidatorsRegistrationContract */;
+
+	/// @dev Called by: validator registration contract
+	/// Notifies a new validator was unregistered
+	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
+
+	/// @dev Called by: validator registration contract
+	/// Notifies on a validator compliance change
+	function validatorConformanceChanged(address addr, string calldata conformanceType) external /* onlyComplianceContract */;
+
 	/*
 	 * Governance
 	 */
+
 	/// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
 
-	/*
-	 *   Test helpers
-	 */
-
-	function getTopology() external view returns (address[] memory);
-
-	function getCommittee() external view returns (address[] memory validators, uint256[] memory weights); // todo - temporary, remove
 }
