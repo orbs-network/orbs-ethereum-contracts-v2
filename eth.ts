@@ -83,10 +83,6 @@ export class Web3Driver{
         }
     }
 
-    newSession(): Web3Session {
-        return new Web3Session();
-    }
-
 }
 
 export class Contract {

@@ -588,7 +588,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         // Create a new staking contract and stake different amounts
-        const newStaking = await d.newStakingContract(d.elections.address, d.erc20.address);
+        const newStaking = await Driver.newStakingContract(d.web3, d.elections.address, d.erc20.address, d.session);
         await d.contractRegistry.set("staking", newStaking.address);
 
         await v1.stake(baseStake * 5, newStaking);
