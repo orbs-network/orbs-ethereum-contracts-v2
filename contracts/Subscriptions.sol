@@ -6,9 +6,9 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./Fees.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract Subscriptions is ISubscriptions, ContractAccessor {
+contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     enum CommitteeType {

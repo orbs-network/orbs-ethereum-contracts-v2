@@ -2,10 +2,10 @@ pragma solidity 0.5.16;
 
 import "./spec_interfaces/ICommittee.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, ContractAccessor {
+contract Committee is ICommittee, ContractRegistryAccessor {
 	address[] topology;
 
 	struct Member {

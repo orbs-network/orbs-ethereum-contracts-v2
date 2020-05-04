@@ -8,9 +8,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IBootstrapRewards.sol";
 import "./spec_interfaces/ICommittee.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract BootstrapRewards is IBootstrapRewards, ContractAccessor {
+contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     uint256 pool;

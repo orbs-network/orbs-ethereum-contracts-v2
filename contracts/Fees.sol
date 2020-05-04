@@ -8,9 +8,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IStakingContract.sol";
 import "./spec_interfaces/IFees.sol";
 import "./spec_interfaces/ICommittee.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract Fees is IFees, ContractAccessor {
+contract Fees is IFees, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     enum CommitteeType {

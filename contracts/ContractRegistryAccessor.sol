@@ -10,7 +10,7 @@ import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 
-contract ContractAccessor is Ownable {
+contract ContractRegistryAccessor is Ownable {
 
     IContractRegistry contractRegistry;
 

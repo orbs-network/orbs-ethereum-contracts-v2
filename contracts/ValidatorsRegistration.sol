@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./interfaces/IElections.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract ValidatorsRegistration is IValidatorsRegistration, ContractAccessor {
+contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor {
 
 	modifier onlyRegisteredValidator {
 		require(isRegistered(msg.sender), "Validator is not registered");

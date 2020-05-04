@@ -9,9 +9,9 @@ import "./IStakingContract.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IStakingRewards.sol";
 import "./spec_interfaces/ICommittee.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract StakingRewards is IStakingRewards, ContractAccessor {
+contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     uint256 pool;

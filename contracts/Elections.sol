@@ -10,10 +10,10 @@ import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICompliance.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
 
-contract Elections is IElections, IStakeChangeNotifier, ContractAccessor {
+contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor {
 	using SafeMath for uint256;
 
     uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;

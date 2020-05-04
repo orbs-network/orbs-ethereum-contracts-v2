@@ -1,9 +1,9 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/ICompliance.sol";
-import "./ContractAccessor.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract Compliance is ICompliance, ContractAccessor { // TODO consider renaming to something like 'ValidatorIdentification' or make more generic
+contract Compliance is ICompliance, ContractRegistryAccessor { // TODO consider renaming to something like 'ValidatorIdentification' or make more generic
 
     mapping (address => string) validatorCompliance;
 

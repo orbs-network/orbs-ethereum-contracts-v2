@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Subscriptions.sol";
 import "./ContractRegistry.sol";
 
-contract MonthlySubscriptionPlan is Ownable, ContractAccessor {
+contract MonthlySubscriptionPlan is Ownable, ContractRegistryAccessor {
 
     string public tier;
     uint256 public monthlyRate;
