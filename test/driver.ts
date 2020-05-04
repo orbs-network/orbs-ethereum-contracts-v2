@@ -80,7 +80,7 @@ export class Driver {
         } = Object.assign({}, defaultDriverOptions, options);
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
-        const session = web3.newSession();
+        const session = new Web3Session();
         const accounts = await web3.eth.getAccounts();
 
         const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]], null, session);
@@ -152,10 +152,6 @@ export class Driver {
         return staking;
     }
 
-    async newStakingContract(electionsAddr: string, erc20Addr: string): Promise<StakingContract> {
-        return Driver.newStakingContract(this.web3, electionsAddr, erc20Addr, this.session);
-    }
-
     get contractsOwner() {
         return this.accounts[0];
     }
@@ -176,12 +172,12 @@ export class Driver {
     }
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
-        name = name || `Validator${this.participants.length}-name`;
+        name = name || `Validator${this.participants.length}`;
         const RESERVED_ACCOUNTS = 2;
         const v = new Participant(
             name,
-            `Validator${this.participants.length}-website`,
-            `Validator${this.participants.length}-contact`,
+            `${name}-website`,
+            `${name}-contact`,
             this.accounts[RESERVED_ACCOUNTS + this.participants.length*2],
             this.accounts[RESERVED_ACCOUNTS + this.participants.length*2+1],
             this);
@@ -202,8 +198,11 @@ export class Driver {
     }
 
     logGasUsageSummary(scenarioName: string) {
-        console.log(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`);
-        console.log(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`.replace(/./g, '-'));
+        const logTitle = (t: string) => {
+            console.log(t);
+            console.log('-'.repeat(t.length));
+        };
+        logTitle(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`);
 
         console.log(`Root Account (${this.accounts[0]}): ${this.session.gasRecorder.gasUsedBy(this.accounts[0])}`);
         for (const p of this.participants) {
