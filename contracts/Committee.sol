@@ -1,13 +1,13 @@
 pragma solidity 0.5.16;
 
-import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "./ContractRegistryAccessor.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, Ownable {
+contract Committee is ICommittee, ContractRegistryAccessor {
 	address[] participants;
 
 	struct MemberData { // TODO can be reduced to 1 state entry
@@ -60,7 +60,7 @@ contract Committee is ICommittee, Ownable {
 	CommitteeInfo committeeInfo;
 
 	modifier onlyElectionsContract() {
-		require(msg.sender == contractRegistry.get("elections"), "caller is not the elections");
+		require(msg.sender == address(getElectionsContract()), "caller is not the elections");
 
 		_;
 	}
@@ -202,18 +202,6 @@ contract Committee is ICommittee, Ownable {
 	}
 
 	/*
-	 * Governance
-	 */
-
-	IContractRegistry contractRegistry;
-
-    /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-		require(_contractRegistry != IContractRegistry(0), "contractRegistry must not be 0");
-		contractRegistry = _contractRegistry;
-	}
-
-	/*
      * Getters
      */
 
@@ -250,7 +238,7 @@ contract Committee is ICommittee, Ownable {
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
 		address[] memory orbsAddresses = new address[](addrs.length);
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
+		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
 		for (uint i = 0; i < addrs.length; i++) {
 			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
 		}
@@ -259,7 +247,7 @@ contract Committee is ICommittee, Ownable {
 
 	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
 		bytes4[] memory ips = new bytes4[](addrs.length);
-		IValidatorsRegistration validatorsRegistrationContract = validatorsRegistration();
+		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
 		for (uint i = 0; i < addrs.length; i++) {
 			ips[i] = validatorsRegistrationContract.getValidatorIp(addrs[i]);
 		}
@@ -710,10 +698,6 @@ contract Committee is ICommittee, Ownable {
 			addrs[i] = list[i].addr;
 			weights[i] = list[i].data.weight;
 		}
-	}
-
-	function validatorsRegistration() private view returns (IValidatorsRegistration) {
-		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
 	}
 
 	function slice(Participant[] memory list, uint from, uint count) private pure returns (Participant[] memory sliced) {

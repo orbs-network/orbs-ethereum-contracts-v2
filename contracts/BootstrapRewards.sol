@@ -8,11 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IBootstrapRewards.sol";
 import "./spec_interfaces/ICommittee.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract BootstrapRewards is IBootstrapRewards, Ownable {
+contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
     using SafeMath for uint256;
-
-    IContractRegistry contractRegistry;
 
     uint256 pool;
 
@@ -40,11 +39,6 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastPayedAt = now;
         rewardsGovernor = _rewardsGovernor;
-    }
-
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-        require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
-        contractRegistry = _contractRegistry;
     }
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
@@ -76,8 +70,11 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
     }
 
     function _assignRewards() private {
-        _assignRewardsToCommittee(_getGeneralCommittee(), generalCommitteeAnnualBootstrap);
-        _assignRewardsToCommittee(_getComplianceCommittee(), complianceCommitteeAnnualBootstrap);
+        (address[] memory generalCommittee,) = getGeneralCommitteeContract().getCommittee();
+        _assignRewardsToCommittee(generalCommittee, generalCommitteeAnnualBootstrap);
+
+        (address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
+        _assignRewardsToCommittee(complianceCommittee, complianceCommitteeAnnualBootstrap);
 
         lastPayedAt = now;
     }
@@ -107,20 +104,6 @@ contract BootstrapRewards is IBootstrapRewards, Ownable {
         uint256 amount = bootstrapBalance[msg.sender];
         bootstrapBalance[msg.sender] = bootstrapBalance[msg.sender].sub(amount);
         require(bootstrapToken.transfer(msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
-    }
-
-    function _getCommittee(string memory committeeContract) private view returns (address[] memory) {
-        ICommittee e = ICommittee(contractRegistry.get(committeeContract));
-        (address[] memory validators,) = e.getCommittee();
-        return validators;
-    }
-
-    function _getGeneralCommittee() private view returns (address[] memory) {
-        return _getCommittee("committee-general");
-    }
-
-    function _getComplianceCommittee() private view returns (address[] memory) {
-        return _getCommittee("committee-compliance");
     }
 
 }

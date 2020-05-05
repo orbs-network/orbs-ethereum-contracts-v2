@@ -5,19 +5,17 @@ import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./IStakingContract.sol";
 import "./spec_interfaces/IFees.sol";
 import "./spec_interfaces/ICommittee.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract Fees is IFees, Ownable {
+contract Fees is IFees, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     enum CommitteeType {
         General,
         Compliance
     }
-
-    IContractRegistry contractRegistry;
 
     uint256 constant bucketTimePeriod = 30 days;
 
@@ -35,11 +33,6 @@ contract Fees is IFees, Ownable {
 
         erc20 = _erc20;
         lastPayedAt = now;
-    }
-
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-        require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
-        contractRegistry = _contractRegistry;
     }
 
     function getOrbsBalance(address addr) external view returns (uint256) {
@@ -94,29 +87,29 @@ contract Fees is IFees, Ownable {
         assignAmountFixed(complianceFeePoolAmount, CommitteeType.Compliance);
     }
 
-    function assignAmountFixed(uint256 amount, CommitteeType complianceType) private {
-        address[] memory currentCommittee = _getCommittee(complianceType);
+    function assignAmountFixed(uint256 amount, CommitteeType committeeType) private {
+        address[] memory committee = _getCommittee(committeeType);
 
-        uint256[] memory assignedFees = new uint256[](currentCommittee.length);
+        uint256[] memory assignedFees = new uint256[](committee.length);
 
         uint256 totalAssigned = 0;
 
-        for (uint i = 0; i < currentCommittee.length; i++) {
-            uint256 curAmount = amount.div(currentCommittee.length);
+        for (uint i = 0; i < committee.length; i++) {
+            uint256 curAmount = amount.div(committee.length);
             assignedFees[i] = curAmount;
             totalAssigned = totalAssigned.add(curAmount);
         }
 
         uint256 remainder = amount.sub(totalAssigned);
-        if (remainder > 0 && currentCommittee.length > 0) {
-            uint ind = now % currentCommittee.length;
+        if (remainder > 0 && committee.length > 0) {
+            uint ind = now % committee.length;
             assignedFees[ind] = assignedFees[ind].add(remainder);
         }
 
-        for (uint i = 0; i < currentCommittee.length; i++) {
-            addToBalance(currentCommittee[i], assignedFees[i]);
+        for (uint i = 0; i < committee.length; i++) {
+            addToBalance(committee[i], assignedFees[i]);
         }
-        emit FeesAssigned(currentCommittee, assignedFees);
+        emit FeesAssigned(committee, assignedFees);
     }
 
     function addToBalance(address addr, uint256 amount) private {
@@ -182,13 +175,12 @@ contract Fees is IFees, Ownable {
 
     function _getCommittee(CommitteeType committeeType) private view returns (address[] memory) {
         string memory contractName;
+        address[] memory validators;
         if (committeeType == CommitteeType.General) {
-            contractName = "committee-general";
+            (validators,) =  getGeneralCommitteeContract().getCommittee();
         } else {
-            contractName = "committee-compliance";
+            (validators,) =  getComplianceCommitteeContract().getCommittee();
         }
-        ICommittee e = ICommittee(contractRegistry.get(contractName));
-        (address[] memory validators, ) =  e.getCommittee();
         return validators;
     }
 

@@ -14,7 +14,7 @@ describe('contract-registry-high-level-flows', async () => {
   it('registers contracts only by governor and emits events', async () => {
     const d = await Driver.new();
     const governor = d.newParticipant();
-    const registry = await Driver.newContractRegistry(d.web3, governor.address);
+    const registry = await d.newContractRegistry(governor.address);
 
     const contract1Name = "Contract1";
     const addr1 = d.newParticipant().address;
