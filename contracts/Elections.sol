@@ -2,18 +2,17 @@ pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 import "./spec_interfaces/ICommitteeListener.sol";
 import "./interfaces/IElections.sol";
-import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICompliance.sol";
+import "./ContractRegistryAccessor.sol";
 
 
-contract Elections is IElections, IStakeChangeNotifier, Ownable {
+contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor {
 	using SafeMath for uint256;
 
     uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;
@@ -36,19 +35,19 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	uint256 banningPercentageThreshold;
 
 	modifier onlyStakingContract() {
-		require(msg.sender == contractRegistry.get("staking"), "caller is not the staking contract");
+		require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
 
 		_;
 	}
 
 	modifier onlyValidatorsRegistrationContract() {
-		require(msg.sender == contractRegistry.get("validatorsRegistration"), "caller is not the validator registrations contract");
+		require(msg.sender == address(getValidatorsRegistrationContract()), "caller is not the validator registrations contract");
 
 		_;
 	}
 
 	modifier onlyComplianceContract() {
-		require(msg.sender == contractRegistry.get("compliance"), "caller is not the validator registrations contract");
+		require(msg.sender == address(getComplianceContract()), "caller is not the validator registrations contract");
 
 		_;
 	}
@@ -94,28 +93,28 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		}
 
 		if (isComplianceType(complianceType)) {
-			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+            getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		} else {
-			complianceCommitteeContract().removeMember(addr);
+			getComplianceCommitteeContract().removeMember(addr);
 		}
 	}
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = generalCommitteeContract().memberReadyForCommittee(sender);
+		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyForCommittee(sender);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		complianceCommitteeContract().memberReadyForCommittee(sender);
+		getComplianceCommitteeContract().memberReadyForCommittee(sender);
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = generalCommitteeContract().memberReadyToSync(sender);
+		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		complianceCommitteeContract().memberReadyToSync(sender);
+		getComplianceCommitteeContract().memberReadyToSync(sender);
 	}
 
 	function delegate(address to) external {
@@ -169,13 +168,13 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights) = generalCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights) = getGeneralCommitteeContract().getCommittee();
 
 		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
 		} else if (isComplianceValidator(addr)) {
-			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = complianceCommitteeContract().getCommittee();
+			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = getComplianceCommitteeContract().getCommittee();
 			votedOut = isCommitteeVoteOutThresholdReached(complianceCommittee, complianceWeights, addr);
 			if (votedOut) {
 				clearCommitteeVoteOuts(complianceCommittee, addr);
@@ -185,11 +184,11 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 		if (votedOut) {
 			emit VotedOutOfCommittee(addr);
 
-			(bool committeeChanged,) = generalCommitteeContract().memberNotReadyToSync(addr);
+			(bool committeeChanged,) = getGeneralCommitteeContract().memberNotReadyToSync(addr);
 			if (committeeChanged) {
 				updateComplianceCommitteeMinimumWeight();
 			}
-			complianceCommitteeContract().memberNotReadyToSync(addr);
+			getComplianceCommitteeContract().memberNotReadyToSync(addr);
 		}
 	}
 
@@ -343,7 +342,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
 	function refreshStakes(address[] calldata addrs) external {
-		IStakingContract staking = IStakingContract(contractRegistry.get("staking"));
+		IStakingContract staking = getStakingContract();
 
 		for (uint i = 0; i < addrs.length; i++) {
 			address staker = addrs[i];
@@ -360,7 +359,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
 		address[] memory orbsAddrArr = new address[](1);
 		orbsAddrArr[0] = orbsAddr;
-		address sender = validatorsRegistration().getEthereumAddresses(orbsAddrArr)[0];
+		address sender = getValidatorsRegistrationContract().getEthereumAddresses(orbsAddrArr)[0];
 		require(sender != address(0), "unknown orbs address");
 		return sender;
 	}
@@ -377,11 +376,11 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 
 		emit StakeChanged(addr, ownStakes[addr], newStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
 
-		(bool committeeChanged,) = generalCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		complianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		getComplianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 
 	}
 
@@ -407,51 +406,27 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	}
 
 	function removeMemberFromCommittees(address addr) private {
-		(bool committeeChanged,) = generalCommitteeContract().removeMember(addr);
+		(bool committeeChanged,) = getGeneralCommitteeContract().removeMember(addr);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		complianceCommitteeContract().removeMember(addr);
+		getComplianceCommitteeContract().removeMember(addr);
 	}
 
 	function addMemberToCommittees(address addr) private {
-		(bool committeeChanged,) = generalCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = getGeneralCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
 		if (isComplianceValidator(addr)) {
-			complianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		}
 	}
 
 	function updateComplianceCommitteeMinimumWeight() private {
-		address lowestMember = generalCommitteeContract().getLowestCommitteeMember();
+		address lowestMember = getGeneralCommitteeContract().getLowestCommitteeMember();
 		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
-		complianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
-	}
-
-	function validatorsRegistration() private view returns (IValidatorsRegistration) {
-		return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
-	}
-
-	function generalCommitteeContract() private view returns (ICommittee) {
-		return ICommittee(contractRegistry.get("committee-general"));
-	}
-
-	function complianceCommitteeContract() private view returns (ICommittee) {
-		return ICommittee(contractRegistry.get("committee-compliance"));
-	}
-
-	function complianceContract() private view returns (ICompliance) {
-		return ICompliance(contractRegistry.get("compliance"));
-	}
-
-	IContractRegistry contractRegistry;
-
-	/// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-		require(_contractRegistry != IContractRegistry(0), "contractRegistry must not be 0");
-		contractRegistry = _contractRegistry;
+		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
 	}
 
 	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
@@ -463,7 +438,7 @@ contract Elections is IElections, IStakeChangeNotifier, Ownable {
 	}
 
 	function isComplianceValidator(address addr) private view returns (bool) {
-		string memory compliance = complianceContract().getValidatorCompliance(addr);
+		string memory compliance = getComplianceContract().getValidatorCompliance(addr);
 		return isComplianceType(compliance);
 	}
 
