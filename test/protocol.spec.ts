@@ -124,4 +124,35 @@ describe('protocol-contract', async () => {
     });
   });
 
+  it('gets the current protocol version before and after an upgrade, on first and subsequent upgrades', async () => {
+    const d = await Driver.new();
+
+    let reportedVersion: BN = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersion).to.be.bignumber.equal(bn(1));
+
+    // first upgrade
+    let curBlockNumber: number = await new Promise((resolve, reject) => d.web3.eth.getBlockNumber((err, blockNumber) => err ? reject(err): resolve(blockNumber)));
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, curBlockNumber + 3);
+
+    reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersion).to.be.bignumber.equal(bn(1));
+
+    await evmMine(d.web3, 3);
+
+    reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersion).to.be.bignumber.equal(bn(2));
+
+    // the second upgrade
+    curBlockNumber = await new Promise((resolve, reject) => d.web3.eth.getBlockNumber((err, blockNumber) => err ? reject(err): resolve(blockNumber)));
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, curBlockNumber + 3);
+
+    reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersion).to.be.bignumber.equal(bn(2));
+
+    await evmMine(d.web3, 6);
+
+    reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersion).to.be.bignumber.equal(bn(3));
+
+  });
 });
