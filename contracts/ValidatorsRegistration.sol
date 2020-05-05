@@ -2,11 +2,11 @@ pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 
-import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./interfaces/IElections.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
+contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor {
 
 	modifier onlyRegisteredValidator {
 		require(isRegistered(msg.sender), "Validator is not registered");
@@ -29,8 +29,6 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	mapping (address => address) orbsAddressToEthereumAddress;
 	mapping (bytes4 => address) ipToValidator;
 
-	IContractRegistry contractRegistry;
-
 	/*
      * External methods
      */
@@ -42,7 +40,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		_updateValidator(ip, orbsAddr, name, website, contact);
 
 		emit ValidatorRegistered(msg.sender, ip, orbsAddr, name, website, contact);
-		electionsContract().validatorRegistered(msg.sender);
+		getElectionsContract().validatorRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
@@ -69,7 +67,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		delete ipToValidator[validators[msg.sender].ip];
 		delete validators[msg.sender];
 
-		electionsContract().validatorUnregistered(msg.sender);
+		getElectionsContract().validatorUnregistered(msg.sender);
 
 		emit ValidatorUnregistered(msg.sender);
 	}
@@ -121,15 +119,6 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 	}
 
 	/*
-    * Governance
-    */
-
-	function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-		require(_contractRegistry != IContractRegistry(0), "contractRegistry must not be 0");
-		contractRegistry = _contractRegistry;
-	}
-
-	/*
 	 * Private methods
 	 */
 
@@ -155,7 +144,4 @@ contract ValidatorsRegistration is IValidatorsRegistration, Ownable {
 		validators[msg.sender].lastUpdateTime = now;
 	}
 
-	function electionsContract() private view returns (IElections) {
-		return IElections(contractRegistry.get("elections"));
-	}
 }

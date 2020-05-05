@@ -7,9 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Subscriptions.sol";
 import "./ContractRegistry.sol";
 
-contract MonthlySubscriptionPlan is Ownable {
-
-    IContractRegistry contractRegistry;
+contract MonthlySubscriptionPlan is ContractRegistryAccessor {
 
     string public tier;
     uint256 public monthlyRate;
@@ -24,15 +22,10 @@ contract MonthlySubscriptionPlan is Ownable {
         monthlyRate = _monthlyRate;
     }
 
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyOwner {
-        require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
-        contractRegistry = _contractRegistry;
-    }
-
     function createVC(uint256 amount, string calldata compliance, string calldata deploymentSubset) external {
         require(amount > 0, "must include funds");
 
-        ISubscriptions subs = ISubscriptions(contractRegistry.get("subscriptions"));
+        ISubscriptions subs = getSubscriptionsContract();
 
         // TODO TBD subs has to trust this contract to transfer the funds. alternatively, transfer to this account and then approve subs to pull same amount.
         require(erc20.transferFrom(msg.sender, address(subs), amount), "failed to transfer subscription fees");
@@ -42,7 +35,7 @@ contract MonthlySubscriptionPlan is Ownable {
     function extendSubscription(uint256 vcid, uint256 amount) external {
         require(amount > 0, "must include funds");
 
-        ISubscriptions subs = ISubscriptions(contractRegistry.get("subscriptions"));
+        ISubscriptions subs = getSubscriptionsContract();
 
         // TODO TBD subs has to trust this contract to transfer the funds. alternatively, transfer to this account and then approve subs to pull same amount.
         require(erc20.transferFrom(msg.sender, address(subs), amount), "failed to transfer subscription fees");

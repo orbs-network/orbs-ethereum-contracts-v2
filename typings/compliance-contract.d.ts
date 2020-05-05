@@ -3,9 +3,9 @@ import {Contract} from "../eth";
 
 export type ComplianceType = "Compliance" | "General";
 
-export interface ValidatorConformanceUpdateEvent {
+export interface ValidatorComplianceUpdateEvent {
   validator: string,
-  conformanceType: ComplianceType;
+  complianceType: ComplianceType;
 }
 
 export interface ComplianceContract extends Contract {

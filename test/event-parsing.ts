@@ -55,4 +55,4 @@ export const protocolChangedEvents = (txResult, contractAddress?: string) => par
 export const banningVoteEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningVote(address,address[])", contractAddress);
 export const electionsBanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Banned(address)", contractAddress);
 export const electionsUnbanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Unbanned(address)", contractAddress);
-export const validatorConformanceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorConformanceUpdate(address,string)", contractAddress);
+export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,string)", contractAddress);
