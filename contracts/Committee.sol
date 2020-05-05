@@ -514,41 +514,40 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		Participant[] evicted;
 	}
 
+	// WARNING - this function sorts _participants in place.
 	function computeCommittee(Participant[] memory _participants, Settings memory _settings) private view returns (CommitteeComputationResults memory out) {
-
-		Participant[] memory list = slice(_participants, 0, _participants.length); // TODO can be omitted?
-
-		sortByCommitteeCriteria(list, _settings);
+		
+		sortByCommitteeCriteria(_participants, _settings);
 
 		uint i = 0;
 		uint committeeSize = 0;
 
 		while (
-			i < list.length &&
+			i < _participants.length &&
 			committeeSize < _settings.maxCommitteeSize &&
-			qualifiesForCommittee(Member({addr: list[i].addr, data: list[i].data}), _settings, committeeSize, false)
+			qualifiesForCommittee(Member({addr: _participants[i].addr, data: _participants[i].data}), _settings, committeeSize, false)
 		) {
 			committeeSize++;
 			i++;
 		}
 
-		sortByStandbysCriteria(list, _settings, committeeSize, list.length);
+		sortByStandbysCriteria(_participants, _settings, committeeSize, _participants.length);
 
 		uint nStandbys = 0;
 		while (
-			i < list.length &&
+			i < _participants.length &&
 			nStandbys < _settings.maxStandbys &&
-			qualifiesAsStandby(Member({addr: list[i].addr, data: list[i].data}))
+			qualifiesAsStandby(Member({addr: _participants[i].addr, data: _participants[i].data}))
 		) {
 			nStandbys++;
 			i++;
 		}
 
-		uint nEvicted = list.length - nStandbys - committeeSize;
+		uint nEvicted = _participants.length - nStandbys - committeeSize;
 
-		Participant[] memory committee = slice(list, 0, committeeSize);
-		Participant[] memory standbys = slice(list, committeeSize, nStandbys);
-		Participant[] memory evicted = slice(list, committeeSize + nStandbys, nEvicted);
+		Participant[] memory committee = slice(_participants, 0, committeeSize);
+		Participant[] memory standbys = slice(_participants, committeeSize, nStandbys);
+		Participant[] memory evicted = slice(_participants, committeeSize + nStandbys, nEvicted);
 
 		return CommitteeComputationResults({
 			committee: committee,
