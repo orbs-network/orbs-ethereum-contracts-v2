@@ -101,20 +101,20 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyForCommittee(sender);
+		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, true);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		getComplianceCommitteeContract().memberReadyForCommittee(sender);
+		getComplianceCommitteeContract().memberReadyToSync(sender, true);
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender);
+		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, false);
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		getComplianceCommitteeContract().memberReadyToSync(sender);
+		getComplianceCommitteeContract().memberReadyToSync(sender, false);
 	}
 
 	function delegate(address to) external {

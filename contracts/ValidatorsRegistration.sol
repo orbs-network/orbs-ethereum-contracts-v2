@@ -15,7 +15,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
 	struct Validator {
-		bytes4 ip; // TODO should we enforce uniqueness of IP address as we did in previous contract?
+		bytes4 ip;
 		address orbsAddr;
 		string name;
 		string website;
@@ -27,6 +27,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 	mapping (address => Validator) validators;
 	mapping (address => address) orbsAddressToEthereumAddress;
+	mapping (bytes4 => address) ipToValidator;
 
 	/*
      * External methods
@@ -63,6 +64,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	/// @dev Called by a participant who wishes to unregister
 	function unregisterValidator() external onlyRegisteredValidator {
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
+		delete ipToValidator[validators[msg.sender].ip];
 		delete validators[msg.sender];
 
 		getElectionsContract().validatorUnregistered(msg.sender);
@@ -126,11 +128,16 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		require(bytes(contact).length != 0, "contact must be given");
 		// TODO which are mandatory?
 
-		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
-        orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
+		delete ipToValidator[validators[msg.sender].ip];
+		require(ipToValidator[ip] == address(0), "ip is already in use");
+		ipToValidator[ip] = msg.sender;
 
-        validators[msg.sender].orbsAddr = orbsAddr; // TODO enforce uniqueness?
-		validators[msg.sender].ip = ip; // TODO enforce uniqueness?
+		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
+		require(orbsAddressToEthereumAddress[orbsAddr] == address(0), "orbs address is already in use");
+		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
+
+		validators[msg.sender].orbsAddr = orbsAddr;
+		validators[msg.sender].ip = ip;
 		validators[msg.sender].name = name;
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;

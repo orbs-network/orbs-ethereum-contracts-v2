@@ -232,6 +232,263 @@ describe('validator-registration', async () => {
         {from: v.address}));
   });
 
+  it('does not allow registering using an IP of an existing validator', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await expectRejected(d.validatorsRegistration.registerValidator(
+        v.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact,
+        {from: v2.address}));
+  });
+
+  it('does not allow a registered validator to set an IP of an existing validator', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+
+    await expectRejected(d.validatorsRegistration.updateValidator(
+        v.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact,
+        {from: v2.address}));
+  });
+
+  it('allows registering with an IP of a previously existing validator that unregistered', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    await d.validatorsRegistration.unregisterValidator({from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+  });
+
+  it('allows a registered validator to set an IP of a previously existing validator that unregistered', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+
+    await d.validatorsRegistration.unregisterValidator({from: v.address});
+
+    await d.validatorsRegistration.updateValidator(
+        v.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+    , {from: v2.address});
+
+  });
+
+  it('does not allow registering using an orbs address of an existing validator', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await expectRejected(d.validatorsRegistration.registerValidator(
+        v.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact,
+        {from: v2.address}));
+  });
+
+  it('does not allow a registered validator to set an orbs address of an existing validator', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+
+    await expectRejected(d.validatorsRegistration.updateValidator(
+        v2.ip,
+        v.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact,
+        {from: v2.address}));
+  });
+
+  it('allows registering with an orbs address of a previously existing validator that unregistered', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    await d.validatorsRegistration.unregisterValidator({from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+  });
+
+  it('allows a registered validator to set an orbs address of a previously existing validator that unregistered', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    const v2 = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v2.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+
+    await d.validatorsRegistration.unregisterValidator({from: v.address});
+
+    await d.validatorsRegistration.updateValidator(
+        v2.ip,
+        v.orbsAddress,
+        v2.name,
+        v2.website,
+        v2.contact
+    , {from: v2.address});
+
+  });
+
+  it('allows a registered validator to update without changing any detail', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    await d.validatorsRegistration.updateValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+    , {from: v.address});
+
+  });
+
   it('sets, overrides, gets and clears validator metadata', async () => {
     const d = await Driver.new();
 

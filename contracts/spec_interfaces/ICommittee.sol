@@ -20,16 +20,12 @@ interface ICommittee {
 	function memberWeightChange(address addr, uint256 weight) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
-	/// Notifies a validator sent a readyToSynx signal
-	function memberReadyToSync(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
+	/// Notifies a validator sent a readyToSynx signal, with a flag indicating whether the validator is ready to join the committee
+	function memberReadyToSync(address addr, bool readyForCommittee) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a validator is no longer ready to sync
 	function memberNotReadyToSync(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
-
-	/// @dev Called by: Elections contract
-	/// Notifies a validator sent a readyForCommittee signal
-	function memberReadyForCommittee(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready
@@ -52,8 +48,8 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal weight, and committee members
-    /// Every member with sortingStake >= mimimumStake OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 _mimimumWeight, address _minimumAddress, uint _minCommitteeSize) external /* onlyElectionsContract */;
+    /// Every member with sortingStake >= minimumStake OR in top minimumN is included in the committee
+	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize) external /* onlyElectionsContract */;
 
 	/*
 	 * Governance

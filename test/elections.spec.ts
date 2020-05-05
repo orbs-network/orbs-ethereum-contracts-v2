@@ -39,7 +39,7 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it ('sorts committee by stake', async () => {
+    it('sorts committee by stake', async () => {
         const stake100 = new BN(100);
         const stake200 = new BN(200);
         const stake300 = new BN(300);
