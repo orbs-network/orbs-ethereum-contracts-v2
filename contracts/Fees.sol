@@ -174,7 +174,6 @@ contract Fees is IFees, ContractRegistryAccessor {
     }
 
     function _getCommittee(CommitteeType committeeType) private view returns (address[] memory) {
-        string memory contractName;
         address[] memory validators;
         if (committeeType == CommitteeType.General) {
             (validators,) =  getGeneralCommitteeContract().getCommittee();
