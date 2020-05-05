@@ -18,7 +18,7 @@ export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     ETHEREUM_MNEMONIC,
     ETHEREUM_URL,
     0,
-    100,
+    1000,
     false
     ));
 
@@ -121,7 +121,7 @@ export class Contract {
         try {
             const ret = await this.web3Contract.methods[method](...args)[action]({
                 from: accounts[0],
-                gas: 6700000,
+                gas: 0x7fffffff,
                 ...opts
             });
             if (action == "send") {
