@@ -33,13 +33,19 @@ contract Protocol is IProtocol, Ownable {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
         require(asOfBlock > block.number, "protocol update can only be scheduled for a future block");
 
-        if (deploymentSubsets[deploymentSubset].asOfBlock <= block.number) {
-            deploymentSubsets[deploymentSubset].currentVersion = deploymentSubsets[deploymentSubset].nextVersion;
-        }
-        require(protocolVersion > deploymentSubsets[deploymentSubset].currentVersion, "protocol version must be later than current version");
+        bool prevUpgradeExecuted = deploymentSubsets[deploymentSubset].asOfBlock <= block.number;
+        uint256 currentVersion = prevUpgradeExecuted ?
+            deploymentSubsets[deploymentSubset].nextVersion
+        :
+            deploymentSubsets[deploymentSubset].currentVersion;
+
+        require(protocolVersion >= currentVersion, "protocol version must be greater or equal to current version");
 
         deploymentSubsets[deploymentSubset].nextVersion = protocolVersion;
         deploymentSubsets[deploymentSubset].asOfBlock = asOfBlock;
+        if (prevUpgradeExecuted) {
+            deploymentSubsets[deploymentSubset].currentVersion = currentVersion;
+        }
 
         emit ProtocolVersionChanged(deploymentSubset, protocolVersion, asOfBlock);
     }

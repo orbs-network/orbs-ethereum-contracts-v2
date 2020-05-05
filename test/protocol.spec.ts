@@ -92,8 +92,36 @@ describe('protocol-contract', async () => {
 
     await evmMine(d.web3, 3);
 
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, curBlockNumber + 100));
     await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, curBlockNumber + 100));
+  });
+
+  it('allows upgrading to current version (an abort mechanism)', async () => {
+    const d = await Driver.new();
+
+    const curBlockNumber: number = await new Promise((resolve, reject) => d.web3.eth.getBlockNumber((err, blockNumber) => err ? reject(err): resolve(blockNumber)));
+    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, curBlockNumber + 3);
+    expect(r).to.have.a.protocolChangedEvent({
+      deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
+      protocolVersion: bn(3),
+      asOfBlock: bn(curBlockNumber + 3)
+    });
+
+    await evmMine(d.web3, 3);
+    await evmMine(d.web3, 3);
+
+    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, curBlockNumber + 100);
+    expect(r).to.have.a.protocolChangedEvent({
+      deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
+      protocolVersion: bn(4),
+      asOfBlock: bn(curBlockNumber + 100)
+    });
+
+    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, curBlockNumber + 50);
+    expect(r).to.have.a.protocolChangedEvent({
+      deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
+      protocolVersion: bn(3),
+      asOfBlock: bn(curBlockNumber + 50)
+    });
   });
 
 });
