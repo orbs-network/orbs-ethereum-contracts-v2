@@ -11,7 +11,7 @@ contract Compliance is ICompliance, ContractRegistryAccessor { // TODO consider 
      * External methods
      */
 
-    function getValidatorCompliance(address addr) external view returns (string memory conformanceType) {
+    function getValidatorCompliance(address addr) external view returns (string memory complianceType) {
         string memory compliance = validatorCompliance[addr];
         if (bytes(compliance).length == 0) {
             compliance = "General"; // TODO should this be configurable?
@@ -20,9 +20,9 @@ contract Compliance is ICompliance, ContractRegistryAccessor { // TODO consider 
     }
 
     function setValidatorCompliance(address addr, string calldata conformanceType) external onlyOwner {
-        validatorCompliance[addr] = conformanceType; // TODO should we only allow a predefined set? (i.e. "General", "Compliance")
-        emit ValidatorConformanceUpdate(addr, conformanceType);
-        getElectionsContract().validatorConformanceChanged(addr, conformanceType);
+        validatorCompliance[addr] = complianceType; // TODO should we only allow a predefined set? (i.e. "General", "Compliance")
+        emit ValidatorComplianceUpdate(addr, complianceType);
+        getElectionsContract().validatorComplianceChanged(addr, complianceType);
     }
 
 }

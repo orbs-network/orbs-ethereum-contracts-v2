@@ -87,13 +87,13 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
-	function validatorConformanceChanged(address addr, string calldata conformanceType) external onlyComplianceContract {
+	function validatorComplianceChanged(address addr, string calldata complianceType) external onlyComplianceContract {
 		if (_isBanned(addr)) {
 			return;
 		}
 
-		if (isComplianceType(conformanceType)) {
-			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		if (isComplianceType(complianceType)) {
+            getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		} else {
 			getComplianceCommitteeContract().removeMember(addr);
 		}

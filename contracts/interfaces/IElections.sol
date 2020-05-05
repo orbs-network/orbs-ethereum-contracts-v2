@@ -64,7 +64,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
-	function validatorConformanceChanged(address addr, string calldata conformanceType) external /* onlyComplianceContract */;
+	function validatorComplianceChanged(address addr, string calldata complianceType) external /* onlyComplianceContract */;
 
 	/*
 	 * Governance

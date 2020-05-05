@@ -5,6 +5,6 @@ import {ComplianceType} from "./compliance-contract";
 
 export interface MonthlySubscriptionPlanContract extends Contract {
   createVC(payment: number | BN, compliance: ComplianceType, deploymentSubset: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  extendSubscription(vcid: number | BN, payment: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  extendSubscription(vcid: string, payment: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 }
