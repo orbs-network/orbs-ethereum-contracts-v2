@@ -120,7 +120,7 @@ export class Driver {
         await committeeGeneral.setContractRegistry(contractRegistry.address);
         await committeeCompliance.setContractRegistry(contractRegistry.address);
 
-        await protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 1, 0);
+        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
 
         return new Driver(web3, session,
             accounts,
