@@ -87,12 +87,12 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
-	function validatorComplianceChanged(address addr, string calldata complianceType) external onlyComplianceContract {
+	function validatorComplianceChanged(address addr, bool isCompliant) external onlyComplianceContract {
 		if (_isBanned(addr)) {
 			return;
 		}
 
-		if (isComplianceType(complianceType)) {
+		if (isCompliant) {
             getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		} else {
 			getComplianceCommitteeContract().removeMember(addr);
@@ -173,7 +173,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
-		} else if (isComplianceValidator(addr)) {
+		} else if (getComplianceContract().isValidatorCompliant(addr)) {
 			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = getComplianceCommitteeContract().getCommittee();
 			votedOut = isCommitteeVoteOutThresholdReached(complianceCommittee, complianceWeights, addr);
 			if (votedOut) {
@@ -418,7 +418,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
-		if (isComplianceValidator(addr)) {
+		if (getComplianceContract().isValidatorCompliant(addr)) {
 			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		}
 	}
@@ -431,15 +431,6 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 
 	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
 		return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
-	}
-
-	function isComplianceType(string memory compliance) private pure returns (bool) {
-		return compareStrings(compliance, "Compliance"); // TODO where should this constant be?
-	}
-
-	function isComplianceValidator(address addr) private view returns (bool) {
-		string memory compliance = getComplianceContract().getValidatorCompliance(addr);
-		return isComplianceType(compliance);
 	}
 
 }

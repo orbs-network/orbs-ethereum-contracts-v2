@@ -6,7 +6,7 @@ import "./IContractRegistry.sol";
 /// @title Fees contract interface
 interface IFees {
     event FeesAssigned(address[] assignees, uint256[] orbs_amounts);
-    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, string complianceType);
+    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCompliant);
 
     /*
      *   External methods

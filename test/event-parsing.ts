@@ -40,7 +40,7 @@ export const delegatedEvents = (txResult, contractAddress?: string) => parseLogs
 export const stakeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "StakeChanged(address,uint256,uint256,uint256,uint256,uint256)", contractAddress);
 export const subscriptionChangedEvents = (txResult, contractAddress?: string): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,uint256,uint256,string,string)", contractAddress);
 export const paymentEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)", contractAddress);
-export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, fees, "FeesAddedToBucket(uint256,uint256,uint256,string)", contractAddress);
+export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, fees, "FeesAddedToBucket(uint256,uint256,uint256,bool)", contractAddress);
 export const stakingRewardAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, stakingRewards, "StakingRewardAssigned(address,uint256,uint256)", contractAddress);
 export const feesAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, fees, "FeesAssigned(address[],uint256[])", contractAddress);
 export const bootstrapRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardsAssigned(address[],uint256[])", contractAddress);
@@ -55,4 +55,4 @@ export const protocolChangedEvents = (txResult, contractAddress?: string) => par
 export const banningVoteEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningVote(address,address[])", contractAddress);
 export const electionsBanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Banned(address)", contractAddress);
 export const electionsUnbanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Unbanned(address)", contractAddress);
-export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,string)", contractAddress);
+export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,bool)", contractAddress);

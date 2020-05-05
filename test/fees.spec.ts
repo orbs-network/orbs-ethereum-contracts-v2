@@ -9,7 +9,6 @@ import {bn, evmIncreaseTime} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 import {FeesAddedToBucketEvent} from "../typings/fees-contract";
-import {ComplianceType} from "../typings/compliance-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -46,14 +45,14 @@ describe('fees-contract', async () => {
 
     // create a VCs
 
-    const createVc = async (vcRate: number, compliance: ComplianceType, payment: number): Promise<{vcid: string, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
+    const createVc = async (vcRate: number, isCompliant: boolean, payment: number): Promise<{vcid: string, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
       const subs = await d.newSubscriber('tier', vcRate);
 
       const appOwner = d.newParticipant();
       await d.erc20.assign(appOwner.address, payment);
       await d.erc20.approve(subs.address, payment, {from: appOwner.address});
 
-      let r = await subs.createVC(payment, compliance, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+      let r = await subs.createVC(payment, isCompliant, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
       const vcid = vcCreatedEvents(r)[0].vcid;
       let startTime = await txTimestamp(d.web3, r);
 
@@ -84,8 +83,8 @@ describe('fees-contract', async () => {
       }
     };
 
-    const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(3000000000, "General", 12 * 3000000000);
-    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(6000000000, "Compliance", 12 * 3000000000);
+    const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(3000000000, false, 12 * 3000000000);
+    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(6000000000, true, 12 * 3000000000);
 
     const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[]) => {
       let rewards = 0;
@@ -175,7 +174,7 @@ describe('fees-contract', async () => {
     await d.erc20.assign(appOwner.address, firstPayment);
     await d.erc20.approve(subs.address, firstPayment, {from: appOwner.address});
 
-    let r = await subs.createVC(firstPayment, "General", DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+    let r = await subs.createVC(firstPayment, false, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
     let startTime = await txTimestamp(d.web3, r);
     expect(r).to.have.a.subscriptionChangedEvent({
       expiresAt: bn(startTime + MONTH_IN_SECONDS * initialDurationInMonths)
