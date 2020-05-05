@@ -216,7 +216,7 @@ describe('elections-compliance', async () => {
         expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
             addrs: [bannedValidator.address]
         });
-    })
+    });
 
     it('votes out a compliance committee member from both committees when threshold is reached in compliance committee', async () => {
         const voteOutThreshold = 80;
