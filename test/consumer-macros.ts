@@ -4,12 +4,10 @@ import {
     Driver,
     DEPLOYMENT_SUBSET_MAIN,
     Participant,
-    CONFORMANCE_TYPE_GENERAL,
-    CONFORMANCE_TYPE_COMPLIANCE
 } from './driver';
 import {MonthlySubscriptionPlanContract} from "../typings/monthly-subscription-plan-contract";
 
-export async function createVC(d : Driver, compliance?: typeof CONFORMANCE_TYPE_GENERAL | typeof CONFORMANCE_TYPE_COMPLIANCE, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number, appOwner?: Participant) {
+export async function createVC(d : Driver, isCompliant?: boolean, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number, appOwner?: Participant) {
     monthlyRate = monthlyRate != null ? monthlyRate : 1000;
     const firstPayment = monthlyRate * 2;
 
@@ -21,7 +19,7 @@ export async function createVC(d : Driver, compliance?: typeof CONFORMANCE_TYPE_
         from: appOwner.address
     });
 
-    return subscriber.createVC(firstPayment, compliance || CONFORMANCE_TYPE_GENERAL, DEPLOYMENT_SUBSET_MAIN, {
+    return subscriber.createVC(firstPayment, isCompliant || false, DEPLOYMENT_SUBSET_MAIN, {
         from: appOwner.address
     });
 }

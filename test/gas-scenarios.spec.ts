@@ -3,8 +3,6 @@ import Web3 from "web3";
 import BN from "bn.js";
 import * as _ from "lodash";
 import {
-    CONFORMANCE_TYPE_COMPLIANCE,
-    CONFORMANCE_TYPE_GENERAL,
     defaultDriverOptions,
     Driver,
     Participant
@@ -64,8 +62,8 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     const appOwner = d.newParticipant();
 
     for (let i = 0; i < numVCs; i++) {
-        await createVC(d, CONFORMANCE_TYPE_GENERAL, subs, monthlyRate, appOwner);
-        await createVC(d, CONFORMANCE_TYPE_COMPLIANCE, subs, monthlyRate, appOwner);
+        await createVC(d, false, subs, monthlyRate, appOwner);
+        await createVC(d, true, subs, monthlyRate, appOwner);
     }
 
     return {

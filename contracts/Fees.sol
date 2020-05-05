@@ -12,15 +12,10 @@ import "./ContractRegistryAccessor.sol";
 contract Fees is IFees, ContractRegistryAccessor {
     using SafeMath for uint256;
 
-    enum CommitteeType {
-        General,
-        Compliance
-    }
-
     uint256 constant bucketTimePeriod = 30 days;
 
     mapping(uint256 => uint256) generalFeePoolBuckets;
-    mapping(uint256 => uint256) complianceFeePoolBuckets;
+    mapping(uint256 => uint256) compliantFeePoolBuckets;
 
     uint256 lastPayedAt;
 
@@ -68,27 +63,27 @@ contract Fees is IFees, ContractRegistryAccessor {
             generalFeePoolAmount += amount;
             generalFeePoolBuckets[bucketStart] = generalFeePoolBuckets[bucketStart].sub(amount);
 
-            amount = complianceFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
+            amount = compliantFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
             complianceFeePoolAmount += amount;
-            complianceFeePoolBuckets[bucketStart] = complianceFeePoolBuckets[bucketStart].sub(amount);
+            compliantFeePoolBuckets[bucketStart] = compliantFeePoolBuckets[bucketStart].sub(amount);
 
             lastPayedAt = payUntil;
 
             assert(lastPayedAt <= bucketEnd);
             if (lastPayedAt == bucketEnd) {
                 delete generalFeePoolBuckets[bucketStart];
-                delete complianceFeePoolBuckets[bucketStart];
+                delete compliantFeePoolBuckets[bucketStart];
             }
 
             bucketsPayed++;
         }
 
-        assignAmountFixed(generalFeePoolAmount, CommitteeType.General);
-        assignAmountFixed(complianceFeePoolAmount, CommitteeType.Compliance);
+        assignAmountFixed(generalFeePoolAmount, false);
+        assignAmountFixed(complianceFeePoolAmount, true);
     }
 
-    function assignAmountFixed(uint256 amount, CommitteeType committeeType) private {
-        address[] memory committee = _getCommittee(committeeType);
+    function assignAmountFixed(uint256 amount, bool isCompliant) private {
+        address[] memory committee = _getCommittee(isCompliant);
 
         uint256[] memory assignedFees = new uint256[](committee.length);
 
@@ -117,31 +112,27 @@ contract Fees is IFees, ContractRegistryAccessor {
     }
 
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp, CommitteeType.General);
+        fillFeeBuckets(amount, monthlyRate, fromTimestamp, false);
     }
 
     function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp, CommitteeType.Compliance);
+        fillFeeBuckets(amount, monthlyRate, fromTimestamp, true);
     }
 
-    function fillBucket(uint256 bucketId, uint256 amount, CommitteeType complianceType) private {
+    function fillBucket(uint256 bucketId, uint256 amount, bool isCompliant) private {
         uint256 total;
-        string memory complianceStr;
-        if (complianceType == CommitteeType.General) {
-            generalFeePoolBuckets[bucketId] = generalFeePoolBuckets[bucketId].add(amount);
-            total = generalFeePoolBuckets[bucketId];
-            complianceStr = "General";
+        if (!isCompliant) {
+            total = generalFeePoolBuckets[bucketId].add(amount);
+            generalFeePoolBuckets[bucketId] = total;
         } else {
-            assert(complianceType == CommitteeType.Compliance);
-            complianceFeePoolBuckets[bucketId] = complianceFeePoolBuckets[bucketId].add(amount);
-            total = complianceFeePoolBuckets[bucketId];
-            complianceStr = "Compliance";
+            total = compliantFeePoolBuckets[bucketId].add(amount);
+            compliantFeePoolBuckets[bucketId] = total;
         }
 
-        emit FeesAddedToBucket(bucketId, amount, total, complianceStr);
+        emit FeesAddedToBucket(bucketId, amount, total, isCompliant);
     }
 
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, CommitteeType complianceType) private {
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCompliant) private {
         _assignFees(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(fromTimestamp);
@@ -149,14 +140,14 @@ contract Fees is IFees, ContractRegistryAccessor {
 
         // add the partial amount to the first bucket
         uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - fromTimestamp % bucketTimePeriod).div(bucketTimePeriod));
-        fillBucket(bucket, bucketAmount, complianceType);
+        fillBucket(bucket, bucketAmount, isCompliant);
         _amount = _amount.sub(bucketAmount);
 
         // following buckets are added with the monthly rate
         while (_amount > 0) {
             bucket = bucket.add(bucketTimePeriod);
             bucketAmount = Math.min(monthlyRate, _amount);
-            fillBucket(bucket, bucketAmount, complianceType);
+            fillBucket(bucket, bucketAmount, isCompliant);
             _amount = _amount.sub(bucketAmount);
         }
 
@@ -173,13 +164,12 @@ contract Fees is IFees, ContractRegistryAccessor {
         return time - time % bucketTimePeriod;
     }
 
-    function _getCommittee(CommitteeType committeeType) private view returns (address[] memory) {
-        string memory contractName;
+    function _getCommittee(bool isCompliant) private view returns (address[] memory) {
         address[] memory validators;
-        if (committeeType == CommitteeType.General) {
-            (validators,) =  getGeneralCommitteeContract().getCommittee();
-        } else {
+        if (isCompliant) {
             (validators,) =  getComplianceCommitteeContract().getCommittee();
+        } else {
+            (validators,) =  getGeneralCommitteeContract().getCommittee();
         }
         return validators;
     }

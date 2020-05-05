@@ -125,7 +125,7 @@ describe('elections-compliance', async () => {
             expect(r).to.not.have.a.standbysChangedEvent();
         }
 
-        await committee[0].becomeComplianceType();
+        await committee[0].becomeCompliant();
         let r = await committee[0].notifyReadyForCommittee();
         expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
             addrs: [committee[0].address],
@@ -156,7 +156,7 @@ describe('elections-compliance', async () => {
             expect(r).to.not.have.a.standbysChangedEvent();
         }
 
-        let r = await committee[0].becomeGeneralType();
+        let r = await committee[0].becomeNotCompliant();
         expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
             addrs: committee.slice(1).map(s => s.address),
         });
@@ -169,7 +169,7 @@ describe('elections-compliance', async () => {
 
         let {delegatees, bannedValidator, thresholdCrossingIndex} = await banningScenario_setupDelegatorsAndValidators(d);
 
-        await bannedValidator.becomeComplianceType();
+        await bannedValidator.becomeCompliant();
         let r = await bannedValidator.notifyReadyForCommittee();
         expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
             addrs: [bannedValidator.address]
@@ -190,7 +190,7 @@ describe('elections-compliance', async () => {
 
         let {delegatees, bannedValidator, thresholdCrossingIndex} = await banningScenario_setupDelegatorsAndValidators(d);
 
-        await bannedValidator.becomeComplianceType();
+        await bannedValidator.becomeCompliant();
         let r = await bannedValidator.notifyReadyForCommittee();
         expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
             addrs: [bannedValidator.address]

@@ -20,8 +20,6 @@ import {GasRecorder} from "../gas-recorder";
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
-export const COMPLIANCE_TYPE_GENERAL = "General";
-export const COMPLIANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
     minCommitteeSize: number,
@@ -282,21 +280,20 @@ export class Participant {
         return await this.elections.notifyReadyToSync({from: this.orbsAddress});
     }
 
-    async becomeComplianceType() {
-        return await this.compliance.setValidatorCompliance(this.address, COMPLIANCE_TYPE_COMPLIANCE);
+    async becomeCompliant() {
+        return await this.compliance.setValidatorCompliance(this.address, true);
     }
 
-    async becomeGeneralType() {
-        return await this.compliance.setValidatorCompliance(this.address, COMPLIANCE_TYPE_GENERAL);
+    async becomeNotCompliant() {
+        return await this.compliance.setValidatorCompliance(this.address, false);
     }
 
-    async becomeValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
-        let r;
+    async becomeValidator(stake: number, compliant: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
         await this.registerAsValidator();
-        if (compliance) {
-            await this.becomeComplianceType();
+        if (compliant) {
+            await this.becomeCompliant();
         }
-        r = await this.stake(stake);
+        let r = await this.stake(stake);
         if (signalReadyToSync) {
             r = await this.notifyReadyToSync();
         }
