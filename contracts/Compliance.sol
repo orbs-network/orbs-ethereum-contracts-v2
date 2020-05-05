@@ -19,7 +19,7 @@ contract Compliance is ICompliance, ContractRegistryAccessor { // TODO consider 
         return compliance;
     }
 
-    function setValidatorCompliance(address addr, string calldata conformanceType) external onlyOwner {
+    function setValidatorCompliance(address addr, string calldata complianceType) external onlyOwner {
         validatorCompliance[addr] = complianceType; // TODO should we only allow a predefined set? (i.e. "General", "Compliance")
         emit ValidatorComplianceUpdate(addr, complianceType);
         getElectionsContract().validatorComplianceChanged(addr, complianceType);
