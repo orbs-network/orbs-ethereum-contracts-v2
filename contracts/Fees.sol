@@ -121,12 +121,12 @@ contract Fees is IFees, ContractRegistryAccessor {
 
     function fillBucket(uint256 bucketId, uint256 amount, bool isCompliant) private {
         uint256 total;
-        if (!isCompliant) {
-            total = generalFeePoolBuckets[bucketId].add(amount);
-            generalFeePoolBuckets[bucketId] = total;
-        } else {
+        if (isCompliant) {
             total = compliantFeePoolBuckets[bucketId].add(amount);
             compliantFeePoolBuckets[bucketId] = total;
+        } else {
+            total = generalFeePoolBuckets[bucketId].add(amount);
+            generalFeePoolBuckets[bucketId] = total;
         }
 
         emit FeesAddedToBucket(bucketId, amount, total, isCompliant);

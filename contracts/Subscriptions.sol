@@ -106,8 +106,4 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 
-    function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
-        return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
-    }
-
 }

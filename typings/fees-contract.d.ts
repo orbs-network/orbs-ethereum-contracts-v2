@@ -6,7 +6,7 @@ export interface FeesAddedToBucketEvent {
   bucketId: string|BN,
   added: string|BN,
   total: string|BN,
-  complianceType: string
+  isCompliant: boolean
 }
 
 export interface FeesAssignedEvent {
