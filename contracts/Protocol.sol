@@ -50,5 +50,4 @@ contract Protocol is IProtocol, Ownable {
         emit ProtocolVersionChanged(deploymentSubset, protocolVersion, asOfBlock);
     }
 
-    // TODO what about cancelling a future upgrade?
 }
