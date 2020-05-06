@@ -2,7 +2,7 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, expectRejected} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY, expectRejected} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));
@@ -25,16 +25,16 @@ describe('protocol-contract', async () => {
       asOfBlock: bn(curBlockNumber + 100)
     });
 
-    r = await d.protocol.createDeploymentSubset("canary", 2);
+    r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2);
     expect(r).to.have.a.protocolChangedEvent({
-      deploymentSubset: "canary",
+      deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       protocolVersion: bn(2),
       asOfBlock: bn(r.blockNumber)
     });
 
-    r = await d.protocol.setProtocolVersion("canary", 3, curBlockNumber + 100);
+    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, curBlockNumber + 100);
     expect(r).to.have.a.protocolChangedEvent({
-      deploymentSubset: "canary",
+      deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       protocolVersion: bn(3),
       asOfBlock: bn(curBlockNumber + 100)
     });
@@ -154,5 +154,35 @@ describe('protocol-contract', async () => {
     reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
     expect(reportedVersion).to.be.bignumber.equal(bn(3));
 
+  });
+
+  it('distinguishes between different deployment subsets when calling getProtocolVersion', async () => {
+    const d = await Driver.new();
+
+    const curBlockNumber: number = await new Promise((resolve, reject) => d.web3.eth.getBlockNumber((err, blockNumber) => err ? reject(err): resolve(blockNumber)));
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, curBlockNumber + 100);
+
+    // future upgrade should not affect the current version
+    let reportedVersionMain = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersionMain).to.be.bignumber.equal(bn(1));
+
+    // create a second deployment subset
+    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3);
+
+    let reportedVersionCanary = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_CANARY);
+    expect(reportedVersionCanary).to.be.bignumber.equal(bn(3));
+
+    // should not affect DEPLOYMENT_SUBSET_MAIN
+    reportedVersionMain = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersionMain).to.be.bignumber.equal(bn(1));
+
+    await evmMine(d.web3, 100); // upgrade of DEPLOYMENT_SUBSET_MAIN kicks in
+
+    reportedVersionMain = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
+    expect(reportedVersionMain).to.be.bignumber.equal(bn(2));
+
+    // should not affect DEPLOYMENT_SUBSET_CANARY
+    reportedVersionCanary = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_CANARY);
+    expect(reportedVersionCanary).to.be.bignumber.equal(bn(3));
   });
 });
