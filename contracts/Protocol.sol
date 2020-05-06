@@ -18,6 +18,10 @@ contract Protocol is IProtocol, Ownable {
         return deploymentSubsets[deploymentSubset].exists;
     }
 
+    function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256 currentVersion) {
+        (, currentVersion) = checkPrevUpgrades(deploymentSubset);
+    }
+
     function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyOwner {
         require(!deploymentSubsets[deploymentSubset].exists, "deployment subset already exists");
 
@@ -33,11 +37,7 @@ contract Protocol is IProtocol, Ownable {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
         require(asOfBlock > block.number, "protocol update can only be scheduled for a future block");
 
-        bool prevUpgradeExecuted = deploymentSubsets[deploymentSubset].asOfBlock <= block.number;
-        uint256 currentVersion = prevUpgradeExecuted ?
-            deploymentSubsets[deploymentSubset].nextVersion
-        :
-            deploymentSubsets[deploymentSubset].currentVersion;
+        (bool prevUpgradeExecuted, uint256 currentVersion) = checkPrevUpgrades(deploymentSubset);
 
         require(protocolVersion >= currentVersion, "protocol version must be greater or equal to current version");
 
@@ -50,4 +50,9 @@ contract Protocol is IProtocol, Ownable {
         emit ProtocolVersionChanged(deploymentSubset, protocolVersion, asOfBlock);
     }
 
+    function checkPrevUpgrades(string memory deploymentSubset) private view returns (bool prevUpgradeExecuted, uint256 currentVersion) {
+        prevUpgradeExecuted = deploymentSubsets[deploymentSubset].asOfBlock <= block.number;
+        currentVersion = prevUpgradeExecuted ? deploymentSubsets[deploymentSubset].nextVersion :
+                                               deploymentSubsets[deploymentSubset].currentVersion;
+    }
 }
