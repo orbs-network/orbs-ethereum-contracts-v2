@@ -19,7 +19,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		_;
 	}
-	event debug(address elections);
 
 	constructor() public {
 	}
