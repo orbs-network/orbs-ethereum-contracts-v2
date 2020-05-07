@@ -21,6 +21,7 @@ const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
+import {committeeChangedEvents, delegatedEvents, stakedEvents} from "./event-parsing";
 
 const baseStake = 100;
 
@@ -360,19 +361,23 @@ describe('elections-high-level-flows', async () => {
 
         await expectRejected(d.delegations.stakeChange(d.accounts[0], 1, true, 1, {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
         await d.delegations.stakeChange(d.accounts[0], 1, true, 1, {from: stakingAddr});
+
+        await expectRejected(d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
+        await d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: stakingAddr});
     });
 
-    it('should only accept delegations notifications from the delegations contract', async () => {
-        const d = await Driver.new();
-
-        const delegationsAddr = d.accounts[1];
-        const nonDelegationsAddr = d.accounts[2];
-
-        await d.contractRegistry.set("delegations", delegationsAddr);
-
-        await expectRejected(d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: nonDelegationsAddr}), "should not accept notifications from an address other than the delegations contract");
-        await d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: delegationsAddr});
-    });
+    // TODO - check all the functions that should only be called from delegations
+    // it('should only accept delegations notifications from the delegations contract', async () => {
+    //     const d = await Driver.new();
+    //
+    //     const delegationsAddr = d.accounts[1];
+    //     const nonDelegationsAddr = d.accounts[2];
+    //
+    //     await d.contractRegistry.set("delegations", delegationsAddr);
+    //
+    //     await expectRejected(d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: nonDelegationsAddr}), "should not accept notifications from an address other than the delegations contract");
+    //     await d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: delegationsAddr});
+    // });
 
     it('staking before or after delegating has the same effect', async () => {
         const d = await Driver.new();
@@ -755,7 +760,7 @@ describe('elections-high-level-flows', async () => {
         const tipValidator = delegatees[thresholdCrossingIndex];
 
         const other = d.newParticipant();
-        r = await d.elections.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -763,7 +768,7 @@ describe('elections-high-level-flows', async () => {
         // -------------- ATTEMPT UNBAN BY DELEGATION - DELEGATOR --------------
         const tipDelegator = delegators[thresholdCrossingIndex];
 
-        r = await d.elections.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -798,7 +803,6 @@ describe('elections-high-level-flows', async () => {
 
         // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES, THEN UNSTAKES ---------------
 
-        const originalTotalStake = await d.elections.getTotalGovernanceStake();
         const dilutingParticipant = d.newParticipant();
         const dilutingStake = baseStake * defaultDriverOptions.banningThreshold * 200;
         r = await dilutingParticipant.stake(dilutingStake);
@@ -839,7 +843,7 @@ describe('elections-high-level-flows', async () => {
         const tipValidator = delegatees[thresholdCrossingIndex];
 
         const other = d.newParticipant();
-        r = await d.elections.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
@@ -849,7 +853,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [bannedValidator.address]
         });
 
-        r = await d.elections.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
+        r = await d.delegations.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
@@ -860,7 +864,7 @@ describe('elections-high-level-flows', async () => {
         // -------------- UNBAN THEN BAN BY DELEGATION - DELEGATOR --------------
         const tipDelegator = delegators[thresholdCrossingIndex];
 
-        r = await d.elections.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
@@ -870,7 +874,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [bannedValidator.address]
         });
 
-        r = await d.elections.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
+        r = await d.delegations.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });

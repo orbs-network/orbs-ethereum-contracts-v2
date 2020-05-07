@@ -2,6 +2,7 @@ import BN from "bn.js";
 
 import {
   delegatedEvents,
+  delegatedStakeChangedEvents,
   stakedEvents,
   stakeChangedEvents,
   subscriptionChangedEvents,
@@ -35,7 +36,6 @@ import {
   PaymentEvent, VcConfigRecordChangedEvent, VcOwnerChangedEvent, VcCreatedEvent
 } from "../typings/subscriptions-contract";
 import {
-  DelegatedEvent,
   StakeChangeEvent,
   VoteOutEvent,
   VotedOutOfCommitteeEvent,
@@ -54,6 +54,10 @@ import {
   ValidatorRegisteredEvent,
   ValidatorUnregisteredEvent
 } from "../typings/validator-registration-contract";
+import {
+  DelegatedEvent,
+  DelegatedStakeChangedEvent
+} from "../typings/delegations-contract";
 import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
@@ -164,6 +168,7 @@ const containEvent = (eventParser, transposed?: boolean, key?: string) =>
 
 module.exports = function(chai) {
   chai.Assertion.overwriteMethod("delegatedEvent", containEvent(delegatedEvents));
+  chai.Assertion.overwriteMethod("delegatedStakeChangedEvent", containEvent(delegatedStakeChangedEvents));
   chai.Assertion.overwriteMethod("validatorRegisteredEvent", containEvent(validatorRegisteredEvents));
   chai.Assertion.overwriteMethod("validatorUnregisteredEvent", containEvent(validatorUnregisteredEvents));
   chai.Assertion.overwriteMethod("validatorDataUpdatedEvent", containEvent(validatorDataUpdatedEvents));
@@ -204,6 +209,7 @@ declare global {
   export namespace Chai {
     export interface TypeComparison {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
+      delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
       committeeChangedEvent(data?: Partial<CommitteeChangedEvent>): void;
       standbysChangedEvent(data?: Partial<StandbysChangedEvent>): void;
       validatorRegisteredEvent(data?: Partial<ValidatorRegisteredEvent>): void;

@@ -12,7 +12,7 @@ import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
 
 
-contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor {
+contract Elections is IElections, ContractRegistryAccessor {
 	using SafeMath for uint256;
 
     uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;
@@ -117,19 +117,18 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		getComplianceCommitteeContract().memberReadyToSync(sender, false);
 	}
 
-	function delegate(address to) external {
-		address prevDelegatee = delegations[msg.sender];
+	function delegate1(address from, address to) onlyDelegationsContract external {
+		address prevDelegatee = delegations[from];
         if (prevDelegatee == address(0)) {
-            prevDelegatee = msg.sender;
+            prevDelegatee = from;
         }
 
 		uint256 prevGovStakePrevDelegatee = getGovernanceEffectiveStake(prevDelegatee);
 		uint256 prevGovStakeNewDelegatee = getGovernanceEffectiveStake(to);
 
-		delegations[msg.sender] = to; // delegation!
-		emit Delegated(msg.sender, to);
+		delegations[from] = to; // delegation!
 
-		uint256 stake = ownStakes[msg.sender];
+		uint256 stake = ownStakes[from];
 
         _applyDelegatedStake(prevDelegatee, uncappedStakes[prevDelegatee].sub(stake), prevGovStakePrevDelegatee);
 		_applyDelegatedStake(to, uncappedStakes[to].add(stake), prevGovStakeNewDelegatee);
@@ -201,7 +200,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		emit BanningVote(msg.sender, validators);
 	}
 
-	function getTotalGovernanceStake() external view returns (uint256) {
+	function getTotalGovernanceStake() internal view returns (uint256) {
 		return totalGovernanceStake;
 	}
 
@@ -291,8 +290,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		return bannedValidators[addr] != 0;
 	}
 
-    function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs,
-		uint256[] calldata _updatedStakes) external onlyDelegationsContract {
+    function stakeChangeBatch1(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyDelegationsContract {
 		require(_stakeOwners.length == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(_stakeOwners.length == _signs.length, "_stakeOwners, _signs - array length mismatch");
 		require(_stakeOwners.length == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
@@ -302,14 +300,14 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		}
 	}
 
-	function getDelegation(address delegator) external view returns (address) {
+	function getDelegation1(address delegator) external view returns (address) {
 		if (_isSelfDelegating(delegator)) {
 			return delegator;
 		}
 		return delegations[delegator];
 	}
 
-	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyDelegationsContract {
+	function stakeChange1(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyDelegationsContract {
 		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake);
 	}
 
@@ -339,9 +337,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee); // totalGovernanceStake must be updated by now
 	}
 
-	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyDelegationsContract {}
-
-	function refreshStakes(address[] calldata addrs) external {
+	function refreshStakes1(address[] calldata addrs) external {
 		IStakingContract staking = getStakingContract();
 
 		for (uint i = 0; i < addrs.length; i++) {
@@ -398,7 +394,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		return ownStake.mul(maxRatio); // never overflows
 	}
 
-	function getGovernanceEffectiveStake(address v) public view returns (uint256) {
+	function getGovernanceEffectiveStake(address v) internal view returns (uint256) {
 		if (!_isSelfDelegating(v)) {
 			return 0;
 		}

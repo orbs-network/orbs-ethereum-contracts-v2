@@ -5,6 +5,7 @@ chai.use(require('chai-bn')(BN));
 export const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 import { ElectionsContract } from "../typings/elections-contract";
+import { DelegationsContract } from "../typings/delegations-contract";
 import { ERC20Contract } from "../typings/erc20-contract";
 import { StakingContract } from "../typings/staking-contract";
 import { MonthlySubscriptionPlanContract } from "../typings/monthly-subscription-plan-contract";
@@ -16,6 +17,7 @@ import {ValidatorsRegistrationContract} from "../typings/validator-registration-
 import {ComplianceContract} from "../typings/compliance-contract";
 import {TransactionReceipt} from "web3-core";
 import {GasRecorder} from "../gas-recorder";
+import {stakedEvents} from "./event-parsing";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -88,7 +90,7 @@ export class Driver {
         const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]], null, session);
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]], null, session);
         const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
-        const delegations = await web3.deploy( "Delegations", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
+        const delegations = await web3.deploy( "Delegations", [], null, session);
         const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
@@ -225,6 +227,7 @@ export class Participant {
     private externalToken: ERC20Contract;
     private staking: StakingContract;
     private elections: ElectionsContract;
+    private delegations: DelegationsContract;
     private validatorsRegistration: ValidatorsRegistrationContract;
     private compliance: ComplianceContract;
     private gasRecorder: GasRecorder;
@@ -241,6 +244,7 @@ export class Participant {
         this.externalToken = driver.externalToken;
         this.staking = driver.staking;
         this.elections = driver.elections;
+        this.delegations = driver.delegations;
         this.validatorsRegistration = driver.validatorsRegistration;
         this.compliance = driver.compliance;
         this.gasRecorder = driver.session.gasRecorder;
@@ -270,7 +274,7 @@ export class Participant {
     }
 
     async delegate(to: Participant) {
-        return this.elections.delegate(to.address, {from: this.address});
+        return this.delegations.delegate(to.address, {from: this.address});
     }
 
     async registerAsValidator() {

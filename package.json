@@ -5,7 +5,7 @@
   "main": "./release/test/test-kit.js",
   "repository": "https://github.com/orbs-network/orbs-ethereum-contracts-v2",
   "scripts": {
-    "test": "npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 600000",
+    "test": "npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000",
     "test-gas-scenarios": "npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/gas-scenarios.spec.ts --timeout 600000",
     "coverage": "solidity-coverage",
     "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
