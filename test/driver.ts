@@ -90,7 +90,7 @@ export class Driver {
         const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
         const delegations = await web3.deploy( "Delegations", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
-        const staking = await Driver.newStakingContract(web3, elections.address, erc20.address, session);
+        const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
@@ -111,7 +111,7 @@ export class Driver {
         await contractRegistry.set("committee-general", committeeGeneral.address);
         await contractRegistry.set("committee-compliance", committeeCompliance.address);
 
-        await delegations.setContractRegistry(delegations.address);
+        await delegations.setContractRegistry(contractRegistry.address);
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
         await stakingRewards.setContractRegistry(contractRegistry.address);
@@ -148,10 +148,10 @@ export class Driver {
         return await this.web3.deploy('ContractRegistry', [governorAddr],{from: this.accounts[0]}, this.session) as ContractRegistryContract;
     }
 
-    static async newStakingContract(web3: Web3Driver, electionsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
+    static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
         const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[0] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
-        await staking.setStakeChangeNotifier(electionsAddr, {from: accounts[0]});
+        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[0]});
         return staking;
     }
 

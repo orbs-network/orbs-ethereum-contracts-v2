@@ -293,13 +293,7 @@ contract Delegations is IElections, IStakeChangeNotifier, ContractRegistryAccess
 
     function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs,
 		uint256[] calldata _updatedStakes) external onlyStakingContract {
-		require(_stakeOwners.length == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
-		require(_stakeOwners.length == _signs.length, "_stakeOwners, _signs - array length mismatch");
-		require(_stakeOwners.length == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
-
-		for (uint i = 0; i < _stakeOwners.length; i++) {
-			_stakeChange(_stakeOwners[i], _amounts[i], _signs[i], _updatedStakes[i]);
-		}
+		getElectionsContract().stakeChangeBatch(_stakeOwners, _amounts, _signs, _updatedStakes);
 	}
 
 	function getDelegation(address delegator) external view returns (address) {
@@ -310,7 +304,7 @@ contract Delegations is IElections, IStakeChangeNotifier, ContractRegistryAccess
 	}
 
 	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract {
-		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake);
+		getElectionsContract().stakeChange(_stakeOwner, _amount, _sign, _updatedStake);
 	}
 
 	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 /* _updatedStake */) private {
@@ -342,18 +336,7 @@ contract Delegations is IElections, IStakeChangeNotifier, ContractRegistryAccess
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
 	function refreshStakes(address[] calldata addrs) external {
-		IStakingContract staking = getStakingContract();
-
-		for (uint i = 0; i < addrs.length; i++) {
-			address staker = addrs[i];
-			uint256 newOwnStake = staking.getStakeBalanceOf(staker);
-			uint256 oldOwnStake = ownStakes[staker];
-			if (newOwnStake > oldOwnStake) {
-				_stakeChange(staker, newOwnStake - oldOwnStake, true, newOwnStake);
-			} else if (oldOwnStake > newOwnStake) {
-				_stakeChange(staker, oldOwnStake - newOwnStake, false, newOwnStake);
-			}
-		}
+		getElectionsContract().refreshStakes(addrs);
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {

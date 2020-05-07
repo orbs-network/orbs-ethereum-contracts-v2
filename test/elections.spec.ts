@@ -24,7 +24,7 @@ import {ETHEREUM_URL} from "../eth";
 
 const baseStake = 100;
 
-describe.only('elections-high-level-flows', async () => {
+describe('elections-high-level-flows', async () => {
 
     it('handle delegation requests', async () => {
         const d = await Driver.new();
@@ -358,8 +358,20 @@ describe.only('elections-high-level-flows', async () => {
 
         await d.contractRegistry.set("staking", stakingAddr);
 
-        await expectRejected(d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
-        await d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: stakingAddr});
+        await expectRejected(d.delegations.stakeChange(d.accounts[0], 1, true, 1, {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
+        await d.delegations.stakeChange(d.accounts[0], 1, true, 1, {from: stakingAddr});
+    });
+
+    it('should only accept delegations notifications from the delegations contract', async () => {
+        const d = await Driver.new();
+
+        const delegationsAddr = d.accounts[1];
+        const nonDelegationsAddr = d.accounts[2];
+
+        await d.contractRegistry.set("delegations", delegationsAddr);
+
+        await expectRejected(d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: nonDelegationsAddr}), "should not accept notifications from an address other than the delegations contract");
+        await d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: delegationsAddr});
     });
 
     it('staking before or after delegating has the same effect', async () => {
@@ -588,7 +600,7 @@ describe.only('elections-high-level-flows', async () => {
         });
 
         // Create a new staking contract and stake different amounts
-        const newStaking = await Driver.newStakingContract(d.web3, d.elections.address, d.erc20.address, d.session);
+        const newStaking = await Driver.newStakingContract(d.web3, d.delegations.address, d.erc20.address, d.session);
         await d.contractRegistry.set("staking", newStaking.address);
 
         await v1.stake(baseStake * 5, newStaking);
@@ -597,7 +609,7 @@ describe.only('elections-high-level-flows', async () => {
 
         // refresh the stakes
         const anonymous = d.newParticipant();
-        r = await d.elections.refreshStakes([v1.address, v2.address, delegator.address], {from: anonymous.address});
+        r = await d.delegations.refreshStakes([v1.address, v2.address, delegator.address], {from: anonymous.address});
         expect(r).to.have.a.committeeChangedEvent({
             orbsAddrs: [v1, v2].map(v => v.orbsAddress),
             weights: bn([baseStake * 5, baseStake * 4])

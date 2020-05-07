@@ -40,7 +40,7 @@ contract ContractRegistryAccessor is Ownable {
     }
 
     function getDelegationsContract() public view returns (IElections) {
-        return IElections(contractRegistry.get("elections"));
+        return IElections(contractRegistry.get("delegations"));
     }
 
     function getValidatorsRegistrationContract() public view returns (IValidatorsRegistration) {

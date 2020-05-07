@@ -34,8 +34,8 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 	uint256 voteOutTimeoutSeconds;
 	uint256 banningPercentageThreshold;
 
-	modifier onlyStakingContract() {
-		require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
+	modifier onlyDelegationsContract() {
+		require(msg.sender == address(getDelegationsContract()), "caller is not the delegations contract");
 
 		_;
 	}
@@ -292,7 +292,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 	}
 
     function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs,
-		uint256[] calldata _updatedStakes) external onlyStakingContract {
+		uint256[] calldata _updatedStakes) external onlyDelegationsContract {
 		require(_stakeOwners.length == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(_stakeOwners.length == _signs.length, "_stakeOwners, _signs - array length mismatch");
 		require(_stakeOwners.length == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
@@ -309,7 +309,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		return delegations[delegator];
 	}
 
-	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract {
+	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyDelegationsContract {
 		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake);
 	}
 
@@ -339,7 +339,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee); // totalGovernanceStake must be updated by now
 	}
 
-	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
+	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyDelegationsContract {}
 
 	function refreshStakes(address[] calldata addrs) external {
 		IStakingContract staking = getStakingContract();
