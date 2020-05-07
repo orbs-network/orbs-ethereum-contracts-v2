@@ -24,7 +24,7 @@ import {ETHEREUM_URL} from "../eth";
 
 const baseStake = 100;
 
-describe('elections-high-level-flows', async () => {
+describe.only('elections-high-level-flows', async () => {
 
     it('handle delegation requests', async () => {
         const d = await Driver.new();

@@ -58,6 +58,7 @@ export class Driver {
         public erc20: Contracts["TestingERC20"],
         public externalToken: Contracts["TestingERC20"],
         public staking: Contracts["StakingContract"],
+        public delegations: Contracts["Delegations"],
         public subscriptions: Contracts["Subscriptions"],
         public bootstrapRewards: Contracts["BootstrapRewards"],
         public stakingRewards: Contracts["StakingRewards"],
@@ -87,6 +88,7 @@ export class Driver {
         const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]], null, session);
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]], null, session);
         const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
+        const delegations = await web3.deploy( "Delegations", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, elections.address, erc20.address, session);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
@@ -100,6 +102,7 @@ export class Driver {
         await contractRegistry.set("bootstrapRewards", bootstrapRewards.address);
         await contractRegistry.set("stakingRewards", stakingRewards.address);
         await contractRegistry.set("fees", fees.address);
+        await contractRegistry.set("delegations", delegations.address);
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
@@ -108,6 +111,7 @@ export class Driver {
         await contractRegistry.set("committee-general", committeeGeneral.address);
         await contractRegistry.set("committee-compliance", committeeCompliance.address);
 
+        await delegations.setContractRegistry(delegations.address);
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
         await stakingRewards.setContractRegistry(contractRegistry.address);
@@ -126,6 +130,7 @@ export class Driver {
             erc20,
             externalToken,
             staking,
+            delegations,
             subscriptions,
             bootstrapRewards,
             stakingRewards,
