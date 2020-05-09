@@ -58,3 +58,7 @@ export const banningVoteEvents = (txResult, contractAddress?: string) => parseLo
 export const electionsBanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Banned(address)", contractAddress);
 export const electionsUnbanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Unbanned(address)", contractAddress);
 export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,bool)", contractAddress);
+
+// TODO remove
+export const debug_notifyDelegationChange = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "debug_notifyDelegationChange(address,address,uint256,uint256,uint256,uint256,uint256,uint256)", contractAddress);
+export const debug_notifyStakeChange = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "debug_notifyStakeChange(address,uint256,uint256,address,uint256,uint256,uint256,uint256)", contractAddress);

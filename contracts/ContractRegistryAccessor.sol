@@ -9,6 +9,7 @@ import "./interfaces/IElections.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./spec_interfaces/ISubscriptions.sol";
+import "./spec_interfaces/IDelegation.sol";
 
 contract ContractRegistryAccessor is Ownable {
 
@@ -39,8 +40,8 @@ contract ContractRegistryAccessor is Ownable {
         return IElections(contractRegistry.get("elections"));
     }
 
-    function getDelegationsContract() public view returns (IElections) {
-        return IElections(contractRegistry.get("delegations"));
+    function getDelegationsContract() public view returns (IDelegations) {
+        return IDelegations(contractRegistry.get("delegations"));
     }
 
     function getValidatorsRegistrationContract() public view returns (IValidatorsRegistration) {

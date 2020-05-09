@@ -21,7 +21,12 @@ const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
-import {committeeChangedEvents, delegatedEvents, stakedEvents} from "./event-parsing";
+import {
+    committeeChangedEvents,
+    delegatedEvents,
+    stakedEvents,
+    stakeChangedEvents
+} from "./event-parsing";
 
 const baseStake = 100;
 
@@ -382,22 +387,22 @@ describe('elections-high-level-flows', async () => {
     it('staking before or after delegating has the same effect', async () => {
         const d = await Driver.new();
 
-        const firstValidator = d.newParticipant();
-        let r = await firstValidator.stake(100);
+        const aValidator = d.newParticipant();
+        let r = await aValidator.stake(100);
 
         // stake before delegate
-        const delegator = d.newParticipant();
-        await delegator.stake(100);
-        r = await delegator.delegate(firstValidator);
+        const delegator1 = d.newParticipant();
+        await delegator1.stake(100);
+        r = await delegator1.delegate(aValidator);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: firstValidator.address, committeeStake: new BN(200)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aValidator.address, committeeStake: new BN(200)});
 
         // delegate before stake
-        const delegator1 = d.newParticipant();
-        await delegator1.delegate(firstValidator);
-        r = await delegator1.stake(100);
+        const delegator2 = d.newParticipant();
+        await delegator2.delegate(aValidator);
+        r = await delegator2.stake(100);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: firstValidator.address, committeeStake: new BN(300)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aValidator.address, committeeStake: new BN(300)});
     });
 
     it('does not count delegated stake twice', async () => {
@@ -888,7 +893,6 @@ describe('elections-high-level-flows', async () => {
 export async function banningScenario_setupDelegatorsAndValidators(driver: Driver) {
     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
-
 
     // -------------- SETUP ---------------
     const stakesPercentage = [

@@ -46,11 +46,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies on a validator compliance change
 	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
 
-	// TODO - delete TEMP RUBBISH
-	function getDelegation1(address delegator) external view returns (address);
-	function delegate1(address from, address to) external;
-	function refreshStakes1(address[] calldata addrs) external;
-	function stakeChangeBatch1(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external /*onlyDelegationsContract*/;
-	function stakeChange1(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external /* onlyStakingContract */;
+	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external /*onlyDelegationsContract*/;
+	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) external /*onlyDelegationsContract*/;
 }
 
