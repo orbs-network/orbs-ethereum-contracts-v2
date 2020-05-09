@@ -305,7 +305,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO newStake is getUncappedStakes(addr) at this point. governance and committee "effective" stakes can also be passed into this method, or alternately, use a getter for newStake also
-		emit StakeChanged(addr, getDelegationsContract().getOwnStake(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
+		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
 
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
@@ -316,7 +316,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
-		uint256 ownStake =  getDelegationsContract().getOwnStake(v);
+		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
 		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v; // TODO optimized three sequential calls to delegations in this function
 		if (!isSelfDelegating || ownStake == 0) {
 			return 0;

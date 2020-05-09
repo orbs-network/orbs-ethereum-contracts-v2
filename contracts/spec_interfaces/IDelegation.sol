@@ -29,7 +29,6 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	 */
 
 	function getDelegatedStakes(address addr) external view returns (uint256);
-	function getOwnStake(address addr) external view returns (uint256); // TODO don't duplicate - get from staking
 	function getTotalGovernanceStake() external view returns (uint256); // TODO move to elections!
 	function getGovernanceEffectiveStake(address addr) external view returns (uint256); // TODO move to elections!
 	function getDelegation(address addr) external view returns (address);

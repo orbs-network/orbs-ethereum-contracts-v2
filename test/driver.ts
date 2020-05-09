@@ -150,6 +150,10 @@ export class Driver {
         return await this.web3.deploy('ContractRegistry', [governorAddr],{from: this.accounts[0]}, this.session) as ContractRegistryContract;
     }
 
+    async newStakingContract(delegationsAddr: string, erc20Addr: string): Promise<StakingContract> {
+        return await Driver.newStakingContract(this.web3, delegationsAddr, erc20Addr, this.session);
+    }
+
     static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
         const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[0] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);

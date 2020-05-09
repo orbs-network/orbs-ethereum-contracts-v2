@@ -16,7 +16,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	using SafeMath for uint256;
 
 	// TODO consider using structs instead of multiple mappings
-	mapping (address => uint256) ownStakes; // TODO move to staking
 	mapping (address => uint256) uncappedStakes;
 	uint256 totalGovernanceStake; // TODO - move to elections
 
@@ -30,6 +29,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	constructor() public {
 	}
+
 	function delegate(address to) external {
 		address prevDelegatee = getDelegation(msg.sender);
 
@@ -38,7 +38,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		delegations[msg.sender] = to; // delegation!
 
-		uint256 delegatorStake = ownStakes[msg.sender];
+		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(msg.sender);
 
 		uint256 newStakePrevDelegatee = uncappedStakes[prevDelegatee].sub(delegatorStake);
 		uncappedStakes[prevDelegatee] = newStakePrevDelegatee;
@@ -75,22 +75,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
-	function refreshStakes(address[] calldata addrs) external { // TODO use batch stakeChange?
-		IStakingContract staking = getStakingContract();
-
-		for (uint i = 0; i < addrs.length; i++) {
-			address staker = addrs[i];
-			uint256 newOwnStake = staking.getStakeBalanceOf(staker);
-			uint256 oldOwnStake = ownStakes[staker];
-			if (newOwnStake > oldOwnStake) {
-				_stakeChange(staker, newOwnStake - oldOwnStake, true);
-			} else if (oldOwnStake > newOwnStake) {
-				_stakeChange(staker, oldOwnStake - newOwnStake, false);
-			}
-		}
-	}
-
-	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[]  memory _amounts, bool[]  memory _signs) private {
+	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private {
 		uint256[] memory newUncappedStakes = new uint256[](_stakeOwners.length);
 		uint256[] memory  prevGovStakeOwners = new uint256[](_stakeOwners.length);
 		address[] memory  delegatees = new address[](_stakeOwners.length);
@@ -114,25 +99,17 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		prevGovStakeOwner = getGovernanceEffectiveStake(_stakeOwner);
 		prevGovStakeDelegatee = getGovernanceEffectiveStake(delegatee);
 
-		uint256 newOwnStake;
 		if (_sign) {
-			newOwnStake = ownStakes[_stakeOwner].add(_amount);
 			newUncappedStake = uncappedStakes[delegatee].add(_amount);
 		} else {
-			newOwnStake = ownStakes[_stakeOwner].sub(_amount);
 			newUncappedStake = uncappedStakes[delegatee].sub(_amount);
 		}
-		ownStakes[_stakeOwner] = newOwnStake;
 
 		uncappedStakes[delegatee] = newUncappedStake;
 
 		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegatee).add(getGovernanceEffectiveStake(delegatee));
 
 		return (newUncappedStake, prevGovStakeOwner, delegatee, prevGovStakeDelegatee);
-	}
-
-	function getOwnStake(address addr) external view returns (uint256) {
-		return ownStakes[addr];
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {

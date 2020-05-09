@@ -6,7 +6,6 @@ export interface DelegationsContract extends Contract {
   stakeChange(stakeOwner: string, amount: number, sign: boolean, updatedStake: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   stakeChangeBatch(stakeOwners: string[], amounts: number[], signs: boolean[], updatedStakes: number[], params?: TransactionConfig) : Promise<TransactionReceipt>;
   delegate( to: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  refreshStakes(addrs: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   // getters
