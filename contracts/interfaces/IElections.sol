@@ -47,6 +47,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
 
 	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external /*onlyDelegationsContract*/;
+	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata  newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external /*onlyDelegationsContract*/;
 	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) external /*onlyDelegationsContract*/;
 }
 

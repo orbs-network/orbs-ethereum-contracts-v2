@@ -280,6 +280,22 @@ contract Elections is IElections, ContractRegistryAccessor {
 		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee); // totalGovernanceStake must be updated by now
 	}
 
+	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external onlyDelegationsContract {
+		require(stakeOwners.length == newUncappedStakes.length, "arrays must be of same length");
+		require(stakeOwners.length == prevGovStakeOwners.length, "arrays must be of same length");
+		require(stakeOwners.length == delegatees.length, "arrays must be of same length");
+		require(stakeOwners.length == prevGovStakeDelegatees.length, "arrays must be of same length");
+
+		for (uint i = 0; i < stakeOwners.length; i++) {
+
+			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
+			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
+
+			_applyStakesToBanningBy(stakeOwners[i], prevGovStakeOwners[i]); // totalGovernanceStake must be updated by now
+			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]); // totalGovernanceStake must be updated by now
+		}
+	}
+
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
 		address[] memory orbsAddrArr = new address[](1);
 		orbsAddrArr[0] = orbsAddr;
