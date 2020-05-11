@@ -20,7 +20,13 @@ const expect = chai.expect;
 const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
-import {ETHEREUM_URL} from "../eth";
+import {ETHEREUM_URL, Web3Driver} from "../eth";
+import {
+    committeeChangedEvents,
+    delegatedEvents,
+    stakedEvents,
+    stakeChangedEvents
+} from "./event-parsing";
 
 const baseStake = 100;
 
@@ -353,34 +359,39 @@ describe('elections-high-level-flows', async () => {
     it('should only accept stake notifications from the staking contract', async () => {
         const d = await Driver.new();
 
-        const stakingAddr = d.accounts[1];
-        const nonStakingAddr = d.accounts[2];
+        const rogueStakingContract = await d.newStakingContract(d.delegations.address, d.erc20.address);
 
-        await d.contractRegistry.set("staking", stakingAddr);
+        const participant = d.newParticipant();
 
-        await expectRejected(d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
-        await d.elections.stakeChange(d.accounts[0], 1, true, 1, {from: stakingAddr});
+        await expectRejected(participant.stake(5, rogueStakingContract), "should not accept notifications from an address other than the staking contract");
+        await participant.stake(5);
+        await d.contractRegistry.set("staking", rogueStakingContract.address);
+        await participant.stake(5, rogueStakingContract)
+
+        // TODO - to check stakeChangeBatch use a mock staking contract that would satisfy the interface but would allow sending stakeChangeBatch when there are no rewards to distribue
+        // await expectRejected(d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
+        // await d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: stakingAddr});
     });
 
     it('staking before or after delegating has the same effect', async () => {
         const d = await Driver.new();
 
-        const firstValidator = d.newParticipant();
-        let r = await firstValidator.stake(100);
+        const aValidator = d.newParticipant();
+        let r = await aValidator.stake(100);
 
         // stake before delegate
-        const delegator = d.newParticipant();
-        await delegator.stake(100);
-        r = await delegator.delegate(firstValidator);
+        const delegator1 = d.newParticipant();
+        await delegator1.stake(100);
+        r = await delegator1.delegate(aValidator);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: firstValidator.address, committeeStake: new BN(200)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aValidator.address, committeeStake: new BN(200)});
 
         // delegate before stake
-        const delegator1 = d.newParticipant();
-        await delegator1.delegate(firstValidator);
-        r = await delegator1.stake(100);
+        const delegator2 = d.newParticipant();
+        await delegator2.delegate(aValidator);
+        r = await delegator2.stake(100);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: firstValidator.address, committeeStake: new BN(300)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aValidator.address, committeeStake: new BN(300)});
     });
 
     it('does not count delegated stake twice', async () => {
@@ -565,46 +576,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it("performs a batch refresh of stakes", async () => {
-        const d = await Driver.new();
-
-        const v1 = d.newParticipant();
-        await v1.registerAsValidator();
-        await v1.notifyReadyForCommittee();
-        await v1.stake(baseStake * 2);
-
-        const v2 = d.newParticipant();
-        await v2.registerAsValidator();
-        await v2.notifyReadyForCommittee();
-        await v2.stake(baseStake);
-
-        const delegator = d.newParticipant();
-        await delegator.stake(baseStake * 2);
-        let r = await delegator.delegate(v2);
-
-        expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: [v2, v1].map(v => v.orbsAddress),
-            weights: bn([baseStake * 3, baseStake * 2])
-        });
-
-        // Create a new staking contract and stake different amounts
-        const newStaking = await Driver.newStakingContract(d.web3, d.elections.address, d.erc20.address, d.session);
-        await d.contractRegistry.set("staking", newStaking.address);
-
-        await v1.stake(baseStake * 5, newStaking);
-        await v2.stake(baseStake * 3, newStaking);
-        await delegator.stake(baseStake, newStaking);
-
-        // refresh the stakes
-        const anonymous = d.newParticipant();
-        r = await d.elections.refreshStakes([v1.address, v2.address, delegator.address], {from: anonymous.address});
-        expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: [v1, v2].map(v => v.orbsAddress),
-            weights: bn([baseStake * 5, baseStake * 4])
-        });
-
-    });
-
     it("allows voting only to 3 at a time", async () => {
         const d = await Driver.new();
 
@@ -743,7 +714,7 @@ describe('elections-high-level-flows', async () => {
         const tipValidator = delegatees[thresholdCrossingIndex];
 
         const other = d.newParticipant();
-        r = await d.elections.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -751,7 +722,7 @@ describe('elections-high-level-flows', async () => {
         // -------------- ATTEMPT UNBAN BY DELEGATION - DELEGATOR --------------
         const tipDelegator = delegators[thresholdCrossingIndex];
 
-        r = await d.elections.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -786,7 +757,6 @@ describe('elections-high-level-flows', async () => {
 
         // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES, THEN UNSTAKES ---------------
 
-        const originalTotalStake = await d.elections.getTotalGovernanceStake();
         const dilutingParticipant = d.newParticipant();
         const dilutingStake = baseStake * defaultDriverOptions.banningThreshold * 200;
         r = await dilutingParticipant.stake(dilutingStake);
@@ -827,7 +797,7 @@ describe('elections-high-level-flows', async () => {
         const tipValidator = delegatees[thresholdCrossingIndex];
 
         const other = d.newParticipant();
-        r = await d.elections.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
@@ -837,7 +807,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [bannedValidator.address]
         });
 
-        r = await d.elections.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
+        r = await d.delegations.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
@@ -848,7 +818,7 @@ describe('elections-high-level-flows', async () => {
         // -------------- UNBAN THEN BAN BY DELEGATION - DELEGATOR --------------
         const tipDelegator = delegators[thresholdCrossingIndex];
 
-        r = await d.elections.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
+        r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.have.a.unbannedEvent({
             validator: bannedValidator.address
         });
@@ -858,7 +828,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [bannedValidator.address]
         });
 
-        r = await d.elections.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
+        r = await d.delegations.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
@@ -872,7 +842,6 @@ describe('elections-high-level-flows', async () => {
 export async function banningScenario_setupDelegatorsAndValidators(driver: Driver) {
     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
-
 
     // -------------- SETUP ---------------
     const stakesPercentage = [
