@@ -123,7 +123,7 @@ describe('staking-rewards-level-flows', async () => {
         amounts: [totalOrbsRewardsArr[i]]
       });
       expect(r).to.have.a.stakedEvent({
-        stakeOwner: v.v.address,
+        stakeOwner: delegator.address,
         amount: totalOrbsRewardsArr[i],
         totalStakedAmount: totalOrbsRewardsArr[i]
       });
