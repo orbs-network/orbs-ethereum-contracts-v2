@@ -107,19 +107,49 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
         emit StakingRewardAssigned(addr, amount, orbsBalance[addr]); // TODO event per committee?
     }
 
-    function distributeOrbsTokenRewards(address[] calldata to, uint256[] calldata amounts) external {
-        require(to.length == amounts.length, "expected to and amounts to be of same length");
+    struct DistributorBatchState {
+        uint256 fromBlock;
+        uint256 toBlock;
+        uint256 nextTxIndex;
+        uint split;
+    }
+    mapping (address => DistributorBatchState) distributorBatchState;
 
-        uint256 totalAmount = 0;
-        for (uint i = 0; i < to.length; i++) {
-            totalAmount = totalAmount.add(amounts[i]);
-        }
+    function distributeOrbsTokenRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external {
+        require(to.length == amounts.length, "expected to and amounts to be of same length");
         require(totalAmount <= orbsBalance[msg.sender], "not enough balance for this distribution");
+
+        DistributorBatchState memory ds = distributorBatchState[msg.sender];
+
+        bool firstTxBySender = ds.nextTxIndex == 0;
+        if (firstTxBySender) {
+            require(fromBlock == 0, "initial distribution tx must be with fromBlock == 0");
+        }
+
+        if (firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
+            require(toBlock < block.number, "toBlock must be in the past");
+            require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
+            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
+            ds.fromBlock = fromBlock;
+            ds.toBlock = toBlock;
+            ds.split = split;
+            ds.nextTxIndex = 1;
+            distributorBatchState[msg.sender] = ds;
+        } else {
+            require(toBlock == ds.toBlock, "toBlock mismatch");
+            require(fromBlock == ds.fromBlock, "fromBlock mismatch");
+            require(split == ds.split, "split mismatch");
+            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
+            distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
+        }
+
         orbsBalance[msg.sender] = orbsBalance[msg.sender].sub(totalAmount);
 
         IStakingContract stakingContract = getStakingContract();
         erc20.approve(address(stakingContract), totalAmount);
-        stakingContract.distributeRewards(totalAmount, to, amounts);
+        stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
+
+        emit StakingRewardsDistributed(msg.sender, fromBlock, toBlock, split, txIndex, to, amounts);
     }
 
 }

@@ -350,6 +350,11 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         await d.stakingRewards.distributeOrbsTokenRewards(
+            balance.div(bn(batchSize)).mul(bn(batchSize)),
+            0,
+            100,
+            1,
+            0,
             delegators.map(delegator => delegator.address),
             delegators.map(() => balance.div(bn(batchSize)))
             , {from: committee[0].address});
