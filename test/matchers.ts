@@ -27,7 +27,7 @@ import {
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
   validatorDataUpdatedEvents,
-  validatorMetadataChangedEvents, committeeChangedEvents, standbysChangedEvents
+  validatorMetadataChangedEvents, committeeChangedEvents, standbysChangedEvents, stakingRewardsDistributed
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -46,7 +46,7 @@ import {
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
-import {StakingRewardAssignedEvent} from "../typings/staking-rewards-contract";
+import {StakingRewardAssignedEvent, StakingRewardsDistributedEvent} from "../typings/staking-rewards-contract";
 import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/bootstrap-rewards-contract";
 import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/fees-contract";
 import {
@@ -184,6 +184,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
   chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents, true, 'assignees'));
   chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents, true, 'assignees'));
+  chai.Assertion.overwriteMethod("stakingRewardsDistributedEvent", containEvent(stakingRewardsDistributed));
   chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents, true, 'assignees'));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
@@ -233,6 +234,7 @@ declare global {
       protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
       stakingRewardAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
+      stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)

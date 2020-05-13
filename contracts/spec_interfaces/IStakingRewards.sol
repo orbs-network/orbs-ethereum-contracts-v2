@@ -5,6 +5,7 @@ import "./IContractRegistry.sol";
 
 /// @title Rewards contract interface
 interface IStakingRewards {
+    event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
     event StakingRewardAssigned(address assignee, uint256 amount, uint256 balance);
 
     /*
@@ -18,7 +19,7 @@ interface IStakingRewards {
     function getRewardBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Distributes msg.sender's orbs token rewards to a list of addresses, by transferring directly into the staking contract.
-    function distributeOrbsTokenRewards(address[] calldata to, uint256[] calldata amounts) external;
+    function distributeOrbsTokenRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external;
 
     /// @return The timestamp of the last reward assignment.
     function getLastRewardsAssignment() external view returns (uint256 assignment_time);
