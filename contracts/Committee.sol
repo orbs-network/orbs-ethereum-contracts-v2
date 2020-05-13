@@ -8,13 +8,15 @@ import "./ContractRegistryAccessor.sol";
 
 /// @title Elections contract interface
 contract Committee is ICommittee, ContractRegistryAccessor {
+	event GasReport(string label, uint gas);
+
 	address[] participants;
 
 	struct MemberData { // TODO can be reduced to 1 state entry
 		bool isMember; // exists
 		bool readyForCommittee;
-		uint256 readyToSyncTimestamp;
-		uint256 weight;
+		uint32 readyToSyncTimestamp;
+		uint128 weight;
 
 		bool isStandby;
 		bool inCommittee;
@@ -33,29 +35,22 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	} // Never in state, only in memory
 
 	struct Settings { // TODO can be reduced to 2-3 state entries
+		uint128 minimumWeight;
 		address minimumAddress;
-		uint minimumWeight;
-		uint minCommitteeSize;
-		uint maxCommitteeSize;
-		uint maxStandbys;
-		uint readyToSyncTimeout;
+		uint32 readyToSyncTimeout;
+		uint8 minCommitteeSize;
+		uint8 maxCommitteeSize;
+		uint8 maxStandbys;
 	}
 	Settings settings;
 
 	// Derived properties (TODO can be reduced to 2-3 state entries)
 	struct CommitteeInfo {
-		uint freeParticipantSlotPos;
-
-		// Standby entry barrier
-		uint oldestReadyToSyncStandbyTimestamp; // todo 4 bytes?
-		uint minStandbyWeight;
-		address minStandbyAddress;
-		uint standbysCount;
-
-		// Committee entry barrier
-		uint committeeSize;
-		uint minCommitteeMemberWeight;
+		uint256 weightSortIndicesBytes;
 		address minCommitteeMemberAddress;
+		uint64 committeeBitmap;
+		uint8 standbysCount;
+		uint8 committeeSize;
 	}
 	CommitteeInfo committeeInfo;
 
@@ -71,13 +66,13 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		require(_readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
 		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
 		settings = Settings({
-			minCommitteeSize: _minCommitteeSize,
-			maxCommitteeSize: _maxCommitteeSize,
-			minimumWeight: _minimumWeight, // TODO do we need minimumWeight here in the constructor?
+			minCommitteeSize: uint8(_minCommitteeSize),
+			maxCommitteeSize: uint8(_maxCommitteeSize),
+			minimumWeight: uint128(_minimumWeight), // TODO do we need minimumWeight here in the constructor?
 			minimumAddress: address(0), // TODO if we pass minimum weight, need to also pass min address
-			maxStandbys: _maxStandbys,
-			readyToSyncTimeout: _readyToSyncTimeout
-		});
+			maxStandbys: uint8(_maxStandbys),
+			readyToSyncTimeout: uint32(_readyToSyncTimeout)
+			});
 	}
 
 	/*
@@ -86,15 +81,15 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
-    /// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
+	/// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
 	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (memberData.isMember) {
-			memberData.weight = weight;
+			memberData.weight = uint128(weight);
 			return _rankAndUpdateMember(Member({
 				addr: addr,
 				data: memberData
-			}));
+				}));
 		}
 		return (false, false);
 	}
@@ -102,12 +97,12 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (memberData.isMember) {
-			memberData.readyToSyncTimestamp = now;
+			memberData.readyToSyncTimestamp = uint32(now);
 			memberData.readyForCommittee = readyForCommittee;
 			return _rankAndUpdateMember(Member({
 				addr: addr,
 				data: memberData
-			}));
+				}));
 		}
 		return (false, false);
 	}
@@ -120,7 +115,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 			return _rankAndUpdateMember(Member({
 				addr: addr,
 				data: memberData
-			}));
+				}));
 		}
 		return (false, false);
 	}
@@ -133,11 +128,11 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 					isMember: true,
 					readyForCommittee: false,
 					readyToSyncTimestamp: 0,
-					weight: weight,
+					weight: uint128(weight),
 					isStandby: false,
 					inCommittee: false
-				})
-			}));
+					})
+				}));
 		}
 		return (false, false);
 	}
@@ -150,7 +145,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		(committeeChanged, standbysChanged) = _rankAndUpdateMember(Member({
 			addr: addr,
 			data: memberData
-		}));
+			}));
 		delete membersData[addr];
 	}
 
@@ -176,26 +171,58 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
 	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights) {
-		(Participant[] memory members,) = loadParticipants(participants, NullMember());
-		Participant[] memory committee = computeCommittee(members, settings).committee;
-		return toAddrsWeights(committee);
+		CommitteeInfo memory _committeeInfo = committeeInfo;
+		uint bitmap = uint(_committeeInfo.committeeBitmap);
+		uint committeeSize = _committeeInfo.committeeSize;
+
+		addrs = new address[](committeeSize);
+		weights = new uint[](committeeSize);
+		bitmap = uint(_committeeInfo.committeeBitmap);
+		uint i = 0;
+		while (bitmap != 0) {
+			if (bitmap & 1 == 1) {
+				addrs[i] = participants[i];
+				weights[i] = uint(membersData[addrs[i]].weight);
+				i++;
+			}
+			bitmap = bitmap >> 1;
+		}
 	}
 
 	/// @dev Returns the standby (out of committee) members and their weights
 	function _getStandbys() public view returns (address[] memory addrs, uint256[] memory weights) {
-		(Participant[] memory members,) = loadParticipants(participants, NullMember());
-		Participant[] memory standbys = computeCommittee(members, settings).standbys;
-		return toAddrsWeights(standbys);
+		CommitteeInfo memory _committeeInfo = committeeInfo;
+		uint bitmap = uint(_committeeInfo.committeeBitmap);
+		uint standbysCount = uint(_committeeInfo.standbysCount);
+
+		addrs = new address[](standbysCount);
+		weights = new uint[](standbysCount);
+		bitmap = uint(_committeeInfo.committeeBitmap);
+		uint i = 0;
+		uint ind;
+		address addr;
+		while (i < standbysCount) {
+			if (bitmap & 1 == 0) {
+				addr = participants[ind];
+				if (addr != address(0)) {
+					addrs[i] = addr;
+					weights[i] = uint(membersData[addr].weight);
+					i++;
+				}
+			}
+			bitmap = bitmap >> 1;
+			ind++;
+		}
 	}
 
 	/// @dev Called by: Elections contract
 	/// Sets the minimal weight, and committee members
-    /// Every member with sortingWeight >= minimumWeight OR in top minimumN is included in the committee
+	/// Every member with sortingWeight >= minimumWeight OR in top minimumN is included in the committee
 	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize) external onlyElectionsContract {
 		Settings memory _settings = settings;
-		_settings.minimumWeight = _minimumWeight;
+		_settings.minimumWeight = uint128(_minimumWeight);
 		_settings.minimumAddress = _minimumAddress;
-		_settings.minCommitteeSize = _minCommitteeSize;
+		_settings.minCommitteeSize = uint8(_minCommitteeSize);
 		settings = _settings;
 
 		updateOnMemberChange(NullMember(), _settings);
@@ -205,14 +232,14 @@ contract Committee is ICommittee, ContractRegistryAccessor {
      * Getters
      */
 
-    /// @dev returns the current committee
-    /// used also by the rewards and fees contracts
+	/// @dev returns the current committee
+	/// used also by the rewards and fees contracts
 	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) {
 		(address[] memory _committee, uint256[] memory _weights) = _getCommittee();
 		return (_committee, _weights, _loadOrbsAddresses(_committee), _loadIps(_committee));
 	}
 
-    /// @dev returns the current standbys (out of commiteee) topology
+	/// @dev returns the current standbys (out of commiteee) topology
 	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) {
 		(address[] memory _standbys, uint256[] memory _weights) = _getStandbys();
 		return (_standbys, _weights, _loadOrbsAddresses(_standbys), _loadIps(_standbys));
@@ -232,14 +259,15 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 				weight: 0,
 				isStandby: false,
 				inCommittee: false
-			})
-		});
+				})
+			});
 	}
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
 		address[] memory orbsAddresses = new address[](addrs.length);
 		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
 		for (uint i = 0; i < addrs.length; i++) {
+			require(addrs[i] != address(0), "zero address 0");
 			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
 		}
 		return orbsAddresses;
@@ -255,8 +283,11 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	}
 
 	function _rankAndUpdateMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
+		uint gl01 = gasleft();
 		(committeeChanged, standbysChanged) = _rankMember(member);
 		membersData[member.addr] = member.data;
+		uint gl02 = gasleft();
+		emit GasReport("rankdAndUpdate: all", gl01-gl02);
 	}
 
 	function _rankMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
@@ -264,356 +295,247 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 		bool isParticipant = member.data.inCommittee || member.data.isStandby;
 		if (!isParticipant) {
-			CommitteeInfo memory _committeeInfo = committeeInfo;
-			if (!qualifiedToJoin(member, _settings, _committeeInfo)) {
+			if (!member.data.isMember || member.data.readyToSyncTimestamp == 0 || member.data.weight == 0) {
 				return (false, false);
 			}
-			joinMemberAsParticipant(member, _committeeInfo);
 		}
 
 		return updateOnMemberChange(member, _settings);
 	}
 
-	function qualifiedToJoin(Member memory member, Settings memory _settings, CommitteeInfo memory _committeeInfo) private view returns (bool) {
-		return qualifiedToJoinAsStandby(member, _settings, _committeeInfo) || qualifiedToJoinCommittee(member, _settings, _committeeInfo);
-	}
-
-	function isReadyToSyncStale(uint256 timestamp, bool currentlyInCommittee, Settings memory _settings) private view returns (bool) {
-		return timestamp == 0 || !currentlyInCommittee && timestamp <= now - _settings.readyToSyncTimeout;
+	function isReadyToSyncStale(uint32 timestamp, bool currentlyInCommittee, Settings memory _settings) private view returns (bool) {
+		return timestamp == 0 || !currentlyInCommittee && timestamp <= uint32(now) - _settings.readyToSyncTimeout;
 	}
 
 	function qualifiesAsStandby(Member memory member) private pure returns (bool) {
 		return member.data.isMember && member.data.readyToSyncTimestamp != 0 && member.data.weight != 0; // TODO should we check for isReadyToSyncStale instead? this means that timed-out nodes are evicted on any change, instead of only when being replaced.
 	}
 
-	function qualifiedToJoinAsStandby(Member memory member, Settings memory _settings, CommitteeInfo memory _committeeInfo) private view returns (bool) {
-		if (!qualifiesAsStandby(member)) {
-			return false;
-		}
-
-		return _committeeInfo.standbysCount < _settings.maxStandbys || // Room in standbys
-			_committeeInfo.standbysCount > 0 && member.data.readyToSyncTimestamp > _committeeInfo.oldestReadyToSyncStandbyTimestamp || // A standby timed out
-			outranksLowestStandby(member, _committeeInfo, _settings); // A standby can be outranked by weight
-	}
-
 	function isAboveCommitteeEntryThreshold(Member memory member, Settings memory _settings) private view returns (bool) {
 		return compareMembersPerCommitteeCriteria(
 			member,
 			Member({
-				addr: _settings.minimumAddress,
-				data: MemberData({
-					isMember: true,
-					readyForCommittee: true,
-					readyToSyncTimestamp: now,
-					weight: _settings.minimumWeight,
+			addr: _settings.minimumAddress,
+			data: MemberData({
+				isMember: true,
+				readyForCommittee: true,
+				readyToSyncTimestamp: uint32(now),
+				weight: uint128(_settings.minimumWeight),
 
-					isStandby: false,
-					inCommittee: true
+				isStandby: false,
+				inCommittee: true
 				})
 			}),
 			_settings
 		) >= 0;
 	}
 
-	function outranksLowestCommitteeMember(Member memory member, CommitteeInfo memory _committeeInfo, Settings memory _settings) private view returns (bool) {
-		return _committeeInfo.committeeSize > 0 && compareMembersPerCommitteeCriteria(
-			member,
-			Member({
-				addr: _settings.minimumAddress,
-				data: MemberData({
-					isMember: true,
-					readyForCommittee: true,
-					readyToSyncTimestamp: now,
-					weight: _committeeInfo.minCommitteeMemberWeight,
-
-					isStandby: false,
-					inCommittee: true
-				})
-			}),
-			_settings
-		) > 0;
-	}
-
-	function outranksLowestStandby(Member memory member, CommitteeInfo memory _committeeInfo, Settings memory _settings) private view returns (bool) {
-		return _committeeInfo.standbysCount > 0 && compareMembersPerStandbyCriteria(
-			member,
-			Member({
-				addr: _committeeInfo.minStandbyAddress,
-				data: MemberData({
-					isMember: true,
-					readyForCommittee: false,
-					readyToSyncTimestamp: now,
-					weight: _committeeInfo.minStandbyWeight,
-
-					isStandby: true,
-					inCommittee: false
-				})
-			}),
-		_settings) > 0;
-	}
-
-	function qualifiesForCommittee(Member memory member, Settings memory _settings, uint committeeSize, bool _outranksLowestCommitteeMember) private view returns (bool) {
+	function qualifiesForCommittee(Member memory member, Settings memory _settings, uint committeeSize) private view returns (bool) {
 		return (
-			member.data.isMember &&
-			member.data.weight > 0 &&
-			member.data.readyForCommittee &&
-			!isReadyToSyncStale(member.data.readyToSyncTimestamp, member.data.inCommittee, _settings) &&
-			(
-				_outranksLowestCommitteeMember ||
-				committeeSize < _settings.minCommitteeSize ||
-				committeeSize < _settings.maxCommitteeSize && isAboveCommitteeEntryThreshold(member, _settings)
-			)
+		member.data.isMember &&
+		member.data.weight > 0 &&
+		member.data.readyForCommittee &&
+		!isReadyToSyncStale(member.data.readyToSyncTimestamp, member.data.inCommittee, _settings) &&
+		(
+		committeeSize < _settings.minCommitteeSize ||
+		committeeSize < _settings.maxCommitteeSize && isAboveCommitteeEntryThreshold(member, _settings)
+		)
 		);
 	}
 
-	function qualifiedToJoinCommittee(Member memory member, Settings memory _settings, CommitteeInfo memory _committeeInfo) private view returns (bool) {
-		return qualifiesForCommittee(member, _settings, _committeeInfo.committeeSize, outranksLowestCommitteeMember(member, _committeeInfo, _settings));
+	function repositionParticipantAccordingToWeight(Participant[] memory members, uint pos) private pure {
+		while (pos < members.length - 1 && (members[pos].data.weight < members[pos + 1].data.weight || members[pos].data.weight == members[pos + 1].data.weight && uint(members[pos].addr) < uint(members[pos + 1].addr))) {
+			(members[pos], members[pos + 1]) = (members[pos + 1], members[pos]);
+			pos++;
+		}
+		while (pos > 0 && (members[pos - 1].data.weight < members[pos].data.weight || members[pos - 1].data.weight == members[pos].data.weight && uint(members[pos - 1].addr) < uint(members[pos].addr))) {
+			(members[pos - 1], members[pos]) = (members[pos], members[pos - 1]);
+			pos--;
+		}
 	}
 
-	function joinMemberAsParticipant(Member memory member, CommitteeInfo memory _committeeInfo) private {
-		participants.length = Math.max(participants.length, _committeeInfo.freeParticipantSlotPos + 1);
-		participants[_committeeInfo.freeParticipantSlotPos] = member.addr;
+	struct UpdateVars {
+		uint maxPos;
+		Participant p;
+		uint128 minCommitteeWeight;
 	}
-
 	function updateOnMemberChange(Member memory member, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) { // TODO this is sometimes called with a member with address 0 indicating no member changed
-		// TODO in all the state writes below, can skip the write for the given member as it will be written anyway
-
-		CommitteeInfo memory ci = CommitteeInfo({
-			freeParticipantSlotPos: 0,
-			oldestReadyToSyncStandbyTimestamp: 0,
-			minStandbyWeight: 0,
-			minStandbyAddress: address(0),
-			standbysCount: 0,
-			committeeSize: 0,
-			minCommitteeMemberWeight: 0,
-			minCommitteeMemberAddress: address(0)
-		});
-
 		committeeChanged = member.data.inCommittee;
 		standbysChanged = member.data.isStandby;
 
 		address[] memory _participants = participants;
-		Participant[] memory _members;
-		uint maxPos;
+		Participant[] memory _members = loadParticipantsSortedByWeights(_participants, member); // override stored member with preloaded one
 
-		// TODO consider modifying computeCommittee to return one list with labels and make a single pass here
+		CommitteeInfo memory newCommitteeInfo = CommitteeInfo({
+			standbysCount: 0,
+			committeeSize: 0,
+			minCommitteeMemberAddress: address(-1),
+			committeeBitmap: 0,
+			weightSortIndicesBytes: 0
+			});
 
-		(_members, ci.freeParticipantSlotPos) = loadParticipants(_participants, member); // override stored member with preloaded one
-		CommitteeComputationResults memory o = computeCommittee(_members, _settings);
-		(ci.committeeSize, ci.standbysCount) = (o.committee.length, o.standbys.length);
-
-		AnalyzisResult memory r = UpdateAndAnalyzeParticipantSet(o.committee, true, false, member.addr);
-		(committeeChanged, standbysChanged) = (committeeChanged || r.committeeChanged, standbysChanged || r.standbysChanged);
-		(ci.minCommitteeMemberWeight, ci.minCommitteeMemberAddress, maxPos) = (r.minWeight, r.minAddr, r.maxPos);
-
-		r = UpdateAndAnalyzeParticipantSet(o.standbys, false, true, member.addr);
-		(committeeChanged, standbysChanged) = (committeeChanged || r.committeeChanged, standbysChanged || r.standbysChanged);
-		(ci.minStandbyWeight, ci.minStandbyAddress, ci.oldestReadyToSyncStandbyTimestamp) = (r.minWeight, r.minAddr, r.minTimestamp);
-		maxPos = Math.max(maxPos, r.maxPos);
-
-		r = UpdateAndAnalyzeParticipantSet(o.evicted, false, false, member.addr);
-		(committeeChanged, standbysChanged) = (committeeChanged || r.committeeChanged, standbysChanged || r.standbysChanged);
-		ci.freeParticipantSlotPos = Math.min(ci.freeParticipantSlotPos, r.minPos);
-
-		participants.length = Math.min(_participants.length, maxPos + 1);
-
-		committeeInfo = ci;
-
-		if (committeeChanged) _notifyCommitteeChanged(o.committee);
-		if (standbysChanged) _notifyStandbysChanged(o.standbys);
-	}
-
-	struct AnalyzisResult {
-		bool committeeChanged;
-		bool standbysChanged;
-		uint minPos;
-		uint maxPos;
-		uint minWeight;
-		address minAddr;
-		uint minTimestamp;
-	}
-	function UpdateAndAnalyzeParticipantSet(Participant[] memory list, bool inCommittee, bool isStandby, address skipSavingMember) private returns (AnalyzisResult memory r) {
-		r = AnalyzisResult({
-			minWeight: uint256(-1),
-			minAddr: address(-1),
+		UpdateVars memory s = UpdateVars({
 			maxPos: 0,
-			minPos: uint(-1),
-			minTimestamp: uint(-1),
-			committeeChanged: false,
-			standbysChanged: false
-		});
-		for (uint i = 0; i < list.length; i++) {
-			Participant memory p = list[i];
-			bool changed = false;
+			p: Participant({
+				addr: member.addr,
+				data: member.data,
+				pos: 0
+				}),
+			minCommitteeWeight: uint128(-1)
+			});
+		for (uint pass = 0; pass < 2; pass++) {
+			uint seenStandbys;
+			uint seenCommittee;
+			for (uint i = 0; i < _members.length; i++) {
+				require(i == 0 || _members[i].data.weight <= _members[i-1].data.weight, "weights are not sorted");
+				bool shouldBeInCommittee;
+				bool shouldBeStandby;
 
-			if (p.data.isStandby != isStandby) {
-				p.data.isStandby = isStandby;
-				if (isStandby && p.data.inCommittee) {
-					p.data.readyToSyncTimestamp = now;
+				s.p = _members[i];
+				if (qualifiesForCommittee(Member({addr: s.p.addr, data: s.p.data}), _settings, seenCommittee)) {
+					shouldBeInCommittee = true;
+					seenCommittee++;
+					if (pass == 0) {
+						newCommitteeInfo.committeeBitmap = uint64(newCommitteeInfo.committeeBitmap | (1 << s.p.pos));
+						newCommitteeInfo.committeeSize++;
+						if (s.p.data.weight < s.minCommitteeWeight) {
+							s.minCommitteeWeight = s.p.data.weight;
+							newCommitteeInfo.minCommitteeMemberAddress = s.p.addr;
+						} else if (s.p.data.weight == s.minCommitteeWeight && uint(s.p.addr) < uint(newCommitteeInfo.minCommitteeMemberAddress)) {
+							newCommitteeInfo.minCommitteeMemberAddress = s.p.addr;
+						}
+					}
+				} else if (
+					seenStandbys < _settings.maxStandbys &&
+					qualifiesAsStandby(Member({addr: s.p.addr, data: s.p.data}))
+				) {
+					if (!isReadyToSyncStale(s.p.data.readyToSyncTimestamp, s.p.data.inCommittee, _settings)) {
+						shouldBeStandby = true;
+						if (pass == 0) newCommitteeInfo.standbysCount++;
+					} else if (pass == 1 && newCommitteeInfo.standbysCount < _settings.maxStandbys) {
+						shouldBeStandby = true;
+						newCommitteeInfo.standbysCount++;
+					}
+					if (shouldBeStandby) seenStandbys++;
 				}
-				changed = true;
-				r.standbysChanged = true;
-			}
 
-			if (p.data.inCommittee != inCommittee) {
-				p.data.inCommittee = inCommittee;
-				changed = true;
-				r.committeeChanged = true;
-			}
-
-			if (!isStandby && !inCommittee) {
-				participants[p.pos] = address(0);
-			}
-
-			if (changed && p.addr != skipSavingMember) {
-				membersData[p.addr] = p.data;
-			}
-
-			r.maxPos = Math.max(r.maxPos, p.pos);
-			r.minPos = Math.min(r.minPos, p.pos);
-			r.minTimestamp = Math.min(r.minTimestamp, p.data.readyToSyncTimestamp);
-			if (p.data.weight < r.minWeight) {
-				r.minWeight = p.data.weight;
-				r.minAddr = p.addr;
-			} else if (p.data.weight == r.minWeight && uint(p.addr) < uint(r.minAddr)) {
-				r.minAddr = p.addr;
+				if (pass == 1) {
+					bool changed;
+					if (shouldBeStandby != s.p.data.isStandby) {
+						s.p.data.isStandby = shouldBeStandby;
+						if (shouldBeStandby && s.p.data.inCommittee) {
+							s.p.data.readyToSyncTimestamp = uint32(now);
+						}
+						changed = true;
+						standbysChanged = true;
+					}
+					if (shouldBeInCommittee != s.p.data.inCommittee) {
+						s.p.data.inCommittee = shouldBeInCommittee;
+						changed = true;
+						committeeChanged = true;
+					}
+					if (changed) {
+						membersData[s.p.addr] = s.p.data;
+					}
+					if (!s.p.data.inCommittee && !s.p.data.isStandby) {
+						// no longer a participant
+						if (s.p.pos < _participants.length) {
+							participants[s.p.pos] = address(0);
+						}
+					} else {
+						newCommitteeInfo.weightSortIndicesBytes = (newCommitteeInfo.weightSortIndicesBytes << 8) | uint8(s.p.pos + 1);
+						if (_participants.length == s.p.pos || _participants[s.p.pos] != s.p.addr) { // new participant
+							if (_participants.length == s.p.pos) {
+								participants.length++;
+							}
+							participants[s.p.pos] = s.p.addr;
+						}
+						s.maxPos = Math.max(s.maxPos, s.p.pos);
+					}
+				}
 			}
 		}
+
+
+		if (_participants.length > s.maxPos + 1) {
+			participants.length = s.maxPos + 1;
+		}
+
+		committeeInfo = newCommitteeInfo;
+
+		notifyChanges(_members, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged);
 	}
 
-	function loadParticipants(address[] memory participantsAddrs, Member memory overrideMember) private view returns (Participant[] memory _participants, uint firstFreeSlot) {
-		uint nParticipants = 0;
-		firstFreeSlot = participantsAddrs.length;
+	function notifyChanges(Participant[] memory members, uint committeeSize, uint standbysCount, bool committeeChanged, bool standbysChanged) private {
+		address[] memory committeeAddrs = new address[](committeeSize);
+		uint[] memory committeeWeights = new uint[](committeeSize);
+		uint cInd;
+		address[] memory standbyAddrs = new address[](standbysCount);
+		uint[] memory standbyWeights = new uint[](standbysCount);
+		uint sInd;
 
-		for (uint i = 0; i < participantsAddrs.length; i++) { // TODO can be replaced by getting number from committee info (which is read anyway)
+		Participant memory p;
+		for (uint i = 0; i < members.length; i++) {
+			p = members[i];
+			if (p.data.inCommittee) {
+				committeeAddrs[cInd] = p.addr;
+				committeeWeights[cInd++] = p.data.weight;
+			} else if (p.data.isStandby) {
+				standbyAddrs[sInd] = p.addr;
+				standbyWeights[sInd++] = p.data.weight;
+			}
+		}
+
+		if (committeeChanged) _notifyCommitteeChanged(committeeAddrs, committeeWeights);
+		if (standbysChanged) _notifyStandbysChanged(standbyAddrs, standbyWeights);
+	}
+
+	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private returns (Participant[] memory _participants) {
+		uint nParticipants;
+		bool foundMember;
+		uint firstFreeSlot = participantsAddrs.length;
+		for (uint i = 0; i < participantsAddrs.length; i++) {
 			if (participantsAddrs[i] != address(0)) {
 				nParticipants++;
-			} else if (firstFreeSlot == participantsAddrs.length) {
-				firstFreeSlot = i;
+				if (participantsAddrs[i] == preloadedMember.addr) {
+					foundMember = true;
+				}
+			} else{
+				if (firstFreeSlot == participantsAddrs.length) {
+					firstFreeSlot = i;
+				}
 			}
 		}
+		if (!foundMember) nParticipants++;
 
+		uint memberPos;
+		uint sortBytes = committeeInfo.weightSortIndicesBytes;
 		_participants = new Participant[](nParticipants);
-		uint mInd = 0;
-		for (uint i = 0; i < participantsAddrs.length; i++) {
-			address addr = participantsAddrs[i];
-			if (addr != address(0)) {
-				_participants[mInd] = Participant({
-					addr: addr,
-					data: addr == overrideMember.addr ? overrideMember.data : membersData[addr], // load data unless overridden
-					pos: i
+		uint pind = nParticipants - 1;
+		while (sortBytes != 0) {
+			uint ind = uint(sortBytes & 0xFF) - 1;
+			sortBytes = sortBytes >> 8;
+			_participants[pind] = Participant({
+				addr: participantsAddrs[ind],
+				data: participantsAddrs[ind] == preloadedMember.addr ? preloadedMember.data : membersData[participantsAddrs[ind]], // load data unless overridden
+				pos: ind
 				});
-				mInd++;
+			if (participantsAddrs[ind] == preloadedMember.addr) {
+				memberPos = pind;
 			}
-		}
-	}
-
-	struct CommitteeComputationResults {
-		Participant[] committee;
-		Participant[] standbys;
-		Participant[] evicted;
-	}
-
-	function computeCommittee(Participant[] memory _participants, Settings memory _settings) private view returns (CommitteeComputationResults memory out) {
-
-		Participant[] memory list = slice(_participants, 0, _participants.length); // TODO can be omitted?
-
-		sortByCommitteeCriteria(list, _settings);
-
-		uint i = 0;
-		uint committeeSize = 0;
-
-		while (
-			i < list.length &&
-			committeeSize < _settings.maxCommitteeSize &&
-			qualifiesForCommittee(Member({addr: list[i].addr, data: list[i].data}), _settings, committeeSize, false)
-		) {
-			committeeSize++;
-			i++;
+			pind--;
 		}
 
-		sortByStandbysCriteria(list, _settings, committeeSize, list.length);
-
-		uint nStandbys = 0;
-		while (
-			i < list.length &&
-			nStandbys < _settings.maxStandbys &&
-			qualifiesAsStandby(Member({addr: list[i].addr, data: list[i].data}))
-		) {
-			nStandbys++;
-			i++;
+		if (!foundMember) {
+			_participants[0] = Participant({
+				addr: preloadedMember.addr,
+				data: preloadedMember.data,
+				pos: firstFreeSlot
+				});
+			memberPos = 0; // todo redundant, already 0
 		}
 
-		uint nEvicted = list.length - nStandbys - committeeSize;
-
-		Participant[] memory committee = slice(list, 0, committeeSize);
-		Participant[] memory standbys = slice(list, committeeSize, nStandbys);
-		Participant[] memory evicted = slice(list, committeeSize + nStandbys, nEvicted);
-
-		return CommitteeComputationResults({
-			committee: committee,
-			standbys: standbys,
-			evicted: evicted
-		});
-	}
-
-	enum Comparator {Committee, Standbys}
-
-	function sortByCommitteeCriteria(Participant[] memory list, Settings memory _settings) private view {
-		quickSort(list, 0, list.length, _settings, Comparator.Committee);
-	}
-
-	function sortByStandbysCriteria(Participant[] memory list, Settings memory _settings, uint from, uint to) private view {
-		quickSort(list, from, to, _settings, Comparator.Standbys);
-	}
-
-	function quickSort(Participant[] memory arr, uint from, uint to, Settings memory _settings, Comparator comparator) private view {
-        // todo: are stack variables initialized to 0? if so, some assignments can be omitted
-        Participant memory piv;
-        uint i = 0;
-        int L;
-        int R;
-        int[] memory beg = new int[](to - from + 1);
-        int[] memory end = new int[](to - from + 1);
-
-		(beg[0], end[0]) = (int(from), int(to));
-        while (int(i) >= 0) {
-            L = beg[i];
-            R = end[i] - 1;
-            if (L < R) {
-                piv = arr[uint(L)];
-                while (L<R) {
-                    while (L < R && compareMembers(arr[uint(R)], piv, _settings, comparator) <= 0) {
-                        R--;
-                    }
-                    if (L < R) {
-                        arr[uint(L++)] = arr[uint(R)];
-                    }
-                    while (L < R && compareMembers(arr[uint(L)], piv, _settings, comparator) >= 0) {
-                        L++;
-                    }
-                    if (L < R) {
-                        arr[uint(R--)] = arr[uint(L)];
-                    }
-                }
-                arr[uint(L)] = piv;
-                beg[i + 1] = L + 1;
-                end[i + 1] = end[i];
-                end[i++] = L;
-            } else {
-                i--;
-            }
-        }
-	}
-
-	function compareMembers(Participant memory a, Participant memory b, Settings memory _settings, Comparator comparator) private view returns (int) {
-		Member memory ma = Member({addr: a.addr, data: a.data});
-		Member memory mb = Member({addr: b.addr, data: b.data});
-		if (comparator == Comparator.Committee) {
-			return compareMembersPerCommitteeCriteria(ma, mb, _settings);
-		} else {
-			return compareMembersPerStandbyCriteria(ma, mb, _settings);
-		}
+		repositionParticipantAccordingToWeight(_participants, memberPos);
 	}
 
 	function compareMembersPerCommitteeCriteria(Member memory v1, Member memory v2, Settings memory _settings) private view returns (int) {
@@ -651,60 +573,12 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		return 0;
 	}
 
-	function compareMembersPerStandbyCriteria(Member memory v1, Member memory v2, Settings memory _settings) private view returns (int) {
-		bool v1TimedOut = isReadyToSyncStale(v1.data.readyToSyncTimestamp, v1.data.inCommittee, _settings);
-		bool v2TimedOut = isReadyToSyncStale(v2.data.readyToSyncTimestamp, v2.data.inCommittee, _settings);
-
-		bool v1Qualified = qualifiesAsStandby(v1);
-		bool v2Qualified = qualifiesAsStandby(v2);
-
-		if (v1Qualified && !v2Qualified) return 1;
-		if (!v1Qualified && v2Qualified) return -1;
-
-		// v1Qualified == v2Qualified
-
-		if (!v1TimedOut && v2TimedOut) return 1;
-		if (v1TimedOut && !v2TimedOut) return -1;
-
-		// v1TimedOut == v2TimedOut
-
-		if (v1.data.weight > v2.data.weight) return 1;
-		if (v1.data.weight < v2.data.weight) return -1;
-
-		// v1.data.weight == v2.data.weight
-
-		if (uint256(v1.addr) > uint256(v2.addr)) return 1;
-		if (uint256(v1.addr) < uint256(v2.addr)) return -1;
-
-		// v1.addr == v2.addr
-
-		return 0;
-	}
-
-	function _notifyStandbysChanged(Participant[] memory standbys) private {
-		(address[] memory addrs, uint256[] memory weights) = toAddrsWeights(standbys);
+	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights) private {
 		emit StandbysChanged(addrs, _loadOrbsAddresses(addrs), weights);
 	}
 
-	function _notifyCommitteeChanged(Participant[] memory committee) private {
-		(address[] memory addrs, uint256[] memory weights) = toAddrsWeights(committee);
+	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights) private {
 		emit CommitteeChanged(addrs, _loadOrbsAddresses(addrs), weights);
-	}
-
-	function toAddrsWeights(Participant[] memory list) private pure returns (address[] memory addrs, uint256[] memory weights) {
-		addrs = new address[](list.length);
-		weights = new uint256[](list.length);
-		for (uint i = 0; i < list.length; i++) {
-			addrs[i] = list[i].addr;
-			weights[i] = list[i].data.weight;
-		}
-	}
-
-	function slice(Participant[] memory list, uint from, uint count) private pure returns (Participant[] memory sliced) {
-		sliced = new Participant[](count);
-		for (uint i = 0; i < count; i++) {
-			sliced[i] = list[from + i];
-		}
 	}
 
 }

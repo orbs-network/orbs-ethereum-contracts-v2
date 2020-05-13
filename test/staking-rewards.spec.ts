@@ -144,11 +144,11 @@ describe('staking-rewards-level-flows', async () => {
     await v2.notifyReadyForCommittee();
 
     const validators = [{
-      v: v2,
-      stake: initStakeLarger
-    }, {
       v: v1,
       stake: initStakeLesser
+    }, {
+      v: v2,
+      stake: initStakeLarger
     }];
 
     const nValidators = validators.length;
