@@ -291,8 +291,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
 			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
 
-			_applyStakesToBanningBy(stakeOwners[i], prevGovStakeOwners[i]); // totalGovernanceStake must be updated by now
-			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]); // totalGovernanceStake must be updated by now
+			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]);
 		}
 	}
 
