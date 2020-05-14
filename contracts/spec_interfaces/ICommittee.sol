@@ -49,7 +49,9 @@ interface ICommittee {
 	/// @dev Called by: Elections contract
 	/// Sets the mimimal weight, and committee members
     /// Every member with sortingStake >= minimumStake OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize) external /* onlyElectionsContract */;
+	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize, bool dontComputeCommittee) external /* onlyElectionsContract */;
+
+	function flush() external;
 
 	/*
 	 * Governance

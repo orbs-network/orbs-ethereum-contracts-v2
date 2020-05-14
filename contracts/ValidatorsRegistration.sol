@@ -15,8 +15,8 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
 	struct Validator {
-		bytes4 ip;
 		address orbsAddr;
+		bytes4 ip;
 		string name;
 		string website;
 		string contact;
@@ -80,8 +80,15 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		return (v.ip, v.orbsAddr, v.name, v.website, v.contact, v.registrationTime, v.lastUpdateTime);
 	}
 
+	function getValidatorsOrbsAddress(address[] calldata addrs) external view returns (address[] memory orbsAddrs) {
+		orbsAddrs = new address[](addrs.length);
+		for (uint i = 0; i < addrs.length; i++) {
+			orbsAddrs[i] = validators[addrs[i]].orbsAddr;
+		}
+	}
+
 	function getValidatorOrbsAddress(address addr) external view returns (address orbsAddr) {
-		require(isRegistered(addr), "getValidatorOrbsAddress: Validator is not registered");
+//		require(isRegistered(addr), "getValidatorOrbsAddress: Validator is not registered");
 		return validators[addr].orbsAddr;
 	}
 

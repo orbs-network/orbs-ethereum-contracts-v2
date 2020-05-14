@@ -106,6 +106,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 			updateComplianceCommitteeMinimumWeight();
 		}
 		getComplianceCommitteeContract().memberReadyToSync(sender, true);
+		getComplianceCommitteeContract().flush();
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
@@ -115,6 +116,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 			updateComplianceCommitteeMinimumWeight();
 		}
 		getComplianceCommitteeContract().memberReadyToSync(sender, false);
+		getComplianceCommitteeContract().flush();
 	}
 
 	function delegate(address to) external {
@@ -189,6 +191,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 				updateComplianceCommitteeMinimumWeight();
 			}
 			getComplianceCommitteeContract().memberNotReadyToSync(addr);
+			getComplianceCommitteeContract().flush();
 		}
 	}
 
@@ -375,13 +378,15 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		totalGovernanceStake = totalGovernanceStake.sub(prevGovStake).add(currentGovStake);
 
 		emit StakeChanged(addr, ownStakes[addr], newStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
-
+		uint gl01 = gasleft();
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
 		getComplianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
-
+		getComplianceCommitteeContract().flush();
+		uint gl02 = gasleft();
+		emit GasReport("committee calls: all", gl01-gasleft());
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
@@ -397,6 +402,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		}
 		return ownStake.mul(maxRatio); // never overflows
 	}
+	event GasReport(string label, uint gas);
 
 	function getGovernanceEffectiveStake(address v) public view returns (uint256) {
 		if (!_isSelfDelegating(v)) {
@@ -411,6 +417,7 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 			updateComplianceCommitteeMinimumWeight();
 		}
 		getComplianceCommitteeContract().removeMember(addr);
+		getComplianceCommitteeContract().flush();
 	}
 
 	function addMemberToCommittees(address addr) private {
@@ -421,12 +428,13 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		if (isComplianceValidator(addr)) {
 			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		}
+		getComplianceCommitteeContract().flush();
 	}
 
 	function updateComplianceCommitteeMinimumWeight() private {
 		address lowestMember = getGeneralCommitteeContract().getLowestCommitteeMember();
 		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
-		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
+		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize, true);
 	}
 
 	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way

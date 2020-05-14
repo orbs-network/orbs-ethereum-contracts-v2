@@ -32,6 +32,9 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		address addr;
 		MemberData data;
 		uint pos;
+
+		bool shouldBeInCommittee;
+		bool shouldBeStandby;
 	} // Never in state, only in memory
 
 	struct Settings { // TODO can be reduced to 2-3 state entries
@@ -44,13 +47,14 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	}
 	Settings settings;
 
-	// Derived properties (TODO can be reduced to 2-3 state entries)
+	// Derived properties
 	struct CommitteeInfo {
 		uint256 weightSortIndicesBytes;
 		address minCommitteeMemberAddress;
 		uint64 committeeBitmap;
 		uint8 standbysCount;
 		uint8 committeeSize;
+		bool pendingChanges;
 	}
 	CommitteeInfo committeeInfo;
 
@@ -171,6 +175,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
 	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights) {
+		// todo in case of committeeInfo.pendingChanges, this is stale
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint bitmap = uint(_committeeInfo.committeeBitmap);
 		uint committeeSize = _committeeInfo.committeeSize;
@@ -218,14 +223,23 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	/// @dev Called by: Elections contract
 	/// Sets the minimal weight, and committee members
 	/// Every member with sortingWeight >= minimumWeight OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize) external onlyElectionsContract {
+	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize, bool dontComputeCommittee) external onlyElectionsContract {
 		Settings memory _settings = settings;
 		_settings.minimumWeight = uint128(_minimumWeight);
 		_settings.minimumAddress = _minimumAddress;
 		_settings.minCommitteeSize = uint8(_minCommitteeSize);
-		settings = _settings;
+		settings = _settings; // todo check if equal before writing
+		if (dontComputeCommittee) {
+			committeeInfo.pendingChanges = true;
+		} else {
+			updateOnMemberChange(NullMember(), _settings);
+		}
+	}
 
-		updateOnMemberChange(NullMember(), _settings);
+	function flush() external {
+		if (committeeInfo.pendingChanges) {
+			updateOnMemberChange(NullMember(), settings);
+		}
 	}
 
 	/*
@@ -264,13 +278,13 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	}
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
-		address[] memory orbsAddresses = new address[](addrs.length);
-		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
-		for (uint i = 0; i < addrs.length; i++) {
-			require(addrs[i] != address(0), "zero address 0");
-			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
-		}
-		return orbsAddresses;
+//		address[] memory orbsAddresses = new address[](addrs.length);
+//		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
+//		for (uint i = 0; i < addrs.length; i++) {
+//			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
+//		}
+//		return orbsAddresses;
+		return getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs);
 	}
 
 	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
@@ -287,7 +301,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		(committeeChanged, standbysChanged) = _rankMember(member);
 		membersData[member.addr] = member.data;
 		uint gl02 = gasleft();
-		emit GasReport("rankdAndUpdate: all", gl01-gl02);
+ 		emit GasReport("rankdAndUpdate: all", gl01-gl02);
 	}
 
 	function _rankMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
@@ -307,30 +321,11 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		return timestamp == 0 || !currentlyInCommittee && timestamp <= uint32(now) - _settings.readyToSyncTimeout;
 	}
 
-	function qualifiesAsStandby(Member memory member) private pure returns (bool) {
+	function qualifiesAsStandby(Participant memory member) private pure returns (bool) {
 		return member.data.isMember && member.data.readyToSyncTimestamp != 0 && member.data.weight != 0; // TODO should we check for isReadyToSyncStale instead? this means that timed-out nodes are evicted on any change, instead of only when being replaced.
 	}
 
-	function isAboveCommitteeEntryThreshold(Member memory member, Settings memory _settings) private view returns (bool) {
-		return compareMembersPerCommitteeCriteria(
-			member,
-			Member({
-			addr: _settings.minimumAddress,
-			data: MemberData({
-				isMember: true,
-				readyForCommittee: true,
-				readyToSyncTimestamp: uint32(now),
-				weight: uint128(_settings.minimumWeight),
-
-				isStandby: false,
-				inCommittee: true
-				})
-			}),
-			_settings
-		) >= 0;
-	}
-
-	function qualifiesForCommittee(Member memory member, Settings memory _settings, uint committeeSize) private view returns (bool) {
+	function qualifiesForCommittee(Participant memory member, Settings memory _settings, uint committeeSize) private view returns (bool) {
 		return (
 		member.data.isMember &&
 		member.data.weight > 0 &&
@@ -338,132 +333,153 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		!isReadyToSyncStale(member.data.readyToSyncTimestamp, member.data.inCommittee, _settings) &&
 		(
 		committeeSize < _settings.minCommitteeSize ||
-		committeeSize < _settings.maxCommitteeSize && isAboveCommitteeEntryThreshold(member, _settings)
-		)
+		committeeSize < _settings.maxCommitteeSize && (
+			member.data.weight > _settings.minimumWeight || member.data.weight == _settings.minimumWeight && (uint(member.addr) >= uint(_settings.minimumAddress))
+		))
 		);
 	}
 
 	function repositionParticipantAccordingToWeight(Participant[] memory members, uint pos) private pure {
-		while (pos < members.length - 1 && (members[pos].data.weight < members[pos + 1].data.weight || members[pos].data.weight == members[pos + 1].data.weight && uint(members[pos].addr) < uint(members[pos + 1].addr))) {
-			(members[pos], members[pos + 1]) = (members[pos + 1], members[pos]);
+		Participant memory p = members[pos];
+		uint addr = uint(p.addr);
+		uint128 weight = p.data.weight;
+		while (pos < members.length - 1 && (weight < members[pos + 1].data.weight || weight == members[pos + 1].data.weight && addr < uint(members[pos + 1].addr))) {
+			members[pos] = members[pos + 1];
 			pos++;
 		}
-		while (pos > 0 && (members[pos - 1].data.weight < members[pos].data.weight || members[pos - 1].data.weight == members[pos].data.weight && uint(members[pos - 1].addr) < uint(members[pos].addr))) {
-			(members[pos - 1], members[pos]) = (members[pos], members[pos - 1]);
+		while (pos > 0 && (members[pos - 1].data.weight < weight || members[pos - 1].data.weight == weight && uint(members[pos - 1].addr) < addr)) {
+			members[pos] = members[pos - 1];
 			pos--;
 		}
+		members[pos] = p;
 	}
+
+//	function repositionParticipantAccordingToWeight(Participant[] memory members, uint pos) private pure {
+//		while (pos < members.length - 1 && (members[pos].data.weight < members[pos + 1].data.weight || members[pos].data.weight == members[pos + 1].data.weight && uint(members[pos].addr) < uint(members[pos + 1].addr))) {
+//			(members[pos], members[pos + 1]) = (members[pos + 1], members[pos]);
+//			pos++;
+//		}
+//		while (pos > 0 && (members[pos - 1].data.weight < members[pos].data.weight || members[pos - 1].data.weight == members[pos].data.weight && uint(members[pos - 1].addr) < uint(members[pos].addr))) {
+//			(members[pos - 1], members[pos]) = (members[pos], members[pos - 1]);
+//			pos--;
+//		}
+//	}
+
 
 	struct UpdateVars {
 		uint maxPos;
 		Participant p;
 		uint128 minCommitteeWeight;
+		uint seenStandbys;
+		uint seenCommittee;
 	}
 	function updateOnMemberChange(Member memory member, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) { // TODO this is sometimes called with a member with address 0 indicating no member changed
 		committeeChanged = member.data.inCommittee;
 		standbysChanged = member.data.isStandby;
 
-		address[] memory _participants = participants;
-		Participant[] memory _members = loadParticipantsSortedByWeights(_participants, member); // override stored member with preloaded one
+		address[] memory _participants = participants; //25k
+		(Participant[] memory _members, Participant memory memberAsParticipant) = loadParticipantsSortedByWeights(_participants, member); // override stored member with preloaded one //70k
 
-		CommitteeInfo memory newCommitteeInfo = CommitteeInfo({
-			standbysCount: 0,
-			committeeSize: 0,
-			minCommitteeMemberAddress: address(-1),
-			committeeBitmap: 0,
-			weightSortIndicesBytes: 0
-			});
+		CommitteeInfo memory newCommitteeInfo;
+		newCommitteeInfo.minCommitteeMemberAddress = address(-1);
 
-		UpdateVars memory s = UpdateVars({
-			maxPos: 0,
-			p: Participant({
-				addr: member.addr,
-				data: member.data,
-				pos: 0
-				}),
-			minCommitteeWeight: uint128(-1)
-			});
-		for (uint pass = 0; pass < 2; pass++) {
-			uint seenStandbys;
-			uint seenCommittee;
-			for (uint i = 0; i < _members.length; i++) {
-				require(i == 0 || _members[i].data.weight <= _members[i-1].data.weight, "weights are not sorted");
-				bool shouldBeInCommittee;
-				bool shouldBeStandby;
+		uint gl01 = gasleft();
 
-				s.p = _members[i];
-				if (qualifiesForCommittee(Member({addr: s.p.addr, data: s.p.data}), _settings, seenCommittee)) {
-					shouldBeInCommittee = true;
-					seenCommittee++;
-					if (pass == 0) {
-						newCommitteeInfo.committeeBitmap = uint64(newCommitteeInfo.committeeBitmap | (1 << s.p.pos));
-						newCommitteeInfo.committeeSize++;
-						if (s.p.data.weight < s.minCommitteeWeight) {
-							s.minCommitteeWeight = s.p.data.weight;
-							newCommitteeInfo.minCommitteeMemberAddress = s.p.addr;
-						} else if (s.p.data.weight == s.minCommitteeWeight && uint(s.p.addr) < uint(newCommitteeInfo.minCommitteeMemberAddress)) {
-							newCommitteeInfo.minCommitteeMemberAddress = s.p.addr;
-						}
-					}
-				} else if (
-					seenStandbys < _settings.maxStandbys &&
-					qualifiesAsStandby(Member({addr: s.p.addr, data: s.p.data}))
+		UpdateVars memory s;
+		s.minCommitteeWeight = uint128(-1);
+		Participant memory p;
+		bool changed;
+		for (uint i = 0; i < _members.length; i++) { // first iteration: 29k
+			p = _members[i];
+			if (qualifiesForCommittee(p, _settings, newCommitteeInfo.committeeSize)) {
+				p.shouldBeInCommittee = true;
+				newCommitteeInfo.committeeSize++;
+				newCommitteeInfo.committeeBitmap |= uint64(1 << p.pos);
+				if (p.data.weight < s.minCommitteeWeight) {
+					s.minCommitteeWeight = p.data.weight;
+					newCommitteeInfo.minCommitteeMemberAddress = p.addr;
+				} else if (p.data.weight == s.minCommitteeWeight && uint(p.addr) < uint(newCommitteeInfo.minCommitteeMemberAddress)) {
+					newCommitteeInfo.minCommitteeMemberAddress = p.addr;
+				}
+			} else if (
+				newCommitteeInfo.standbysCount < _settings.maxStandbys &&
+				qualifiesAsStandby(p) &&
+				!isReadyToSyncStale(p.data.readyToSyncTimestamp, p.data.inCommittee, _settings)
+			) {
+				p.shouldBeStandby = true;
+				newCommitteeInfo.standbysCount++;
+			}
+		}
+// 		emit GasReport("updateOnMemberChange: first iteration", gl01 - gasleft());
+		gl01 = gasleft();
+		for (uint i = 0; i < _members.length; i++) { // second iteration: 11k
+			p = _members[i];
+			changed = false;
+			if (p.shouldBeStandby != p.data.isStandby) {
+				if (
+					!p.shouldBeInCommittee && !p.shouldBeStandby &&
+					newCommitteeInfo.standbysCount < _settings.maxStandbys &&
+					qualifiesAsStandby(p)
 				) {
-					if (!isReadyToSyncStale(s.p.data.readyToSyncTimestamp, s.p.data.inCommittee, _settings)) {
-						shouldBeStandby = true;
-						if (pass == 0) newCommitteeInfo.standbysCount++;
-					} else if (pass == 1 && newCommitteeInfo.standbysCount < _settings.maxStandbys) {
-						shouldBeStandby = true;
-						newCommitteeInfo.standbysCount++;
-					}
-					if (shouldBeStandby) seenStandbys++;
+					p.shouldBeStandby = true;
+					newCommitteeInfo.standbysCount++;
 				}
-
-				if (pass == 1) {
-					bool changed;
-					if (shouldBeStandby != s.p.data.isStandby) {
-						s.p.data.isStandby = shouldBeStandby;
-						if (shouldBeStandby && s.p.data.inCommittee) {
-							s.p.data.readyToSyncTimestamp = uint32(now);
-						}
-						changed = true;
-						standbysChanged = true;
+				if (p.shouldBeStandby != p.data.isStandby) {
+					p.data.isStandby = p.shouldBeStandby;
+					if (p.shouldBeStandby && p.data.inCommittee) {
+						p.data.readyToSyncTimestamp = uint32(now);
 					}
-					if (shouldBeInCommittee != s.p.data.inCommittee) {
-						s.p.data.inCommittee = shouldBeInCommittee;
-						changed = true;
-						committeeChanged = true;
-					}
-					if (changed) {
-						membersData[s.p.addr] = s.p.data;
-					}
-					if (!s.p.data.inCommittee && !s.p.data.isStandby) {
-						// no longer a participant
-						if (s.p.pos < _participants.length) {
-							participants[s.p.pos] = address(0);
-						}
-					} else {
-						newCommitteeInfo.weightSortIndicesBytes = (newCommitteeInfo.weightSortIndicesBytes << 8) | uint8(s.p.pos + 1);
-						if (_participants.length == s.p.pos || _participants[s.p.pos] != s.p.addr) { // new participant
-							if (_participants.length == s.p.pos) {
-								participants.length++;
-							}
-							participants[s.p.pos] = s.p.addr;
-						}
-						s.maxPos = Math.max(s.maxPos, s.p.pos);
-					}
+					changed = true;
+					standbysChanged = true;
 				}
+			}
+			if (p.shouldBeInCommittee != p.data.inCommittee) {
+				p.data.inCommittee = p.shouldBeInCommittee;
+				changed = true;
+				committeeChanged = true;
+			}
+			if (changed) {
+				membersData[p.addr] = p.data;
+			}
+			if (!p.data.inCommittee && !p.data.isStandby) {
+				// no longer a participant
+				if (p.pos < _participants.length) {
+					participants[p.pos] = address(0);
+				}
+			} else {
+				newCommitteeInfo.weightSortIndicesBytes = (newCommitteeInfo.weightSortIndicesBytes << 8) | uint8(p.pos + 1);
+				if (s.maxPos < p.pos) s.maxPos = p.pos;
 			}
 		}
 
+		// check if member is a new participant
+		if (
+			(memberAsParticipant.data.inCommittee || memberAsParticipant.data.isStandby) &&
+			(_participants.length == memberAsParticipant.pos || _participants[memberAsParticipant.pos] != memberAsParticipant.addr)
+		) {
+			if (_participants.length == memberAsParticipant.pos) {
+				participants.length++;
+				s.maxPos = memberAsParticipant.pos;
+			}
+			participants[memberAsParticipant.pos] = memberAsParticipant.addr;
+		}
 
+// 		emit GasReport("updateOnMemberChange: second iteration", gl01 - gasleft());
+
+		gl01 = gasleft();
 		if (_participants.length > s.maxPos + 1) {
 			participants.length = s.maxPos + 1;
 		}
+// 		emit GasReport("updateOnMemberChange: updating participants array length", gl01 - gasleft());
 
-		committeeInfo = newCommitteeInfo;
+		gl01 = gasleft();
+		committeeInfo = newCommitteeInfo; // todo check if changed before writing // 11k??
+// 		emit GasReport("updateOnMemberChange: saving committee info", gl01 - gasleft());
 
-		notifyChanges(_members, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged);
+		gl01 = gasleft();
+		notifyChanges(_members, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged); //130k
+ 		emit GasReport("updateOnMemberChange: notifications", gl01 - gasleft());
+
 	}
 
 	function notifyChanges(Participant[] memory members, uint committeeSize, uint standbysCount, bool committeeChanged, bool standbysChanged) private {
@@ -490,38 +506,49 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		if (standbysChanged) _notifyStandbysChanged(standbyAddrs, standbyWeights);
 	}
 
-	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private returns (Participant[] memory _participants) {
+	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private returns (Participant[] memory _participants, Participant memory memberAsParticipant) {
+//		uint gl01 = gasleft();
 		uint nParticipants;
-		bool foundMember;
+		bool foundMember = preloadedMember.data.inCommittee || preloadedMember.data.isStandby;
+		address addr;
 		uint firstFreeSlot = participantsAddrs.length;
-		for (uint i = 0; i < participantsAddrs.length; i++) {
-			if (participantsAddrs[i] != address(0)) {
+		for (uint i = 0; i < participantsAddrs.length; i++) { // this iteration takes 5k
+			addr = participantsAddrs[i];
+			if (addr != address(0)) {
 				nParticipants++;
-				if (participantsAddrs[i] == preloadedMember.addr) {
-					foundMember = true;
-				}
-			} else{
-				if (firstFreeSlot == participantsAddrs.length) {
-					firstFreeSlot = i;
-				}
+			} else if (firstFreeSlot == participantsAddrs.length) {
+				firstFreeSlot = i;
 			}
 		}
 		if (!foundMember) nParticipants++;
-
+// //		emit GasReport("loadParticipantsSortedByWeights: first iteration", gl01-gasleft());
+//
+//		gl01 = gasleft();
 		uint memberPos;
 		uint sortBytes = committeeInfo.weightSortIndicesBytes;
-		_participants = new Participant[](nParticipants);
+		_participants = new Participant[](nParticipants); //12k
 		uint pind = nParticipants - 1;
+		uint ind;
+// //		emit GasReport("loadParticipantsSortedByWeights: allocation", gl01-gasleft());
+//		gl01 = gasleft();
+//		uint tot=0;
+//		uint gl2;
+		Participant memory p;
 		while (sortBytes != 0) {
-			uint ind = uint(sortBytes & 0xFF) - 1;
+			ind = uint(sortBytes & 0xFF) - 1;
+			addr = participantsAddrs[ind];
 			sortBytes = sortBytes >> 8;
-			_participants[pind] = Participant({
-				addr: participantsAddrs[ind],
-				data: participantsAddrs[ind] == preloadedMember.addr ? preloadedMember.data : membersData[participantsAddrs[ind]], // load data unless overridden
-				pos: ind
-				});
-			if (participantsAddrs[ind] == preloadedMember.addr) {
+
+			// this assignment alone sums up to 40k
+			p = _participants[pind];
+			p.addr = addr;
+//			gl2 = gasleft();
+			p.data = addr == preloadedMember.addr ? preloadedMember.data : membersData[addr]; // load data unless overridden // 35k
+//			tot += gl2 - gasleft();
+			p.pos = ind;
+			if (addr == preloadedMember.addr) {
 				memberPos = pind;
+				memberAsParticipant = p;
 			}
 			pind--;
 		}
@@ -530,55 +557,104 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 			_participants[0] = Participant({
 				addr: preloadedMember.addr,
 				data: preloadedMember.data,
-				pos: firstFreeSlot
-				});
+				pos: firstFreeSlot,
+				shouldBeInCommittee: false,
+				shouldBeStandby: false
+			});
+			memberAsParticipant = _participants[0];
 			memberPos = 0; // todo redundant, already 0
 		}
+// //		emit GasReport("loadParticipantsSortedByWeights: second iteration", gl01-gasleft());
+//		gl01 = gasleft();
 
-		repositionParticipantAccordingToWeight(_participants, memberPos);
-	}
-
-	function compareMembersPerCommitteeCriteria(Member memory v1, Member memory v2, Settings memory _settings) private view returns (int) {
-		bool v1TimedOut = isReadyToSyncStale(v1.data.readyToSyncTimestamp, v1.data.inCommittee, _settings);
-		bool v2TimedOut = isReadyToSyncStale(v2.data.readyToSyncTimestamp, v2.data.inCommittee, _settings);
-
-		bool v1Qualified = qualifiesAsStandby(v1);
-		bool v2Qualified = qualifiesAsStandby(v2);
-
-		if (v1Qualified && !v2Qualified) return 1;
-		if (!v1Qualified && v2Qualified) return -1;
-
-		// v1Qualified == v2Qualified
-
-		if (v1.data.readyForCommittee && !v2.data.readyForCommittee) return 1;
-		if (!v1.data.readyForCommittee && v2.data.readyForCommittee) return -1;
-
-		// v1.data.readyForCommittee == !v2.data.readyForCommittee
-
-		if (!v1TimedOut && v2TimedOut) return 1;
-		if (v1TimedOut && !v2TimedOut) return -1;
-
-		// v1TimedOut == v2TimedOut
-
-		if (v1.data.weight > v2.data.weight) return 1;
-		if (v1.data.weight < v2.data.weight) return -1;
-
-		// v1.data.weight == v2.data.weight
-
-		if (uint256(v1.addr) > uint256(v2.addr)) return 1;
-		if (uint256(v1.addr) < uint256(v2.addr)) return -1;
-
-		// v1.addr == v2.addr
-
-		return 0;
+		repositionParticipantAccordingToWeight(_participants, memberPos); //15k
+// 		emit GasReport("loadParticipantsSortedByWeights: ind calc", tot);
+// 		emit GasReport("loadParticipantsSortedByWeights: reposition", gl01-gasleft());
 	}
 
 	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights) private {
-		emit StandbysChanged(addrs, _loadOrbsAddresses(addrs), weights);
+		emit StandbysChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights);
 	}
 
 	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights) private {
-		emit CommitteeChanged(addrs, _loadOrbsAddresses(addrs), weights);
+		emit CommitteeChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights);
 	}
+
+	function tf1(Participant memory p) private {
+		emit GasReport("dummy", p.pos);
+	}
+
+	function tf2(uint n) private {
+		emit GasReport("dummy", n);
+	}
+
+	struct AddrWeight {
+		address addr;
+		uint64 weight;
+	}
+	mapping (address => AddrWeight) tm;
+
+	function test() external {
+//		CommitteeInfo memory ci = committeeInfo;
+//		Settings memory _settings = settings;
+		uint gl01;
+		uint gl02;
+
+		gl01 = gasleft();
+		address[] memory _participants = participants;
+		emit GasReport("reading participants array", gl01 - gasleft());
+
+		gl01 = gasleft();
+		(Participant[] memory members,) = loadParticipantsSortedByWeights(_participants, NullMember());
+		gl02 = gasleft();
+		emit GasReport("loading participants", gl01 - gl02);
+
+		gl01 = gasleft();
+		Participant memory p = members[0];
+		gl02 = gasleft();
+		emit GasReport("reading participant to new local", gl01 - gl02);
+
+		gl01 = gasleft();
+		p = members[0];
+		gl02 = gasleft();
+		emit GasReport("reading participant to existing local", gl01 - gl02);
+
+		gl01 = gasleft();
+		tf1(p);
+		gl02 = gasleft();
+		emit GasReport("calling func with Participant", gl01 - gl02);
+
+		gl01 = gasleft();
+		Participant memory p2 = p;
+		gl02 = gasleft();
+		emit GasReport("copying from local to new local", gl01 - gl02);
+
+		Participant memory p3;
+
+		gl01 = gasleft();
+		p3 = p2;
+		gl02 = gasleft();
+		emit GasReport("copying from local to existing local", gl01 - gl02);
+
+		uint n = 3;
+		gl01 = gasleft();
+		tf2(n);
+		gl02 = gasleft();
+		emit GasReport("calling func with uint", gl01 - gl02);
+
+		MemberData memory md;
+		gl01 = gasleft();
+		md = membersData[msg.sender];
+		gl02 = gasleft();
+		emit GasReport("reading one member data", gl01 - gl02);
+
+		AddrWeight memory aw;
+		gl01 = gasleft();
+		aw = tm[msg.sender];
+		gl02 = gasleft();
+		emit GasReport("reading addr weight", gl01 - gl02);
+
+	}
+
 
 }

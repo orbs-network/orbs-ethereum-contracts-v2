@@ -12,7 +12,7 @@ import {
 import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime} from "./helpers";
-import {gasReportEvents} from "./event-parsing";
+import {gasReportEvents, gasReportEvents2} from "./event-parsing";
 
 declare const web3: Web3;
 
@@ -90,7 +90,7 @@ describe('gas usage scenarios', async () => {
             addrs: committee.map(v => v.address)
         });
 
-        const ge = gasReportEvents(r);
+        const ge = gasReportEvents(r).concat(gasReportEvents2(r));
         ge.forEach(e => console.log(JSON.stringify(e)));
 
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
