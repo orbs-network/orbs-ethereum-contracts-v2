@@ -905,7 +905,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake - 1, ZERO_ADDR, minCommitteeSize);
+        r = await d.committeeGeneral.setMinimumWeight(stake - 1, ZERO_ADDR, minCommitteeSize, false);
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -934,7 +934,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake + 1, ZERO_ADDR, minCommitteeSize);
+        r = await d.committeeGeneral.setMinimumWeight(stake + 1, ZERO_ADDR, minCommitteeSize, false);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -963,7 +963,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake - 2, ZERO_ADDR, minCommitteeSize);
+        r = await d.committeeGeneral.setMinimumWeight(stake - 2, ZERO_ADDR, minCommitteeSize, false);
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
     });
@@ -986,7 +986,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake, ZERO_ADDR, minCommitteeSize + 1);
+        r = await d.committeeGeneral.setMinimumWeight(stake, ZERO_ADDR, minCommitteeSize + 1, false);
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -1015,7 +1015,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(stake, ZERO_ADDR, minCommitteeSize - 1);
+        r = await d.committeeGeneral.setMinimumWeight(stake, ZERO_ADDR, minCommitteeSize - 1, false);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [],
             orbsAddrs: [],
@@ -1044,7 +1044,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
 
         await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committeeGeneral.setMinimumWeight(0, ZERO_ADDR, minCommitteeSize + 1);
+        r = await d.committeeGeneral.setMinimumWeight(0, ZERO_ADDR, minCommitteeSize + 1, false);
         expect(r).to.not.have.a.standbysChangedEvent();
         expect(r).to.not.have.a.committeeChangedEvent();
     });

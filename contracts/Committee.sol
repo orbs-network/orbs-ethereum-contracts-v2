@@ -47,9 +47,10 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	}
 	Settings settings;
 
+	uint256 weightSortIndicesBytes;
+
 	// Derived properties
 	struct CommitteeInfo {
-		uint256 weightSortIndicesBytes;
 		address minCommitteeMemberAddress;
 		uint64 committeeBitmap;
 		uint8 standbysCount;
@@ -383,11 +384,12 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		CommitteeInfo memory newCommitteeInfo;
 		newCommitteeInfo.minCommitteeMemberAddress = address(-1);
 
-		uint gl01 = gasleft();
+//		uint gl01 = gasleft();
 
 		UpdateVars memory s;
 		s.minCommitteeWeight = uint128(-1);
 		Participant memory p;
+		uint newWeightSortIndicesBytes;
 		bool changed;
 		for (uint i = 0; i < _members.length; i++) { // first iteration: 29k
 			p = _members[i];
@@ -411,7 +413,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 			}
 		}
 // 		emit GasReport("updateOnMemberChange: first iteration", gl01 - gasleft());
-		gl01 = gasleft();
+//		gl01 = gasleft();
 		for (uint i = 0; i < _members.length; i++) { // second iteration: 11k
 			p = _members[i];
 			changed = false;
@@ -447,7 +449,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 					participants[p.pos] = address(0);
 				}
 			} else {
-				newCommitteeInfo.weightSortIndicesBytes = (newCommitteeInfo.weightSortIndicesBytes << 8) | uint8(p.pos + 1);
+				newWeightSortIndicesBytes = (newWeightSortIndicesBytes << 8) | uint8(p.pos + 1);
 				if (s.maxPos < p.pos) s.maxPos = p.pos;
 			}
 		}
@@ -466,19 +468,20 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 // 		emit GasReport("updateOnMemberChange: second iteration", gl01 - gasleft());
 
-		gl01 = gasleft();
+//		gl01 = gasleft();
 		if (_participants.length > s.maxPos + 1) {
 			participants.length = s.maxPos + 1;
 		}
 // 		emit GasReport("updateOnMemberChange: updating participants array length", gl01 - gasleft());
 
-		gl01 = gasleft();
-		committeeInfo = newCommitteeInfo; // todo check if changed before writing // 11k??
+//		gl01 = gasleft();
+		weightSortIndicesBytes = newWeightSortIndicesBytes;
+		committeeInfo = newCommitteeInfo; // todo check if changed before writing
 // 		emit GasReport("updateOnMemberChange: saving committee info", gl01 - gasleft());
 
-		gl01 = gasleft();
+//		gl01 = gasleft();
 		notifyChanges(_members, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged); //130k
- 		emit GasReport("updateOnMemberChange: notifications", gl01 - gasleft());
+// 		emit GasReport("updateOnMemberChange: notifications", gl01 - gasleft());
 
 	}
 
@@ -507,7 +510,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	}
 
 	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private returns (Participant[] memory _participants, Participant memory memberAsParticipant) {
-//		uint gl01 = gasleft();
+		uint gl01 = gasleft();
 		uint nParticipants;
 		bool foundMember = preloadedMember.data.inCommittee || preloadedMember.data.isStandby;
 		address addr;
@@ -524,52 +527,61 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 // //		emit GasReport("loadParticipantsSortedByWeights: first iteration", gl01-gasleft());
 //
 //		gl01 = gasleft();
-		uint memberPos;
-		uint sortBytes = committeeInfo.weightSortIndicesBytes;
+		uint sortBytes = weightSortIndicesBytes;
 		_participants = new Participant[](nParticipants); //12k
 		uint pind = nParticipants - 1;
-		uint ind;
+		uint pos;
 // //		emit GasReport("loadParticipantsSortedByWeights: allocation", gl01-gasleft());
 //		gl01 = gasleft();
 //		uint tot=0;
 //		uint gl2;
 		Participant memory p;
+		MemberData memory md;
+		uint preloadedInd = uint(-1);
+		uint preloadedPos = uint(-1);
 		while (sortBytes != 0) {
-			ind = uint(sortBytes & 0xFF) - 1;
-			addr = participantsAddrs[ind];
-			sortBytes = sortBytes >> 8;
-
-			// this assignment alone sums up to 40k
-			p = _participants[pind];
-			p.addr = addr;
-//			gl2 = gasleft();
-			p.data = addr == preloadedMember.addr ? preloadedMember.data : membersData[addr]; // load data unless overridden // 35k
-//			tot += gl2 - gasleft();
-			p.pos = ind;
-			if (addr == preloadedMember.addr) {
-				memberPos = pind;
-				memberAsParticipant = p;
+			pos = uint(sortBytes & 0xFF) - 1;
+			addr = participantsAddrs[pos];
+			if (addr != preloadedMember.addr) {
+				md = membersData[addr];
+				if (
+					preloadedInd == uint(-1) && (
+					md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr)))
+				) {
+					p = _participants[pind];
+					p.addr = preloadedMember.addr;
+					p.data = preloadedMember.data;
+					preloadedInd = pind;
+					memberAsParticipant = p;
+					require(pind != 0, "pind == 0 bbb");
+					pind--;
+				}
+				p = _participants[pind];
+				p.addr = addr;
+				p.data = md;
+				p.pos = pos;
+				pind--;
+			} else {
+				preloadedPos = pos;
 			}
-			pind--;
+			sortBytes = sortBytes >> 8;
 		}
 
-		if (!foundMember) {
-			_participants[0] = Participant({
-				addr: preloadedMember.addr,
-				data: preloadedMember.data,
-				pos: firstFreeSlot,
-				shouldBeInCommittee: false,
-				shouldBeStandby: false
-			});
-			memberAsParticipant = _participants[0];
-			memberPos = 0; // todo redundant, already 0
+		if (preloadedInd == uint(-1)) {
+			require(pind != uint(-1), "pind expected to not be -1");
+			require(pind == 0, "pind expected to be 0");
+			preloadedInd = pind;
+			p = _participants[preloadedInd];
+			p.addr = preloadedMember.addr;
+			p.data = preloadedMember.data;
+			memberAsParticipant = p;
 		}
-// //		emit GasReport("loadParticipantsSortedByWeights: second iteration", gl01-gasleft());
-//		gl01 = gasleft();
-
-		repositionParticipantAccordingToWeight(_participants, memberPos); //15k
-// 		emit GasReport("loadParticipantsSortedByWeights: ind calc", tot);
-// 		emit GasReport("loadParticipantsSortedByWeights: reposition", gl01-gasleft());
+		if (preloadedPos != uint(-1)) {
+			_participants[preloadedInd].pos = preloadedPos;
+		} else {
+			_participants[preloadedInd].pos = firstFreeSlot;
+		}
+		emit GasReport("loadParticipants - all", gl01 - gasleft());
 	}
 
 	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights) private {

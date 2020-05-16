@@ -378,15 +378,15 @@ contract Elections is IElections, IStakeChangeNotifier, ContractRegistryAccessor
 		totalGovernanceStake = totalGovernanceStake.sub(prevGovStake).add(currentGovStake);
 
 		emit StakeChanged(addr, ownStakes[addr], newStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
-		uint gl01 = gasleft();
+//		uint gl01 = gasleft();
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
 		getComplianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		getComplianceCommitteeContract().flush();
-		uint gl02 = gasleft();
-		emit GasReport("committee calls: all", gl01-gasleft());
+//		uint gl02 = gasleft();
+//		emit GasReport("committee calls: all", gl01-gasleft());
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
