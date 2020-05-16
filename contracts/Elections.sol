@@ -289,13 +289,22 @@ contract Elections is IElections, ContractRegistryAccessor {
 		require(stakeOwners.length == delegatees.length, "arrays must be of same length");
 		require(stakeOwners.length == prevGovStakeDelegatees.length, "arrays must be of same length");
 
-		for (uint i = 0; i < stakeOwners.length; i++) {
-
-			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
-			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
-
-			_applyStakesToBanningBy(stakeOwners[i], prevGovStakeOwners[i]); // totalGovernanceStake must be updated by now
-			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]); // totalGovernanceStake must be updated by now
+		address curDelegatee;
+		uint totalNewUncapped;
+		for (uint i = 0; i < stakeOwners.length + 1; i++) {
+			if (i == stakeOwners.length || delegatees[i] != curDelegatee) {
+				if (curDelegatee != address(0)) {
+					// this mimics notifyStakeChange
+					_applyDelegatedStake(curDelegatee, totalNewUncapped);
+					_applyStakesToBanningBy(curDelegatee, prevGovStakeDelegatees[i - 1]); // totalGovernanceStake must be updated by now
+				}
+				if (i == stakeOwners.length) {
+					break;
+				}
+				curDelegatee = delegatees[i];
+				totalNewUncapped = 0;
+			}
+			totalNewUncapped += newUncappedStakes[i];
 		}
 	}
 
