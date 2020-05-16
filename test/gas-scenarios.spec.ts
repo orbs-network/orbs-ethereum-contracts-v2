@@ -3,8 +3,6 @@ import Web3 from "web3";
 import BN from "bn.js";
 import * as _ from "lodash";
 import {
-    COMPLIANCE_TYPE_COMPLIANCE,
-    COMPLIANCE_TYPE_GENERAL,
     defaultDriverOptions,
     Driver,
     Participant
@@ -64,8 +62,8 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     const appOwner = d.newParticipant();
 
     for (let i = 0; i < numVCs; i++) {
-        await createVC(d, COMPLIANCE_TYPE_GENERAL, subs, monthlyRate, appOwner);
-        await createVC(d, COMPLIANCE_TYPE_COMPLIANCE, subs, monthlyRate, appOwner);
+        await createVC(d, false, subs, monthlyRate, appOwner);
+        await createVC(d, true, subs, monthlyRate, appOwner);
     }
     tlog("VCs created - done init");
 
@@ -354,6 +352,11 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         await d.stakingRewards.distributeOrbsTokenRewards(
+            balance.div(bn(batchSize)).mul(bn(batchSize)),
+            0,
+            100,
+            1,
+            0,
             delegators.map(delegator => delegator.address),
             delegators.map(() => balance.div(bn(batchSize)))
             , {from: committee[0].address});

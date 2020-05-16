@@ -22,14 +22,14 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor {
         monthlyRate = _monthlyRate;
     }
 
-    function createVC(uint256 amount, string calldata compliance, string calldata deploymentSubset) external {
+    function createVC(uint256 amount, bool isCompliant, string calldata deploymentSubset) external {
         require(amount > 0, "must include funds");
 
         ISubscriptions subs = getSubscriptionsContract();
 
         // TODO TBD subs has to trust this contract to transfer the funds. alternatively, transfer to this account and then approve subs to pull same amount.
         require(erc20.transferFrom(msg.sender, address(subs), amount), "failed to transfer subscription fees");
-        subs.createVC(tier, monthlyRate, amount, msg.sender, compliance, deploymentSubset);
+        subs.createVC(tier, monthlyRate, amount, msg.sender, isCompliant, deploymentSubset);
     }
 
     function extendSubscription(uint256 vcid, uint256 amount) external {

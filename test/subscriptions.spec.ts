@@ -24,7 +24,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
     await d.erc20.approve(subscriber.address, firstPayment, {from: appOwner.address});
 
-    let r = await subscriber.createVC(firstPayment, "General", "main",  {from: appOwner.address});
+    let r = await subscriber.createVC(firstPayment, false, "main",  {from: appOwner.address});
 
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
@@ -85,7 +85,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
     await d.erc20.approve(subscriber.address, firstPayment, {from: appOwner.address});
 
-    let r = await subscriber.createVC(firstPayment, "Compliance", "main",  {from: appOwner.address});
+    let r = await subscriber.createVC(firstPayment, true, "main",  {from: appOwner.address});
 
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
@@ -155,11 +155,11 @@ describe('subscriptions-high-level-flows', async () => {
     const amount = 10;
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, "General", "main",  {from: owner.address});
+    let r = await subs.createVC(amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    r = await subs.createVC(amount, "General", "main",  {from: owner.address});
+    r = await subs.createVC(amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
   });
 
@@ -171,7 +171,7 @@ describe('subscriptions-high-level-flows', async () => {
     const amount = 10;
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, "General", "main",  {from: owner.address});
+    let r = await subs.createVC(amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
     const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
 
@@ -228,7 +228,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     const amount = 10;
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, "General", "main", {from: owner.address});
+    let r = await subs.createVC(amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
     const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
     expect(r).to.have.a.vcCreatedEvent({

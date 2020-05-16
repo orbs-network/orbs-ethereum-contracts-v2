@@ -5,6 +5,7 @@ chai.use(require('chai-bn')(BN));
 export const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 import { ElectionsContract } from "../typings/elections-contract";
+import { DelegationsContract } from "../typings/delegations-contract";
 import { ERC20Contract } from "../typings/erc20-contract";
 import { StakingContract } from "../typings/staking-contract";
 import { MonthlySubscriptionPlanContract } from "../typings/monthly-subscription-plan-contract";
@@ -16,12 +17,11 @@ import {ValidatorsRegistrationContract} from "../typings/validator-registration-
 import {ComplianceContract} from "../typings/compliance-contract";
 import {TransactionReceipt} from "web3-core";
 import {GasRecorder} from "../gas-recorder";
+import {stakedEvents} from "./event-parsing";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
-export const COMPLIANCE_TYPE_GENERAL = "General";
-export const COMPLIANCE_TYPE_COMPLIANCE = "Compliance";
 
 export type DriverOptions = {
     minCommitteeSize: number,
@@ -60,6 +60,7 @@ export class Driver {
         public erc20: Contracts["TestingERC20"],
         public externalToken: Contracts["TestingERC20"],
         public staking: Contracts["StakingContract"],
+        public delegations: Contracts["Delegations"],
         public subscriptions: Contracts["Subscriptions"],
         public bootstrapRewards: Contracts["BootstrapRewards"],
         public stakingRewards: Contracts["StakingRewards"],
@@ -89,8 +90,9 @@ export class Driver {
         const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]], null, session);
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]], null, session);
         const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
+        const delegations = await web3.deploy( "Delegations", [], null, session);
         const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
-        const staking = await Driver.newStakingContract(web3, elections.address, erc20.address, session);
+        const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
@@ -102,6 +104,7 @@ export class Driver {
         await contractRegistry.set("bootstrapRewards", bootstrapRewards.address);
         await contractRegistry.set("stakingRewards", stakingRewards.address);
         await contractRegistry.set("fees", fees.address);
+        await contractRegistry.set("delegations", delegations.address);
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
@@ -110,6 +113,7 @@ export class Driver {
         await contractRegistry.set("committee-general", committeeGeneral.address);
         await contractRegistry.set("committee-compliance", committeeCompliance.address);
 
+        await delegations.setContractRegistry(contractRegistry.address);
         await elections.setContractRegistry(contractRegistry.address);
         await bootstrapRewards.setContractRegistry(contractRegistry.address);
         await stakingRewards.setContractRegistry(contractRegistry.address);
@@ -128,6 +132,7 @@ export class Driver {
             erc20,
             externalToken,
             staking,
+            delegations,
             subscriptions,
             bootstrapRewards,
             stakingRewards,
@@ -145,10 +150,14 @@ export class Driver {
         return await this.web3.deploy('ContractRegistry', [governorAddr],{from: this.accounts[0]}, this.session) as ContractRegistryContract;
     }
 
-    static async newStakingContract(web3: Web3Driver, electionsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
+    async newStakingContract(delegationsAddr: string, erc20Addr: string): Promise<StakingContract> {
+        return await Driver.newStakingContract(this.web3, delegationsAddr, erc20Addr, this.session);
+    }
+
+    static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
         const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[0] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
-        await staking.setStakeChangeNotifier(electionsAddr, {from: accounts[0]});
+        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[0]});
         return staking;
     }
 
@@ -222,6 +231,7 @@ export class Participant {
     private externalToken: ERC20Contract;
     private staking: StakingContract;
     private elections: ElectionsContract;
+    private delegations: DelegationsContract;
     private validatorsRegistration: ValidatorsRegistrationContract;
     private compliance: ComplianceContract;
     private gasRecorder: GasRecorder;
@@ -238,6 +248,7 @@ export class Participant {
         this.externalToken = driver.externalToken;
         this.staking = driver.staking;
         this.elections = driver.elections;
+        this.delegations = driver.delegations;
         this.validatorsRegistration = driver.validatorsRegistration;
         this.compliance = driver.compliance;
         this.gasRecorder = driver.session.gasRecorder;
@@ -267,7 +278,7 @@ export class Participant {
     }
 
     async delegate(to: Participant) {
-        return this.elections.delegate(to.address, {from: this.address});
+        return this.delegations.delegate(to.address, {from: this.address});
     }
 
     async registerAsValidator() {
@@ -282,21 +293,20 @@ export class Participant {
         return await this.elections.notifyReadyToSync({from: this.orbsAddress});
     }
 
-    async becomeComplianceType() {
-        return await this.compliance.setValidatorCompliance(this.address, COMPLIANCE_TYPE_COMPLIANCE);
+    async becomeCompliant() {
+        return await this.compliance.setValidatorCompliance(this.address, true);
     }
 
-    async becomeGeneralType() {
-        return await this.compliance.setValidatorCompliance(this.address, COMPLIANCE_TYPE_GENERAL);
+    async becomeNotCompliant() {
+        return await this.compliance.setValidatorCompliance(this.address, false);
     }
 
-    async becomeValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
-        let r;
+    async becomeValidator(stake: number, compliant: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
         await this.registerAsValidator();
-        if (compliance) {
-            await this.becomeComplianceType();
+        if (compliant) {
+            await this.becomeCompliant();
         }
-        r = await this.stake(stake);
+        let r = await this.stake(stake);
         if (signalReadyToSync) {
             r = await this.notifyReadyToSync();
         }

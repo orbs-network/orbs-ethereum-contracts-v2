@@ -10,6 +10,9 @@ interface IProtocol {
     /// @dev returns true if the given deployment subset exists (i.e - is registered with a protocol version)
     function deploymentSubsetExists(string calldata deploymentSubset) external view returns (bool);
 
+    /// @dev returns the current protocol version for the given deployment subset.
+    function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256);
+
     /*
      *   Governor methods
      */

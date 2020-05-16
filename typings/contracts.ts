@@ -9,9 +9,10 @@ import { ProtocolContract } from "./protocol-contract";
 import { StakingContract } from "./staking-contract";
 import { MonthlySubscriptionPlanContract } from "./monthly-subscription-plan-contract";
 import { Contract } from "../eth";
-import {ValidatorsRegistrationContract} from "./validator-registration-contract";
-import {CommitteeContract} from "./committee-contract";
-import {ComplianceContract} from "./compliance-contract";
+import { ValidatorsRegistrationContract } from "./validator-registration-contract";
+import { CommitteeContract } from "./committee-contract";
+import { ComplianceContract } from "./compliance-contract";
+import { DelegationsContract } from "./delegations-contract";
 
 /**
  * Dictionary type
@@ -31,4 +32,5 @@ export type Contracts = {
     Compliance: ComplianceContract & Contract;
     ValidatorsRegistration: ValidatorsRegistrationContract & Contract;
     Committee: CommitteeContract & Contract;
+    Delegations: DelegationsContract & Contract;
 }

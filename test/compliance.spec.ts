@@ -1,12 +1,8 @@
 import 'mocha';
 
-import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, COMPLIANCE_TYPE_GENERAL, COMPLIANCE_TYPE_COMPLIANCE} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN} from "./driver";
 import chai from "chai";
-import {bn, evmIncreaseTime} from "./helpers";
-import {TransactionReceipt} from "web3-core";
-import {Web3Driver} from "../eth";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -23,30 +19,30 @@ describe('compliance-contract', async () => {
         const v1 = d.newParticipant();
 
         // Get default
-        const defaultCompliance = await d.compliance.getValidatorCompliance(v1.address);
-        expect(defaultCompliance).to.equal(COMPLIANCE_TYPE_GENERAL);
+        const defaultCompliance = await d.compliance.isValidatorCompliant(v1.address);
+        expect(defaultCompliance).to.equal(false);
 
         // Set
-        let r = await d.compliance.setValidatorCompliance(v1.address, COMPLIANCE_TYPE_COMPLIANCE);
+        let r = await d.compliance.setValidatorCompliance(v1.address, true);
         expect(r).to.have.a.validatorComplianceUpdateEvent({
             validator: v1.address,
-            complianceType: COMPLIANCE_TYPE_COMPLIANCE
+            isCompliant: true
         });
 
         // Get after set
-        let currentCompliance = await d.compliance.getValidatorCompliance(v1.address);
-        expect(currentCompliance).to.equal(COMPLIANCE_TYPE_COMPLIANCE);
+        let currentCompliance = await d.compliance.isValidatorCompliant(v1.address);
+        expect(currentCompliance).to.equal(true);
 
         // Update
-        r = await d.compliance.setValidatorCompliance(v1.address, COMPLIANCE_TYPE_GENERAL);
+        r = await d.compliance.setValidatorCompliance(v1.address, false);
         expect(r).to.have.a.validatorComplianceUpdateEvent({
             validator: v1.address,
-            complianceType: COMPLIANCE_TYPE_GENERAL
+            isCompliant: false
         });
 
         // Get after update
-        currentCompliance = await d.compliance.getValidatorCompliance(v1.address);
-        expect(currentCompliance).to.equal(COMPLIANCE_TYPE_GENERAL);
+        currentCompliance = await d.compliance.isValidatorCompliant(v1.address);
+        expect(currentCompliance).to.equal(false);
 
     })
 
