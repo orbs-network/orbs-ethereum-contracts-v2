@@ -60,12 +60,15 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     function assignRewards() external {
         _assignRewards();
     }
+    event GasReport(string label, uint gas);
 
     function _assignRewards() private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
+		uint gl01 = gasleft();
         (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee();
+ 		emit GasReport("StakingRewards: calling getCommittee", gl01-gasleft());
 
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;

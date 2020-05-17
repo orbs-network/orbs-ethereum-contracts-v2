@@ -62,3 +62,4 @@ export const validatorComplianceUpdateEvents = (txResult, contractAddress?: stri
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "GasReport(string,uint256)", contractAddress);
 export const gasReportEvents2 = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);
+export const gasReportEvents3 = (txResult, contractAddress?: string) => parseLogs(txResult, stakingRewards, "GasReport(string,uint256)", contractAddress);

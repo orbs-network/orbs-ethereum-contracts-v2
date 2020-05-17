@@ -291,18 +291,20 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 		address curDelegatee;
 		uint totalNewUncapped;
+		uint prevGovStake;
 		for (uint i = 0; i < stakeOwners.length + 1; i++) {
 			if (i == stakeOwners.length || delegatees[i] != curDelegatee) {
 				if (curDelegatee != address(0)) {
 					// this mimics notifyStakeChange
 					_applyDelegatedStake(curDelegatee, totalNewUncapped);
-					_applyStakesToBanningBy(curDelegatee, prevGovStakeDelegatees[i - 1]); // totalGovernanceStake must be updated by now
+					_applyStakesToBanningBy(curDelegatee, prevGovStake); // totalGovernanceStake must be updated by now // TODO check prevGovStake is correct
 				}
 				if (i == stakeOwners.length) {
 					break;
 				}
 				curDelegatee = delegatees[i];
 				totalNewUncapped = 0;
+				prevGovStake = prevGovStakeOwners[i];
 			}
 			totalNewUncapped += newUncappedStakes[i];
 		}
@@ -319,24 +321,30 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO newStake is getUncappedStakes(addr) at this point. governance and committee "effective" stakes can also be passed into this method, or alternately, use a getter for newStake also
 		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
 
+		uint gl01 = gasleft();
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		emit GasReport("committee call (1)", gl01-gasleft());
 		if (committeeChanged) {
 			updateComplianceCommitteeMinimumWeight();
 		}
+		gl01 = gasleft();
 		getComplianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		emit GasReport("committee call (3)", gl01-gasleft());
+
+		gl01 = gasleft();
 		getComplianceCommitteeContract().flush();
+		emit GasReport("committee call (4)", gl01-gasleft());
 //		uint gl02 = gasleft();
 //		emit GasReport("committee calls: all", gl01-gasleft());
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
 		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
-		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v; // TODO optimized three sequential calls to delegations in this function
-		if (!isSelfDelegating || ownStake == 0) {
+		if (ownStake == 0) {
 			return 0;
 		}
 
-		uint256 uncappedStake = getUncappedStakes(v);
+		uint256 uncappedStake = getGovernanceEffectiveStake(v);
 		uint256 maxRatio = maxDelegationRatio;
 		if (uncappedStake.div(ownStake) < maxRatio) {
 			return uncappedStake;
@@ -376,7 +384,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function updateComplianceCommitteeMinimumWeight() private {
 		address lowestMember = getGeneralCommitteeContract().getLowestCommitteeMember();
 		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
+		uint gl01 = gasleft();
 		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize, true);
+		emit GasReport("committee call (2)", gl01-gasleft());
 	}
 
 	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
