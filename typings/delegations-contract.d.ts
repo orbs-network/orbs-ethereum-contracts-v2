@@ -25,5 +25,7 @@ export interface DelegatedStakeChangedEvent {
   addr: string;
   selfStake: BN;
   delegatedStake: BN;
+  delegators: string[];
+  delegatorTotalStakes: BN[];
 }
 

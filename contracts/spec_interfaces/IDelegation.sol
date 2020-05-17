@@ -5,10 +5,10 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface IDelegations /* is IStakeChangeNotifier */ {
     // Delegation state change events
-    event DelegatedStakeChanged(address addr, uint256 selfStake, uint256 delegatedStake);
+	event DelegatedStakeChanged(address indexed addr, uint256 selfStake, uint256 delegatedStake, address[] delegators, uint256[] delegatorTotalStakes);
 
     // Function calls
-	event Delegated(address from, address to);
+	event Delegated(address indexed from, address indexed to);
 
 	/*
      * External methods

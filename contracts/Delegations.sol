@@ -51,21 +51,74 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
     	getElectionsContract().notifyDelegationChange(to, prevDelegatee, newStakePrevDelegatee, newStakeNewDelegatee, prevGovStakePrevDelegatee, prevGovStakeNewDelegatee);
 
 		emit Delegated(msg.sender, to);
+		emitDelegatedStakeChanged(prevDelegatee, msg.sender, delegatorStake);
+		if (prevDelegatee != to) {
+			emitDelegatedStakeChanged(to, msg.sender, delegatorStake);
+		}
 	}
 
-	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 /* _updatedStake */) external onlyStakingContract {
+	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract {
 		_stakeChange(_stakeOwner, _amount, _sign);
-		//TODO? emit DelegatedStakeChanged(address addr, uint256 selfSstake, uint256 delegatedStake);
+		emitDelegatedStakeChanged(getDelegation(_stakeOwner), _stakeOwner, _updatedStake);
+	}
+
+	function emitDelegatedStakeChanged(address _delegate, address delegator, uint256 delegatorStake) private {
+		uint256 delegateSelfBalance = getStakingContract().getStakeBalanceOf(_delegate);
+		address[] memory delegators = new address[](1);
+		uint256[] memory delegatorTotalStakes = new uint256[](1);
+		delegators[0] = delegator;
+		delegatorTotalStakes[0] = delegatorStake;
+		emit DelegatedStakeChanged(_delegate, delegateSelfBalance, uncappedStakes[_delegate], delegators, delegatorTotalStakes);
+	}
+
+	function emitDelegatedStakeChanged(address[] memory delegators, uint256[] memory delegatorsStakes) private {
+		uint delegatorsLength = delegators.length;
+
+		address streakDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
+		uint streakStartIdx = 0;
+
+		for (uint i = 1; i <= delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
+
+			bool closingIteration = i == delegatorsLength;
+			if (!closingIteration && getDelegation(delegators[i]) == streakDelegate) {
+				continue; // delegate streak continues
+			}
+
+			// end of delegate streak - emit event
+			uint sliceLen =  i - streakStartIdx;
+			address[] memory delegatorsSlice = new address[](sliceLen);
+			uint256[] memory delegatorTotalStakesSlice = new uint256[](sliceLen);
+			for (uint j = 0; j < sliceLen; j++) {
+				delegatorsSlice[j] = delegators[j + streakStartIdx];
+				delegatorTotalStakesSlice[j] = delegatorsStakes[j + streakStartIdx];
+			}
+			emit DelegatedStakeChanged(
+				streakDelegate,
+				getStakingContract().getStakeBalanceOf(streakDelegate),
+				uncappedStakes[streakDelegate],
+				delegatorsSlice,
+				delegatorTotalStakesSlice
+			);
+
+			// reset vars for next streak
+			if (!closingIteration) {
+				streakDelegate = getDelegation(delegators[i]);
+				streakStartIdx = i;
+			}
+		}
 	}
 
 	// TODO add testing to this method - not sure a "late" notification will not break assumptions in Elections contract
 	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract {
-		require(_stakeOwners.length == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
-		require(_stakeOwners.length == _signs.length, "_stakeOwners, _signs - array length mismatch");
-		require(_stakeOwners.length == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
+		uint batchLength = _stakeOwners.length;
+		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
+		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
+		require(batchLength == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
 
 		_stakeChangeBatch(_stakeOwners, _amounts, _signs);
-		//TODO? emit DelegatedStakeChanged(address addr, uint256 selfSstake, uint256 delegatedStake);
+
+		emitDelegatedStakeChanged(_stakeOwners, _updatedStakes);
+
 	}
 
 	function getDelegation(address addr) public view returns (address) {
