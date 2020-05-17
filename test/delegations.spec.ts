@@ -50,7 +50,7 @@ describe('delegations-contract', async () => {
         // await d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: stakingAddr});
     });
 
-    it.only('emits DelegatedStakeChanged and Delegated on delegation changes - non batch', async () => {
+    it('emits DelegatedStakeChanged and Delegated on delegation changes', async () => {
         const d = await Driver.new();
 
         const p1 = d.newParticipant();
@@ -134,6 +134,21 @@ describe('delegations-contract', async () => {
             delegatedStake: bn(500),
             delegators: [p4.address],
             delegatorTotalStakes: [bn(500)]
+        });
+
+        await d.erc20.assign(d.accounts[0], 300);
+        await d.erc20.approve(d.staking.address, 300, {from: d.accounts[0]});
+        r = await d.staking.distributeRewards(
+            300,
+            [p1.address, p2.address, p3.address],
+            [100,100,100]
+        );
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p1.address,
+            selfStake: bn(300),
+            delegatedStake: bn(1211),
+            delegators: [p1.address, p2.address, p3.address],
+            delegatorTotalStakes: [bn(300), bn(411), bn(500)]
         });
 
     });

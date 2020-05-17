@@ -31,28 +31,28 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	function delegate(address to) external {
-		address prevDelegatee = getDelegation(msg.sender);
+		address prevDelegate = getDelegation(msg.sender);
 
-		uint256 prevGovStakePrevDelegatee = getGovernanceEffectiveStake(prevDelegatee);
-		uint256 prevGovStakeNewDelegatee = getGovernanceEffectiveStake(to);
+		uint256 prevGovStakePrevDelegate = getGovernanceEffectiveStake(prevDelegate);
+		uint256 prevGovStakeNewDelegate = getGovernanceEffectiveStake(to);
 
 		delegations[msg.sender] = to; // delegation!
 
 		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(msg.sender);
 
-		uint256 newStakePrevDelegatee = uncappedStakes[prevDelegatee].sub(delegatorStake);
-		uncappedStakes[prevDelegatee] = newStakePrevDelegatee;
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakePrevDelegatee).add(getGovernanceEffectiveStake(prevDelegatee));
+		uint256 newStakePrevDelegate = uncappedStakes[prevDelegate].sub(delegatorStake);
+		uncappedStakes[prevDelegate] = newStakePrevDelegate;
+		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakePrevDelegate).add(getGovernanceEffectiveStake(prevDelegate));
 
-		uint256 newStakeNewDelegatee = uncappedStakes[to].add(delegatorStake);
-		uncappedStakes[to] = newStakeNewDelegatee;
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeNewDelegatee).add(getGovernanceEffectiveStake(to));
+		uint256 newStakeNewDelegate = uncappedStakes[to].add(delegatorStake);
+		uncappedStakes[to] = newStakeNewDelegate;
+		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeNewDelegate).add(getGovernanceEffectiveStake(to));
 
-    	getElectionsContract().notifyDelegationChange(to, prevDelegatee, newStakePrevDelegatee, newStakeNewDelegatee, prevGovStakePrevDelegatee, prevGovStakeNewDelegatee);
+    	getElectionsContract().notifyDelegationChange(to, prevDelegate, newStakePrevDelegate, newStakeNewDelegate, prevGovStakePrevDelegate, prevGovStakeNewDelegate);
 
 		emit Delegated(msg.sender, to);
-		emitDelegatedStakeChanged(prevDelegatee, msg.sender, delegatorStake);
-		if (prevDelegatee != to) {
+		emitDelegatedStakeChanged(prevDelegate, msg.sender, delegatorStake);
+		if (prevDelegate != to) {
 			emitDelegatedStakeChanged(to, msg.sender, delegatorStake);
 		}
 	}
@@ -71,40 +71,47 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit DelegatedStakeChanged(_delegate, delegateSelfBalance, uncappedStakes[_delegate], delegators, delegatorTotalStakes);
 	}
 
-	function emitDelegatedStakeChanged(address[] memory delegators, uint256[] memory delegatorsStakes) private {
+	function emitDelegatedStakeChangedSlice(address commonDelegate, address[] memory delegators, uint256[] memory delegatorsStakes, uint startIdx, uint sliceLen) private {
+
+		address[] memory delegatorsSlice = new address[](sliceLen);
+		uint256[] memory delegatorTotalStakesSlice = new uint256[](sliceLen);
+		for (uint j = 0; j < sliceLen; j++) {
+			delegatorsSlice[j] = delegators[j + startIdx];
+			delegatorTotalStakesSlice[j] = delegatorsStakes[j + startIdx];
+		}
+		emit DelegatedStakeChanged(
+			commonDelegate,
+			getStakingContract().getStakeBalanceOf(commonDelegate),
+			uncappedStakes[commonDelegate],
+			delegatorsSlice,
+			delegatorTotalStakesSlice
+		);
+	}
+
+	function emitDelegatedStakeChangedBatch(address[] memory delegators, uint256[] memory delegatorsStakes) private {
 		uint delegatorsLength = delegators.length;
 
 		address streakDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
 		uint streakStartIdx = 0;
 
-		for (uint i = 1; i <= delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
+		for (uint i = 1; i < delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
+			address currentDelegate = getDelegation(delegators[i]);
 
-			bool closingIteration = i == delegatorsLength;
-			if (!closingIteration && getDelegation(delegators[i]) == streakDelegate) {
+			if (currentDelegate == streakDelegate) {
 				continue; // delegate streak continues
 			}
 
-			// end of delegate streak - emit event
-			uint sliceLen =  i - streakStartIdx;
-			address[] memory delegatorsSlice = new address[](sliceLen);
-			uint256[] memory delegatorTotalStakesSlice = new uint256[](sliceLen);
-			for (uint j = 0; j < sliceLen; j++) {
-				delegatorsSlice[j] = delegators[j + streakStartIdx];
-				delegatorTotalStakesSlice[j] = delegatorsStakes[j + streakStartIdx];
-			}
-			emit DelegatedStakeChanged(
-				streakDelegate,
-				getStakingContract().getStakeBalanceOf(streakDelegate),
-				uncappedStakes[streakDelegate],
-				delegatorsSlice,
-				delegatorTotalStakesSlice
-			);
+			// end of common delegate streak - emit event
+			emitDelegatedStakeChangedSlice(streakDelegate, delegators, delegatorsStakes, streakStartIdx, i - streakStartIdx);
 
 			// reset vars for next streak
-			if (!closingIteration) {
-				streakDelegate = getDelegation(delegators[i]);
-				streakStartIdx = i;
-			}
+			streakDelegate = currentDelegate;
+			streakStartIdx = i;
+		}
+
+		// final streak
+		if (delegatorsLength > 0) {
+			emitDelegatedStakeChangedSlice(streakDelegate, delegators, delegatorsStakes, streakStartIdx, delegatorsLength - streakStartIdx);
 		}
 	}
 
@@ -117,7 +124,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		_stakeChangeBatch(_stakeOwners, _amounts, _signs);
 
-		emitDelegatedStakeChanged(_stakeOwners, _updatedStakes);
+		emitDelegatedStakeChangedBatch(_stakeOwners, _updatedStakes);
 
 	}
 
@@ -131,38 +138,38 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private {
 		uint256[] memory newUncappedStakes = new uint256[](_stakeOwners.length);
 		uint256[] memory  prevGovStakeOwners = new uint256[](_stakeOwners.length);
-		address[] memory  delegatees = new address[](_stakeOwners.length);
-		uint256[] memory  prevGovStakeDelegatees = new uint256[](_stakeOwners.length);
+		address[] memory  delegates = new address[](_stakeOwners.length);
+		uint256[] memory  prevGovStakeDelegates = new uint256[](_stakeOwners.length);
 
 		for (uint i = 0; i < _stakeOwners.length; i++) {
-			(newUncappedStakes[i], prevGovStakeOwners[i], delegatees[i], prevGovStakeDelegatees[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
+			(newUncappedStakes[i], prevGovStakeOwners[i], delegates[i], prevGovStakeDelegates[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
 		}
 
-		getElectionsContract().notifyStakeChangeBatch(_stakeOwners, newUncappedStakes, prevGovStakeOwners, delegatees, prevGovStakeDelegatees);
+		getElectionsContract().notifyStakeChangeBatch(_stakeOwners, newUncappedStakes, prevGovStakeOwners, delegates, prevGovStakeDelegates);
 	}
 
 	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign) private {
-		(uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) = _applyStakeChangeLocally(_stakeOwner, _amount, _sign);
-		getElectionsContract().notifyStakeChange(_stakeOwner, newUncappedStake, prevGovStakeOwner, delegatee, prevGovStakeDelegatee);
+		(uint256 newUncappedStake, uint256 prevGovStakeOwner, address _delegate, uint256 prevGovStakeDelegate) = _applyStakeChangeLocally(_stakeOwner, _amount, _sign);
+		getElectionsContract().notifyStakeChange(_stakeOwner, newUncappedStake, prevGovStakeOwner, _delegate, prevGovStakeDelegate);
 	}
 
-	function _applyStakeChangeLocally(address _stakeOwner, uint256 _amount, bool _sign) private returns (uint256 newUncappedStake, uint prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) {
-		delegatee = getDelegation(_stakeOwner);
+	function _applyStakeChangeLocally(address _stakeOwner, uint256 _amount, bool _sign) private returns (uint256 newUncappedStake, uint prevGovStakeOwner, address _delegate, uint256 prevGovStakeDelegate) {
+		_delegate = getDelegation(_stakeOwner);
 
 		prevGovStakeOwner = getGovernanceEffectiveStake(_stakeOwner);
-		prevGovStakeDelegatee = getGovernanceEffectiveStake(delegatee);
+		prevGovStakeDelegate = getGovernanceEffectiveStake(_delegate);
 
 		if (_sign) {
-			newUncappedStake = uncappedStakes[delegatee].add(_amount);
+			newUncappedStake = uncappedStakes[_delegate].add(_amount);
 		} else {
-			newUncappedStake = uncappedStakes[delegatee].sub(_amount);
+			newUncappedStake = uncappedStakes[_delegate].sub(_amount);
 		}
 
-		uncappedStakes[delegatee] = newUncappedStake;
+		uncappedStakes[_delegate] = newUncappedStake;
 
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegatee).add(getGovernanceEffectiveStake(delegatee));
+		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegate).add(getGovernanceEffectiveStake(_delegate));
 
-		return (newUncappedStake, prevGovStakeOwner, delegatee, prevGovStakeDelegatee);
+		return (newUncappedStake, prevGovStakeOwner, _delegate, prevGovStakeDelegate);
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {
