@@ -67,25 +67,33 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	function emitDelegatedStakeChanged(address _delegate, address delegator, uint256 delegatorStake) private {
-		uint256 delegateSelfBalance = getStakingContract().getStakeBalanceOf(_delegate);
 		address[] memory delegators = new address[](1);
 		uint256[] memory delegatorTotalStakes = new uint256[](1);
+
 		delegators[0] = delegator;
 		delegatorTotalStakes[0] = delegatorStake;
-		emit DelegatedStakeChanged(_delegate, delegateSelfBalance, uncappedStakes[_delegate], delegators, delegatorTotalStakes);
+
+		emit DelegatedStakeChanged(
+			_delegate,
+			getSelfDelegatedStake(_delegate),
+			uncappedStakes[_delegate],
+			delegators,
+			delegatorTotalStakes
+		);
 	}
 
 	function emitDelegatedStakeChangedSlice(address commonDelegate, address[] memory delegators, uint256[] memory delegatorsStakes, uint startIdx, uint sliceLen) private {
-
 		address[] memory delegatorsSlice = new address[](sliceLen);
 		uint256[] memory delegatorTotalStakesSlice = new uint256[](sliceLen);
+
 		for (uint j = 0; j < sliceLen; j++) {
 			delegatorsSlice[j] = delegators[j + startIdx];
 			delegatorTotalStakesSlice[j] = delegatorsStakes[j + startIdx];
 		}
+
 		emit DelegatedStakeChanged(
 			commonDelegate,
-			getStakingContract().getStakeBalanceOf(commonDelegate),
+			getSelfDelegatedStake(commonDelegate),
 			uncappedStakes[commonDelegate],
 			delegatorsSlice,
 			delegatorTotalStakesSlice
@@ -190,7 +198,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		return _isSelfDelegating(v) ? uncappedStakes[v] : 0;
 	}
 
-	function _isSelfDelegating(address validator) private view returns (bool) {
-		return delegations[validator] == address(0) || delegations[validator] == validator;
+	function getSelfDelegatedStake(address addr) public view returns (uint256) {
+		return _isSelfDelegating(addr) ? getStakingContract().getStakeBalanceOf(addr) : 0;
+	}
+
+	function _isSelfDelegating(address addr) private view returns (bool) {
+		address d = delegations[addr];
+		return  d == address(0) || d == addr;
 	}
 }

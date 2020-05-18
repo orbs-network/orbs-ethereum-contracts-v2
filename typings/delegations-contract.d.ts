@@ -13,6 +13,7 @@ export interface DelegationsContract extends Contract {
   getDelegatedStakes(address: string): Promise<BN>;
   getOwnStake(address: string): Promise<BN>;
   getTotalGovernanceStake(): Promise<BN>;
+  getSelfDelegatedStake(address: string): Promise<BN>;
   getGovernanceEffectiveStake(address: string): Promise<BN>;
 }
 
@@ -23,7 +24,7 @@ export interface DelegatedEvent {
 
 export interface DelegatedStakeChangedEvent {
   addr: string;
-  selfStake: BN;
+  selfDelegatedStake: BN;
   delegatedStake: BN;
   delegators: string[];
   delegatorTotalStakes: BN[];

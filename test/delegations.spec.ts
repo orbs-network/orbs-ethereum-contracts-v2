@@ -50,6 +50,39 @@ describe('delegations-contract', async () => {
         // await d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: stakingAddr});
     });
 
+    it('selfDelegatedStake toggles to zero if delegating to another', async () => {
+        const d = await Driver.new();
+
+        const p1 = d.newParticipant();
+        let r = await p1.stake(100);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p1.address,
+            selfDelegatedStake: bn(100),
+            delegatedStake: bn(100),
+            delegators: [p1.address],
+            delegatorTotalStakes: [bn(100)]
+        });
+
+        const p2 = d.newParticipant();
+        r = await p1.delegate(p2);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p1.address,
+            selfDelegatedStake: bn(0),
+            delegatedStake: bn(0),
+            delegators: [p1.address],
+            delegatorTotalStakes: [bn(100)]
+        });
+
+        r = await p1.delegate(p1);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p1.address,
+            selfDelegatedStake: bn(100),
+            delegatedStake: bn(100),
+            delegators: [p1.address],
+            delegatorTotalStakes: [bn(100)]
+        });
+    });
+
     it('emits DelegatedStakeChanged and Delegated on delegation changes', async () => {
         const d = await Driver.new();
 
@@ -57,7 +90,7 @@ describe('delegations-contract', async () => {
         let r = await p1.stake(100);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
-            selfStake: bn(100),
+            selfDelegatedStake: bn(100),
             delegatedStake: bn(100),
             delegators: [p1.address],
             delegatorTotalStakes: [bn(100)]
@@ -74,7 +107,7 @@ describe('delegations-contract', async () => {
         r = await p2.stake(100);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
-            selfStake: bn(100),
+            selfDelegatedStake: bn(100),
             delegatedStake: bn(200),
             delegators: [p2.address],
             delegatorTotalStakes: [bn(100)]
@@ -83,7 +116,7 @@ describe('delegations-contract', async () => {
         r = await p2.stake(11);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
-            selfStake: bn(100),
+            selfDelegatedStake: bn(100),
             delegatedStake: bn(211),
             delegators: [p2.address],
             delegatorTotalStakes: [bn(111)]
@@ -98,14 +131,14 @@ describe('delegations-contract', async () => {
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p3.address,
-            selfStake: bn(100),
+            selfDelegatedStake: bn(0),
             delegatedStake: bn(0),
             delegators: [p3.address],
             delegatorTotalStakes: [bn(100)]
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
-            selfStake: bn(100),
+            selfDelegatedStake: bn(100),
             delegatedStake: bn(311),
             delegators: [p3.address],
             delegatorTotalStakes: [bn(100)]
@@ -124,14 +157,14 @@ describe('delegations-contract', async () => {
         );
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
-            selfStake: bn(200),
+            selfDelegatedStake: bn(200),
             delegatedStake: bn(911),
             delegators: [p1.address, p2.address, p3.address],
             delegatorTotalStakes: [bn(200), bn(311), bn(400)]
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p4.address,
-            selfStake: bn(500),
+            selfDelegatedStake: bn(500),
             delegatedStake: bn(500),
             delegators: [p4.address],
             delegatorTotalStakes: [bn(500)]
@@ -146,7 +179,7 @@ describe('delegations-contract', async () => {
         );
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
-            selfStake: bn(300),
+            selfDelegatedStake: bn(300),
             delegatedStake: bn(1211),
             delegators: [p1.address, p2.address, p3.address],
             delegatorTotalStakes: [bn(300), bn(411), bn(500)]
