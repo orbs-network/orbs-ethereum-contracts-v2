@@ -24,6 +24,12 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     IERC20 erc20;
     address rewardsGovernor;
 
+    modifier onlyElectionsContract() {
+        require(msg.sender == address(getElectionsContract()), "caller is not the elections");
+
+        _;
+    }
+
     modifier onlyRewardsGovernor() {
         require(msg.sender == rewardsGovernor, "caller is not the rewards governor");
 
@@ -39,7 +45,8 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     }
 
     function setAnnualRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
-        _assignRewards();
+        (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee();
+        _assignRewards(committee, weights);
         annualRateInPercentMille = annual_rate_in_percent_mille;
         annualCap = annual_cap;
     }
@@ -57,17 +64,16 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
         return lastPayedAt;
     }
 
-    function assignRewards() external {
-        _assignRewards();
+    function assignRewards(address[] calldata committee, uint256[] calldata weights) external onlyElectionsContract {
+        _assignRewards(committee, weights);
     }
     event GasReport(string label, uint gas);
 
-    function _assignRewards() private {
+    function _assignRewards(address[] memory committee, uint256[] memory weights) private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
 		uint gl01 = gasleft();
-        (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee();
  		emit GasReport("StakingRewards: calling getCommittee", gl01-gasleft());
 
         uint256 totalAssigned = 0;

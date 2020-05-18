@@ -15,6 +15,7 @@ export interface ElectionsContract extends Contract {
   refreshBanningVote(voter: string, against: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getBanningVotes(address: string): Promise<string[]>;
   getAccumulatedStakesForBanning(address: string): Promise<BN>;
+  assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
 }
 
 export interface TopologyChangedEvent {

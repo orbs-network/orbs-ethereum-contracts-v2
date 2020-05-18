@@ -341,7 +341,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(true);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.stakingRewards.assignRewards();
+        await d.elections.assignRewards();
 
         const v = committee[0];
 
@@ -389,17 +389,17 @@ describe('gas usage scenarios', async () => {
 
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
-        const r = await d.stakingRewards.assignRewards({from: p.address});
-        const events = gasReportEvents3(r);
-        events.forEach(e => console.log(JSON.stringify(e)));
-        d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
-        d.resetGasRecording();
-        await d.bootstrapRewards.assignRewards({from: p.address});
-        d.logGasUsageSummary("assigns rewards (bootstrap) (1 month, initial balance == 0)", [p]);
-        d.resetGasRecording();
-        await d.fees.assignFees({from: p.address});
-        d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
-
+        await d.elections.assignRewards({from: p.address});
+        // const r = await d.stakingRewards.assignRewards({from: p.address});
+        // const events = gasReportEvents3(r);
+        // events.forEach(e => console.log(JSON.stringify(e)));
+        // d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
+        // d.resetGasRecording();
+        // await d.bootstrapRewards.assignRewards({from: p.address});
+        // d.logGasUsageSummary("assigns rewards (bootstrap) (1 month, initial balance == 0)", [p]);
+        // d.resetGasRecording();
+        // await d.fees.assignFees({from: p.address});
+        // d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
         d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
     });
 
@@ -407,24 +407,26 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 5);
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
-        await d.stakingRewards.assignRewards();
-        await d.bootstrapRewards.assignRewards();
-        await d.fees.assignFees();
+        // await d.stakingRewards.assignRewards();
+        // await d.bootstrapRewards.assignRewards();
+        // await d.fees.assignFees();
+        await d.elections.assignRewards();
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
-        const r = await d.stakingRewards.assignRewards({from: p.address});
-        const events = gasReportEvents3(r);
-        events.forEach(e => console.log(JSON.stringify(e)));
-        d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
-        d.resetGasRecording();
-        await d.bootstrapRewards.assignRewards({from: p.address});
-        d.logGasUsageSummary("assigns rewards (bootstrap) (1 month, initial balance == 0)", [p]);
-        d.resetGasRecording();
-        await d.fees.assignFees({from: p.address});
-        d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
+        await d.elections.assignRewards({from: p.address});
+        // const r = await d.stakingRewards.assignRewards({from: p.address});
+        // const events = gasReportEvents3(r);
+        // events.forEach(e => console.log(JSON.stringify(e)));
+        // d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
+        // d.resetGasRecording();
+        // await d.bootstrapRewards.assignRewards({from: p.address});
+        // d.logGasUsageSummary("assigns rewards (bootstrap) (1 month, initial balance == 0)", [p]);
+        // d.resetGasRecording();
+        // await d.fees.assignFees({from: p.address});
+        // d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
 
         d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
     });

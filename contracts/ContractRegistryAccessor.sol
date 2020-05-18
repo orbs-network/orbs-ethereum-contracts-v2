@@ -10,6 +10,8 @@ import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
+import "./spec_interfaces/IBootstrapRewards.sol";
+import "./spec_interfaces/IStakingRewards.sol";
 
 contract ContractRegistryAccessor is Ownable {
 
@@ -26,6 +28,14 @@ contract ContractRegistryAccessor is Ownable {
 
     function getFeesContract() public view returns (IFees) {
         return IFees(contractRegistry.get("fees"));
+    }
+
+    function getBootstrapRewardsContract() public view returns (IBootstrapRewards) {
+        return IBootstrapRewards(contractRegistry.get("bootstrapRewards"));
+    }
+
+    function getStakingRewardsContract() public view returns (IStakingRewards) {
+        return IStakingRewards(contractRegistry.get("stakingRewards"));
     }
 
     function getGeneralCommitteeContract() public view returns (ICommittee) {

@@ -13,7 +13,7 @@ interface IStakingRewards {
      */
 
     /// @dev Calculates and assigns validator rewards for the time period since the last reward calculation
-    function assignRewards() external;
+    function assignRewards(address[] calldata committee, uint256[] calldata committeeWeights) external /* onlyElectionsContract */;
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
     function getRewardBalance(address addr) external view returns (uint256 balance);

@@ -23,6 +23,12 @@ contract Fees is IFees, ContractRegistryAccessor {
 
     IERC20 erc20;
 
+    modifier onlyElectionsContract() {
+        require(msg.sender == address(getElectionsContract()), "caller is not the elections");
+
+        _;
+    }
+
     constructor(IERC20 _erc20) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
@@ -40,11 +46,11 @@ contract Fees is IFees, ContractRegistryAccessor {
 
     uint constant MAX_REWARD_BUCKET_ITERATIONS = 6;
 
-    function assignFees() external {
-        _assignFees();
+    function assignFees(address[] calldata generalCommittee, address[] calldata complianceCommittee) external onlyElectionsContract {
+        _assignFees(generalCommittee, complianceCommittee);
     }
 
-    function _assignFees() private {
+    function _assignFees(address[] memory generalCommittee, address[] memory complianceCommittee) private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -78,13 +84,11 @@ contract Fees is IFees, ContractRegistryAccessor {
             bucketsPayed++;
         }
 
-        assignAmountFixed(generalFeePoolAmount, false);
-        assignAmountFixed(complianceFeePoolAmount, true);
+        assignAmountFixed(generalCommittee, generalFeePoolAmount);
+        assignAmountFixed(complianceCommittee, complianceFeePoolAmount);
     }
 
-    function assignAmountFixed(uint256 amount, bool isCompliant) private {
-        address[] memory committee = _getCommittee(isCompliant);
-
+    function assignAmountFixed(address[] memory committee, uint256 amount) private {
         uint256[] memory assignedFees = new uint256[](committee.length);
 
         uint256 totalAssigned = 0;
@@ -133,7 +137,7 @@ contract Fees is IFees, ContractRegistryAccessor {
     }
 
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCompliant) private {
-        _assignFees(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
+        _assignFees(_getCommittee(false), _getCommittee(true)); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(fromTimestamp);
         uint256 _amount = amount;
