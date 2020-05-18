@@ -49,15 +49,13 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
         (address[] memory generalCommittee,) = getGeneralCommitteeContract().getCommittee();
-        (address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
-        _assignRewards(generalCommittee, complianceCommittee);
+        _assignRewards(generalCommittee);
         generalCommitteeAnnualBootstrap = annual_amount;
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
         (address[] memory generalCommittee,) = getGeneralCommitteeContract().getCommittee();
-        (address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
-        _assignRewards(generalCommittee, complianceCommittee);
+        _assignRewards(generalCommittee);
         complianceCommitteeAnnualBootstrap = annual_amount;
     }
 
@@ -75,13 +73,12 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
         return lastPayedAt;
     }
 
-    function assignRewards(address[] calldata generalCommittee, address[] calldata complianceCommittee) external onlyElectionsContract {
-        _assignRewards(generalCommittee, complianceCommittee);
+    function assignRewards(address[] calldata generalCommittee) external onlyElectionsContract {
+        _assignRewards(generalCommittee);
     }
 
-    function _assignRewards(address[] memory generalCommittee, address[] memory complianceCommittee) private {
+    function _assignRewards(address[] memory generalCommittee) private {
         _assignRewardsToCommittee(generalCommittee, generalCommitteeAnnualBootstrap);
-        _assignRewardsToCommittee(complianceCommittee, complianceCommitteeAnnualBootstrap);
 
         lastPayedAt = now;
     }

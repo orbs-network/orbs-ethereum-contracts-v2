@@ -40,12 +40,6 @@ contract Elections is IElections, ContractRegistryAccessor {
 		_;
 	}
 
-	modifier onlyComplianceContract() {
-		require(msg.sender == address(getComplianceContract()), "caller is not the validator registrations contract");
-
-		_;
-	}
-
 	modifier onlyNotBanned() {
 		require(!_isBanned(msg.sender), "caller is a banned validator");
 
@@ -81,40 +75,26 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
-	function validatorComplianceChanged(address addr, bool isCompliant) external onlyComplianceContract {
-		if (_isBanned(addr)) {
-			return;
-		}
-
-		if (isCompliant) {
-            getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-		} else {
-			getComplianceCommitteeContract().removeMember(addr);
-		}
+	function validatorComplianceChanged(address addr, bool isCompliant) external {
 	}
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, true);
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().memberReadyToSync(sender, true);
-		getComplianceCommitteeContract().flush();
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, false);
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().memberReadyToSync(sender, false);
-		getComplianceCommitteeContract().flush();
 	}
 
 	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) onlyDelegationsContract external {
-
         _applyDelegatedStake(prevDelegatee, newStakePrevDelegatee);
 		_applyDelegatedStake(newDelegatee, newStakeNewDelegatee);
 
@@ -157,23 +137,11 @@ contract Elections is IElections, ContractRegistryAccessor {
 		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
-		} else if (getComplianceContract().isValidatorCompliant(addr)) {
-			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = getComplianceCommitteeContract().getCommittee();
-			votedOut = isCommitteeVoteOutThresholdReached(complianceCommittee, complianceWeights, addr);
-			if (votedOut) {
-				clearCommitteeVoteOuts(complianceCommittee, addr);
-			}
-		}
-
-		if (votedOut) {
 			emit VotedOutOfCommittee(addr);
-
 			(bool committeeChanged,) = getGeneralCommitteeContract().memberNotReadyToSync(addr);
 			if (committeeChanged) {
-				updateComplianceCommitteeMinimumWeight();
+				assignRewards();
 			}
-			getComplianceCommitteeContract().memberNotReadyToSync(addr);
-			getComplianceCommitteeContract().flush();
 		}
 	}
 
@@ -186,12 +154,19 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit BanningVote(msg.sender, validators);
 	}
 
-	function assignRewards() external {
+	function assignRewards() public {
+		uint gl01 = gasleft();
 		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getGeneralCommitteeContract().getCommittee();
-		(address[] memory complianceCommittee, uint256[] memory complianceCommitteeWeights) = getComplianceCommitteeContract().getCommittee();
-		getFeesContract().assignFees(generalCommittee, complianceCommittee);
-		getBootstrapRewardsContract().assignRewards(generalCommittee, complianceCommittee);
+		emit GasReport("assignRewards: getCommittee", gl01-gasleft());
+		gl01 = gasleft();
+		getFeesContract().assignFees(generalCommittee);
+		emit GasReport("assignRewards: assignFees", gl01-gasleft());
+		gl01 = gasleft();
+		getBootstrapRewardsContract().assignRewards(generalCommittee);
+		emit GasReport("assignRewards: bootstrap rewards", gl01-gasleft());
+		gl01 = gasleft();
 		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
+		emit GasReport("assignRewards: staking rewards", gl01-gasleft());
 	}
 
 	function getTotalGovernanceStake() internal view returns (uint256) {
@@ -333,17 +308,8 @@ contract Elections is IElections, ContractRegistryAccessor {
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		emit GasReport("committee call (1)", gl01-gasleft());
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		gl01 = gasleft();
-		getComplianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
-		emit GasReport("committee call (3)", gl01-gasleft());
-
-		gl01 = gasleft();
-		getComplianceCommitteeContract().flush();
-		emit GasReport("committee call (4)", gl01-gasleft());
-//		uint gl02 = gasleft();
-//		emit GasReport("committee calls: all", gl01-gasleft());
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
@@ -372,29 +338,15 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function removeMemberFromCommittees(address addr) private {
 		(bool committeeChanged,) = getGeneralCommitteeContract().removeMember(addr);
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().removeMember(addr);
-		getComplianceCommitteeContract().flush();
 	}
 
 	function addMemberToCommittees(address addr) private {
 		(bool committeeChanged,) = getGeneralCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		if (getComplianceContract().isValidatorCompliant(addr)) {
-			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-		}
-		getComplianceCommitteeContract().flush();
-	}
-
-	function updateComplianceCommitteeMinimumWeight() private {
-		address lowestMember = getGeneralCommitteeContract().getLowestCommitteeMember();
-		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
-		uint gl01 = gasleft();
-		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize, true);
-		emit GasReport("committee call (2)", gl01-gasleft());
 	}
 
 	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way

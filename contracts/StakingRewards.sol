@@ -73,9 +73,6 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
-		uint gl01 = gasleft();
- 		emit GasReport("StakingRewards: calling getCommittee", gl01-gasleft());
-
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
         for (uint i = 0; i < committee.length; i++) {

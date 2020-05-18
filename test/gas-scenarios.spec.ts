@@ -48,7 +48,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     let standbys: Participant[] = [];
     for (let i = MAX_STANDBYS - 1; i >= 0; i--) {
-        const {v} = await d.newValidator(BASE_STAKE - (standbysEvenStakes ? 0 : i), true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE - (standbysEvenStakes ? 0 : i), false, false, false);
         standbys = [v].concat(standbys);
         console.log(`standby ${i}`)
     }
@@ -56,7 +56,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
-        const {v} = await d.newValidator(BASE_STAKE + 1 + (committeeEvenStakes ? 0 : i), true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE + 1 + (committeeEvenStakes ? 0 : i), false, false, false);
         committee = [v].concat(committee);
         console.log(`committee ${i}`)
     }
@@ -70,7 +70,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     for (let i = 0; i < numVCs; i++) {
         await createVC(d, false, subs, monthlyRate, appOwner);
-        await createVC(d, true, subs, monthlyRate, appOwner);
+        // await createVC(d, true, subs, monthlyRate, appOwner);
     }
     tlog("VCs created - done init");
 
@@ -88,6 +88,8 @@ describe('gas usage scenarios', async () => {
 
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
 
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE * 1000);
@@ -371,12 +373,12 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same validator (batch size - ${batchSize})`, [committee[0]]);
     };
 
-    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 1)", async () => {
+    it("Distribute rewards - all delegators delegated to same validator (batch size - 1)", async () => {
         await distributeRewardsScenario(1)
     });
 
-    it("Distribute rewards - all delegators delegated to same validator (batch size - 20)", async () => {
-        await distributeRewardsScenario(20)
+    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
+        await distributeRewardsScenario(50)
     });
 
     it("Distribute rewards - all delegators delegated to same validator (batch size - 200)", async () => {
@@ -428,7 +430,7 @@ describe('gas usage scenarios', async () => {
         // await d.fees.assignFees({from: p.address});
         // d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
 
-        d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
+        d.logGasUsageSummary("assigns rewards (1 month, initial balance > 0)", [p]);
     });
 
     it("test", async () => {

@@ -96,7 +96,8 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
         IFees feesContract = getFeesContract();
         require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
         if (vc.isCompliant) {
-            feesContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
+//            feesContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
+            revert("compliant vcs not supported");
         } else {
             feesContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
         }
