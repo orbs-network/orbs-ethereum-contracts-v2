@@ -33,6 +33,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	function delegate(address to) external {
 		address prevDelegate = getDelegation(msg.sender);
 
+		require(to != address(0), "cannot delegate to a zero address");
+		require(to != prevDelegate, "delegation already in place");
+
 		uint256 prevGovStakePrevDelegate = getGovernanceEffectiveStake(prevDelegate);
 		uint256 prevGovStakeNewDelegate = getGovernanceEffectiveStake(to);
 
@@ -51,8 +54,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
     	getElectionsContract().notifyDelegationChange(to, prevDelegate, newStakePrevDelegate, newStakeNewDelegate, prevGovStakePrevDelegate, prevGovStakeNewDelegate);
 
 		emit Delegated(msg.sender, to);
-		emitDelegatedStakeChanged(prevDelegate, msg.sender, delegatorStake);
-		if (prevDelegate != to) {
+
+		if (delegatorStake != 0) {
+			emitDelegatedStakeChanged(prevDelegate, msg.sender, delegatorStake);
 			emitDelegatedStakeChanged(to, msg.sender, delegatorStake);
 		}
 	}
@@ -88,14 +92,14 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		);
 	}
 
-	function emitDelegatedStakeChangedBatch(address[] memory delegators, uint256[] memory delegatorsStakes) private {
+	function emitDelegatedStakeChangedBatch(address[] memory delegators, uint256[] memory delegatorsStakes, address[] memory delegates) private {
 		uint delegatorsLength = delegators.length;
 
 		address streakDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
 		uint streakStartIdx = 0;
 
 		for (uint i = 1; i < delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
-			address currentDelegate = getDelegation(delegators[i]);
+			address currentDelegate = delegates[i];
 
 			if (currentDelegate == streakDelegate) {
 				continue; // delegate streak continues
@@ -122,9 +126,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
 		require(batchLength == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
 
-		_stakeChangeBatch(_stakeOwners, _amounts, _signs);
+		address[] memory delegates = _stakeChangeBatch(_stakeOwners, _amounts, _signs);
 
-		emitDelegatedStakeChangedBatch(_stakeOwners, _updatedStakes);
+		emitDelegatedStakeChangedBatch(_stakeOwners, _updatedStakes, delegates);
 
 	}
 
@@ -135,17 +139,19 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
-	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private {
+	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private returns (address[] memory delegates){
 		uint256[] memory newUncappedStakes = new uint256[](_stakeOwners.length);
-		uint256[] memory  prevGovStakeOwners = new uint256[](_stakeOwners.length);
-		address[] memory  delegates = new address[](_stakeOwners.length);
-		uint256[] memory  prevGovStakeDelegates = new uint256[](_stakeOwners.length);
+		uint256[] memory prevGovStakeOwners = new uint256[](_stakeOwners.length);
+		uint256[] memory prevGovStakeDelegates = new uint256[](_stakeOwners.length);
+		delegates = new address[](_stakeOwners.length);
 
 		for (uint i = 0; i < _stakeOwners.length; i++) {
 			(newUncappedStakes[i], prevGovStakeOwners[i], delegates[i], prevGovStakeDelegates[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
 		}
 
 		getElectionsContract().notifyStakeChangeBatch(_stakeOwners, newUncappedStakes, prevGovStakeOwners, delegates, prevGovStakeDelegates);
+
+		return delegates;
 	}
 
 	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign) private {

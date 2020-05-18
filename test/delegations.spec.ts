@@ -69,6 +69,7 @@ describe('delegations-contract', async () => {
             from: p2.address,
             to: p1.address
         });
+        expect(r).to.not.have.a.delegatedStakeChangedEvent();
 
         r = await p2.stake(100);
         expect(r).to.have.a.delegatedStakeChangedEvent({
