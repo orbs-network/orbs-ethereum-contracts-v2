@@ -32,7 +32,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, maxStandbys: MAX_STANDBYS, maxDelegationRatio: 255});
     tlog("Driver created");
 
-    const poolAmount = new BN(1000000000000);
+    const poolAmount = new BN(1000000000000000);
     await d.erc20.assign(d.accounts[0], poolAmount);
     await d.erc20.approve(d.stakingRewards.address, poolAmount);
     await d.stakingRewards.setAnnualRate(12000, poolAmount);
@@ -83,11 +83,15 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
 
 describe('gas usage scenarios', async () => {
-    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
+    it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+        await d.elections.assignRewards();
+        await evmIncreaseTime(d.web3, 30*24*60*60);
 
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE * 1000);
@@ -371,12 +375,12 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same validator (batch size - ${batchSize})`, [committee[0]]);
     };
 
-    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 1)", async () => {
+    it("Distribute rewards - all delegators delegated to same validator (batch size - 1)", async () => {
         await distributeRewardsScenario(1)
     });
 
-    it("Distribute rewards - all delegators delegated to same validator (batch size - 20)", async () => {
-        await distributeRewardsScenario(20)
+    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
+        await distributeRewardsScenario(50)
     });
 
     it("Distribute rewards - all delegators delegated to same validator (batch size - 200)", async () => {
@@ -403,7 +407,7 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
     });
 
-    it.only("assigns rewards (1 month, initial balance > 0)", async () => {
+    it("assigns rewards (1 month, initial balance > 0)", async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 5);
         await evmIncreaseTime(d.web3, 30*24*60*60);
 

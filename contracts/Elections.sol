@@ -101,6 +101,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 		getComplianceCommitteeContract().memberReadyToSync(sender, true);
 		getComplianceCommitteeContract().flush();
+		if (committeeChanged) {
+			assignRewards();
+		}
+
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
@@ -111,6 +115,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 		getComplianceCommitteeContract().memberReadyToSync(sender, false);
 		getComplianceCommitteeContract().flush();
+		if (committeeChanged) {
+			assignRewards();
+		}
+
 	}
 
 	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) onlyDelegationsContract external {
@@ -174,6 +182,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 			}
 			getComplianceCommitteeContract().memberNotReadyToSync(addr);
 			getComplianceCommitteeContract().flush();
+			if (committeeChanged) {
+				assignRewards();
+			}
+
 		}
 	}
 
@@ -186,7 +198,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit BanningVote(msg.sender, validators);
 	}
 
-	function assignRewards() external {
+	function assignRewards() public {
 		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getGeneralCommitteeContract().getCommittee();
 		(address[] memory complianceCommittee, uint256[] memory complianceCommitteeWeights) = getComplianceCommitteeContract().getCommittee();
 		getFeesContract().assignFees(generalCommittee, complianceCommittee);
@@ -344,6 +356,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit GasReport("committee call (4)", gl01-gasleft());
 //		uint gl02 = gasleft();
 //		emit GasReport("committee calls: all", gl01-gasleft());
+		if (committeeChanged) {
+			assignRewards();
+		}
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
@@ -376,6 +391,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 		getComplianceCommitteeContract().removeMember(addr);
 		getComplianceCommitteeContract().flush();
+		if (committeeChanged) {
+			assignRewards();
+		}
+
 	}
 
 	function addMemberToCommittees(address addr) private {
@@ -387,6 +406,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
 		}
 		getComplianceCommitteeContract().flush();
+		if (committeeChanged) {
+			assignRewards();
+		}
+
 	}
 
 	function updateComplianceCommitteeMinimumWeight() private {
