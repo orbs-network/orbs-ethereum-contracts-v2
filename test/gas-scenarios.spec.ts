@@ -90,6 +90,8 @@ describe('gas usage scenarios', async () => {
         await delegator.delegate(committee[committee.length - 1]);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
+        await d.elections.assignRewards();
+        await evmIncreaseTime(d.web3, 30*24*60*60);
 
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE * 1000);

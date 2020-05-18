@@ -72,45 +72,56 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     function _assignRewards(address[] memory committee, uint256[] memory weights) private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-
+        uint g = gasleft();
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
         for (uint i = 0; i < committee.length; i++) {
             totalWeight = totalWeight.add(weights[i]);
         }
-
+//        emit GasReport("StakingRewards: total weight summation", g - gasleft());
+        g = gasleft();
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastPayedAt);
 
             uint256 annualAmount = Math.min(annualRateInPercentMille.mul(totalWeight).div(100000), annualCap);
-            uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pool);
-            pool = pool.sub(amount);
-
+            uint _pool = pool;
+            uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), _pool);
+            pool = _pool.sub(amount);
+//            emit GasReport("StakingRewards: util allocation", g - gasleft());
+            g = gasleft();
             uint256[] memory assignedRewards = new uint256[](committee.length);
-
+//            emit GasReport("StakingRewards: rewards array allocation", g - gasleft());
+            g = gasleft();
+            uint n;
             for (uint i = 0; i < committee.length; i++) {
-                uint256 curAmount = amount.mul(weights[i]).div(totalWeight);
-                assignedRewards[i] = curAmount;
-                totalAssigned = totalAssigned.add(curAmount);
+                n = amount.mul(weights[i]).div(totalWeight);
+                assignedRewards[i] = n;
+                totalAssigned = totalAssigned.add(n);
             }
+//            emit GasReport("StakingRewards: first iteration", g - gasleft());
+            g = gasleft();
 
-            uint256 remainder = amount.sub(totalAssigned);
-            if (remainder > 0 && committee.length > 0) {
+            n = amount.sub(totalAssigned);
+            if (n > 0 && committee.length > 0) {
                 uint ind = now % committee.length;
-                assignedRewards[ind] = assignedRewards[ind].add(remainder);
+                assignedRewards[ind] = assignedRewards[ind].add(n);
             }
+//            emit GasReport("StakingRewards: remainder calculation", g - gasleft());
+            g = gasleft();
 
             for (uint i = 0; i < committee.length; i++) {
-                addToBalance(committee[i], assignedRewards[i]);
+                n = orbsBalance[committee[i]] + assignedRewards[i];
+                orbsBalance[committee[i]] = n;
+                emit StakingRewardAssigned(committee[i], assignedRewards[i], n); // TODO event per committee?
             }
+//            emit GasReport("StakingRewards: second interation", g - gasleft());
+            g = gasleft();
+
         }
 
         lastPayedAt = now;
-    }
+//        emit GasReport("StakingRewards: end", g - gasleft());
 
-    function addToBalance(address addr, uint256 amount) private {
-        orbsBalance[addr] = orbsBalance[addr].add(amount);
-        emit StakingRewardAssigned(addr, amount, orbsBalance[addr]); // TODO event per committee?
     }
 
     struct DistributorBatchState {
