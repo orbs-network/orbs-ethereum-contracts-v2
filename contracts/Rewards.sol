@@ -24,18 +24,25 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
     BootstrapAndStaking bootstrapAndStaking;
 
+    struct Balance {
+        uint256 bootstrapRewards;
+        uint256 fees;
+        uint256 stakingRewards;
+    }
+    mapping(address => Balance) balance;
+
     // Bootstrap
-    mapping(address => uint256) bootstrapBalance;
+//    mapping(address => uint256) bootstrapBalance;
     IERC20 bootstrapToken;
 
     // Staking
-    mapping(address => uint256) stakingRewardsBalance;
+//    mapping(address => uint256) stakingRewardsBalance;
 
     // Fees
     uint256 constant feeBucketTimePeriod = 30 days;
     mapping(uint256 => uint256) generalFeePoolBuckets;
     mapping(uint256 => uint256) compliantFeePoolBuckets;
-    mapping(address => uint256) feesBalance;
+//    mapping(address => uint256) feesBalance;
 
 
     IERC20 erc20;
@@ -91,7 +98,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
-        return bootstrapBalance[addr];
+        return balance[addr].bootstrapRewards;
     }
 
     function getLastBootstrapAssignment() external view returns (uint256) {
@@ -130,12 +137,12 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function addToBootstrapBalance(address addr, uint256 amount) private {
-        bootstrapBalance[addr] = bootstrapBalance[addr].add(amount);
+        balance[addr].bootstrapRewards = balance[addr].bootstrapRewards.add(amount);
     }
 
     function withdrawBootstrapFunds() external {
-        uint256 amount = bootstrapBalance[msg.sender];
-        bootstrapBalance[msg.sender] = bootstrapBalance[msg.sender].sub(amount);
+        uint256 amount = balance[msg.sender].bootstrapRewards;
+        balance[msg.sender].bootstrapRewards = balance[msg.sender].bootstrapRewards.sub(amount);
         require(bootstrapToken.transfer(msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
@@ -156,7 +163,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {
-        return stakingRewardsBalance[addr];
+        return balance[addr].stakingRewards;
     }
 
     function getLastRewardsAssignment() external view returns (uint256) {
@@ -201,8 +208,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function addToStakingRewardsBalance(address addr, uint256 amount) private {
-        stakingRewardsBalance[addr] = stakingRewardsBalance[addr].add(amount);
-        emit StakingRewardAssigned(addr, amount, stakingRewardsBalance[addr]); // TODO event per committee?
+        balance[addr].stakingRewards = balance[addr].stakingRewards.add(amount);
+        emit StakingRewardAssigned(addr, amount, balance[addr].stakingRewards); // TODO event per committee?
     }
 
     struct DistributorBatchState {
@@ -215,7 +222,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external {
         require(to.length == amounts.length, "expected to and amounts to be of same length");
-        require(totalAmount <= stakingRewardsBalance[msg.sender], "not enough balance for this distribution");
+        require(totalAmount <= balance[msg.sender].stakingRewards, "not enough balance for this distribution");
 
         DistributorBatchState memory ds = distributorBatchState[msg.sender];
 
@@ -241,7 +248,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
         }
 
-        stakingRewardsBalance[msg.sender] = stakingRewardsBalance[msg.sender].sub(totalAmount);
+        balance[msg.sender].stakingRewards = balance[msg.sender].stakingRewards.sub(totalAmount);
 
         IStakingContract stakingContract = getStakingContract();
         erc20.approve(address(stakingContract), totalAmount);
@@ -253,7 +260,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     // fees
 
     function getFeeBalance(address addr) external view returns (uint256) {
-        return feesBalance[addr];
+        return balance[addr].fees;
     }
 
     function getLastFeesAssignment() external view returns (uint256) {
@@ -324,7 +331,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function addToFeeBalance(address addr, uint256 amount) private {
-        feesBalance[addr] = feesBalance[addr].add(amount);
+        balance[addr].fees = balance[addr].fees.add(amount);
     }
 
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
@@ -371,8 +378,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function withdrawFeeFunds() external {
-        uint256 amount = feesBalance[msg.sender];
-        feesBalance[msg.sender] = 0;
+        uint256 amount = balance[msg.sender].fees;
+        balance[msg.sender].fees = 0;
         require(erc20.transfer(msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
