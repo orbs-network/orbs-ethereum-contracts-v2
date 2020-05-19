@@ -34,16 +34,16 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     const poolAmount = new BN(1000000000000000);
     await d.erc20.assign(d.accounts[0], poolAmount);
-    await d.erc20.approve(d.stakingRewards.address, poolAmount);
-    await d.stakingRewards.setAnnualRate(12000, poolAmount);
-    await d.stakingRewards.topUpPool(poolAmount);
+    await d.erc20.approve(d.rewards.address, poolAmount);
+    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount);
+    await d.rewards.topUpStakingRewardsPool(poolAmount);
     tlog("Staking pools topped up");
 
     await d.externalToken.assign(d.accounts[0], poolAmount);
-    await d.externalToken.approve(d.bootstrapRewards.address, poolAmount);
-    await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(12000);
-    await d.bootstrapRewards.setComplianceCommitteeAnnualBootstrap(12000);
-    await d.bootstrapRewards.topUpBootstrapPool(poolAmount);
+    await d.externalToken.approve(d.rewards.address, poolAmount);
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(12000);
+    await d.rewards.setComplianceCommitteeAnnualBootstrap(12000);
+    await d.rewards.topUpBootstrapPool(poolAmount);
     tlog("Bootstrap pools topped up");
 
     let standbys: Participant[] = [];
@@ -68,6 +68,8 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
     const appOwner = d.newParticipant();
 
+    tlog("Subscriber created");
+
     for (let i = 0; i < numVCs; i++) {
         await createVC(d, false, subs, monthlyRate, appOwner);
         await createVC(d, true, subs, monthlyRate, appOwner);
@@ -83,7 +85,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
 
 describe('gas usage scenarios', async () => {
-    it("New delegator stake increase, lowest committee member gets to top", async () => {
+    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         const delegator = d.newParticipant("delegator");
@@ -360,10 +362,10 @@ describe('gas usage scenarios', async () => {
             return delegator;
         }));
 
-        const balance = bn(await d.stakingRewards.getRewardBalance(v.address));
+        const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
         d.resetGasRecording();
-        await d.stakingRewards.distributeOrbsTokenRewards(
+        await d.rewards.distributeOrbsTokenStakingRewards(
             balance.div(bn(batchSize)).mul(bn(batchSize)),
             0,
             100,
@@ -375,7 +377,7 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same validator (batch size - ${batchSize})`, [committee[0]]);
     };
 
-    it("Distribute rewards - all delegators delegated to same validator (batch size - 1)", async () => {
+    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 1)", async () => {
         await distributeRewardsScenario(1)
     });
 
@@ -394,7 +396,7 @@ describe('gas usage scenarios', async () => {
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
         await d.elections.assignRewards({from: p.address});
-        // const r = await d.stakingRewards.assignRewards({from: p.address});
+        // const r = await d.rewards.assignRewards({from: p.address});
         // const events = gasReportEvents3(r);
         // events.forEach(e => console.log(JSON.stringify(e)));
         // d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
@@ -411,7 +413,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 5);
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
-        // await d.stakingRewards.assignRewards();
+        // await d.rewards.assignRewards();
         // await d.bootstrapRewards.assignRewards();
         // await d.fees.assignFees();
         await d.elections.assignRewards();
@@ -421,7 +423,7 @@ describe('gas usage scenarios', async () => {
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
         await d.elections.assignRewards({from: p.address});
-        // const r = await d.stakingRewards.assignRewards({from: p.address});
+        // const r = await d.rewards.assignRewards({from: p.address});
         // const events = gasReportEvents3(r);
         // events.forEach(e => console.log(JSON.stringify(e)));
         // d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);

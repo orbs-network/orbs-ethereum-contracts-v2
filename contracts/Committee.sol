@@ -167,6 +167,9 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights) {
 		return _getCommittee();
 	}
+	function getCommittee2() external view returns (address[] memory addrs, uint256[] memory weights) {
+		return _getCommittee();
+	}
 
 	/// @dev Returns the standy (out of committee) members and their weights
 	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights) {
@@ -483,7 +486,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	}
 
 	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private returns (Participant[] memory _participants, Participant memory memberAsParticipant) {
-		uint gl01 = gasleft();
+//		uint gl01 = gasleft();
 		uint nParticipants;
 		bool foundMember = preloadedMember.data.inCommittee || preloadedMember.data.isStandby;
 		address addr;

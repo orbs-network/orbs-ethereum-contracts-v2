@@ -19,7 +19,7 @@ interface IFees {
     function getOrbsBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
-    function withdrawFunds() external;
+    function withdrawFeeFunds() external;
 
     /// @return The timestamp of the last reward assignment.
     function getLastFeesAssignment() external view returns (uint256 time);

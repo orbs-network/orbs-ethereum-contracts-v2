@@ -12,6 +12,7 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./spec_interfaces/IBootstrapRewards.sol";
 import "./spec_interfaces/IStakingRewards.sol";
+import "./interfaces/IRewards.sol";
 
 contract ContractRegistryAccessor is Ownable {
 
@@ -26,16 +27,20 @@ contract ContractRegistryAccessor is Ownable {
         return IProtocol(contractRegistry.get("protocol"));
     }
 
-    function getFeesContract() public view returns (IFees) {
-        return IFees(contractRegistry.get("fees"));
-    }
+//    function getFeesContract() public view returns (IFees) {
+//        return IFees(contractRegistry.get("fees"));
+//    }
+//
+//    function getBootstrapRewardsContract() public view returns (IBootstrapRewards) {
+//        return IBootstrapRewards(contractRegistry.get("bootstrapRewards"));
+//    }
+//
+//    function getStakingRewardsContract() public view returns (IStakingRewards) {
+//        return IStakingRewards(contractRegistry.get("stakingRewards"));
+//    }
 
-    function getBootstrapRewardsContract() public view returns (IBootstrapRewards) {
-        return IBootstrapRewards(contractRegistry.get("bootstrapRewards"));
-    }
-
-    function getStakingRewardsContract() public view returns (IStakingRewards) {
-        return IStakingRewards(contractRegistry.get("stakingRewards"));
+    function getRewardsContract() public view returns (IRewards) {
+        return IRewards(contractRegistry.get("rewards"));
     }
 
     function getGeneralCommitteeContract() public view returns (ICommittee) {

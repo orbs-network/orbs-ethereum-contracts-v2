@@ -102,7 +102,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		getComplianceCommitteeContract().memberReadyToSync(sender, true);
 		getComplianceCommitteeContract().flush();
 		if (committeeChanged) {
-			assignRewards();
+			assignRewards(); // todo check both committees
 		}
 
 	}
@@ -116,7 +116,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		getComplianceCommitteeContract().memberReadyToSync(sender, false);
 		getComplianceCommitteeContract().flush();
 		if (committeeChanged) {
-			assignRewards();
+			assignRewards(); // todo check both committees
 		}
 
 	}
@@ -183,7 +183,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 			getComplianceCommitteeContract().memberNotReadyToSync(addr);
 			getComplianceCommitteeContract().flush();
 			if (committeeChanged) {
-				assignRewards();
+				assignRewards(); // todo check both committees
 			}
 
 		}
@@ -200,10 +200,8 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	function assignRewards() public {
 		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getGeneralCommitteeContract().getCommittee();
-		(address[] memory complianceCommittee, uint256[] memory complianceCommitteeWeights) = getComplianceCommitteeContract().getCommittee();
-		getFeesContract().assignFees(generalCommittee, complianceCommittee);
-		getBootstrapRewardsContract().assignRewards(generalCommittee, complianceCommittee);
-		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
+		(address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
+		getRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights, complianceCommittee);
 	}
 
 	function getTotalGovernanceStake() internal view returns (uint256) {
@@ -357,7 +355,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 //		uint gl02 = gasleft();
 //		emit GasReport("committee calls: all", gl01-gasleft());
 		if (committeeChanged) {
-			assignRewards();
+			assignRewards(); // todo check both committees
 		}
 	}
 
@@ -392,7 +390,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		getComplianceCommitteeContract().removeMember(addr);
 		getComplianceCommitteeContract().flush();
 		if (committeeChanged) {
-			assignRewards();
+			assignRewards(); // todo check both committees
 		}
 
 	}
@@ -407,7 +405,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 		getComplianceCommitteeContract().flush();
 		if (committeeChanged) {
-			assignRewards();
+			assignRewards(); // todo check both committees
 		}
 
 	}
