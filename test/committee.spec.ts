@@ -27,7 +27,7 @@ describe('committee', async () => {
 
     // Basic tests: standbys, committee
 
-    it('becomes standby only after ready-to-sync', async () => {
+    it.only('becomes standby only after ready-to-sync', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -50,7 +50,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it('joins committee and leaves standbys only after ready-for-committee', async () => {
+    it.only('joins committee and leaves standbys only after ready-for-committee', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -85,7 +85,7 @@ describe('committee', async () => {
         });
     });
 
-    it('joins straight to committee on ready-for-committee', async () => {
+    it.only('joins straight to committee on ready-for-committee', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -108,7 +108,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
     });
 
-    it('does not allow more than maxStandbys', async () => {
+    it.only('does not allow more than maxStandbys', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -137,7 +137,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it('does not allow more than maxCommitteeSize', async () => {
+    it.only('does not allow more than maxCommitteeSize', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -168,7 +168,7 @@ describe('committee', async () => {
         });
     });
 
-    it('evicts a committee member which explicitly became not-ready-to-sync', async () => {
+    it.only('evicts a committee member which explicitly became not-ready-to-sync', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -192,7 +192,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
     });
 
-    it('evicts a committee member which became not-ready-for-committee because it sent ready-to-sync', async () => {
+    it.only('evicts a committee member which became not-ready-for-committee because it sent ready-to-sync', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -219,7 +219,7 @@ describe('committee', async () => {
         });
     });
 
-    it('does not allow a non-ready standby to join committee even if was ready previously', async () => {
+    it.only('does not allow a non-ready standby to join committee even if was ready previously', async () => {
         const d = await Driver.new({maxCommitteeSize: 1});
 
         const stake = 100;
@@ -240,7 +240,7 @@ describe('committee', async () => {
         expect(r).to.not.have.committeeChangedEvent();
     });
 
-    it('evicts a standby which explicitly became not-ready-to-sync', async () => {
+    it.only('evicts a standby which explicitly became not-ready-to-sync', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -264,7 +264,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it('standby can overtake committee member with more stake', async () => {
+    it.only('standby can overtake committee member with more stake', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -310,7 +310,7 @@ describe('committee', async () => {
 
     });
 
-    it('non-committee-ready standby with more stake cannot overtake a committee member', async () => {
+    it.only('non-committee-ready standby with more stake cannot overtake a committee member', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -349,7 +349,7 @@ describe('committee', async () => {
 
     });
 
-    it('two non-ready-for-committee with more stake can overtake two ready-for-committee standbys', async () => {
+    it.only('two non-ready-for-committee with more stake can overtake two ready-for-committee standbys', async () => {
         const maxStandbys = 3;
         const d = await Driver.new({maxStandbys});
 
@@ -406,7 +406,7 @@ describe('committee', async () => {
 
     });
 
-    it('evicts the lowest staked standby when both standbys and committee are full and a new committee member enters', async () => {
+    it.only('evicts the lowest staked standby when both standbys and committee are full and a new committee member enters', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
         const d = await Driver.new({maxStandbys, maxCommitteeSize});
@@ -456,7 +456,7 @@ describe('committee', async () => {
 
     });
 
-    it('notifies StandbysChanged when a committee member leaves and a standby joins the committee', async () => {
+    it.only('notifies StandbysChanged when a committee member leaves and a standby joins the committee', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
         const d = await Driver.new({maxStandbys, maxCommitteeSize});
@@ -504,7 +504,7 @@ describe('committee', async () => {
 
     // Ready-To-Sync timeout related tests
 
-    it('two ready-for-sync with less stake can overtake two timed-out standbys', async () => {
+    it.only('two ready-for-sync with less stake can overtake two timed-out standbys', async () => {
         const maxStandbys = 2;
         const readyToSyncTimeout = 30*24*60*60;
         const d = await Driver.new({maxStandbys, readyToSyncTimeout});
@@ -545,7 +545,7 @@ describe('committee', async () => {
 
     });
 
-    it('an out-ranked committee member can become standby even with stale readyToSync', async () => {
+    it.only('an out-ranked committee member can become standby even with stale readyToSync', async () => {
         const maxStandbys = 1;
         const maxCommitteeSize = 1;
         const readyToSyncTimeout = 30*24*60*60;
@@ -579,7 +579,7 @@ describe('committee', async () => {
         });
     });
 
-    it('a stale readyToSync does not get a validator evicted from committee', async () => {
+    it.only('a stale readyToSync does not get a validator evicted from committee', async () => {
         const maxStandbys = 1;
         const maxCommitteeSize = 1;
         const readyToSyncTimeout = 30*24*60*60;
@@ -610,7 +610,7 @@ describe('committee', async () => {
         });
     });
 
-    it('stake change does not count as a readyToSync notification', async () => {
+    it.only('stake change does not count as a readyToSync notification', async () => {
         const maxStandbys = 1;
         const readyToSyncTimeout = 30*24*60*60;
         const d = await Driver.new({maxStandbys, readyToSyncTimeout});
@@ -649,7 +649,7 @@ describe('committee', async () => {
         });
     });
 
-    it('evicts a higher-staked, timed-out standby when both standbys and committee are full and a new committee member enters', async () => {
+    it.only('evicts a higher-staked, timed-out standby when both standbys and committee are full and a new committee member enters', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
         const readyToSyncTimeout = 30*24*60*60;
@@ -717,7 +717,7 @@ describe('committee', async () => {
 
     });
 
-    it('sets last ready-to-sync timestamp to now for a validator who left the committee by unstaking and became a standby', async () => {
+    it.only('sets last ready-to-sync timestamp to now for a validator who left the committee by unstaking and became a standby', async () => {
         const maxStandbys = 1;
         const maxCommitteeSize = 1;
         const readyToSyncTimeout = 30*24*60*60;
@@ -751,7 +751,7 @@ describe('committee', async () => {
         expect(r3).to.not.have.a.standbysChangedEvent();
     });
 
-    it('sets last ready-to-sync timestamp to now for a validator who left the committee to became a standby by being outranked', async () => {
+    it.only('sets last ready-to-sync timestamp to now for a validator who left the committee to became a standby by being outranked', async () => {
         const maxStandbys = 1;
         const maxCommitteeSize = 1;
         const readyToSyncTimeout = 30*24*60*60;
@@ -781,7 +781,7 @@ describe('committee', async () => {
 
     // Min-Weight and Min-Committee-Size
 
-    it('joins committee only if has min-weight (min-committee == 0)', async () => {
+    it.only('joins committee only if has min-weight (min-committee == 0)', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -803,7 +803,7 @@ describe('committee', async () => {
         }
     });
 
-    it('joins committee if current is smaller than min-committee even with less than min-weight', async () => {
+    it.only('joins committee if current is smaller than min-committee even with less than min-weight', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 2;
@@ -833,7 +833,7 @@ describe('committee', async () => {
         }
     });
 
-    it('evicts a committee member which unstaked below the min-weight threshold, if member position is above min-committee', async () => {
+    it.only('evicts a committee member which unstaked below the min-weight threshold, if member position is above min-committee', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -862,7 +862,7 @@ describe('committee', async () => {
         });
     });
 
-    it('does not evict a committee member which unstaked below the min-weight threshold if member position is below min-committee', async () => {
+    it.only('does not evict a committee member which unstaked below the min-weight threshold if member position is below min-committee', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 1;
@@ -887,7 +887,7 @@ describe('committee', async () => {
         });
     });
 
-    it('joins committee due to min-weight change', async () => {
+    it.only('joins committee due to min-weight change', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -916,7 +916,7 @@ describe('committee', async () => {
         });
     });
 
-    it('leaves committee due to min-weight change', async () => {
+    it.only('leaves committee due to min-weight change', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -945,7 +945,7 @@ describe('committee', async () => {
         });
     });
 
-    it('does not join committee due to min-weight change if not ready for committee', async () => {
+    it.only('does not join committee due to min-weight change if not ready for committee', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -968,7 +968,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it('joins committee due to min-committee-size change', async () => {
+    it.only('joins committee due to min-committee-size change', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 0;
@@ -997,7 +997,7 @@ describe('committee', async () => {
         });
     });
 
-    it('leaves committee due to min-committee-size change', async () => {
+    it.only('leaves committee due to min-committee-size change', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = stake;
         const minCommitteeSize = 1;
@@ -1026,7 +1026,7 @@ describe('committee', async () => {
         });
     });
 
-    it('does not join committee due to min-committee-size change if not ready for committee', async () => {
+    it.only('does not join committee due to min-committee-size change if not ready for committee', async () => {
         const stake = 100;
         const generalCommitteeMinimumWeight = 0;
         const minCommitteeSize = 0;
@@ -1049,7 +1049,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
-    it('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (join committee directly, standbys not full)', async () => {
+    it.only('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (join committee directly, standbys not full)', async () => {
         const generalCommitteeMinimumWeight = 100;
         const minCommitteeSize = 2;
         const maxCommitteeSize = 4;
@@ -1079,7 +1079,7 @@ describe('committee', async () => {
 
     });
 
-    it('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (join committee directly, standbys full)', async () => {
+    it.only('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (join committee directly, standbys full)', async () => {
         const generalCommitteeMinimumWeight = 100;
         const maxStandbys = 1;
         const minCommitteeSize = 2;
@@ -1115,7 +1115,7 @@ describe('committee', async () => {
 
     });
 
-    it('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (become standby first)', async () => {
+    it.only('allows a validator to overtake a committee member with less stake, even if has less than min weight and joined due to min-committee-size (become standby first)', async () => {
         const generalCommitteeMinimumWeight = 100;
         const minCommitteeSize = 2;
         const maxCommitteeSize = 4;
@@ -1145,7 +1145,7 @@ describe('committee', async () => {
 
     });
 
-    it('returns committee and standbys using getters', async () => {
+    it.only('returns committee and standbys using getters', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
         const d = await Driver.new({maxStandbys, maxCommitteeSize});
@@ -1220,7 +1220,7 @@ describe('committee', async () => {
 
     });
 
-    it('returns address of committee member with lowest stake', async () => {
+    it.only('returns address of committee member with lowest stake', async () => {
         const maxStandbys = 2;
         const maxCommitteeSize = 2;
         const d = await Driver.new({maxStandbys, maxCommitteeSize});
