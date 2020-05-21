@@ -217,7 +217,7 @@ declare global {
       validatorMetadataChangedEvent(data?: Partial<ValidatorMetadataChangedEvent>): void;
       validatorUnregisteredEvent(data?: Partial<ValidatorUnregisteredEvent>): void;
       validatorDataUpdatedEvent(data?: Partial<ValidatorDataUpdatedEvent>): void;
-      stakeChangedEvent(data?: Partial<StakeChangeEvent>): void;
+      stakeChangedEvent(data?: Partial<StakeChangeEvent>): void; // Elections?
       stakedEvent(data?: Partial<StakedEvent>): void;
       unstakedEvent(data?: Partial<UnstakedEvent>): void;
       subscriptionChangedEvent(data?: Partial<SubscriptionChangedEvent>): void;
