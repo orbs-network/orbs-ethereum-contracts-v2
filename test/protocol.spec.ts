@@ -21,21 +21,24 @@ describe('protocol-contract', async () => {
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(2),
+      currentVersion: bn(1),
+      nextVersion: bn(2),
       fromTimestamp: bn(currTime + 100)
     });
 
     r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
-      protocolVersion: bn(2),
+      currentVersion: bn(2),
+      nextVersion: bn(2),
       fromTimestamp: bn(r.blockNumber)
     });
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, currTime + 100);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
-      protocolVersion: bn(3),
+      currentVersion: bn(2),
+      nextVersion: bn(3),
       fromTimestamp: bn(currTime + 100)
     });
   });
@@ -47,7 +50,8 @@ describe('protocol-contract', async () => {
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(2),
+      currentVersion: bn(1),
+      nextVersion: bn(2),
       fromTimestamp: bn(currTime + 3)
     });
 
@@ -64,7 +68,8 @@ describe('protocol-contract', async () => {
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(2),
+      currentVersion: bn(1),
+      nextVersion: bn(2),
       fromTimestamp: bn(currTime + 100)
     });
 
@@ -86,7 +91,8 @@ describe('protocol-contract', async () => {
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(3),
+      currentVersion: bn(1),
+      nextVersion: bn(3),
       fromTimestamp: bn(currTime + 3)
     });
 
@@ -102,24 +108,26 @@ describe('protocol-contract', async () => {
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(3),
+      currentVersion: bn(1),
+      nextVersion: bn(3),
       fromTimestamp: bn(currTime + 3)
     });
 
-    await evmIncreaseTimeForQueries(d.web3, 3);
     await evmIncreaseTimeForQueries(d.web3, 3);
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(4),
+      currentVersion: bn(3),
+      nextVersion: bn(4),
       fromTimestamp: bn(currTime + 100)
     });
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 50);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
-      protocolVersion: bn(3),
+      currentVersion: bn(3),
+      nextVersion: bn(3),
       fromTimestamp: bn(currTime + 50)
     });
   });
