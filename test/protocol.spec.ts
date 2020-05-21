@@ -23,7 +23,7 @@ async function getTopBlockTimestamp(d: Driver) : Promise<number> {
   );
 }
 
-describe.only('protocol-contract', async () => {
+describe('protocol-contract', async () => {
 
   it('schedules a protocol version upgrade for the main, canary deployment subsets', async () => {
     const d = await Driver.new();
