@@ -2,6 +2,7 @@ import Web3 from "web3";
 import BN from "bn.js";
 import * as _ from "lodash";
 import { Web3Driver } from "../eth";
+import {Driver} from "./driver";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
     for (let i = 0; i < n; i++) {
@@ -44,4 +45,15 @@ export function minAddress(addrs: string[]): string {
         .map(toBn)
         .reduce((m, x) => BN.min(m, x), toBn(addrs[0]));
     return addrs.find(addr => toBn(addr).eq(minBn)) as string
+}
+
+export async function getTopBlockTimestamp(d: Driver) : Promise<number> {
+    return new Promise(
+        (resolve, reject) =>
+            d.web3.eth.getBlock(
+                "latest",
+                (err, block: any) =>
+                    err ? reject(err): resolve(block.timestamp)
+            )
+    );
 }

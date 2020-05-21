@@ -10,18 +10,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
-import {bn, evmIncreaseTimeForQueries} from "./helpers";
-
-async function getTopBlockTimestamp(d: Driver) : Promise<number> {
-  return new Promise(
-      (resolve, reject) =>
-          d.web3.eth.getBlock(
-              "latest",
-              (err, block: any) =>
-                  err ? reject(err): resolve(block.timestamp)
-          )
-  );
-}
+import {bn, evmIncreaseTimeForQueries, getTopBlockTimestamp} from "./helpers";
 
 describe('protocol-contract', async () => {
 
