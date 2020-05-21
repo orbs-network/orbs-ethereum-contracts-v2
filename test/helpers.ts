@@ -9,6 +9,11 @@ export const retry = (n: number, f: () => Promise<void>) => async  () => {
     }
 };
 
+export const evmIncreaseTimeForQueries = async (web3: Web3Driver, seconds: number) => {
+    await evmIncreaseTime(web3, seconds);
+    evmMine(web3, 1); // "bake" the new clock in by closing 1 block
+};
+
 export const evmIncreaseTime = async (web3: Web3Driver, seconds: number) => new Promise(
     (resolve, reject) =>
         (web3.currentProvider as any).send(
