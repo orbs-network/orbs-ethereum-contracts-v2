@@ -56,7 +56,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit Delegated(msg.sender, to);
 
 		if (delegatorStake != 0) {
-			emitDelegatedStakeChanged(prevDelegate, msg.sender, delegatorStake);
+			emitDelegatedStakeChanged(prevDelegate, msg.sender, 0);
 			emitDelegatedStakeChanged(to, msg.sender, delegatorStake);
 		}
 	}
