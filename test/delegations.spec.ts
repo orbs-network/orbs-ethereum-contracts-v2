@@ -190,7 +190,6 @@ describe('delegations-contract', async () => {
 
     it('when delegating to another, DelegatedStakeChanged should indicate a new delegation of 0 to the previous delegate', async () => {
         const d = await Driver.new();
-
         let r: TransactionReceipt;
 
         const v1 = d.newParticipant();
