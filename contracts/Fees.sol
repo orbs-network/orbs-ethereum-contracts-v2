@@ -15,6 +15,7 @@ contract Fees is IFees, ContractRegistryAccessor {
     uint256 constant bucketTimePeriod = 30 days;
 
     mapping(uint256 => uint256) generalFeePoolBuckets;
+    mapping(uint256 => uint256) compliantFeePoolBuckets;
 
     uint256 lastPayedAt;
 
@@ -56,6 +57,7 @@ contract Fees is IFees, ContractRegistryAccessor {
         // Fee pool
         uint bucketsPayed = 0;
         uint generalFeePoolAmount = 0;
+        uint complianceFeePoolAmount = 0;
         while (bucketsPayed < MAX_REWARD_BUCKET_ITERATIONS && lastPayedAt < now) {
             uint256 bucketStart = _bucketTime(lastPayedAt);
             uint256 bucketEnd = bucketStart.add(bucketTimePeriod);
@@ -67,20 +69,26 @@ contract Fees is IFees, ContractRegistryAccessor {
             generalFeePoolAmount += amount;
             generalFeePoolBuckets[bucketStart] = generalFeePoolBuckets[bucketStart].sub(amount);
 
+            amount = compliantFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
+            complianceFeePoolAmount += amount;
+            compliantFeePoolBuckets[bucketStart] = compliantFeePoolBuckets[bucketStart].sub(amount);
+
             lastPayedAt = payUntil;
 
             assert(lastPayedAt <= bucketEnd);
             if (lastPayedAt == bucketEnd) {
                 delete generalFeePoolBuckets[bucketStart];
+                delete compliantFeePoolBuckets[bucketStart];
             }
 
             bucketsPayed++;
         }
 
-        assignAmountFixed(generalCommittee, generalFeePoolAmount);
+        assignAmountFixed(generalCommittee, generalFeePoolAmount, false);
+        assignAmountFixed(_getCommittee(true) /* todo */, complianceFeePoolAmount, true);
     }
 
-    function assignAmountFixed(address[] memory committee, uint256 amount) private {
+    function assignAmountFixed(address[] memory committee, uint256 amount, bool isCompliant /* todo - use */) private {
         uint256[] memory assignedFees = new uint256[](committee.length);
 
         uint256 totalAssigned = 0;
@@ -108,33 +116,42 @@ contract Fees is IFees, ContractRegistryAccessor {
     }
 
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp);
+        fillFeeBuckets(amount, monthlyRate, fromTimestamp, false);
     }
 
-    function fillBucket(uint256 bucketId, uint256 amount) private {
+    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
+        fillFeeBuckets(amount, monthlyRate, fromTimestamp, true);
+    }
+
+    function fillBucket(uint256 bucketId, uint256 amount, bool isCompliant) private {
         uint256 total;
-        total = generalFeePoolBuckets[bucketId].add(amount);
-        generalFeePoolBuckets[bucketId] = total;
+        if (isCompliant) {
+            total = compliantFeePoolBuckets[bucketId].add(amount);
+            compliantFeePoolBuckets[bucketId] = total;
+        } else {
+            total = generalFeePoolBuckets[bucketId].add(amount);
+            generalFeePoolBuckets[bucketId] = total;
+        }
 
-        emit FeesAddedToBucket(bucketId, amount, total);
+        emit FeesAddedToBucket(bucketId, amount, total, isCompliant);
     }
 
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) private {
-        _assignFees(_getCommittee(false)); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCompliant) private {
+        _assignFees(_getCommittee(isCompliant)); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(fromTimestamp);
         uint256 _amount = amount;
 
         // add the partial amount to the first bucket
         uint256 bucketAmount = Math.min(amount, monthlyRate.mul(bucketTimePeriod - fromTimestamp % bucketTimePeriod).div(bucketTimePeriod));
-        fillBucket(bucket, bucketAmount);
+        fillBucket(bucket, bucketAmount, isCompliant);
         _amount = _amount.sub(bucketAmount);
 
         // following buckets are added with the monthly rate
         while (_amount > 0) {
             bucket = bucket.add(bucketTimePeriod);
             bucketAmount = Math.min(monthlyRate, _amount);
-            fillBucket(bucket, bucketAmount);
+            fillBucket(bucket, bucketAmount, isCompliant);
             _amount = _amount.sub(bucketAmount);
         }
 
@@ -153,10 +170,10 @@ contract Fees is IFees, ContractRegistryAccessor {
 
     function _getCommittee(bool isCompliant) private view returns (address[] memory) {
         address[] memory validators;
-        if (isCompliant) {
-            (validators,) =  getComplianceCommitteeContract().getCommittee();
+        if (!isCompliant) {
+            (validators,) =  getCommitteeContract().getCommittee();
         } else {
-            (validators,) =  getGeneralCommitteeContract().getCommittee();
+            validators = new address[](0); // todo compliance committee
         }
         return validators;
     }

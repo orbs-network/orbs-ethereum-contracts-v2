@@ -438,7 +438,7 @@ describe('gas usage scenarios', async () => {
     it("test", async () => {
         const {d} = await fullCommitteeAndStandbys(false, false, 0);
         const p = d.newParticipant();
-        const r = await (d.committeeGeneral as any).test({from: p.address});
+        const r = await (d.committee as any).test({from: p.address});
         const events = gasReportEvents(r);
         events.forEach(e => console.log(JSON.stringify(e)));
         d.logGasUsageSummary("test", [p]);

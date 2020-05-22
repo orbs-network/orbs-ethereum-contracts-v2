@@ -45,7 +45,7 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     }
 
     function setAnnualRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
-        (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee();
+        (address[] memory committee, uint256[] memory weights) = getCommitteeContract().getCommittee();
         _assignRewards(committee, weights);
         annualRateInPercentMille = annual_rate_in_percent_mille;
         annualCap = annual_cap;

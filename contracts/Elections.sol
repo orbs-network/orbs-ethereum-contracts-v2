@@ -76,11 +76,15 @@ contract Elections is IElections, ContractRegistryAccessor {
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
 	function validatorComplianceChanged(address addr, bool isCompliant) external {
+		(bool committeeChanged,) = getCommitteeContract().memberComplianceChange(addr, isCompliant);
+		if (committeeChanged) {
+			assignRewards();
+		}
 	}
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, true);
+		(bool committeeChanged,) = getCommitteeContract().memberReadyToSync(sender, true);
 		if (committeeChanged) {
 			assignRewards();
 		}
@@ -88,7 +92,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, false);
+		(bool committeeChanged,) = getCommitteeContract().memberReadyToSync(sender, false);
 		if (committeeChanged) {
 			assignRewards();
 		}
@@ -132,13 +136,13 @@ contract Elections is IElections, ContractRegistryAccessor {
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights) = getGeneralCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights) = getCommitteeContract().getCommittee();
 
 		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
 			emit VotedOutOfCommittee(addr);
-			(bool committeeChanged,) = getGeneralCommitteeContract().memberNotReadyToSync(addr);
+			(bool committeeChanged,) = getCommitteeContract().memberNotReadyToSync(addr);
 			if (committeeChanged) {
 				assignRewards();
 			}
@@ -156,7 +160,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	function assignRewards() public {
 		uint gl01 = gasleft();
-		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getGeneralCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getCommitteeContract().getCommittee();
 		emit GasReport("assignRewards: getCommittee", gl01-gasleft());
 		gl01 = gasleft();
 		getFeesContract().assignFees(generalCommittee);
@@ -305,7 +309,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
 
 		uint gl01 = gasleft();
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		emit GasReport("committee call (1)", gl01-gasleft());
 		if (committeeChanged) {
 			assignRewards();
@@ -336,14 +340,14 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function removeMemberFromCommittees(address addr) private {
-		(bool committeeChanged,) = getGeneralCommitteeContract().removeMember(addr);
+		(bool committeeChanged,) = getCommitteeContract().removeMember(addr);
 		if (committeeChanged) {
 			assignRewards();
 		}
 	}
 
 	function addMemberToCommittees(address addr) private {
-		(bool committeeChanged,) = getGeneralCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr), getComplianceContract().isValidatorCompliant(addr));
 		if (committeeChanged) {
 			assignRewards();
 		}

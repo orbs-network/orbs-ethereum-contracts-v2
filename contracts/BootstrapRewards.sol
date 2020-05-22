@@ -48,13 +48,13 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
     }
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        (address[] memory generalCommittee,) = getGeneralCommitteeContract().getCommittee();
+        (address[] memory generalCommittee,) = getCommitteeContract().getCommittee();
         _assignRewards(generalCommittee);
         generalCommitteeAnnualBootstrap = annual_amount;
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        (address[] memory generalCommittee,) = getGeneralCommitteeContract().getCommittee();
+        (address[] memory generalCommittee,) = getCommitteeContract().getCommittee();
         _assignRewards(generalCommittee);
         complianceCommitteeAnnualBootstrap = annual_amount;
     }
@@ -79,7 +79,7 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
 
     function _assignRewards(address[] memory generalCommittee) private {
         _assignRewardsToCommittee(generalCommittee, generalCommitteeAnnualBootstrap);
-
+        // todo compliance committee
         lastPayedAt = now;
     }
 
@@ -96,7 +96,7 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
                 assignedRewards[i] = amountPerValidator;
             }
 
-            emit BootstrapRewardsAssigned(committee, assignedRewards); // TODO separate event per committee?
+            emit BootstrapRewardsAssigned(committee, assignedRewards, lastPayedAt); // TODO separate event per committee?
         }
     }
 

@@ -68,8 +68,7 @@ export class Driver {
         public protocol: Contracts["Protocol"],
         public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
-        public committeeGeneral: Contracts['Committee'],
-        public committeeCompliance: Contracts['Committee'],
+        public committee: Contracts['Committee'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
@@ -96,8 +95,7 @@ export class Driver {
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
-        const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout], null, session);
-        const committeeCompliance = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, 0, maxStandbys, readyToSyncTimeout], null, session);
+        const committee = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout], null, session);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
@@ -110,8 +108,7 @@ export class Driver {
         await contractRegistry.set("protocol", protocol.address);
         await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
-        await contractRegistry.set("committee-general", committeeGeneral.address);
-        await contractRegistry.set("committee-compliance", committeeCompliance.address);
+        await contractRegistry.set("committee", committee.address);
 
         await delegations.setContractRegistry(contractRegistry.address);
         await elections.setContractRegistry(contractRegistry.address);
@@ -121,8 +118,7 @@ export class Driver {
         await subscriptions.setContractRegistry(contractRegistry.address);
         await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
-        await committeeGeneral.setContractRegistry(contractRegistry.address);
-        await committeeCompliance.setContractRegistry(contractRegistry.address);
+        await committee.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
 
@@ -140,8 +136,7 @@ export class Driver {
             protocol,
             compliance,
             validatorsRegistration,
-            committeeGeneral,
-            committeeCompliance,
+            committee,
             contractRegistry
         );
     }

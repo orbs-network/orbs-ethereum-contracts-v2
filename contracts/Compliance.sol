@@ -15,6 +15,13 @@ contract Compliance is ICompliance, ContractRegistryAccessor {
         return validatorCompliance[addr];
     }
 
+    function isValidatorCompliantBatch(address[] calldata addrs) external view returns (bool[] memory isCompliantArr) { // todo needed?
+        isCompliantArr = new bool[](addrs.length);
+        for (uint i = 0; i < addrs.length; i++) {
+            isCompliantArr[i] = validatorCompliance[addrs[i]];
+        }
+    }
+
     function setValidatorCompliance(address addr, bool isCompliant) external onlyOwner {
         validatorCompliance[addr] = isCompliant;
         emit ValidatorComplianceUpdate(addr, isCompliant);

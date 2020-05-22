@@ -4,8 +4,8 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface ICommittee {
-    event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] weights);
-	event StandbysChanged(address[] addrs, address[] orbsAddrs, uint256[] weights);
+    event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] weights, bool[] compliance);
+	event StandbysChanged(address[] addrs, address[] orbsAddrs, uint256[] weights, bool[] compliance);
 
     // No events
     // No external functions
@@ -28,12 +28,16 @@ interface ICommittee {
 	function memberNotReadyToSync(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
+	/// Notifies a validator compliance change
+	function memberComplianceChange(address addr, bool isCompliant) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionsContract */;
+
+	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready
 	function removeMember(address addr) external returns (bool commiteeChanged, bool standbysChanged) /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a new member applicable for committee (due to registration, unbanning, compliance change)
-	function addMember(address addr, uint256 weight) external returns (bool committeeChanged, bool standbysChanged) /* onlyElectionsContract */;
+	function addMember(address addr, uint256 weight, bool isCompliant) external returns (bool committeeChanged, bool standbysChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee member with the lowest weight
@@ -45,13 +49,6 @@ interface ICommittee {
 
 	/// @dev Returns the standy (out of commiteee) members and their weights
 	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights);
-
-	/// @dev Called by: Elections contract
-	/// Sets the mimimal weight, and committee members
-    /// Every member with sortingStake >= minimumStake OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize, bool dontComputeCommittee) external /* onlyElectionsContract */;
-
-	function flush() external;
 
 	/*
 	 * Governance

@@ -17,6 +17,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		uint32 readyToSyncTimestamp;
 		bool isMember; // exists
 		bool readyForCommittee;
+		bool isCompliant;
 
 		bool isStandby;
 		bool inCommittee;
@@ -125,7 +126,19 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		return (false, false);
 	}
 
-	function addMember(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract returns (bool commiteeChanged, bool standbysChanged) {
+		MemberData memory memberData = membersData[addr];
+		if (memberData.isMember) {
+			memberData.isCompliant = isCompliant;
+			return _rankAndUpdateMember(Member({
+				addr: addr,
+				data: memberData
+			}));
+		}
+		return (false, false);
+	}
+
+	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
 		if (!membersData[addr].isMember) {
 			return _rankAndUpdateMember(Member({
 				addr: addr,
@@ -134,6 +147,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 					readyForCommittee: false,
 					readyToSyncTimestamp: 0,
 					weight: uint128(weight),
+					isCompliant: isCompliant,
 					isStandby: false,
 					inCommittee: false
 					})
@@ -221,28 +235,6 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		}
 	}
 
-	/// @dev Called by: Elections contract
-	/// Sets the minimal weight, and committee members
-	/// Every member with sortingWeight >= minimumWeight OR in top minimumN is included in the committee
-	function setMinimumWeight(uint256 _minimumWeight, address _minimumAddress, uint _minCommitteeSize, bool dontComputeCommittee) external onlyElectionsContract {
-		Settings memory _settings = settings;
-		_settings.minimumWeight = uint128(_minimumWeight);
-		_settings.minimumAddress = _minimumAddress;
-		_settings.minCommitteeSize = uint8(_minCommitteeSize);
-		settings = _settings; // todo check if equal before writing
-		if (dontComputeCommittee) {
-			committeeInfo.pendingChanges = true;
-		} else {
-			updateOnMemberChange(NullMember(), _settings);
-		}
-	}
-
-	function flush() external {
-		if (committeeInfo.pendingChanges) {
-			updateOnMemberChange(NullMember(), settings);
-		}
-	}
-
 	/*
      * Getters
      */
@@ -264,27 +256,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	 * Private
 	 */
 
-	function NullMember() private pure returns (Member memory nullMember) {
-		return Member({
-			addr: address(0),
-			data: MemberData({
-				isMember: false,
-				readyForCommittee: false,
-				readyToSyncTimestamp: 0,
-				weight: 0,
-				isStandby: false,
-				inCommittee: false
-				})
-			});
-	}
-
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
-//		address[] memory orbsAddresses = new address[](addrs.length);
-//		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
-//		for (uint i = 0; i < addrs.length; i++) {
-//			orbsAddresses[i] = validatorsRegistrationContract.getValidatorOrbsAddress(addrs[i]);
-//		}
-//		return orbsAddresses;
 		return getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs);
 	}
 
@@ -461,9 +433,11 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	function notifyChanges(Participant[] memory members, uint committeeSize, uint standbysCount, bool committeeChanged, bool standbysChanged) private {
 		address[] memory committeeAddrs = new address[](committeeSize);
 		uint[] memory committeeWeights = new uint[](committeeSize);
+		bool[] memory committeeCompliance = new bool[](committeeSize); // todo - bitmap?
 		uint cInd;
 		address[] memory standbyAddrs = new address[](standbysCount);
 		uint[] memory standbyWeights = new uint[](standbysCount);
+		bool[] memory standbysCompliance = new bool[](standbysCount); // todo - bitmap?
 		uint sInd;
 
 		Participant memory p;
@@ -471,15 +445,17 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 			p = members[i];
 			if (p.data.inCommittee) {
 				committeeAddrs[cInd] = p.addr;
+				committeeCompliance[cInd] = p.data.isCompliant;
 				committeeWeights[cInd++] = p.data.weight;
 			} else if (p.data.isStandby) {
 				standbyAddrs[sInd] = p.addr;
+				standbysCompliance[sInd] = p.data.isCompliant;
 				standbyWeights[sInd++] = p.data.weight;
 			}
 		}
 
-		if (committeeChanged) _notifyCommitteeChanged(committeeAddrs, committeeWeights);
-		if (standbysChanged) _notifyStandbysChanged(standbyAddrs, standbyWeights);
+		if (committeeChanged) _notifyCommitteeChanged(committeeAddrs, committeeWeights, committeeCompliance);
+		if (standbysChanged) _notifyStandbysChanged(standbyAddrs, standbyWeights, standbysCompliance);
 	}
 
 	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private returns (Participant[] memory _participants, Participant memory memberAsParticipant) {
@@ -554,89 +530,11 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 //		emit GasReport("loadParticipants - all", gl01 - gasleft());
 	}
 
-	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights) private {
-		emit StandbysChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights);
+	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
+		emit StandbysChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights, compliance);
 	}
 
-	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights) private {
-		emit CommitteeChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights);
+	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
+		emit CommitteeChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights, compliance);
 	}
-
-	function tf1(Participant memory p) private {
-		emit GasReport("dummy", p.pos);
-	}
-
-	function tf2(uint n) private {
-		emit GasReport("dummy", n);
-	}
-
-	struct AddrWeight {
-		address addr;
-		uint64 weight;
-	}
-	mapping (address => AddrWeight) tm;
-
-	function test() external {
-//		CommitteeInfo memory ci = committeeInfo;
-//		Settings memory _settings = settings;
-		uint gl01;
-		uint gl02;
-
-		gl01 = gasleft();
-		address[] memory _participants = participants;
-		emit GasReport("reading participants array", gl01 - gasleft());
-
-		gl01 = gasleft();
-		(Participant[] memory members,) = loadParticipantsSortedByWeights(_participants, NullMember());
-		gl02 = gasleft();
-		emit GasReport("loading participants", gl01 - gl02);
-
-		gl01 = gasleft();
-		Participant memory p = members[0];
-		gl02 = gasleft();
-		emit GasReport("reading participant to new local", gl01 - gl02);
-
-		gl01 = gasleft();
-		p = members[0];
-		gl02 = gasleft();
-		emit GasReport("reading participant to existing local", gl01 - gl02);
-
-		gl01 = gasleft();
-		tf1(p);
-		gl02 = gasleft();
-		emit GasReport("calling func with Participant", gl01 - gl02);
-
-		gl01 = gasleft();
-		Participant memory p2 = p;
-		gl02 = gasleft();
-		emit GasReport("copying from local to new local", gl01 - gl02);
-
-		Participant memory p3;
-
-		gl01 = gasleft();
-		p3 = p2;
-		gl02 = gasleft();
-		emit GasReport("copying from local to existing local", gl01 - gl02);
-
-		uint n = 3;
-		gl01 = gasleft();
-		tf2(n);
-		gl02 = gasleft();
-		emit GasReport("calling func with uint", gl01 - gl02);
-
-		MemberData memory md;
-		gl01 = gasleft();
-		md = membersData[msg.sender];
-		gl02 = gasleft();
-		emit GasReport("reading one member data", gl01 - gl02);
-
-		AddrWeight memory aw;
-		gl01 = gasleft();
-		aw = tm[msg.sender];
-		gl02 = gasleft();
-		emit GasReport("reading addr weight", gl01 - gl02);
-
-	}
-
-
 }

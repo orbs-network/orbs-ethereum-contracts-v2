@@ -38,12 +38,8 @@ contract ContractRegistryAccessor is Ownable {
         return IStakingRewards(contractRegistry.get("stakingRewards"));
     }
 
-    function getGeneralCommitteeContract() public view returns (ICommittee) {
-        return ICommittee(contractRegistry.get("committee-general"));
-    }
-
-    function getComplianceCommitteeContract() public view returns (ICommittee) {
-        return ICommittee(contractRegistry.get("committee-compliance"));
+    function getCommitteeContract() public view returns (ICommittee) {
+        return ICommittee(contractRegistry.get("committee"));
     }
 
     function getElectionsContract() public view returns (IElections) {

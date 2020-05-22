@@ -84,7 +84,7 @@ describe('fees-contract', async () => {
     };
 
     const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(3000000000, false, 12 * 3000000000);
-    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(6000000000, true, 12 * 3000000000);
+    // const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(6000000000, true, 12 * 3000000000); // todo compliance committee
 
     const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[]) => {
       let rewards = 0;
@@ -108,11 +108,11 @@ describe('fees-contract', async () => {
       return rewardsArr;
     };
 
-    if (complianceStartTime > generalStartTime) {
-      // the creation of the second VC triggered reward calculaton for the general committee, need to fix the buckets
-      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, generalCommittee);
-    }
-
+    // if (complianceStartTime > generalStartTime) {
+    //   // the creation of the second VC triggered reward calculaton for the general committee, need to fix the buckets
+    //   calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, generalCommittee);
+    // }
+    //
     // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
     // and subtract it afterwards
 
@@ -124,22 +124,23 @@ describe('fees-contract', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
 
-    const assignFeesTxRes = await d.fees.assignFees();
+    const assignFeesTxRes = await d.elections.assignRewards();
     const endTime = await txTimestamp(d.web3, assignFeesTxRes);
 
     // Calculate expected rewards from VC fees
 
-    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, generalCommittee);
+    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, endTime, generalCommittee);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
       assignees: generalCommittee.map(v => v.address),
       orbs_amounts: generalCommitteeRewardsArr.map(x => x.toString())
     });
 
-    const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
-    expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      assignees: complianceCommittee.map(v => v.address),
-      orbs_amounts: complianceCommitteeRewardsArr.map(x => x.toString())
-    });
+    // todo compliance committee
+    // const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
+    // expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
+    //   assignees: complianceCommittee.map(v => v.address),
+    //   orbs_amounts: complianceCommitteeRewardsArr.map(x => x.toString())
+    // });
 
     const orbsBalances:BN[] = [];
     for (const v of generalCommittee) {
@@ -149,7 +150,8 @@ describe('fees-contract', async () => {
 
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
-      const totalExpectedRewards = generalCommitteeRewardsArr[i] + (i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2] : 0);
+      // const totalExpectedRewards = generalCommitteeRewardsArr[i] + (i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2] : 0);
+      const totalExpectedRewards = generalCommitteeRewardsArr[i]; // todo compliance committee
       const expectedBalance = bn(totalExpectedRewards).add(initialOrbsBalances[i]);
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
