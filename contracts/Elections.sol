@@ -167,7 +167,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		getFeesContract().assignFees(generalCommittee, compliance);
 		emit GasReport("assignRewards: assignFees", gl01-gasleft());
 		gl01 = gasleft();
-		getBootstrapRewardsContract().assignRewards(generalCommittee);
+		getBootstrapRewardsContract().assignRewards(generalCommittee, compliance);
 		emit GasReport("assignRewards: bootstrap rewards", gl01-gasleft());
 		gl01 = gasleft();
 		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);

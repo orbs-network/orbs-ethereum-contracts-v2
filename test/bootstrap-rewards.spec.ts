@@ -72,17 +72,12 @@ describe('bootstrap-rewards-level-flows', async () => {
     const calcRewards = (annualRate) => bn(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS));
 
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
+    const expectedComplianceCommitteeRewards = calcRewards(annualAmountCompliance);
+
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
       assignees: generalCommittee.map(v => v.address),
-      amounts: generalCommittee.map(() => expectedGeneralCommitteeRewards.toString())
+      amounts: generalCommittee.map((v, i) => bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0))).map(x => x.toString())
     });
-
-    // todo - rewards tests
-    // const expectedComplianceCommitteeRewards = calcRewards(annualAmountCompliance);
-    // expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
-    //   assignees: complianceCommittee.map(v => v.address),
-    //   amounts: complianceCommittee.map(() => expectedComplianceCommitteeRewards.toString())
-    // });
 
     const tokenBalances:BN[] = [];
     for (const v of generalCommittee) {
@@ -92,8 +87,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
 
-      // const expectedBalance = expectedGeneralCommitteeRewards + ((i % 2 == 0) ? expectedComplianceCommitteeRewards : 0);
-      const expectedBalance = expectedGeneralCommitteeRewards; // todo - rewards tests
+      const expectedBalance = bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0));
       expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds

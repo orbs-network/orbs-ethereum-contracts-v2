@@ -25,7 +25,7 @@ interface IBootstrapRewards {
     /// Assumes the tokens were approved for transfer
     function topUpBootstrapPool(uint256 amount) external;
 
-    function assignRewards(address[] calldata generalCommittee) external /* onlyElectionsContract */;
+    function assignRewards(address[] calldata generalCommittee, bool[] calldata compliance) external /* onlyElectionsContract */;
 
     /*
      * Reward-governor methods
