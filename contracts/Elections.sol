@@ -136,7 +136,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights) = getCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights,) = getCommitteeContract().getCommittee();
 
 		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
 		if (votedOut) {
@@ -160,10 +160,11 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	function assignRewards() public {
 		uint gl01 = gasleft();
-		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+
 		emit GasReport("assignRewards: getCommittee", gl01-gasleft());
 		gl01 = gasleft();
-		getFeesContract().assignFees(generalCommittee);
+		getFeesContract().assignFees(generalCommittee, compliance);
 		emit GasReport("assignRewards: assignFees", gl01-gasleft());
 		gl01 = gasleft();
 		getBootstrapRewardsContract().assignRewards(generalCommittee);

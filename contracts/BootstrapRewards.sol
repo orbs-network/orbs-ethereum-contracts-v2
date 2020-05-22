@@ -48,13 +48,13 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
     }
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        (address[] memory generalCommittee,) = getCommitteeContract().getCommittee();
+        (address[] memory generalCommittee,,) = getCommitteeContract().getCommittee();
         _assignRewards(generalCommittee);
         generalCommitteeAnnualBootstrap = annual_amount;
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        (address[] memory generalCommittee,) = getCommitteeContract().getCommittee();
+        (address[] memory generalCommittee,,) = getCommitteeContract().getCommittee();
         _assignRewards(generalCommittee);
         complianceCommitteeAnnualBootstrap = annual_amount;
     }

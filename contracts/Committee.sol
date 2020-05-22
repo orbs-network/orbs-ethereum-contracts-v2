@@ -178,7 +178,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights) {
+	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		return _getCommittee();
 	}
 
@@ -189,7 +189,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights) {
+	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		// todo in case of committeeInfo.pendingChanges, this is stale
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint bitmap = uint(_committeeInfo.committeeBitmap);
@@ -197,12 +197,16 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 		addrs = new address[](committeeSize);
 		weights = new uint[](committeeSize);
+		compliance = new bool[](committeeSize);
 		bitmap = uint(_committeeInfo.committeeBitmap);
 		uint i = 0;
+		MemberData memory md;
 		while (bitmap != 0) {
 			if (bitmap & 1 == 1) {
 				addrs[i] = participants[i];
-				weights[i] = uint(membersData[addrs[i]].weight);
+				md = membersData[addrs[i]];
+				weights[i] = md.weight;
+				compliance[i] = md.isCompliant;
 				i++;
 			}
 			bitmap >>= 1;
@@ -241,8 +245,8 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	/// @dev returns the current committee
 	/// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) {
-		(address[] memory _committee, uint256[] memory _weights) = _getCommittee();
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) { // todo also compliance
+		(address[] memory _committee, uint256[] memory _weights,) = _getCommittee();
 		return (_committee, _weights, _loadOrbsAddresses(_committee), _loadIps(_committee));
 	}
 

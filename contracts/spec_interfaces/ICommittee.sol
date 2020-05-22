@@ -45,7 +45,7 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights);
+	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance);
 
 	/// @dev Returns the standy (out of commiteee) members and their weights
 	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights);
