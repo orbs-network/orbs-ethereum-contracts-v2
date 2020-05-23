@@ -4,7 +4,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IProtocol.sol";
-import "./Fees.sol";
 import "./ContractRegistryAccessor.sol";
 
 contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
