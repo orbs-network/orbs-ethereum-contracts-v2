@@ -29,7 +29,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
         uint256 fees;
         uint256 stakingRewards;
     }
-    mapping(address => Balance) balance;
+    mapping(address => Balance) balances;
 
     // Bootstrap
 //    mapping(address => uint256) bootstrapBalance;
@@ -77,17 +77,15 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     // bootstrap rewards
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        BootstrapAndStaking memory pools = bootstrapAndStaking;
-        _assignBootstrapRewards(_getCommittee(false), _getCommittee(true), pools);
-        pools.generalCommitteeAnnualBootstrap = annual_amount;
-        bootstrapAndStaking = pools;
+        (address[] memory generalCommittee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewards(generalCommittee, weights, compliance);
+        bootstrapAndStaking.generalCommitteeAnnualBootstrap = annual_amount;
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        BootstrapAndStaking memory pools = bootstrapAndStaking;
-        _assignBootstrapRewards(_getCommittee(false), _getCommittee(true), pools);
-        pools.complianceCommitteeAnnualBootstrap = annual_amount;
-        bootstrapAndStaking = pools;
+        (address[] memory generalCommittee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewards(generalCommittee, weights, compliance);
+        bootstrapAndStaking.complianceCommitteeAnnualBootstrap = annual_amount;
     }
 
     function topUpBootstrapPool(uint256 amount) external {
@@ -98,60 +96,76 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
-        return balance[addr].bootstrapRewards;
+        return balances[addr].bootstrapRewards;
     }
 
     function getLastBootstrapAssignment() external view returns (uint256) {
         return lastPayedAt;
     }
 
-    function assignRewards(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, address[] calldata complianceCommittee) external onlyElectionsContract {
+    function assignRewards(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyElectionsContract {
+        _assignRewards(committee, committeeWeights, compliance);
+    }
+
+    function _assignRewards(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
         BootstrapAndStaking memory pools = bootstrapAndStaking;
-        _assignBootstrapRewards(generalCommittee, complianceCommittee, pools);
-        _assignStakingRewards(generalCommittee, generalCommitteeWeights, pools);
-        _assignFees(generalCommittee, complianceCommittee);
+
+        uint256[] memory bootstrapRewards = collectBootstrapRewards(committee, compliance, pools);
+        uint256[] memory fees = collectFees(committee, compliance);
+        uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
+
+        Balance memory balance;
+        for (uint i = 0; i < committee.length; i++) {
+            balance = balances[committee[i]];
+            balance.bootstrapRewards = balance.bootstrapRewards.add(bootstrapRewards[i]);
+            balance.fees = balance.fees.add(fees[i]);
+            balance.stakingRewards = balance.stakingRewards.add(stakingRewards[i]);
+            balances[committee[i]] = balance;
+
+            emit StakingRewardAssigned(committee[i], stakingRewards[i], balance.stakingRewards);
+        }
+
+        emit BootstrapRewardsAssigned(committee, bootstrapRewards); // TODO separate event per committee?
+        emit FeesAssigned(committee, fees);
+
         bootstrapAndStaking = pools;
         lastPayedAt = now;
     }
 
-    function _assignBootstrapRewards(address[] memory generalCommittee, address[] memory complianceCommittee, BootstrapAndStaking memory pools) private {
-        _assignBootstrapRewardsToCommittee(generalCommittee, pools.generalCommitteeAnnualBootstrap, pools);
-        _assignBootstrapRewardsToCommittee(complianceCommittee, pools.complianceCommitteeAnnualBootstrap, pools);
-    }
+    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private returns (uint256[] memory assignedRewards){
+        assignedRewards = new uint256[](committee.length);
 
-    function _assignBootstrapRewardsToCommittee(address[] memory committee, uint256 annualBootstrapRewards, BootstrapAndStaking memory pools) private {
         if (committee.length > 0) {
-            uint256 duration = now.sub(lastPayedAt);
-            uint256 amountPerValidator = Math.min(annualBootstrapRewards.mul(duration).div(365 days), pools.bootstrapPool.div(committee.length));
-            pools.bootstrapPool = pools.bootstrapPool.sub(amountPerValidator * committee.length);
-
-            uint256[] memory assignedRewards = new uint256[](committee.length);
-
+            uint nCompliance = 0;
             for (uint i = 0; i < committee.length; i++) {
-                addToBootstrapBalance(committee[i], amountPerValidator);
-                assignedRewards[i] = amountPerValidator;
+                if (compliance[i]) nCompliance++;
             }
 
-            emit BootstrapRewardsAssigned(committee, assignedRewards); // TODO separate event per committee?
+            uint256 duration = now.sub(lastPayedAt);
+            uint256 amountPerGeneralValidator = Math.min(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pools.bootstrapPool.div(committee.length));
+            uint256 amountPerCompliantValidator = nCompliance == 0 ? 0 :
+            Math.min(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days), pools.bootstrapPool.div(nCompliance));
+
+            pools.bootstrapPool = pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length).sub(amountPerCompliantValidator * nCompliance);
+
+            for (uint i = 0; i < committee.length; i++) {
+                assignedRewards[i] = amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0);
+            }
         }
     }
 
-    function addToBootstrapBalance(address addr, uint256 amount) private {
-        balance[addr].bootstrapRewards = balance[addr].bootstrapRewards.add(amount);
-    }
-
     function withdrawBootstrapFunds() external {
-        uint256 amount = balance[msg.sender].bootstrapRewards;
-        balance[msg.sender].bootstrapRewards = balance[msg.sender].bootstrapRewards.sub(amount);
+        uint256 amount = balances[msg.sender].bootstrapRewards;
+        balances[msg.sender].bootstrapRewards = balances[msg.sender].bootstrapRewards.sub(amount);
         require(bootstrapToken.transfer(msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
     // staking rewards
 
     function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
-        (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee2();
+        (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewards(committee, weights, compliance);
         BootstrapAndStaking memory pools = bootstrapAndStaking;
-        _assignStakingRewards(committee, weights, bootstrapAndStaking);
         pools.annualRateInPercentMille = annual_rate_in_percent_mille;
         pools.annualCap = annual_cap;
         bootstrapAndStaking = pools;
@@ -163,16 +177,17 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {
-        return balance[addr].stakingRewards;
+        return balances[addr].stakingRewards;
     }
 
     function getLastRewardsAssignment() external view returns (uint256) {
         return lastPayedAt;
     }
 
-    function _assignStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private returns (uint256[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
+        assignedRewards = new uint256[](committee.length);
 
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
@@ -187,8 +202,6 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pools.stakingPool);
             pools.stakingPool = pools.stakingPool.sub(amount);
 
-            uint256[] memory assignedRewards = new uint256[](committee.length);
-
             for (uint i = 0; i < committee.length; i++) {
                 uint256 curAmount = amount.mul(weights[i]).div(totalWeight);
                 assignedRewards[i] = curAmount;
@@ -200,16 +213,12 @@ contract Rewards is IRewards, ContractRegistryAccessor {
                 uint ind = now % committee.length;
                 assignedRewards[ind] = assignedRewards[ind].add(remainder);
             }
-
-            for (uint i = 0; i < committee.length; i++) {
-                addToStakingRewardsBalance(committee[i], assignedRewards[i]);
-            }
         }
     }
 
     function addToStakingRewardsBalance(address addr, uint256 amount) private {
-        balance[addr].stakingRewards = balance[addr].stakingRewards.add(amount);
-        emit StakingRewardAssigned(addr, amount, balance[addr].stakingRewards); // TODO event per committee?
+        balances[addr].stakingRewards = balances[addr].stakingRewards.add(amount);
+        emit StakingRewardAssigned(addr, amount, balances[addr].stakingRewards); // TODO event per committee?
     }
 
     struct DistributorBatchState {
@@ -222,7 +231,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external {
         require(to.length == amounts.length, "expected to and amounts to be of same length");
-        require(totalAmount <= balance[msg.sender].stakingRewards, "not enough balance for this distribution");
+        require(totalAmount <= balances[msg.sender].stakingRewards, "not enough balance for this distribution");
 
         DistributorBatchState memory ds = distributorBatchState[msg.sender];
 
@@ -248,7 +257,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
         }
 
-        balance[msg.sender].stakingRewards = balance[msg.sender].stakingRewards.sub(totalAmount);
+        balances[msg.sender].stakingRewards = balances[msg.sender].stakingRewards.sub(totalAmount);
 
         IStakingContract stakingContract = getStakingContract();
         erc20.approve(address(stakingContract), totalAmount);
@@ -260,7 +269,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     // fees
 
     function getFeeBalance(address addr) external view returns (uint256) {
-        return balance[addr].fees;
+        return balances[addr].fees;
     }
 
     function getLastFeesAssignment() external view returns (uint256) {
@@ -269,7 +278,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
     uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
 
-    function _assignFees(address[] memory generalCommittee, address[] memory complianceCommittee) private {
+    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint256[] memory assignedFees){
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -303,35 +312,45 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             bucketsPayed++;
         }
 
-        assignFeeAmountFixed(generalFeePoolAmount, generalCommittee);
-        assignFeeAmountFixed(complianceFeePoolAmount, complianceCommittee);
+        assignedFees = new uint256[](committee.length);
+        assignAmountFixed(committee, compliance, generalFeePoolAmount, false, assignedFees);
+        assignAmountFixed(committee, compliance, complianceFeePoolAmount, true, assignedFees);
     }
 
-    function assignFeeAmountFixed(uint256 amount, address[] memory committee) private {
-        uint256[] memory assignedFees = new uint256[](committee.length);
+    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint256[] memory assignedFees) private {
+        uint n = committee.length;
+        if (isCompliant)  {
+            n = 0; // todo - this is calculated in other places, get as argument to save gas
+            for (uint i = 0; i < committee.length; i++) {
+                if (compliance[i]) n++;
+            }
+        }
+        if (n == 0) return;
 
         uint256 totalAssigned = 0;
 
         for (uint i = 0; i < committee.length; i++) {
-            uint256 curAmount = amount.div(committee.length);
-            assignedFees[i] = curAmount;
-            totalAssigned = totalAssigned.add(curAmount);
+            uint256 curAmount = amount.div(n);
+            if (!isCompliant || compliance[i]) {
+                assignedFees[i] = assignedFees[i].add(curAmount);
+                totalAssigned = totalAssigned.add(curAmount);
+            }
         }
 
         uint256 remainder = amount.sub(totalAssigned);
-        if (remainder > 0 && committee.length > 0) {
+        if (remainder > 0 && n > 0) {
             uint ind = now % committee.length;
+            if (isCompliant) {
+                while (!compliance[ind]) {
+                    ind = (ind + 1) % committee.length;
+                }
+            }
             assignedFees[ind] = assignedFees[ind].add(remainder);
         }
-
-        for (uint i = 0; i < committee.length; i++) {
-            addToFeeBalance(committee[i], assignedFees[i]);
-        }
-        emit FeesAssigned(committee, assignedFees);
     }
 
     function addToFeeBalance(address addr, uint256 amount) private {
-        balance[addr].fees = balance[addr].fees.add(amount);
+        balances[addr].fees = balances[addr].fees.add(amount);
     }
 
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
@@ -356,7 +375,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCompliant) private {
-        _assignFees(_getCommittee(false), _getCommittee(true)); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
+        (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewards(committee, weights, compliance); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(fromTimestamp);
         uint256 _amount = amount;
@@ -378,23 +398,13 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function withdrawFeeFunds() external {
-        uint256 amount = balance[msg.sender].fees;
-        balance[msg.sender].fees = 0;
+        uint256 amount = balances[msg.sender].fees;
+        balances[msg.sender].fees = 0;
         require(erc20.transfer(msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
     function _bucketTime(uint256 time) private pure returns (uint256) {
         return time - time % feeBucketTimePeriod;
-    }
-
-    function _getCommittee(bool isCompliant) private view returns (address[] memory) {
-        address[] memory validators;
-        if (isCompliant) {
-            (validators,) =  getComplianceCommitteeContract().getCommittee();
-        } else {
-            (validators,) =  getGeneralCommitteeContract().getCommittee();
-        }
-        return validators;
     }
 
 }

@@ -14,6 +14,14 @@ export interface RewardsContract extends Contract {
     setComplianceCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     topUpBootstrapPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
+    withdrawBootstrapFunds(params?: TransactionConfig): Promise<TransactionReceipt>;
+    getBootstrapBalance(address: string): Promise<string>;
+
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+
+    // fees
+    withdrawFeeFunds(params?: TransactionConfig): Promise<TransactionReceipt>;
+    getFeeBalance(address: string): Promise<string>;
+    getLastFeesAssignment(): Promise<string>;
 
 }

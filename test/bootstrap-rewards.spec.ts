@@ -37,11 +37,11 @@ describe('bootstrap-rewards-level-flows', async () => {
     const annualAmountCompliance = 20000000;
     const poolAmount = (annualAmountGeneral + annualAmountCompliance) * 6 * 12;
 
-    await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
-    await d.bootstrapRewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
+    await d.rewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewards.address);
-    let r = await d.bootstrapRewards.topUpBootstrapPool(poolAmount, {from: g.address});
+    await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
+    let r = await d.rewards.topUpBootstrapPool(poolAmount, {from: g.address});
     expect(r).to.have.a.bootstrapAddedToPoolEvent({
       added: bn(poolAmount),
       total: bn(poolAmount) // todo: a test where total is more than added
@@ -80,7 +80,7 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const tokenBalances:BN[] = [];
     for (const v of generalCommittee) {
-      tokenBalances.push(new BN(await d.bootstrapRewards.getBootstrapBalance(v.address)));
+      tokenBalances.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
 
     for (const v of generalCommittee) {
@@ -90,7 +90,7 @@ describe('bootstrap-rewards-level-flows', async () => {
       expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds
-      await d.bootstrapRewards.withdrawFunds({from: v.address});
+      await d.rewards.withdrawBootstrapFunds({from: v.address});
       const tokenBalance = await d.externalToken.balanceOf(v.address);
       expect(new BN(tokenBalance)).to.bignumber.equal(new BN(expectedBalance));
     }

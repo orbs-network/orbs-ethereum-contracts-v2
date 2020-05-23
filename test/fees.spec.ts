@@ -27,7 +27,7 @@ async function sleep(ms): Promise<void> {
 
 describe('fees-contract', async () => {
 
-  it('should distribute fees to validators in general and compliance committees', async () => {
+  it.only('should distribute fees to validators in general and compliance committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
 
     // create committee
@@ -73,7 +73,7 @@ describe('fees-contract', async () => {
         expect(l.added).to.be.bignumber.equal(new BN(vcRate));
       });
 
-      expect(await d.fees.getLastFeesAssignment()).to.be.bignumber.equal(new BN(startTime));
+      expect(await d.rewards.getLastFeesAssignment()).to.be.bignumber.equal(new BN(startTime));
 
       return {
         vcid,
@@ -118,7 +118,7 @@ describe('fees-contract', async () => {
 
     const initialOrbsBalances:BN[] = [];
     for (const v of generalCommittee) {
-      initialOrbsBalances.push(new BN(await d.fees.getOrbsBalance(v.address)));
+      initialOrbsBalances.push(new BN(await d.rewards.getFeeBalance(v.address)));
     }
 
     await sleep(3000);
@@ -130,20 +130,15 @@ describe('fees-contract', async () => {
     // Calculate expected rewards from VC fees
 
     const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, endTime, generalCommittee);
-    expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      assignees: generalCommittee.map(v => v.address),
-      orbs_amounts: generalCommitteeRewardsArr.map(x => x.toString())
-    });
-
     const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
       assignees: generalCommittee.map(v => v.address),
-      orbs_amounts: generalCommittee.map((x, i) => i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2].toString() : "0")
+      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => (x + ((i % 2 == 0) ? complianceCommitteeRewardsArr[i / 2] : 0)).toString())
     });
 
     const orbsBalances:BN[] = [];
     for (const v of generalCommittee) {
-      orbsBalances.push(new BN(await d.fees.getOrbsBalance(v.address)));
+      orbsBalances.push(new BN(await d.rewards.getFeeBalance(v.address)));
     }
 
 
@@ -154,14 +149,14 @@ describe('fees-contract', async () => {
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
-      await d.fees.withdrawFunds({from: v.address});
+      await d.rewards.withdrawFeeFunds({from: v.address});
       const actualBalance = await d.erc20.balanceOf(v.address);
       expect(new BN(actualBalance)).to.bignumber.equal(expectedBalance);
     }
 
   });
 
-  it('should fill the correct fee buckets on subscription extension', async () => {
+  it.only('should fill the correct fee buckets on subscription extension', async () => {
     const bucketId = (timestamp: number) => timestamp - timestamp % MONTH_IN_SECONDS;
     const d = await Driver.new();
 

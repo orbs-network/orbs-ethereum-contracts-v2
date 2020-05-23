@@ -181,9 +181,6 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		return _getCommittee();
 	}
-	function getCommittee2() external view returns (address[] memory addrs, uint256[] memory weights) {
-		return _getCommittee();
-	}
 
 	/// @dev Returns the standy (out of committee) members and their weights
 	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights) {

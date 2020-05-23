@@ -177,9 +177,8 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
     function assignRewards() public {
-        (address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getGeneralCommitteeContract().getCommittee();
-        (address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
-        getRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights, complianceCommittee);
+		(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        getRewardsContract().assignRewards(committee, committeeWeights, compliance);
     }
 
 //	function assignRewards() public {
