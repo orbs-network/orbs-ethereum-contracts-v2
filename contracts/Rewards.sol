@@ -283,15 +283,16 @@ contract Rewards is IRewards, ContractRegistryAccessor {
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
         // Fee pool
+        uint _lastPayedAt = lastPayedAt;
         uint bucketsPayed = 0;
         uint generalFeePoolAmount = 0;
         uint complianceFeePoolAmount = 0;
-        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && lastPayedAt < now) {
-            uint256 bucketStart = _bucketTime(lastPayedAt);
+        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastPayedAt < now) {
+            uint256 bucketStart = _bucketTime(_lastPayedAt);
             uint256 bucketEnd = bucketStart.add(feeBucketTimePeriod);
             uint256 payUntil = Math.min(bucketEnd, now);
-            uint256 bucketDuration = payUntil.sub(lastPayedAt);
-            uint256 remainingBucketTime = bucketEnd.sub(lastPayedAt);
+            uint256 bucketDuration = payUntil.sub(_lastPayedAt);
+            uint256 remainingBucketTime = bucketEnd.sub(_lastPayedAt);
 
             uint256 amount = generalFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
             generalFeePoolAmount += amount;
@@ -301,10 +302,10 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             complianceFeePoolAmount += amount;
             compliantFeePoolBuckets[bucketStart] = compliantFeePoolBuckets[bucketStart].sub(amount);
 
-            lastPayedAt = payUntil;
+            _lastPayedAt = payUntil;
 
-            assert(lastPayedAt <= bucketEnd);
-            if (lastPayedAt == bucketEnd) {
+            assert(_lastPayedAt <= bucketEnd);
+            if (_lastPayedAt == bucketEnd) {
                 delete generalFeePoolBuckets[bucketStart];
                 delete compliantFeePoolBuckets[bucketStart];
             }

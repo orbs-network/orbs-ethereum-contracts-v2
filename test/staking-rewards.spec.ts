@@ -32,12 +32,12 @@ describe('staking-rewards-level-flows', async () => {
     const g = d.rewardsGovernor;
 
     const annualRate = 12000;
-    const poolAmount = 2000000000;
+    const poolAmount = 200000000000;
     const annualCap = poolAmount;
 
-    let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
-    await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
+    let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
     // create committee
 
@@ -64,7 +64,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.stakingRewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.rewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
@@ -88,7 +88,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const orbsBalances:BN[] = [];
     for (const v of validators) {
-      orbsBalances.push(new BN(await d.stakingRewards.getRewardBalance(v.v.address)));
+      orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
 
     for (const v of validators) {
@@ -103,7 +103,7 @@ describe('staking-rewards-level-flows', async () => {
         balance: bn(new BN(totalOrbsRewardsArr[i])) // todo: a test where balance is different than amount
       });
 
-      r = await d.stakingRewards.distributeOrbsTokenRewards(
+      r = await d.rewards.distributeOrbsTokenStakingRewards(
           totalOrbsRewardsArr[i],
           0,
           100,
@@ -145,9 +145,9 @@ describe('staking-rewards-level-flows', async () => {
     const poolAmount = 2000000000;
     const annualCap = 100;
 
-    let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
-    await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
-    await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
+    let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
     // create committee
 
@@ -174,7 +174,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.stakingRewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.rewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
@@ -198,7 +198,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const orbsBalances:BN[] = [];
     for (const v of validators) {
-      orbsBalances.push(new BN(await d.stakingRewards.getRewardBalance(v.v.address)));
+      orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
 
     for (const v of validators) {
@@ -213,7 +213,7 @@ describe('staking-rewards-level-flows', async () => {
         balance: bn(new BN(totalOrbsRewardsArr[i])) // todo: a test where balance is different than amount
       });
 
-      r = await d.stakingRewards.distributeOrbsTokenRewards(
+      r = await d.rewards.distributeOrbsTokenStakingRewards(
           totalOrbsRewardsArr[i],
           0,
           100,
@@ -259,16 +259,16 @@ describe('staking-rewards-level-flows', async () => {
     const poolAmount = 2000000000;
     const annualCap = 2000000000;
 
-    await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
-    await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
     await d.elections.assignRewards();
 
     // first fromBlock must be 0
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         1,
         100,
@@ -280,7 +280,7 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     // first txIndex must be 0 (initial distribution)
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -292,7 +292,7 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     // should fail if total does not match actual total
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -303,7 +303,7 @@ describe('staking-rewards-level-flows', async () => {
         {from: v.address})
     );
 
-    let r = await d.stakingRewards.distributeOrbsTokenRewards(
+    let r = await d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -324,7 +324,7 @@ describe('staking-rewards-level-flows', async () => {
     });
 
     // next txIndex must increment the previous one
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -335,7 +335,7 @@ describe('staking-rewards-level-flows', async () => {
         {from: v.address}
       )
     );
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -347,7 +347,7 @@ describe('staking-rewards-level-flows', async () => {
       )
     );
 
-    r = await d.stakingRewards.distributeOrbsTokenRewards(
+    r = await d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -367,7 +367,7 @@ describe('staking-rewards-level-flows', async () => {
       amounts: [bn(5)]
     });
 
-    r = await d.stakingRewards.distributeOrbsTokenRewards(
+    r = await d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -388,7 +388,7 @@ describe('staking-rewards-level-flows', async () => {
     });
 
     // next split must equal previous
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -401,7 +401,7 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     // next fromBlock must be previous toBlock + 1
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         99,
         200,
@@ -413,7 +413,7 @@ describe('staking-rewards-level-flows', async () => {
         )
     );
 
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         100,
         200,
@@ -426,7 +426,7 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     // next toBlock must be at least new fromBlock
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         101,
         100,
@@ -439,7 +439,7 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     // on new distribution, txIndex must be 0
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         101,
         200,
@@ -452,7 +452,7 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     // split can be changed on new distribution
-    r = await d.stakingRewards.distributeOrbsTokenRewards(
+    r = await d.rewards.distributeOrbsTokenStakingRewards(
         5,
         101,
         200,
@@ -473,7 +473,7 @@ describe('staking-rewards-level-flows', async () => {
     });
 
     // state is per address, different distributor must start from fromBlock==0
-    r = await d.stakingRewards.distributeOrbsTokenRewards(
+    r = await d.rewards.distributeOrbsTokenStakingRewards(
         5,
         0,
         100,
@@ -494,7 +494,7 @@ describe('staking-rewards-level-flows', async () => {
     });
 
     // toBlock must be in the past
-    await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         5,
         101,
         (r.blockNumber + 10000),
