@@ -117,31 +117,30 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
 
     function distributeOrbsTokenRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external {
         require(to.length == amounts.length, "expected to and amounts to be of same length");
-        require(totalAmount <= orbsBalance[msg.sender], "not enough balance for this distribution");
 
         DistributorBatchState memory ds = distributorBatchState[msg.sender];
-
         bool firstTxBySender = ds.nextTxIndex == 0;
-        if (firstTxBySender) {
-            require(fromBlock == 0, "initial distribution tx must be with fromBlock == 0");
-        }
+
+        require(!firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
 
         if (firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
+            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
             require(toBlock < block.number, "toBlock must be in the past");
             require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
-            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
             ds.fromBlock = fromBlock;
             ds.toBlock = toBlock;
             ds.split = split;
             ds.nextTxIndex = 1;
             distributorBatchState[msg.sender] = ds;
         } else {
+            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             require(toBlock == ds.toBlock, "toBlock mismatch");
             require(fromBlock == ds.fromBlock, "fromBlock mismatch");
             require(split == ds.split, "split mismatch");
-            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
         }
+
+        require(totalAmount <= orbsBalance[msg.sender], "not enough balance for this distribution");
 
         orbsBalance[msg.sender] = orbsBalance[msg.sender].sub(totalAmount);
 
