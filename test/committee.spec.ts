@@ -19,7 +19,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, minAddress} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
 
 
@@ -1329,6 +1329,28 @@ describe('committee', async () => {
             compliance: [false, true]
         });
 
+    });
+
+    it('uses address as tie-breaker when stakes are equal', async () => {
+        const maxCommitteeSize = 10;
+        const maxStandbys = 10;
+        const d = await Driver.new({maxCommitteeSize, maxStandbys});
+
+        const stake = 100;
+
+        const validators = _.range(maxCommitteeSize + 1).map(() => d.newParticipant());
+        const standby = validators.find(x => x.address == minAddress(validators.map(x => x.address))) as Participant;
+        const committee = validators.filter(x => x != standby);
+        let r = await standby.becomeValidator(stake, false, false, true);
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            r = await committee[i].becomeValidator(stake, false, false, true);
+        }
+
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: [standby.address],
+            orbsAddrs: [standby.orbsAddress],
+            weights: [bn(stake)]
+        });
     });
 
 });

@@ -230,7 +230,7 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it('votes out a committee member', async () => {
+    it.only('votes out a committee member', async () => {
         assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
         assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
 

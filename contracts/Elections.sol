@@ -112,23 +112,41 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 	}
 
-	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, address votee) private view returns (bool) {
+	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory compliance, address votee) private view returns (bool) {
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
+		uint256 totalCompliantStake = 0;
+		uint256 totalCompliantVoteOutStake = 0;
 
+		address member;
+		uint256 memberStake;
+		bool isVoteeCompliant;
 		for (uint i = 0; i < committee.length; i++) {
-			address member = committee[i];
-			uint256 memberStake = weights[i];
+			member = committee[i];
+			memberStake = weights[i];
+
+			if (member == votee && compliance[i]) {
+				isVoteeCompliant = true;
+			}
 
 			totalCommitteeStake = totalCommitteeStake.add(memberStake);
+			if (compliance[i]) {
+				totalCompliantStake = totalCompliantStake.add(memberStake);
+			}
+
 			uint256 votedAt = voteOuts[member][votee];
 			if (votedAt != 0 && now.sub(votedAt) < voteOutTimeoutSeconds) {
 				totalVoteOutStake = totalVoteOutStake.add(memberStake);
+				if (compliance[i]) {
+					totalCompliantVoteOutStake = totalCompliantVoteOutStake.add(memberStake);
+				}
 			}
+
 			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
-		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold);
+		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold)
+			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteOutStake.mul(100).div(totalCompliantStake) >= voteOutPercentageThreshold);
 	}
 
 	function voteOut(address addr) external {
@@ -136,9 +154,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights,) = getCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
 
-		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
+		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, compliance, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
 			emit VotedOutOfCommittee(addr);
