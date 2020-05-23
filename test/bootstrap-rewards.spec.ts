@@ -59,7 +59,6 @@ describe('bootstrap-rewards-level-flows', async () => {
     const startTime = await txTimestamp(d.web3, firstAssignTxRes);
 
     const generalCommittee: Participant[] = [v1, v2, v3, v4];
-    const complianceCommittee: Participant[] = [v1, v3];
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
