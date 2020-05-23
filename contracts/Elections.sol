@@ -276,8 +276,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external onlyDelegationsContract {
 		_applyDelegatedStake(delegatee, newUncappedStake);
 
-		_applyStakesToBanningBy(stakeOwner, prevGovStakeOwner); // totalGovernanceStake must be updated by now
-		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee); // totalGovernanceStake must be updated by now
+		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee);
 	}
 
 	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external onlyDelegationsContract {
@@ -291,8 +290,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
 			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
 
-			_applyStakesToBanningBy(stakeOwners[i], prevGovStakeOwners[i]); // totalGovernanceStake must be updated by now
-			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]); // totalGovernanceStake must be updated by now
+			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]);
 		}
 	}
 
