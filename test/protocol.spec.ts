@@ -78,11 +78,12 @@ describe('protocol-contract', async () => {
     await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 99);
   });
 
-  it('does not allow protocol upgrade to be scheduled in the past', async () => {
+  it('does not allow protocol upgrade to be scheduled in the past or now', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime)); // fromTimestamps likely equal now
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime-1)); // fromTimestamps behind now
   });
 
   it('does not allow protocol downgrade', async () => {
