@@ -8,7 +8,7 @@ import {feesAddedToBucketEvents, subscriptionChangedEvents, vcCreatedEvents} fro
 import {bn, evmIncreaseTime} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
-import {FeesAddedToBucketEvent} from "../typings/fees-contract";
+import {FeesAddedToBucketEvent} from "../typings/rewards-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));

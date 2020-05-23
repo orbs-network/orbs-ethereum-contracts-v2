@@ -46,9 +46,9 @@ import {
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
-import {StakingRewardAssignedEvent, StakingRewardsDistributedEvent} from "../typings/staking-rewards-contract";
-import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/bootstrap-rewards-contract";
-import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/fees-contract";
+import {StakingRewardAssignedEvent, StakingRewardsDistributedEvent} from "../typings/rewards-contract";
+import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
+import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/rewards-contract";
 import {
   ValidatorDataUpdatedEvent, ValidatorMetadataChangedEvent,
   ValidatorRegisteredEvent,

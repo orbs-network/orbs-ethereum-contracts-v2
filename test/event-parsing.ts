@@ -2,7 +2,7 @@ import Web3 from "web3";
 import * as _ from "lodash";
 import {SubscriptionChangedEvent, VcCreatedEvent} from "../typings/subscriptions-contract";
 import {compiledContracts} from "../compiled-contracts";
-import {FeesAddedToBucketEvent} from "../typings/fees-contract";
+import {FeesAddedToBucketEvent} from "../typings/rewards-contract";
 
 const elections = compiledContracts["Elections"];
 const committee = compiledContracts["Committee"];

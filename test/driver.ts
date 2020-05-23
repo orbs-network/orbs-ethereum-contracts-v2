@@ -62,9 +62,6 @@ export class Driver {
         public staking: Contracts["StakingContract"],
         public delegations: Contracts["Delegations"],
         public subscriptions: Contracts["Subscriptions"],
-        public bootstrapRewards: Contracts["BootstrapRewards"],
-        public stakingRewards: Contracts["StakingRewards"],
-        public fees: Contracts["Fees"],
         public rewards: Contracts["Rewards"],
         public protocol: Contracts["Protocol"],
         public compliance: Contracts["Compliance"],
@@ -87,9 +84,6 @@ export class Driver {
         const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]], null, session);
         const externalToken = await web3.deploy( 'TestingERC20', [], null, session);
         const erc20 = await web3.deploy( 'TestingERC20', [], null, session);
-        const bootstrapRewards = await web3.deploy( 'BootstrapRewards', [externalToken.address, accounts[0]], null, session);
-        const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]], null, session);
-        const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
         const rewards = await web3.deploy( 'Rewards', [erc20.address, externalToken.address, accounts[0]], null, session);
         const delegations = await web3.deploy( "Delegations", [], null, session);
         const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
@@ -101,9 +95,6 @@ export class Driver {
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
-        // await contractRegistry.set("bootstrapRewards", bootstrapRewards.address);
-        // await contractRegistry.set("stakingRewards", stakingRewards.address);
-        // await contractRegistry.set("fees", fees.address);
         await contractRegistry.set("rewards", rewards.address);
         await contractRegistry.set("delegations", delegations.address);
         await contractRegistry.set("elections", elections.address);
@@ -115,10 +106,7 @@ export class Driver {
 
         await delegations.setContractRegistry(contractRegistry.address);
         await elections.setContractRegistry(contractRegistry.address);
-        await bootstrapRewards.setContractRegistry(contractRegistry.address);
         await rewards.setContractRegistry(contractRegistry.address);
-        await stakingRewards.setContractRegistry(contractRegistry.address);
-        await fees.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
         await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
@@ -134,9 +122,6 @@ export class Driver {
             staking,
             delegations,
             subscriptions,
-            bootstrapRewards,
-            stakingRewards,
-            fees,
             rewards,
             protocol,
             compliance,
