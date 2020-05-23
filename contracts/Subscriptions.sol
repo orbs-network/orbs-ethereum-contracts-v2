@@ -93,12 +93,12 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
     function _extendSubscription(uint256 vcid, uint256 amount, address payer) private {
         VirtualChain storage vc = virtualChains[vcid];
 
-        IFees feesContract = getFeesContract();
-        require(erc20.transfer(address(feesContract), amount), "failed to transfer subscription fees");
+        IRewards rewardsContract = getRewardsContract();
+        require(erc20.transfer(address(rewardsContract), amount), "failed to transfer subscription fees");
         if (vc.isCompliant) {
-            feesContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
+            rewardsContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
         } else {
-            feesContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
+            rewardsContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
         }
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 

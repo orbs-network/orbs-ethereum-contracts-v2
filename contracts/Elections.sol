@@ -176,21 +176,27 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit BanningVote(msg.sender, validators);
 	}
 
-	function assignRewards() public {
-		uint gl01 = gasleft();
-		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+    function assignRewards() public {
+        (address[] memory generalCommittee, uint256[] memory generalCommitteeWeights) = getGeneralCommitteeContract().getCommittee();
+        (address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
+        getRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights, complianceCommittee);
+    }
 
-		emit GasReport("assignRewards: getCommittee", gl01-gasleft());
-		gl01 = gasleft();
-		getFeesContract().assignFees(generalCommittee, compliance);
-		emit GasReport("assignRewards: assignFees", gl01-gasleft());
-		gl01 = gasleft();
-		getBootstrapRewardsContract().assignRewards(generalCommittee, compliance);
-		emit GasReport("assignRewards: bootstrap rewards", gl01-gasleft());
-		gl01 = gasleft();
-		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
-		emit GasReport("assignRewards: staking rewards", gl01-gasleft());
-	}
+//	function assignRewards() public {
+//		uint gl01 = gasleft();
+//		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+//
+//		emit GasReport("assignRewards: getCommittee", gl01-gasleft());
+//		gl01 = gasleft();
+//		getFeesContract().assignFees(generalCommittee, compliance);
+//		emit GasReport("assignRewards: assignFees", gl01-gasleft());
+//		gl01 = gasleft();
+//		getBootstrapRewardsContract().assignRewards(generalCommittee, compliance);
+//		emit GasReport("assignRewards: bootstrap rewards", gl01-gasleft());
+//		gl01 = gasleft();
+//		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
+//		emit GasReport("assignRewards: staking rewards", gl01-gasleft());
+//	}
 
 	function getTotalGovernanceStake() internal view returns (uint256) {
 		return getDelegationsContract().getTotalGovernanceStake();

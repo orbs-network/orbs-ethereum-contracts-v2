@@ -16,7 +16,6 @@ export interface BootstrapRewardsContract extends Contract {
   getLastPayedAt(): Promise<string>;
   getBootstrapBalance(address: string): Promise<string>;
   assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
-  distributeOrbsTokenRewards(addrs: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
   setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setComplianceCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   topUpBootstrapPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
