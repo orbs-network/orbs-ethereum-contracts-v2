@@ -17,7 +17,7 @@ describe('protocol-contract', async () => {
   it('schedules a protocol version upgrade for the main, canary deployment subsets', async () => {
     const d = await Driver.new();
 
-    const currTime: number = await getTopBlockTimestamp(d);
+    let currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
@@ -27,11 +27,12 @@ describe('protocol-contract', async () => {
     });
 
     r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2);
+    currTime = await getTopBlockTimestamp(d);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       currentVersion: bn(2),
       nextVersion: bn(2),
-      fromTimestamp: bn(r.blockNumber)
+      fromTimestamp: bn(currTime) // assuming ganache will not mine since last tx
     });
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, currTime + 100);

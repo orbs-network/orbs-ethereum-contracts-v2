@@ -30,7 +30,7 @@ contract Protocol is IProtocol, Ownable {
         deploymentSubsets[deploymentSubset].fromTimestamp = now;
         deploymentSubsets[deploymentSubset].exists = true;
 
-        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, block.number); // TODO different event?
+        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now); // TODO different event?
     }
 
     function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyOwner {
