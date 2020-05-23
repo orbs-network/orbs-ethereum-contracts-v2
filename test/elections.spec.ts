@@ -559,6 +559,51 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
+    it("tracks total governance stakes", async () => {
+        const d = await Driver.new();
+
+        const s1 = 11;
+        const s2 = 13;
+        const s3 = 17;
+        const sTotal = s1+s2+s3;
+
+        const p1 = d.newParticipant();
+        const p2 = d.newParticipant();
+        const unAndReStaking = d.newParticipant();
+
+        const awayDelegating = d.newParticipant();
+        await awayDelegating.delegate(p1);
+
+        await p1.stake(s1);
+        await p2.stake(s2);
+        await unAndReStaking.stake(s3);
+
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+
+        await unAndReStaking.unstake(1);
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal - 1));
+
+        await unAndReStaking.restake();
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+
+        await p1.delegate(p2); // delegate from self to a self delegating other
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+
+        await p1.delegate(awayDelegating); // delegate from self to a non-self delegating other
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal - s1));
+
+        await p1.delegate(p1); // delegate to self back from a non-self delegating
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+
+        await p1.delegate(awayDelegating);
+        await p1.delegate(p2); // delegate to another self delegating from a non-self delegating other
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+
+        await p1.delegate(p1); // delegate to self back from a self delegating other
+        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+
+    });
+
     it("allows voting only to 3 at a time", async () => {
         const d = await Driver.new();
 
@@ -836,23 +881,34 @@ export async function banningScenario_setupDelegatorsAndValidators(driver: Drive
     const thresholdCrossingIndex = 1;
     const delegatees: Participant[] = [];
     const delegators: Participant[] = [];
+    let totalStake = 0;
     for (const p of stakesPercentage) {
         // stake holders will not have own stake, only delegated - to test the use of governance stake
         const delegator = driver.newParticipant();
-        await delegator.stake(baseStake * p);
+
+        const newStake = baseStake * p;
+        totalStake += newStake;
+
+        await delegator.stake(newStake);
+        expect(await driver.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(totalStake));
+
         const v = driver.newParticipant();
         await delegator.delegate(v);
+        expect(await driver.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(totalStake));
+
         delegatees.push(v);
         delegators.push(delegator);
     }
 
     const bannedValidator = delegatees[delegatees.length - 1];
     await bannedValidator.registerAsValidator();
+
     await bannedValidator.stake(baseStake);
     let r = await bannedValidator.notifyReadyForCommittee();
     expect(r).to.have.a.committeeChangedEvent({
         addrs: [bannedValidator.address]
     });
+
     return {thresholdCrossingIndex, delegatees, delegators, bannedValidator};
 }
 

@@ -17,7 +17,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	// TODO consider using structs instead of multiple mappings
 	mapping (address => uint256) uncappedStakes;
-	uint256 totalGovernanceStake; // TODO - move to elections
 
 	mapping (address => address) delegations;
 
@@ -36,22 +35,34 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		require(to != address(0), "cannot delegate to a zero address");
 		require(to != prevDelegate, "delegation already in place");
 
-		uint256 prevGovStakePrevDelegate = getGovernanceEffectiveStake(prevDelegate);
-		uint256 prevGovStakeNewDelegate = getGovernanceEffectiveStake(to);
+		uint256 prevStakePrevDelegate = uncappedStakes[prevDelegate];
+		uint256 prevStakeNewDelegate = uncappedStakes[to];
+
+		bool prevSelfDelegatingPrevDelegate = _isSelfDelegating(prevDelegate); // keep before delegation
+		bool prevSelfDelegatingNewDelegate = _isSelfDelegating(to); // keep before delegation
 
 		delegations[msg.sender] = to; // delegation!
 
 		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(msg.sender);
 
-		uint256 newStakePrevDelegate = uncappedStakes[prevDelegate].sub(delegatorStake);
+		uint256 newStakePrevDelegate = prevStakePrevDelegate.sub(delegatorStake);
 		uncappedStakes[prevDelegate] = newStakePrevDelegate;
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakePrevDelegate).add(getGovernanceEffectiveStake(prevDelegate));
 
-		uint256 newStakeNewDelegate = uncappedStakes[to].add(delegatorStake);
+		uint256 newStakeNewDelegate = prevStakeNewDelegate.add(delegatorStake);
 		uncappedStakes[to] = newStakeNewDelegate;
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeNewDelegate).add(getGovernanceEffectiveStake(to));
 
-    	getElectionsContract().notifyDelegationChange(to, prevDelegate, newStakePrevDelegate, newStakeNewDelegate, prevGovStakePrevDelegate, prevGovStakeNewDelegate);
+    	getElectionsContract().notifyDelegationChange(
+			msg.sender,
+			delegatorStake,
+			to,
+			prevDelegate,
+			newStakePrevDelegate,
+			newStakeNewDelegate,
+			prevStakePrevDelegate,
+			prevSelfDelegatingPrevDelegate,
+			prevStakeNewDelegate,
+			prevSelfDelegatingNewDelegate
+		);
 
 		emit Delegated(msg.sender, to);
 
@@ -148,54 +159,41 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
 	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private returns (address[] memory delegates){
+		uint256[] memory prevUncappedStakes = new uint256[](_stakeOwners.length);
 		uint256[] memory newUncappedStakes = new uint256[](_stakeOwners.length);
-		uint256[] memory prevGovStakeOwners = new uint256[](_stakeOwners.length);
-		uint256[] memory prevGovStakeDelegates = new uint256[](_stakeOwners.length);
+		bool[] memory isSelfDelegatingDelegates = new bool[](_stakeOwners.length);
 		delegates = new address[](_stakeOwners.length);
 
 		for (uint i = 0; i < _stakeOwners.length; i++) {
-			(newUncappedStakes[i], prevGovStakeOwners[i], delegates[i], prevGovStakeDelegates[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
+			(prevUncappedStakes[i], newUncappedStakes[i], delegates[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
 		}
 
-		getElectionsContract().notifyStakeChangeBatch(_stakeOwners, newUncappedStakes, prevGovStakeOwners, delegates, prevGovStakeDelegates);
+		getElectionsContract().notifyStakeChangeBatch(prevUncappedStakes, newUncappedStakes, delegates, isSelfDelegatingDelegates);
 
 		return delegates;
 	}
 
 	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign) private {
-		(uint256 newUncappedStake, uint256 prevGovStakeOwner, address _delegate, uint256 prevGovStakeDelegate) = _applyStakeChangeLocally(_stakeOwner, _amount, _sign);
-		getElectionsContract().notifyStakeChange(_stakeOwner, newUncappedStake, prevGovStakeOwner, _delegate, prevGovStakeDelegate);
+		(uint256 prevUncappedStake, uint256 newUncappedStake, address _delegate) = _applyStakeChangeLocally(_stakeOwner, _amount, _sign);
+		getElectionsContract().notifyStakeChange(prevUncappedStake, newUncappedStake, _delegate, _isSelfDelegating(_delegate));
 	}
 
-	function _applyStakeChangeLocally(address _stakeOwner, uint256 _amount, bool _sign) private returns (uint256 newUncappedStake, uint prevGovStakeOwner, address _delegate, uint256 prevGovStakeDelegate) {
+	function _applyStakeChangeLocally(address _stakeOwner, uint256 _amount, bool _sign) private returns (uint prevUncappedStake, uint256 newUncappedStake, address _delegate) {
 		_delegate = getDelegation(_stakeOwner);
 
-		prevGovStakeOwner = getGovernanceEffectiveStake(_stakeOwner);
-		prevGovStakeDelegate = getGovernanceEffectiveStake(_delegate);
+		prevUncappedStake = uncappedStakes[_delegate];
 
 		if (_sign) {
-			newUncappedStake = uncappedStakes[_delegate].add(_amount);
+			newUncappedStake = prevUncappedStake.add(_amount);
 		} else {
-			newUncappedStake = uncappedStakes[_delegate].sub(_amount);
+			newUncappedStake = prevUncappedStake.sub(_amount);
 		}
 
 		uncappedStakes[_delegate] = newUncappedStake;
-
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegate).add(getGovernanceEffectiveStake(_delegate));
-
-		return (newUncappedStake, prevGovStakeOwner, _delegate, prevGovStakeDelegate);
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {
 		return uncappedStakes[addr];
-	}
-
-	function getTotalGovernanceStake() public view returns (uint256) {
-		return totalGovernanceStake;
-	}
-
-    function getGovernanceEffectiveStake(address v) public view returns (uint256) {
-		return _isSelfDelegating(v) ? uncappedStakes[v] : 0;
 	}
 
 	function getSelfDelegatedStake(address addr) public view returns (uint256) {

@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
 import "./spec_interfaces/ICommitteeListener.sol";
+import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
@@ -27,6 +28,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	uint8 voteOutPercentageThreshold;
 	uint256 voteOutTimeoutSeconds;
 	uint256 banningPercentageThreshold;
+	uint256 totalGovernanceStake;
 
 	modifier onlyDelegationsContract() {
 		require(msg.sender == address(getDelegationsContract()), "caller is not the delegations contract");
@@ -111,13 +113,33 @@ contract Elections is IElections, ContractRegistryAccessor {
 		getComplianceCommitteeContract().memberReadyToSync(sender, false);
 	}
 
-	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) onlyDelegationsContract external {
+	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract external {
+		require(newDelegate != prevDelegate, "in a delegation change the delegate must change");
 
-        _applyDelegatedStake(prevDelegatee, newStakePrevDelegatee);
-		_applyDelegatedStake(newDelegatee, newStakeNewDelegatee);
+		if (delegator == newDelegate) { // delegator != prevDelegate
+			if (prevSelfDelegatingPrevDelegate) {
+				totalGovernanceStake = totalGovernanceStake.sub(delegatorSelfStake);
+			}
+			totalGovernanceStake = totalGovernanceStake.add(delegatorSelfStake);
+		} else if (delegator == prevDelegate) { // delegator != newDelegate
+			totalGovernanceStake = totalGovernanceStake.sub(delegatorSelfStake);
+			if (prevSelfDelegatingNewDelegate) {
+				totalGovernanceStake = totalGovernanceStake.add(delegatorSelfStake);
+			}
+		} else { // delegator != newDelegate && delegator != prevDelegate
+			if (prevSelfDelegatingPrevDelegate) {
+				totalGovernanceStake = totalGovernanceStake.sub(delegatorSelfStake);
+			}
+			if (prevSelfDelegatingNewDelegate) {
+				totalGovernanceStake = totalGovernanceStake.add(delegatorSelfStake);
+			}
+		}
 
-		_applyStakesToBanningBy(prevDelegatee, prevGovStakePrevDelegatee);
-		_applyStakesToBanningBy(newDelegatee, prevGovStakeNewDelegatee);
+		_applyDelegatedStake(prevDelegate, prevDelegateNewTotalStake);
+		_applyDelegatedStake(newDelegate, newDelegateNewTotalStake);
+
+		_applyStakesToBanningBy(prevDelegate, getGovernanceEffectiveStake(prevSelfDelegatingPrevDelegate, prevDelegatePrevTotalStake));
+		_applyStakesToBanningBy(newDelegate, getGovernanceEffectiveStake(prevSelfDelegatingNewDelegate, newDelegatePrevTotalStake));
 	}
 
 	function clearCommitteeVoteOuts(address[] memory committee, address votee) private {
@@ -183,8 +205,12 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit BanningVote(msg.sender, validators);
 	}
 
-	function getTotalGovernanceStake() internal view returns (uint256) {
-		return getDelegationsContract().getTotalGovernanceStake();
+	function getTotalGovernanceStake() external view returns (uint256) {
+		return totalGovernanceStake;
+	}
+
+	function getGovernanceEffectiveStake(bool selfDelegating, uint256 totalDelegatedStake) private pure returns (uint256) {
+		return selfDelegating ? totalDelegatedStake : 0;
 	}
 
 	function getBanningVotes(address addrs) external view returns (address[] memory) {
@@ -252,7 +278,7 @@ contract Elections is IElections, ContractRegistryAccessor {
         }
 
         uint256 banningStake = accumulatedStakesForBanning[addr];
-        bool shouldBan = getTotalGovernanceStake() > 0 && banningStake.mul(100).div(getTotalGovernanceStake()) >= banningPercentageThreshold;
+        bool shouldBan = totalGovernanceStake > 0 && banningStake.mul(100).div(totalGovernanceStake) >= banningPercentageThreshold;
 
         if (isBanned != shouldBan) {
 			if (shouldBan) {
@@ -273,26 +299,34 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return bannedValidators[addr] != 0;
 	}
 
-	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external onlyDelegationsContract {
-		_applyDelegatedStake(delegatee, newUncappedStake);
+	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract {
 
-		_applyStakesToBanningBy(stakeOwner, prevGovStakeOwner); // totalGovernanceStake must be updated by now
-		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee); // totalGovernanceStake must be updated by now
+		uint256 prevGovStakeDelegate = getGovernanceEffectiveStake(isSelfDelegatingDelegate, prevDelegateTotalStake);
+		uint256 newGovStakeDelegate = getGovernanceEffectiveStake(isSelfDelegatingDelegate, newDelegateTotalStake);
+
+		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
+
+		_applyDelegatedStake(delegate, newDelegateTotalStake);
+
+		_applyStakesToBanningBy(delegate, prevGovStakeDelegate);
 	}
 
-	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external onlyDelegationsContract {
-		require(stakeOwners.length == newUncappedStakes.length, "arrays must be of same length");
-		require(stakeOwners.length == prevGovStakeOwners.length, "arrays must be of same length");
-		require(stakeOwners.length == delegatees.length, "arrays must be of same length");
-		require(stakeOwners.length == prevGovStakeDelegatees.length, "arrays must be of same length");
+	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract {
+		require(prevDelegateTotalStakes.length == newDelegateTotalStakes.length, "arrays must be of same length");
+		require(prevDelegateTotalStakes.length == delegates.length, "arrays must be of same length");
+		require(prevDelegateTotalStakes.length == isSelfDelegatingDelegates.length, "arrays must be of same length");
 
-		for (uint i = 0; i < stakeOwners.length; i++) {
+		for (uint i = 0; i < prevDelegateTotalStakes.length; i++) {
+			uint256 prevGovStakeDelegate = getGovernanceEffectiveStake(isSelfDelegatingDelegates[i], prevDelegateTotalStakes[i]);
+			uint256 newGovStakeDelegate = getGovernanceEffectiveStake(isSelfDelegatingDelegates[i], newDelegateTotalStakes[i]);
 
-			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
-			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
+			totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
 
-			_applyStakesToBanningBy(stakeOwners[i], prevGovStakeOwners[i]); // totalGovernanceStake must be updated by now
-			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]); // totalGovernanceStake must be updated by now
+			// TODO aggregate changes for same delegates to minimize calls to committe contract - may assume similar delegates grouped together... CAUTION - check banning votes eveluation is not skewed
+			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i]);
+
+			// TODO avoid accessing delegation contract downstream for this delegate since totalGovernance is not yet fully applied
+			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate);
 		}
 	}
 
@@ -305,7 +339,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO newStake is getUncappedStakes(addr) at this point. governance and committee "effective" stakes can also be passed into this method, or alternately, use a getter for newStake also
-		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
+		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
 
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
@@ -334,8 +368,12 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return getDelegationsContract().getDelegatedStakes(addr);
 	}
 
+	// TODO remove this function if possible - use pure function with bool and stake
 	function getGovernanceEffectiveStake(address addr) internal view returns (uint256) {
-		return getDelegationsContract().getGovernanceEffectiveStake(addr);
+		IDelegations d = getDelegationsContract();
+		uint256 stakes = d.getDelegatedStakes(addr);
+		bool isSelfDelegating = d.getDelegation(addr) == addr;
+		return getGovernanceEffectiveStake(isSelfDelegating, stakes);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
