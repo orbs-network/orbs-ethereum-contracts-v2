@@ -285,8 +285,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external onlyDelegationsContract {
 		_applyDelegatedStake(delegatee, newUncappedStake);
 
-		_applyStakesToBanningBy(stakeOwner, prevGovStakeOwner); // totalGovernanceStake must be updated by now
-		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee); // totalGovernanceStake must be updated by now
+		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee);
 	}
 
 	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external onlyDelegationsContract {
@@ -295,24 +294,12 @@ contract Elections is IElections, ContractRegistryAccessor {
 		require(stakeOwners.length == delegatees.length, "arrays must be of same length");
 		require(stakeOwners.length == prevGovStakeDelegatees.length, "arrays must be of same length");
 
-		address curDelegatee;
-		uint totalNewUncapped;
-		uint prevGovStake;
-		for (uint i = 0; i < stakeOwners.length + 1; i++) {
-			if (i == stakeOwners.length || delegatees[i] != curDelegatee) {
-				if (curDelegatee != address(0)) {
-					// this mimics notifyStakeChange
-					_applyDelegatedStake(curDelegatee, totalNewUncapped);
-					_applyStakesToBanningBy(curDelegatee, prevGovStake); // totalGovernanceStake must be updated by now // TODO check prevGovStake is correct
-				}
-				if (i == stakeOwners.length) {
-					break;
-				}
-				curDelegatee = delegatees[i];
-				totalNewUncapped = 0;
-				prevGovStake = prevGovStakeOwners[i];
-			}
-			totalNewUncapped += newUncappedStakes[i];
+		for (uint i = 0; i < stakeOwners.length; i++) {
+
+			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
+			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
+
+			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]);
 		}
 	}
 

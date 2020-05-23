@@ -6,7 +6,7 @@ import "./IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IStakingRewards {
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
-    event StakingRewardAssigned(address assignee, uint256 amount, uint256 balance);
+    event StakingRewardAssigned(address indexed assignee, uint256 amount, uint256 balance);
 
     /*
      *   External methods
