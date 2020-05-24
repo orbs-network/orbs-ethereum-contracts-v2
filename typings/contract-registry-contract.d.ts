@@ -8,7 +8,7 @@ export interface ContractRegistryContract extends Contract {
 }
 
 export interface ContractAddressUpdatedEvent {
-  contractName: string,
+  contractName: ContractName,
   addr: string
 }
 
