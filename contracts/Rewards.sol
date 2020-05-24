@@ -11,6 +11,7 @@ import "./ContractRegistryAccessor.sol";
 
 contract Rewards is IRewards, ContractRegistryAccessor {
     using SafeMath for uint256;
+    using SafeMath for uint48; // TODO this is meaningless, SafeMath is only for uint256
 
     struct BootstrapAndStaking {
         uint256 bootstrapPool;
@@ -24,9 +25,9 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     BootstrapAndStaking bootstrapAndStaking;
 
     struct Balance {
-        uint256 bootstrapRewards;
-        uint256 fees;
-        uint256 stakingRewards;
+        uint48 bootstrapRewards;
+        uint48 fees;
+        uint48 stakingRewards;
     }
     mapping(address => Balance) balances;
 
@@ -88,14 +89,14 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
 
     function topUpBootstrapPool(uint256 amount) external {
-        uint bootstrapPool = bootstrapAndStaking.bootstrapPool.add(amount);
-        bootstrapAndStaking.bootstrapPool = bootstrapPool.add(amount);
+        uint bootstrapPool = uint48(bootstrapAndStaking.bootstrapPool.add(amount)); // todo may overflow
+        bootstrapAndStaking.bootstrapPool = uint48(bootstrapPool.add(amount)); // todo may overflow
         require(bootstrapToken.transferFrom(msg.sender, address(this), amount), "Rewards::topUpFixedPool - insufficient allowance");
         emit BootstrapAddedToPool(amount, bootstrapPool);
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
-        return balances[addr].bootstrapRewards;
+        return uint256(balances[addr].bootstrapRewards);
     }
 
     function getLastBootstrapAssignment() external view returns (uint256) {
@@ -109,16 +110,16 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     function _assignRewards(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
         BootstrapAndStaking memory pools = bootstrapAndStaking;
 
-        uint256[] memory bootstrapRewards = collectBootstrapRewards(committee, compliance, pools);
-        uint256[] memory fees = collectFees(committee, compliance);
-        uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
+        uint48[] memory bootstrapRewards = collectBootstrapRewards(committee, compliance, pools);
+        uint48[] memory fees = collectFees(committee, compliance);
+        uint48[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
 
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
-            balance.bootstrapRewards = balance.bootstrapRewards.add(bootstrapRewards[i]);
-            balance.fees = balance.fees.add(fees[i]);
-            balance.stakingRewards = balance.stakingRewards.add(stakingRewards[i]);
+            balance.bootstrapRewards = uint48(balance.bootstrapRewards.add(bootstrapRewards[i])); // todo may overflow
+            balance.fees = uint48(balance.fees.add(fees[i])); // todo may overflow
+            balance.stakingRewards = uint48(balance.stakingRewards.add(stakingRewards[i])); // todo may overflow
             balances[committee[i]] = balance;
 
             emit StakingRewardAssigned(committee[i], stakingRewards[i], balance.stakingRewards);
@@ -131,8 +132,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
         lastPayedAt = now;
     }
 
-    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private returns (uint256[] memory assignedRewards){
-        assignedRewards = new uint256[](committee.length);
+    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards){
+        assignedRewards = new uint48[](committee.length);
 
         if (committee.length > 0) {
             uint nCompliance = 0;
@@ -148,14 +149,14 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             pools.bootstrapPool = pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length).sub(amountPerCompliantValidator * nCompliance);
 
             for (uint i = 0; i < committee.length; i++) {
-                assignedRewards[i] = amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0);
+                assignedRewards[i] = uint48(amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0)); // todo may overflow
             }
         }
     }
 
     function withdrawBootstrapFunds() external {
         uint256 amount = balances[msg.sender].bootstrapRewards;
-        balances[msg.sender].bootstrapRewards = balances[msg.sender].bootstrapRewards.sub(amount);
+        balances[msg.sender].bootstrapRewards = uint48(balances[msg.sender].bootstrapRewards.sub(amount)); // todo may overflow
         require(bootstrapToken.transfer(msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
@@ -183,10 +184,10 @@ contract Rewards is IRewards, ContractRegistryAccessor {
         return lastPayedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private returns (uint256[] memory assignedRewards) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-        assignedRewards = new uint256[](committee.length);
+        assignedRewards = new uint48[](committee.length);
 
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
@@ -201,8 +202,9 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pools.stakingPool);
             pools.stakingPool = pools.stakingPool.sub(amount);
 
+            uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
-                uint256 curAmount = amount.mul(weights[i]).div(totalWeight);
+                curAmount = uint48(amount.mul(weights[i]).div(totalWeight)); // todo may overflow
                 assignedRewards[i] = curAmount;
                 totalAssigned = totalAssigned.add(curAmount);
             }
@@ -210,14 +212,9 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             uint256 remainder = amount.sub(totalAssigned);
             if (remainder > 0 && committee.length > 0) {
                 uint ind = now % committee.length;
-                assignedRewards[ind] = assignedRewards[ind].add(remainder);
+                assignedRewards[ind] = uint48(assignedRewards[ind].add(remainder)); // todo may overflow
             }
         }
-    }
-
-    function addToStakingRewardsBalance(address addr, uint256 amount) private {
-        balances[addr].stakingRewards = balances[addr].stakingRewards.add(amount);
-        emit StakingRewardAssigned(addr, amount, balances[addr].stakingRewards); // TODO event per committee?
     }
 
     struct DistributorBatchState {
@@ -256,7 +253,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
         }
 
-        balances[msg.sender].stakingRewards = balances[msg.sender].stakingRewards.sub(totalAmount);
+        balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount)); // todo may underflow
 
         IStakingContract stakingContract = getStakingContract();
         erc20.approve(address(stakingContract), totalAmount);
@@ -277,7 +274,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
     uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
 
-    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint256[] memory assignedFees){
+    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint48[] memory assignedFees){
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -312,12 +309,12 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             bucketsPayed++;
         }
 
-        assignedFees = new uint256[](committee.length);
+        assignedFees = new uint48[](committee.length);
         assignAmountFixed(committee, compliance, generalFeePoolAmount, false, assignedFees);
         assignAmountFixed(committee, compliance, complianceFeePoolAmount, true, assignedFees);
     }
 
-    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint256[] memory assignedFees) private {
+    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private {
         uint n = committee.length;
         if (isCompliant)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
@@ -332,7 +329,7 @@ contract Rewards is IRewards, ContractRegistryAccessor {
         for (uint i = 0; i < committee.length; i++) {
             uint256 curAmount = amount.div(n);
             if (!isCompliant || compliance[i]) {
-                assignedFees[i] = assignedFees[i].add(curAmount);
+                assignedFees[i] = uint48(assignedFees[i].add(curAmount)); // todo may overflow
                 totalAssigned = totalAssigned.add(curAmount);
             }
         }
@@ -345,12 +342,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
                     ind = (ind + 1) % committee.length;
                 }
             }
-            assignedFees[ind] = assignedFees[ind].add(remainder);
+            assignedFees[ind] = uint48(assignedFees[ind].add(remainder)); // todo may overflow
         }
-    }
-
-    function addToFeeBalance(address addr, uint256 amount) private {
-        balances[addr].fees = balances[addr].fees.add(amount);
     }
 
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {

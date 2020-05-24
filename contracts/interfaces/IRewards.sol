@@ -32,7 +32,7 @@ interface IRewards {
 
     // fees
 
-    event FeesAssigned(address[] assignees, uint256[] orbs_amounts);
+    event FeesAssigned(address[] assignees, uint48[] orbs_amounts);
     event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCompliant);
 
     /*
@@ -58,7 +58,7 @@ interface IRewards {
 
     // bootstrap
 
-    event BootstrapRewardsAssigned(address[] assignees, uint256[] amounts);
+    event BootstrapRewardsAssigned(address[] assignees, uint48[] amounts);
     event BootstrapAddedToPool(uint256 added, uint256 total);
 
     /*
