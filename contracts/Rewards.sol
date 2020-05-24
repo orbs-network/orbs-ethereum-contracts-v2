@@ -215,11 +215,6 @@ contract Rewards is IRewards, ContractRegistryAccessor {
         }
     }
 
-    function addToStakingRewardsBalance(address addr, uint256 amount) private {
-        balances[addr].stakingRewards = balances[addr].stakingRewards.add(amount);
-        emit StakingRewardAssigned(addr, amount, balances[addr].stakingRewards); // TODO event per committee?
-    }
-
     struct DistributorBatchState {
         uint256 fromBlock;
         uint256 toBlock;
@@ -347,10 +342,6 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             }
             assignedFees[ind] = assignedFees[ind].add(remainder);
         }
-    }
-
-    function addToFeeBalance(address addr, uint256 amount) private {
-        balances[addr].fees = balances[addr].fees.add(amount);
     }
 
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
