@@ -221,7 +221,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return accumulatedStakesForBanning[addrs];
 	}
 
-	function _applyStakesToBanningBy(address voter, uint256 previousStake) private {
+	function _applyStakesToBanningBy(address voter, uint256 previousStake) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
 		address[] memory votes = banningVotes[voter];
 		uint256 currentStake = getGovernanceEffectiveStake(voter);
 
@@ -322,10 +322,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 			totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
 
-			// TODO aggregate changes for same delegates to minimize calls to committe contract - may assume similar delegates grouped together... CAUTION - check banning votes eveluation is not skewed
 			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i]);
 
-			// TODO avoid accessing delegation contract downstream for this delegate since totalGovernance is not yet fully applied
+			// TODO add tests to show banning votes are evaluated equally when stake change is batched and not batched
 			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate);
 		}
 	}
@@ -338,7 +337,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return sender;
 	}
 
-	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO newStake is getUncappedStakes(addr) at this point. governance and committee "effective" stakes can also be passed into this method, or alternately, use a getter for newStake also
+	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
 		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), totalGovernanceStake);
 
 		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
@@ -349,9 +348,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	}
 
-	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
+	function getCommitteeEffectiveStake(address v) private view returns (uint256) { // TODO reduce number of calls to other contracts
 		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
-		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v; // TODO optimized three sequential calls to delegations in this function
+		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v;
 		if (!isSelfDelegating || ownStake == 0) {
 			return 0;
 		}
@@ -368,7 +367,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return getDelegationsContract().getDelegatedStakes(addr);
 	}
 
-	// TODO remove this function if possible - use pure function with bool and stake
+	// TODO remove use of this function where possible - use pure function with bool and stake instead
 	function getGovernanceEffectiveStake(address addr) internal view returns (uint256) {
 		IDelegations d = getDelegationsContract();
 		uint256 stakes = d.getDelegatedStakes(addr);
@@ -399,9 +398,4 @@ contract Elections is IElections, ContractRegistryAccessor {
 		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
 		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
 	}
-
-	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
-		return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
-	}
-
 }

@@ -114,31 +114,31 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	function emitDelegatedStakeChangedBatch(address[] memory delegators, uint256[] memory delegatorsStakes, address[] memory delegates) private {
 		uint delegatorsLength = delegators.length;
 
-		address streakDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
-		uint streakStartIdx = 0;
+		address seqDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
+		uint seqStartIdx = 0;
 
 		for (uint i = 1; i < delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
 			address currentDelegate = delegates[i];
 
-			if (currentDelegate == streakDelegate) {
-				continue; // delegate streak continues
+			if (currentDelegate == seqDelegate) {
+				continue; // delegate seq continues
 			}
 
-			// end of common delegate streak - emit event
-			emitDelegatedStakeChangedSlice(streakDelegate, delegators, delegatorsStakes, streakStartIdx, i - streakStartIdx);
+			// end of common delegate seq - emit event
+			emitDelegatedStakeChangedSlice(seqDelegate, delegators, delegatorsStakes, seqStartIdx, i - seqStartIdx);
 
-			// reset vars for next streak
-			streakDelegate = currentDelegate;
-			streakStartIdx = i;
+			// reset vars for next seq
+			seqDelegate = currentDelegate;
+			seqStartIdx = i;
 		}
 
-		// final streak
+		// final seq
 		if (delegatorsLength > 0) {
-			emitDelegatedStakeChangedSlice(streakDelegate, delegators, delegatorsStakes, streakStartIdx, delegatorsLength - streakStartIdx);
+			emitDelegatedStakeChangedSlice(seqDelegate, delegators, delegatorsStakes, seqStartIdx, delegatorsLength - seqStartIdx);
 		}
 	}
 
-	// TODO add testing to this method - not sure a "late" notification will not break assumptions in Elections contract
+	// TODO add tests to equivalence of batched and non batched notifications
 	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
@@ -159,16 +159,57 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
 	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private returns (address[] memory delegates){
-		uint256[] memory prevUncappedStakes = new uint256[](_stakeOwners.length);
-		uint256[] memory newUncappedStakes = new uint256[](_stakeOwners.length);
-		bool[] memory isSelfDelegatingDelegates = new bool[](_stakeOwners.length);
+		if (_stakeOwners.length == 0) {
+			return delegates;
+		}
 		delegates = new address[](_stakeOwners.length);
 
-		for (uint i = 0; i < _stakeOwners.length; i++) {
-			(prevUncappedStakes[i], newUncappedStakes[i], delegates[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
+		uint sequenceCount = 0;
+		address currentSeqDelegate = address(0);
+		for (uint i = 0; i < _stakeOwners.length; i++) { // count sequences and gather addresses
+			delegates[i] = getDelegation(_stakeOwners[i]);
+			if (currentSeqDelegate != delegates[i]) { // init record new delegate, and close previous one
+				sequenceCount++;
+				currentSeqDelegate == delegates[i];
+			}
 		}
 
-		getElectionsContract().notifyStakeChangeBatch(prevUncappedStakes, newUncappedStakes, delegates, isSelfDelegatingDelegates);
+		uint256[] memory prevUncappedStakes = new uint256[](sequenceCount);
+		uint256[] memory newUncappedStakes = new uint256[](sequenceCount);
+		bool[] memory isSelfDelegatingDelegates = new bool[](sequenceCount);
+		address[] memory seqDelegates = new address[](sequenceCount);
+
+		// second pass
+		sequenceCount = 0;
+		currentSeqDelegate = address(0);
+		uint currentUncappedStake = 0;
+		for (uint i = 0; i < _stakeOwners.length; i++) {
+			if (currentSeqDelegate != delegates[i]) {
+				if (sequenceCount > 0) { // close prev seq
+					uncappedStakes[currentSeqDelegate] = currentUncappedStake;
+					newUncappedStakes[sequenceCount - 1] = currentUncappedStake;
+				}
+				// init next seq
+				currentSeqDelegate = delegates[i];
+				currentUncappedStake = uncappedStakes[currentSeqDelegate];
+				seqDelegates[sequenceCount] = currentSeqDelegate;
+				prevUncappedStakes[sequenceCount];
+				isSelfDelegatingDelegates[sequenceCount] = _isSelfDelegating(currentSeqDelegate);
+				sequenceCount++;
+			}
+
+			if (_signs[i]) {
+				currentUncappedStake = currentUncappedStake.add(_amounts[i]);
+			} else {
+				currentUncappedStake = currentUncappedStake.sub(_amounts[i]);
+			}
+		}
+
+		// close the last seq
+		uncappedStakes[currentSeqDelegate] = currentUncappedStake;
+		newUncappedStakes[sequenceCount - 1] = currentUncappedStake;
+
+		getElectionsContract().notifyStakeChangeBatch(prevUncappedStakes, newUncappedStakes, seqDelegates, isSelfDelegatingDelegates);
 
 		return delegates;
 	}
