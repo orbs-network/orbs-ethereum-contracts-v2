@@ -254,7 +254,7 @@ export class Participant {
         this.gasRecorder = driver.session.gasRecorder;
     }
 
-    async stake(amount: number|BN, staking?: StakingContract) {
+    async stake(amount: number|BN, staking?: StakingContract) : Promise<TransactionReceipt> {
         staking = staking || this.staking;
         await this.assignAndApproveOrbs(amount, staking.address);
         return staking.stake(amount, {from: this.address});

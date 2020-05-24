@@ -19,14 +19,8 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime} from "./helpers";
-import {ETHEREUM_URL, Web3Driver} from "../eth";
-import {
-    committeeChangedEvents,
-    delegatedEvents,
-    stakedEvents,
-    delegatedStakeChangedEvents
-} from "./event-parsing";
+import {bn} from "./helpers";
+import {TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
@@ -69,6 +63,13 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(0),
             delegatedStake: bn(0),
+            delegators: [p1.address],
+            delegatorTotalStakes: [bn(0)]
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p2.address,
+            selfDelegatedStake: bn(0),
+            delegatedStake: bn(100),
             delegators: [p1.address],
             delegatorTotalStakes: [bn(100)]
         });
@@ -134,7 +135,7 @@ describe('delegations-contract', async () => {
             selfDelegatedStake: bn(0),
             delegatedStake: bn(0),
             delegators: [p3.address],
-            delegatorTotalStakes: [bn(100)]
+            delegatorTotalStakes: [bn(0)]
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
@@ -153,7 +154,7 @@ describe('delegations-contract', async () => {
         r = await d.staking.distributeRewards(
             1000,
             [p1.address, p2.address, p3.address, p4.address],
-            [100,200,300,400]
+            [100, 200, 300, 400]
         );
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
@@ -175,7 +176,7 @@ describe('delegations-contract', async () => {
         r = await d.staking.distributeRewards(
             300,
             [p1.address, p2.address, p3.address],
-            [100,100,100]
+            [100, 100, 100]
         );
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
@@ -186,5 +187,33 @@ describe('delegations-contract', async () => {
         });
 
     });
-});
 
+    it('when delegating to another, DelegatedStakeChanged should indicate a new delegation of 0 to the previous delegate', async () => {
+        const d = await Driver.new();
+        let r: TransactionReceipt;
+
+        const v1 = d.newParticipant();
+        const v2 = d.newParticipant();
+        const d1 = d.newParticipant();
+
+        await d1.stake(100);
+        r = await d1.delegate(v1);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v1.address,
+            delegators: [d1.address],
+            delegatorTotalStakes: [bn(100)]
+        });
+
+        r = await d1.delegate(v2);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v2.address,
+            delegators: [d1.address],
+            delegatorTotalStakes: [bn(100)]
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v1.address,
+            delegators: [d1.address],
+            delegatorTotalStakes: [bn(0)]
+        });
+    });
+});
