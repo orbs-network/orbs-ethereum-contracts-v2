@@ -175,19 +175,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function assignRewards() public {
-		uint gl01 = gasleft();
 		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-
-		emit GasReport("assignRewards: getCommittee", gl01-gasleft());
-		gl01 = gasleft();
 		getFeesContract().assignFees(generalCommittee, compliance);
-		emit GasReport("assignRewards: assignFees", gl01-gasleft());
-		gl01 = gasleft();
 		getBootstrapRewardsContract().assignRewards(generalCommittee, compliance);
-		emit GasReport("assignRewards: bootstrap rewards", gl01-gasleft());
-		gl01 = gasleft();
 		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
-		emit GasReport("assignRewards: staking rewards", gl01-gasleft());
 	}
 
 	function getTotalGovernanceStake() internal view returns (uint256) {
