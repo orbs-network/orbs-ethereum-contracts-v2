@@ -303,9 +303,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO newStake is getUncappedStakes(addr) at this point. governance and committee "effective" stakes can also be passed into this method, or alternately, use a getter for newStake also
 		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
 
-		uint gl01 = gasleft();
 		(bool committeeChanged,) = getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
-		emit GasReport("committee call (1)", gl01-gasleft());
 		if (committeeChanged) {
 			assignRewards();
 		}
@@ -324,7 +322,6 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 		return ownStake.mul(maxRatio); // never overflows
 	}
-	event GasReport(string label, uint gas);
 
 	function getUncappedStakes(address addr) internal view returns (uint256) {
 		return getDelegationsContract().getDelegatedStakes(addr);
