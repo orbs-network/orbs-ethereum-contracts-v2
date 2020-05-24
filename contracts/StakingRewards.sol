@@ -78,8 +78,7 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
         for (uint i = 0; i < committee.length; i++) {
             totalWeight = totalWeight.add(weights[i]);
         }
-//        emit GasReport("StakingRewards: total weight summation", g - gasleft());
-        g = gasleft();
+
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastPayedAt);
 
@@ -87,41 +86,28 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
             uint _pool = pool;
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), _pool);
             pool = _pool.sub(amount);
-//            emit GasReport("StakingRewards: util allocation", g - gasleft());
-            g = gasleft();
             uint256[] memory assignedRewards = new uint256[](committee.length);
-//            emit GasReport("StakingRewards: rewards array allocation", g - gasleft());
-            g = gasleft();
             uint n;
             for (uint i = 0; i < committee.length; i++) {
                 n = amount.mul(weights[i]).div(totalWeight);
                 assignedRewards[i] = n;
                 totalAssigned = totalAssigned.add(n);
             }
-//            emit GasReport("StakingRewards: first iteration", g - gasleft());
-            g = gasleft();
 
             n = amount.sub(totalAssigned);
             if (n > 0 && committee.length > 0) {
                 uint ind = now % committee.length;
                 assignedRewards[ind] = assignedRewards[ind].add(n);
             }
-//            emit GasReport("StakingRewards: remainder calculation", g - gasleft());
-            g = gasleft();
 
             for (uint i = 0; i < committee.length; i++) {
                 n = orbsBalance[committee[i]] + assignedRewards[i];
                 orbsBalance[committee[i]] = n;
                 emit StakingRewardAssigned(committee[i], assignedRewards[i], n); // TODO event per committee?
             }
-//            emit GasReport("StakingRewards: second interation", g - gasleft());
-            g = gasleft();
-
         }
 
         lastPayedAt = now;
-//        emit GasReport("StakingRewards: end", g - gasleft());
-
     }
 
     struct DistributorBatchState {
