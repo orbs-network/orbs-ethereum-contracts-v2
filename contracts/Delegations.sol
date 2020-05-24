@@ -38,8 +38,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uint256 prevStakePrevDelegate = uncappedStakes[prevDelegate];
 		uint256 prevStakeNewDelegate = uncappedStakes[to];
 
-		bool prevSelfDelegatingPrevDelegate = _isSelfDelegating(prevDelegate); // keep before delegation
-		bool prevSelfDelegatingNewDelegate = _isSelfDelegating(to); // keep before delegation
+		bool prevSelfDelegatingPrevDelegate = _isSelfDelegating(prevDelegate);
+		bool prevSelfDelegatingNewDelegate = _isSelfDelegating(to);
 
 		delegations[msg.sender] = to; // delegation!
 
