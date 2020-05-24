@@ -27,12 +27,11 @@ describe('protocol-contract', async () => {
     });
 
     r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2);
-    currTime = await getTopBlockTimestamp(d);
     expect(r).to.have.a.protocolChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       currentVersion: bn(2),
       nextVersion: bn(2),
-      fromTimestamp: bn(currTime) // assuming ganache will not mine since last tx
+      fromTimestamp: bn(await d.web3.txTimestamp(r))
     });
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, currTime + 100);
