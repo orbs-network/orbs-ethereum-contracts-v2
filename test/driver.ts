@@ -24,9 +24,7 @@ export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
 export type DriverOptions = {
-    minCommitteeSize: number,
     maxCommitteeSize: number;
-    generalCommitteeMinimumWeight: number,
     maxStandbys: number;
     maxDelegationRatio: number;
     voteOutThreshold: number;
@@ -36,9 +34,7 @@ export type DriverOptions = {
     web3Provider : () => Web3;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
-    minCommitteeSize: 0,
     maxCommitteeSize: 2,
-    generalCommitteeMinimumWeight: 0,
     maxStandbys : 2,
     maxDelegationRatio : 10,
     voteOutThreshold : 80,
@@ -74,7 +70,7 @@ export class Driver {
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
         const {
-            minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys,
+            maxCommitteeSize, maxStandbys,
             maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider,
             readyToSyncTimeout
         } = Object.assign({}, defaultDriverOptions, options);
@@ -90,12 +86,12 @@ export class Driver {
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]], null, session);
         const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
         const delegations = await web3.deploy( "Delegations", [], null, session);
-        const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
+        const elections = await web3.deploy( "Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
-        const committee = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout], null, session);
+        const committee = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys, readyToSyncTimeout], null, session);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);

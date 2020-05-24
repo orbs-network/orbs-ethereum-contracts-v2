@@ -22,7 +22,6 @@ contract Elections is IElections, ContractRegistryAccessor {
 	mapping (address => uint256) accumulatedStakesForBanning; // addr => total stake
 	mapping (address => uint256) bannedValidators; // addr => timestamp
 
-	uint minCommitteeSize; // TODO only used as an argument to committee.setMinimumWeight(), should probably not be here
 	uint maxDelegationRatio; // TODO consider using a hardcoded constant instead.
 	uint8 voteOutPercentageThreshold;
 	uint256 voteOutTimeoutSeconds;
@@ -46,12 +45,11 @@ contract Elections is IElections, ContractRegistryAccessor {
 		_;
 	}
 
-	constructor(uint _minCommitteeSize, uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
+	constructor(uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
 		require(_banningPercentageThreshold >= 0 && _banningPercentageThreshold <= 100, "banningPercentageThreshold must be between 0 and 100");
 
-		minCommitteeSize = _minCommitteeSize;
 	    maxDelegationRatio = _maxDelegationRatio;
 		voteOutPercentageThreshold = _voteOutPercentageThreshold;
 		voteOutTimeoutSeconds = _voteOutTimeoutSeconds;
