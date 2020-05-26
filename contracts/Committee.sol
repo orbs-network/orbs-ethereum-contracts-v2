@@ -12,7 +12,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	struct MemberData { // TODO can be reduced to 1 state entry
 		uint128 weight;
-		uint32 readyToSyncTimestamp;
+		uint48 readyToSyncTimestamp;
 		bool isMember; // exists
 		bool readyForCommittee;
 		bool isCompliant;
@@ -37,7 +37,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	} // Never in state, only in memory
 
 	struct Settings { // TODO can be reduced to 2-3 state entries
-		uint32 readyToSyncTimeout;
+		uint48 readyToSyncTimeout;
 		uint8 maxCommitteeSize;
 		uint8 maxStandbys;
 	}
@@ -67,7 +67,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		settings = Settings({
 			maxCommitteeSize: uint8(_maxCommitteeSize),
 			maxStandbys: uint8(_maxStandbys),
-			readyToSyncTimeout: uint32(_readyToSyncTimeout)
+			readyToSyncTimeout: uint48(_readyToSyncTimeout)
 		});
 	}
 
@@ -98,7 +98,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 			return (false, false);
 		}
 
-		memberData.readyToSyncTimestamp = uint32(now);
+		memberData.readyToSyncTimestamp = uint48(now);
 		memberData.readyForCommittee = readyForCommittee;
 		return _rankAndUpdateMember(Member({
 			addr: addr,
@@ -280,8 +280,8 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 		return updateOnMemberChange(member, _settings);
 	}
 
-	function isReadyToSyncStale(uint32 timestamp, bool currentlyInCommittee, Settings memory _settings) private view returns (bool) {
-		return timestamp == 0 || !currentlyInCommittee && timestamp <= uint32(now) - _settings.readyToSyncTimeout;
+	function isReadyToSyncStale(uint48 timestamp, bool currentlyInCommittee, Settings memory _settings) private view returns (bool) {
+		return timestamp == 0 || !currentlyInCommittee && timestamp <= uint48(now) - _settings.readyToSyncTimeout;
 	}
 
 	function qualifiesAsStandby(Member memory member) private pure returns (bool) {
@@ -349,7 +349,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 				if (p.shouldBeStandby != p.data.isStandby) {
 					p.data.isStandby = p.shouldBeStandby;
 					if (p.shouldBeStandby && p.data.inCommittee) {
-						p.data.readyToSyncTimestamp = uint32(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
+						p.data.readyToSyncTimestamp = uint48(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
 					}
 					changed = true;
 					standbysChanged = true;
