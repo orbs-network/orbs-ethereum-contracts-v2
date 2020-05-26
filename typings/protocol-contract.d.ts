@@ -4,13 +4,14 @@ import * as BN from "bn.js";
 
 export interface ProtocolChangedEvent {
   deploymentSubset: string,
-  protocolVersion: number,
-  asOfBlock: number
+  currentVersion: number,
+  nextVersion: number,
+  fromTimestamp: number
 }
 
 export interface ProtocolContract extends Contract {
   createDeploymentSubset(deploymentSubset: string, initialProtocolVersion: number, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setProtocolVersion(deploymentSubset: string, protocolVersion: number, asOfBlock: number,params?: TransactionConfig): Promise<TransactionReceipt>;
+  setProtocolVersion(deploymentSubset: string, nextVersion: number, fromTimestamp: number,params?: TransactionConfig): Promise<TransactionReceipt>;
   getProtocolVersion(deploymentSubset: string ,params?: TransactionConfig): Promise<BN>;
   deploymentSubsetExists(deploymentSubset: string, params?: TransactionConfig): Promise<boolean>;
 }
