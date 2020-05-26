@@ -4,7 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, expectRejected} from "./driver";
 import chai from "chai";
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 
@@ -32,7 +32,7 @@ describe('staking-rewards-level-flows', async () => {
     const g = d.rewardsGovernor;
 
     const annualRate = 12000;
-    const poolAmount = 200000000000;
+    const poolAmount = fromTokenUnits(200000000000);
     const annualCap = poolAmount;
 
     let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
@@ -41,13 +41,13 @@ describe('staking-rewards-level-flows', async () => {
 
     // create committee
 
-    const initStakeLesser = new BN(17000);
+    const initStakeLesser = fromTokenUnits(17000);
     const v1 = d.newParticipant();
     await v1.stake(initStakeLesser);
     await v1.registerAsValidator();
     await v1.notifyReadyForCommittee();
 
-    const initStakeLarger = new BN(21000);
+    const initStakeLarger = fromTokenUnits(21000);
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
@@ -74,14 +74,14 @@ describe('staking-rewards-level-flows', async () => {
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
-      const totalCommitteeStake = _.sumBy(validators, v => v.stake.toNumber());
-      const annualAmount = Math.min(Math.floor(annualRate * totalCommitteeStake / 100000), annualCap);
-      const rewards = new BN(Math.floor(annualAmount * elapsedTime / YEAR_IN_SECONDS));
+      const totalCommitteeStake = bnSum(validators.map(v => v.stake));
+      const annualAmount = BN.min(totalCommitteeStake.mul(bn(annualRate)).div(bn(100000)), annualCap);
+      const rewards = toTokenUnits(annualAmount.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
       const rewardsArr = validators.map(v => rewards.mul(v.stake).div(bn(totalCommitteeStake)));
-      const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
+      const remainder =  rewards.sub(bnSum(rewardsArr));
       const remainderWinnerIdx = endTime % nValidators;
       rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
-      return rewardsArr;
+      return rewardsArr.map(x => fromTokenUnits(x));
     };
 
     const totalOrbsRewardsArr = calcRewards();
@@ -96,11 +96,11 @@ describe('staking-rewards-level-flows', async () => {
       await delegator.delegate(v.v);
 
       const i = validators.indexOf(v);
-      expect(orbsBalances[i]).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
+      expect(orbsBalances[i]).to.be.bignumber.equal(totalOrbsRewardsArr[i]);
       expect(assignRewardTxRes).to.have.a.stakingRewardAssignedEvent({
         assignee: v.v.address,
-        amount: bn(new BN(totalOrbsRewardsArr[i])),
-        balance: bn(new BN(totalOrbsRewardsArr[i])) // todo: a test where balance is different than amount
+        amount: totalOrbsRewardsArr[i],
+        balance: totalOrbsRewardsArr[i] // todo: a test where balance is different than amount
       });
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
@@ -142,8 +142,8 @@ describe('staking-rewards-level-flows', async () => {
     const g = d.rewardsGovernor;
 
     const annualRate = 12000;
-    const poolAmount = 2000000000;
-    const annualCap = 100;
+    const poolAmount = fromTokenUnits(2000000000);
+    const annualCap = fromTokenUnits(100);
 
     let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
     await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
@@ -151,13 +151,13 @@ describe('staking-rewards-level-flows', async () => {
 
     // create committee
 
-    const initStakeLesser = new BN(17000);
+    const initStakeLesser = fromTokenUnits(17000);
     const v1 = d.newParticipant();
     await v1.stake(initStakeLesser);
     await v1.registerAsValidator();
     await v1.notifyReadyForCommittee();
 
-    const initStakeLarger = new BN(21000);
+    const initStakeLarger = fromTokenUnits(21000);
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
@@ -184,14 +184,14 @@ describe('staking-rewards-level-flows', async () => {
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
-      const totalCommitteeStake = _.sumBy(validators, v => v.stake.toNumber());
-      const annualAmount = Math.min(Math.floor(annualRate * totalCommitteeStake / 100000), annualCap);
-      const rewards = new BN(Math.floor(annualAmount * elapsedTime / YEAR_IN_SECONDS));
+      const totalCommitteeStake = bnSum(validators.map(v => v.stake));
+      const annualAmount = BN.min(totalCommitteeStake.mul(bn(annualRate)).div(bn(100000)), annualCap);
+      const rewards = toTokenUnits(annualAmount.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
       const rewardsArr = validators.map(v => rewards.mul(v.stake).div(bn(totalCommitteeStake)));
-      const remainder =  rewards.sub(new BN(_.sumBy(rewardsArr, r => r.toNumber())));
+      const remainder =  rewards.sub(bnSum(rewardsArr));
       const remainderWinnerIdx = endTime % nValidators;
       rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
-      return rewardsArr;
+      return rewardsArr.map(x => fromTokenUnits(x));
     };
 
     const totalOrbsRewardsArr = calcRewards();
@@ -209,8 +209,8 @@ describe('staking-rewards-level-flows', async () => {
       expect(orbsBalances[i]).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
       expect(assignRewardTxRes).to.have.a.stakingRewardAssignedEvent({
         assignee: v.v.address,
-        amount: bn(new BN(totalOrbsRewardsArr[i])),
-        balance: bn(new BN(totalOrbsRewardsArr[i])) // todo: a test where balance is different than amount
+        amount: totalOrbsRewardsArr[i],
+        balance: totalOrbsRewardsArr[i] // todo: a test where balance is different than amount
       });
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(

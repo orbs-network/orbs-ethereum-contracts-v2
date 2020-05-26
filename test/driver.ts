@@ -179,7 +179,7 @@ export class Driver {
         return v;
     }
 
-    async newValidator(stake: number, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<{v: Participant, r: TransactionReceipt}> {
+    async newValidator(stake: number|BN, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<{v: Participant, r: TransactionReceipt}> {
         const v = await this.newParticipant();
         const r = await v.becomeValidator(stake, compliance, signalReadyToSync, signalReadyForCommittee);
         return {v, r}
@@ -286,7 +286,7 @@ export class Participant {
         return await this.compliance.setValidatorCompliance(this.address, false);
     }
 
-    async becomeValidator(stake: number, compliant: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
+    async becomeValidator(stake: number|BN, compliant: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
         await this.registerAsValidator();
         if (compliant) {
             await this.becomeCompliant();

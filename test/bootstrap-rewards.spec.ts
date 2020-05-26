@@ -4,7 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, Participant} from "./driver";
 import chai from "chai";
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 import {bootstrapRewardsAssignedEvents} from "./event-parsing";
@@ -33,9 +33,9 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const g = d.rewardsGovernor;
 
-    const annualAmountGeneral = 10000000;
-    const annualAmountCompliance = 20000000;
-    const poolAmount = (annualAmountGeneral + annualAmountCompliance) * 6 * 12;
+    const annualAmountGeneral = fromTokenUnits(10000000);
+    const annualAmountCompliance = fromTokenUnits(20000000);
+    const poolAmount = annualAmountGeneral.add(annualAmountCompliance).mul(bn(6*12));
 
     await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
     await d.rewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
@@ -49,8 +49,8 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     // create committee
 
-    const initStakeLesser = 17000;
-    const initStakeLarger = 21000;
+    const initStakeLesser = fromTokenUnits(17000);
+    const initStakeLarger = fromTokenUnits(21000);
 
     const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
     const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
@@ -68,7 +68,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
-    const calcRewards = (annualRate) => bn(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS));
+    const calcRewards = (annualRate) => toTokenUnits(bn(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
 
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
     const expectedComplianceCommitteeRewards = calcRewards(annualAmountCompliance);
@@ -86,7 +86,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
 
-      const expectedBalance = bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0));
+      const expectedBalance = fromTokenUnits(bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0)));
       expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds

@@ -5,7 +5,7 @@ import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
 import {feesAddedToBucketEvents, subscriptionChangedEvents, vcCreatedEvents} from "./event-parsing";
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 import {FeesAddedToBucketEvent} from "../typings/rewards-contract";
@@ -32,12 +32,12 @@ describe('fees-contract', async () => {
 
     // create committee
 
-    const initStakeLesser = 17000;
-    const initStakeLarger = 21000;
+    const initStakeLesser = fromTokenUnits(17000);
+    const initStakeLarger = fromTokenUnits(21000);
 
-    const {v: v1} = await d.newValidator(initStakeLarger + 1, true, false, true);
+    const {v: v1} = await d.newValidator(initStakeLarger.add(fromTokenUnits(1)), true, false, true);
     const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
-    const {v: v3} = await d.newValidator(initStakeLesser + 1, true, false, true);
+    const {v: v3} = await d.newValidator(initStakeLesser.add(fromTokenUnits(1)), true, false, true);
     const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
 
     const generalCommittee = [v1, v2, v3, v4];
@@ -45,7 +45,7 @@ describe('fees-contract', async () => {
 
     // create a VCs
 
-    const createVc = async (vcRate: number, isCompliant: boolean, payment: number): Promise<{vcid: string, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
+    const createVc = async (vcRate: BN, isCompliant: boolean, payment: BN): Promise<{vcid: string, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
       const subs = await d.newSubscriber('tier', vcRate);
 
       const appOwner = d.newParticipant();
@@ -64,7 +64,7 @@ describe('fees-contract', async () => {
 
       // the first bucket was added to with proportion to the remaining time
       const secondsInFirstMonth = parseInt(feeBuckets[1].bucketId as string) - startTime;
-      expect(parseInt(feeBuckets[0].added as string)).to.equal(Math.floor(secondsInFirstMonth * vcRate / MONTH_IN_SECONDS));
+      expect(feeBuckets[0].added).to.equal(bn(secondsInFirstMonth).mul(vcRate).div(bn(MONTH_IN_SECONDS)).toString());
 
       // all middle buckets were added to by the monthly rate
       const middleBuckets = feeBuckets.filter((l, i) => i > 0 && i < feeBuckets.length - 1);
@@ -83,29 +83,29 @@ describe('fees-contract', async () => {
       }
     };
 
-    const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(3000000000, false, 12 * 3000000000);
-    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(6000000000, true, 12 * 3000000000);
+    const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(fromTokenUnits(3000000000), false, fromTokenUnits(12 * 3000000000));
+    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(fromTokenUnits(6000000000), true, fromTokenUnits(12 * 3000000000));
 
     const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[]) => {
-      let rewards = 0;
+      let rewards = bn(0);
       for (const bucket of feeBuckets) {
         const bucketStartTime = Math.max(parseInt(bucket.bucketId as string), startTime);
         const bucketEndTime = bucketStartTime - (bucketStartTime % MONTH_IN_SECONDS) + MONTH_IN_SECONDS;
         const bucketRemainingTime = bucketEndTime - bucketStartTime;
-        const bucketAmount = parseInt(bucket.added as string);
+        const bucketAmount = bn(bucket.added);
         if (bucketStartTime < endTime) {
           const payedDuration = Math.min(endTime, bucketEndTime) - bucketStartTime;
-          const amount = Math.floor(bucketAmount * payedDuration / bucketRemainingTime);
-          bucket.added = (parseInt(bucket.added as string) - amount).toString();
-          bucket.total = (parseInt(bucket.total as string) - amount).toString();
-          rewards += amount;
+          const amount = bucketAmount.mul(bn(payedDuration)).div(bn(bucketRemainingTime));
+          bucket.added = bn(bucket.added).sub(amount).toString();
+          bucket.total = bn(bucket.total).sub(amount).toString();
+          rewards = rewards.add(amount);
         }
       }
-      const rewardsArr = committee.map(() => Math.floor(rewards / committee.length));
-      const remainder = rewards - _.sum(rewardsArr);
+      const rewardsArr = committee.map(() => rewards.div(bn(committee.length)));
+      const remainder = rewards.mod(bn(committee.length));
       const remainderWinnerIdx = endTime % committee.length;
-      rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx] + remainder;
-      return rewardsArr;
+      rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
+      return rewardsArr.map(x => toTokenUnits(x));
     };
 
     if (complianceStartTime > generalStartTime) {
@@ -133,7 +133,7 @@ describe('fees-contract', async () => {
     const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
       assignees: generalCommittee.map(v => v.address),
-      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => (x + ((i % 2 == 0) ? complianceCommitteeRewardsArr[i / 2] : 0)).toString())
+      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => (x.add((i % 2 == 0) ? complianceCommitteeRewardsArr[i / 2] : bn(0))).toString())
     });
 
     const orbsBalances:BN[] = [];
@@ -144,8 +144,8 @@ describe('fees-contract', async () => {
 
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
-      const totalExpectedRewards = generalCommitteeRewardsArr[i] + (i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2] : 0);
-      const expectedBalance = bn(totalExpectedRewards).add(initialOrbsBalances[i]);
+      const totalExpectedRewards = generalCommitteeRewardsArr[i].add(i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2] : bn(0));
+      const expectedBalance = fromTokenUnits(totalExpectedRewards).add(initialOrbsBalances[i]);
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
