@@ -86,10 +86,11 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
 
             uint256 duration = now.sub(lastPayedAt);
             uint256 amountPerGeneralValidator = Math.min(generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pool.div(committee.length));
+            pool = pool.sub(amountPerGeneralValidator * committee.length);
+
             uint256 amountPerCompliantValidator = nCompliance == 0 ? 0 :
                 Math.min(complianceCommitteeAnnualBootstrap.mul(duration).div(365 days), pool.div(nCompliance));
-
-            pool = pool.sub(amountPerGeneralValidator * committee.length).sub(amountPerCompliantValidator * nCompliance);
+            pool = pool.sub(amountPerCompliantValidator * nCompliance);
 
             uint256[] memory assignedRewards = new uint256[](committee.length);
             for (uint i = 0; i < committee.length; i++) {
