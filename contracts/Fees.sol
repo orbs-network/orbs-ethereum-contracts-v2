@@ -114,7 +114,7 @@ contract Fees is IFees, ContractRegistryAccessor {
         if (remainder > 0 && n > 0) {
             uint ind = now % committee.length;
             if (isCompliant) {
-                while (!compliance[ind]) {
+                while (!compliance[ind]) { // todo: This is not a fair draw - instead take now % n and find the n'th member.
                     ind = (ind + 1) % committee.length;
                 }
             }

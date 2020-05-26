@@ -97,7 +97,7 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
                 addToBalance(committee[i], assignedRewards[i]);
             }
 
-            emit BootstrapRewardsAssigned(committee, assignedRewards, lastPayedAt); // TODO separate event per committee?
+            emit BootstrapRewardsAssigned(committee, assignedRewards); // TODO separate event per committee?
         }
         // todo compliance committee
         lastPayedAt = now;

@@ -46,7 +46,7 @@ export const feesAddedToBucketEvents = (txResult, contractAddress?: string): Fee
 export const stakingRewardAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, stakingRewards, "StakingRewardAssigned(address,uint256,uint256)", contractAddress);
 export const stakingRewardsDistributed = (txResult, contractAddress?: string) => parseLogs(txResult, stakingRewards, "StakingRewardsDistributed(address,uint256,uint256,uint256,uint256,address[],uint256[])", contractAddress);
 export const feesAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, fees, "FeesAssigned(address[],uint256[])", contractAddress);
-export const bootstrapRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardsAssigned(address[],uint256[],uint256)", contractAddress);
+export const bootstrapRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, bootstrapRewards, "BootstrapRewardsAssigned(address[],uint256[])", contractAddress);
 export const bootstrapAddedToPoolEvents = (txResult, contractAddress?: string) => parseLogs(txResult, bootstrapRewards, "BootstrapAddedToPool(uint256,uint256)", contractAddress);
 export const voteOutEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOut(address,address)", contractAddress);
 export const votedOutOfCommitteeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VotedOutOfCommittee(address)", contractAddress);
@@ -61,5 +61,3 @@ export const electionsUnbanned = (txResult, contractAddress?: string) => parseLo
 export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,bool)", contractAddress);
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "GasReport(string,uint256)", contractAddress);
-export const gasReportEvents2 = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);
-export const gasReportEvents3 = (txResult, contractAddress?: string) => parseLogs(txResult, stakingRewards, "GasReport(string,uint256)", contractAddress);

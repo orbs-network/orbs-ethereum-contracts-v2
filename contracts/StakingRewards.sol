@@ -67,7 +67,6 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     function assignRewards(address[] calldata committee, uint256[] calldata weights) external onlyElectionsContract {
         _assignRewards(committee, weights);
     }
-    event GasReport(string label, uint gas);
 
     function _assignRewards(address[] memory committee, uint256[] memory weights) private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
@@ -86,23 +85,23 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), _pool);
             pool = _pool.sub(amount);
             uint256[] memory assignedRewards = new uint256[](committee.length);
-            uint n;
+            uint validatorReward;
             for (uint i = 0; i < committee.length; i++) {
-                n = amount.mul(weights[i]).div(totalWeight);
-                assignedRewards[i] = n;
-                totalAssigned = totalAssigned.add(n);
+                validatorReward = amount.mul(weights[i]).div(totalWeight);
+                assignedRewards[i] = validatorReward;
+                totalAssigned = totalAssigned.add(validatorReward);
             }
 
-            n = amount.sub(totalAssigned);
-            if (n > 0 && committee.length > 0) {
+            uint remainder = amount.sub(totalAssigned);
+            if (remainder > 0 && committee.length > 0) {
                 uint ind = now % committee.length;
-                assignedRewards[ind] = assignedRewards[ind].add(n);
+                assignedRewards[ind] = assignedRewards[ind].add(remainder);
             }
 
             for (uint i = 0; i < committee.length; i++) {
-                n = orbsBalance[committee[i]] + assignedRewards[i];
-                orbsBalance[committee[i]] = n;
-                emit StakingRewardAssigned(committee[i], assignedRewards[i], n); // TODO event per committee?
+                validatorReward = orbsBalance[committee[i]] + assignedRewards[i];
+                orbsBalance[committee[i]] = validatorReward;
+                emit StakingRewardAssigned(committee[i], assignedRewards[i], validatorReward); // TODO event per committee?
             }
         }
 

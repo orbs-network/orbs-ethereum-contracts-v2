@@ -5,7 +5,7 @@ import "./IContractRegistry.sol";
 
 /// @title Fees contract interface
 interface IBootstrapRewards {
-    event BootstrapRewardsAssigned(address[] assignees, uint256[] amounts, uint256 sinceTime);
+    event BootstrapRewardsAssigned(address[] assignees, uint256[] amounts);
     event BootstrapAddedToPool(uint256 added, uint256 total);
 
     /*
