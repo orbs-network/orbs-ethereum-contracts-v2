@@ -131,6 +131,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
                 if (compliance[i]) nCompliance++;
             }
 
+            // TODO ignore the pool here, update only on withdrawal
+
             uint256 duration = now.sub(lastPayedAt);
             uint256 amountPerGeneralValidator = Math.min(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pools.bootstrapPool.div(committee.length));
             pools.bootstrapPool = pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length);
@@ -188,6 +190,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastPayedAt);
+
+            // TODO ignore the pool here, update only on withdrawal
 
             uint256 annualAmount = Math.min(pools.annualRateInPercentMille.mul(totalWeight).div(100000), pools.annualCap);
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pools.stakingPool);
