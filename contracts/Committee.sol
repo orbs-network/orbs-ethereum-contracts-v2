@@ -62,6 +62,7 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 	constructor(uint _maxCommitteeSize, uint _maxStandbys, uint256 _readyToSyncTimeout) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
+		require(_maxCommitteeSize + _maxStandbys <= 32, "maxCommitteeSize + maxStandbys must be 32 at most");
 		require(_readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
 		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
 		settings = Settings({
