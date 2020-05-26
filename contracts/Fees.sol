@@ -102,8 +102,8 @@ contract Fees is IFees, ContractRegistryAccessor {
 
         uint256 totalAssigned = 0;
 
+        uint256 curAmount = amount.div(n);
         for (uint i = 0; i < committee.length; i++) {
-            uint256 curAmount = amount.div(n);
             if (!isCompliant || compliance[i]) {
                 assignedFees[i] = curAmount;
                 totalAssigned = totalAssigned.add(curAmount);

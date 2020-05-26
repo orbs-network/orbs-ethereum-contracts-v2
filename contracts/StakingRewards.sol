@@ -72,7 +72,6 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     function _assignRewards(address[] memory committee, uint256[] memory weights) private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-        uint g = gasleft();
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
         for (uint i = 0; i < committee.length; i++) {

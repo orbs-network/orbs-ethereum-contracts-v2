@@ -780,8 +780,8 @@ describe('committee', async () => {
     });
 
     it('returns committee and standbys using getters', async () => {
-        const maxStandbys = 2;
-        const maxCommitteeSize = 2;
+        const maxStandbys = 4;
+        const maxCommitteeSize = 4;
         const d = await Driver.new({maxStandbys, maxCommitteeSize});
 
         const stake = 100;
@@ -852,6 +852,19 @@ describe('committee', async () => {
             ]
         );
 
+        // have a middle committee member leave
+        await committee[1].unregisterAsValidator();
+        committee.splice(1,1);
+
+        r = await d.committee.getCommittee();
+        expect(r[0]).to.deep.equal(committee.map(v => v.address));
+
+        // have a middle standby leave
+        await standbys[1].unregisterAsValidator();
+        standbys.splice(1,1);
+
+        r = await d.committee.getStandbys();
+        expect(r[0]).to.deep.equal(standbys.map(v => v.address));
     });
 
     it('emit committeeChanged/standbyChanged when committee member/standby change compliance', async () => {

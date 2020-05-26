@@ -311,11 +311,12 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
 		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
-		if (ownStake == 0) {
+		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v; // TODO optimized three sequential calls to delegations in this function
+		if (!isSelfDelegating || ownStake == 0) {
 			return 0;
 		}
 
-		uint256 uncappedStake = getGovernanceEffectiveStake(v);
+		uint256 uncappedStake = getUncappedStakes(v);
 		uint256 maxRatio = maxDelegationRatio;
 		if (uncappedStake.div(ownStake) < maxRatio) {
 			return uncappedStake;
