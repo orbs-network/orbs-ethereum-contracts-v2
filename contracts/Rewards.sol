@@ -30,20 +30,11 @@ contract Rewards is IRewards, ContractRegistryAccessor {
     }
     mapping(address => Balance) balances;
 
-    // Bootstrap
-//    mapping(address => uint256) bootstrapBalance;
-    IERC20 bootstrapToken;
-
-    // Staking
-//    mapping(address => uint256) stakingRewardsBalance;
-
-    // Fees
     uint256 constant feeBucketTimePeriod = 30 days;
     mapping(uint256 => uint256) generalFeePoolBuckets;
     mapping(uint256 => uint256) compliantFeePoolBuckets;
-//    mapping(address => uint256) feesBalance;
 
-
+    IERC20 bootstrapToken;
     IERC20 erc20;
     uint256 lastPayedAt;
 
@@ -142,10 +133,11 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
             uint256 duration = now.sub(lastPayedAt);
             uint256 amountPerGeneralValidator = Math.min(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pools.bootstrapPool.div(committee.length));
-            uint256 amountPerCompliantValidator = nCompliance == 0 ? 0 :
-            Math.min(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days), pools.bootstrapPool.div(nCompliance));
+            pools.bootstrapPool = pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length);
 
-            pools.bootstrapPool = pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length).sub(amountPerCompliantValidator * nCompliance);
+            uint256 amountPerCompliantValidator = nCompliance == 0 ? 0 :
+                Math.min(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days), pools.bootstrapPool.div(nCompliance));
+            pools.bootstrapPool = pools.bootstrapPool.sub(amountPerCompliantValidator * nCompliance);
 
             for (uint i = 0; i < committee.length; i++) {
                 assignedRewards[i] = amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0);
@@ -201,8 +193,9 @@ contract Rewards is IRewards, ContractRegistryAccessor {
             uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pools.stakingPool);
             pools.stakingPool = pools.stakingPool.sub(amount);
 
+            uint256 curAmount;
             for (uint i = 0; i < committee.length; i++) {
-                uint256 curAmount = amount.mul(weights[i]).div(totalWeight);
+                curAmount = amount.mul(weights[i]).div(totalWeight);
                 assignedRewards[i] = curAmount;
                 totalAssigned = totalAssigned.add(curAmount);
             }
@@ -324,8 +317,8 @@ contract Rewards is IRewards, ContractRegistryAccessor {
 
         uint256 totalAssigned = 0;
 
+        uint256 curAmount = amount.div(n);
         for (uint i = 0; i < committee.length; i++) {
-            uint256 curAmount = amount.div(n);
             if (!isCompliant || compliance[i]) {
                 assignedFees[i] = assignedFees[i].add(curAmount);
                 totalAssigned = totalAssigned.add(curAmount);
