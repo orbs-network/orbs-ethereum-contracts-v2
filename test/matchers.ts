@@ -20,7 +20,7 @@ import {
   vcOwnerChangedEvents,
   feesAssignedEvents,
   bootstrapAddedToPoolEvents,
-  stakingRewardAssignedEvents,
+  stakingRewardsAssignedEvents,
   bootstrapRewardsAssignedEvents,
   validatorComplianceUpdateEvents,
   vcCreatedEvents,
@@ -183,7 +183,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
   chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents, true, 'assignees'));
-  chai.Assertion.overwriteMethod("stakingRewardAssignedEvent", containEvent(stakingRewardAssignedEvents, true, 'assignees'));
+  chai.Assertion.overwriteMethod("stakingRewardsAssignedEvent", containEvent(stakingRewardsAssignedEvents, true, 'assignees'));
   chai.Assertion.overwriteMethod("stakingRewardsDistributedEvent", containEvent(stakingRewardsDistributed));
   chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents, true, 'assignees'));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
@@ -233,7 +233,7 @@ declare global {
       unbannedEvent(data?: Partial<UnbannedEvent>): void;
       protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
-      stakingRewardAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
+      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);

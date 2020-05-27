@@ -25,9 +25,8 @@ export interface FeesAssignedEvent {
 }
 
 export interface StakingRewardAssignedEvent {
-    assignee: string,
-    amount: string|BN,
-    balance: string|BN
+    assignees: string[],
+    amounts: (string|BN)[],
 }
 
 export interface StakingRewardsDistributedEvent {

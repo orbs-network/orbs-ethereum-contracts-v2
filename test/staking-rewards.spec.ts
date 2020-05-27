@@ -86,6 +86,11 @@ describe('staking-rewards-level-flows', async () => {
 
     const totalOrbsRewardsArr = calcRewards();
 
+    expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
+      assignees: validators.map(v => v.v.address),
+      amounts: totalOrbsRewardsArr.map(x => toTokenUnits(x))
+    });
+
     const orbsBalances:BN[] = [];
     for (const v of validators) {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
@@ -97,11 +102,6 @@ describe('staking-rewards-level-flows', async () => {
 
       const i = validators.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(totalOrbsRewardsArr[i]);
-      expect(assignRewardTxRes).to.have.a.stakingRewardAssignedEvent({
-        assignee: v.v.address,
-        amount: totalOrbsRewardsArr[i],
-        balance: totalOrbsRewardsArr[i] // todo: a test where balance is different than amount
-      });
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
           totalOrbsRewardsArr[i],
@@ -201,17 +201,17 @@ describe('staking-rewards-level-flows', async () => {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
 
+    expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
+      assignees: validators.map(v => v.v.address),
+      amounts: totalOrbsRewardsArr.map(x => toTokenUnits(x))
+    });
+
     for (const v of validators) {
       const delegator = d.newParticipant();
       await delegator.delegate(v.v);
 
       const i = validators.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
-      expect(assignRewardTxRes).to.have.a.stakingRewardAssignedEvent({
-        assignee: v.v.address,
-        amount: totalOrbsRewardsArr[i],
-        balance: totalOrbsRewardsArr[i] // todo: a test where balance is different than amount
-      });
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
           totalOrbsRewardsArr[i],

@@ -114,11 +114,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             balance.fees = uint48(balance.fees.add(fees[i])); // todo may overflow
             balance.stakingRewards = uint48(balance.stakingRewards.add(stakingRewards[i])); // todo may overflow
             balances[committee[i]] = balance;
-
-            emit StakingRewardAssigned(committee[i], toUint256Granularity(stakingRewards[i]), toUint256Granularity(balance.stakingRewards));
         }
-
-        emit BootstrapRewardsAssigned(committee, bootstrapRewards); // TODO separate event per committee?
+        emit StakingRewardsAssigned(committee, stakingRewards);
+        emit BootstrapRewardsAssigned(committee, bootstrapRewards);
         emit FeesAssigned(committee, fees);
 
         bootstrapAndStaking = pools;

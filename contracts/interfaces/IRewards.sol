@@ -11,7 +11,7 @@ interface IRewards {
     // staking
 
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
-    event StakingRewardAssigned(address assignee, uint256 amount, uint256 balance);
+    event StakingRewardsAssigned(address[] assignees, uint48[] amounts); // todo balance?
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
     function getStakingRewardBalance(address addr) external view returns (uint256 balance);
