@@ -150,7 +150,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         require(amount <= pool, "not enough balance in the bootstrap pool for this withdrawal");
         balances[msg.sender].bootstrapRewards = 0;
         bootstrapAndStaking.bootstrapPool = uint48(pool.sub(amount));
-        require(transfer(bootstrapToken, msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
+        require(transfer(bootstrapToken, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
     // staking rewards
