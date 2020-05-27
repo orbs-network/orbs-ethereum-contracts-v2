@@ -174,7 +174,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit BanningVote(msg.sender, validators);
 	}
 
-    function assignRewards() public {
+    function assignRewards() public { // todo - committee contract can return the committee earlier, save an extra call to committee contract
 		(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
         getRewardsContract().assignRewards(committee, committeeWeights, compliance);
     }
