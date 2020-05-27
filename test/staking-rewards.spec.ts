@@ -36,8 +36,6 @@ describe('staking-rewards-level-flows', async () => {
     const annualCap = poolAmount;
 
     let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
     // create committee
 
@@ -102,6 +100,10 @@ describe('staking-rewards-level-flows', async () => {
 
       const i = validators.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(totalOrbsRewardsArr[i]);
+
+      // Pool can be topped up after assignment
+      await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+      await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
           totalOrbsRewardsArr[i],

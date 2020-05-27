@@ -40,13 +40,6 @@ describe('bootstrap-rewards-level-flows', async () => {
     await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
     await d.rewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
-    let r = await d.rewards.topUpBootstrapPool(poolAmount, {from: g.address});
-    expect(r).to.have.a.bootstrapAddedToPoolEvent({
-      added: bn(poolAmount),
-      total: bn(poolAmount) // todo: a test where total is more than added
-    });
-
     // create committee
 
     const initStakeLesser = fromTokenUnits(17000);
@@ -82,6 +75,14 @@ describe('bootstrap-rewards-level-flows', async () => {
     for (const v of generalCommittee) {
       tokenBalances.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
+
+    // Pool can be topped up after assignment
+    await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
+    let r = await d.rewards.topUpBootstrapPool(poolAmount, {from: g.address});
+    expect(r).to.have.a.bootstrapAddedToPoolEvent({
+      added: bn(poolAmount),
+      total: bn(poolAmount) // todo: a test where total is more than added
+    });
 
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);

@@ -135,12 +135,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             // TODO ignore the pool here, update only on withdrawal
 
             uint256 duration = now.sub(lastPayedAt);
-            uint48 amountPerGeneralValidator = uint48(Math.min(uint(pools.generalCommitteeAnnualBootstrap).mul(duration).div(365 days), pools.bootstrapPool.div(committee.length)));
-            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length));
-
-            uint48 amountPerCompliantValidator = uint48(nCompliance == 0 ? 0 :
-                Math.min(uint(pools.complianceCommitteeAnnualBootstrap).mul(duration).div(365 days), pools.bootstrapPool.div(nCompliance)));
-            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerCompliantValidator * nCompliance));
+            uint48 amountPerGeneralValidator = uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            uint48 amountPerCompliantValidator = uint48(nCompliance == 0 ? 0 : pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
 
             for (uint i = 0; i < committee.length; i++) {
                 assignedRewards[i] = uint48(amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0)); // todo may overflow
@@ -150,7 +146,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function withdrawBootstrapFunds() external {
         uint48 amount = balances[msg.sender].bootstrapRewards;
+        uint48 pool = bootstrapAndStaking.bootstrapPool;
+        require(amount <= pool, "not enough balance in the bootstrap pool for this withdrawal");
         balances[msg.sender].bootstrapRewards = 0;
+        bootstrapAndStaking.bootstrapPool = uint48(pool.sub(amount));
         require(transfer(bootstrapToken, msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
@@ -196,8 +195,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             // TODO ignore the pool here, update only on withdrawal
 
             uint256 annualAmount = Math.min(uint(pools.annualRateInPercentMille).mul(totalWeight).div(100000), toUint256Granularity(pools.annualCap));
-            uint48 amount = uint48(Math.min(uint(toUint48Granularity(uint(annualAmount).mul(duration).div(365 days))), uint(pools.stakingPool)));
-            pools.stakingPool = uint48(pools.stakingPool.sub(amount));
+            uint48 amount = toUint48Granularity(annualAmount.mul(duration).div(365 days));
 
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
@@ -249,9 +247,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
         }
 
-        require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough balance for this distribution");
+        require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough member balance for this distribution");
 
-        balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount_uint48)); // todo may underflow
+        uint48 stakingPool = bootstrapAndStaking.stakingPool;
+        require(totalAmount_uint48 <= stakingPool, "not enough balance in the staking pool for this distribution");
+
+        bootstrapAndStaking.stakingPool = uint48(stakingPool.sub(totalAmount_uint48));
+        balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount_uint48));
 
         IStakingContract stakingContract = getStakingContract();
         approve(erc20, address(stakingContract), totalAmount_uint48);
