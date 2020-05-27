@@ -2,12 +2,14 @@ import {Contract} from "../eth";
 
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
+import { DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY } from "../test/driver";
 
 export interface SubscriptionChangedEvent {
   vcid: string;
   genRef: number | BN;
   expiresAt: number | BN;
-  tier: string;
+  tier: 'defaultTier';
+  deploymentSubset: typeof DEPLOYMENT_SUBSET_MAIN | typeof DEPLOYMENT_SUBSET_CANARY;
 }
 
 export interface PaymentEvent {
