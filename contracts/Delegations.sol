@@ -111,33 +111,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		);
 	}
 
-	function emitDelegatedStakeChangedBatch(address[] memory delegators, uint256[] memory delegatorsStakes, address[] memory delegates) private {
-		uint delegatorsLength = delegators.length;
-
-		address seqDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
-		uint seqStartIdx = 0;
-
-		for (uint i = 1; i < delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
-			address currentDelegate = delegates[i];
-
-			if (currentDelegate == seqDelegate) {
-				continue; // delegate seq continues
-			}
-
-			// end of common delegate seq - emit event
-			emitDelegatedStakeChangedSlice(seqDelegate, delegators, delegatorsStakes, seqStartIdx, i - seqStartIdx);
-
-			// reset vars for next seq
-			seqDelegate = currentDelegate;
-			seqStartIdx = i;
-		}
-
-		// final seq
-		if (delegatorsLength > 0) {
-			emitDelegatedStakeChangedSlice(seqDelegate, delegators, delegatorsStakes, seqStartIdx, delegatorsLength - seqStartIdx);
-		}
-	}
-
 	// TODO add tests to equivalence of batched and non batched notifications
 	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract {
 		uint batchLength = _stakeOwners.length;
@@ -145,10 +118,13 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
 		require(batchLength == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
 
-		address[] memory delegates = _stakeChangeBatch(_stakeOwners, _amounts, _signs);
+		ProcessSequencesParams memory params;
+		params.stakeOwners = _stakeOwners;
+		params.amounts = _amounts;
+		params.signs = _signs;
+		params.updatedStakes = _updatedStakes;
 
-		emitDelegatedStakeChangedBatch(_stakeOwners, _updatedStakes, delegates);
-
+		_processStakeChangeBatch(params);
 	}
 
 	function getDelegation(address addr) public view returns (address) {
@@ -158,19 +134,28 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
-	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private returns (address[] memory delegates){
-		if (_stakeOwners.length == 0) {
-			return delegates;
-		}
-		delegates = new address[](_stakeOwners.length);
+	struct ProcessSequencesParams {
+		address[] stakeOwners;
+		uint256[] amounts;
+		bool[] signs;
+		uint256[] updatedStakes;
+	}
 
+	function _processStakeChangeBatch(ProcessSequencesParams memory params) private {
+		uint batchLength = params.stakeOwners.length;
+		if (batchLength == 0) {
+			return;
+		}
+		address[] memory delegates = new address[](batchLength);
+
+		// find delegates and number of sequences
 		uint sequenceCount = 0;
-		address currentSeqDelegate = address(0);
-		for (uint i = 0; i < _stakeOwners.length; i++) { // count sequences and gather addresses
-			delegates[i] = getDelegation(_stakeOwners[i]);
-			if (currentSeqDelegate != delegates[i]) { // init record new delegate, and close previous one
+		address sequenceDelegate = address(0);
+		for (uint i = 0; i < batchLength; i++) { // count sequences and gather addresses
+			delegates[i] = getDelegation(params.stakeOwners[i]);
+			if (sequenceDelegate != delegates[i]) { // init record new delegate, and close previous one
 				sequenceCount++;
-				currentSeqDelegate == delegates[i];
+				sequenceDelegate == delegates[i];
 			}
 		}
 
@@ -179,51 +164,54 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		bool[] memory isSelfDelegatingDelegates = new bool[](sequenceCount);
 		address[] memory seqDelegates = new address[](sequenceCount);
 
-		// second pass
 		sequenceCount = 0;
-		currentSeqDelegate = address(0);
-		uint currentUncappedStake = 0;
-		for (uint i = 0; i < _stakeOwners.length; i++) {
-			if (currentSeqDelegate != delegates[i]) {
+		sequenceDelegate = address(0);
+		uint currentUncappedStake;
+		uint sequenceStartIdx;
+		uint sequenceLength;
+
+		for (uint i = 0; i < batchLength; i++) {
+			if (sequenceDelegate != delegates[i]) {
 				if (sequenceCount > 0) { // close prev seq
-					uncappedStakes[currentSeqDelegate] = currentUncappedStake;
+					uncappedStakes[sequenceDelegate] = currentUncappedStake;
 					newUncappedStakes[sequenceCount - 1] = currentUncappedStake;
+					emitDelegatedStakeChangedSlice(sequenceDelegate, params.stakeOwners, params.updatedStakes, sequenceStartIdx, sequenceLength);
 				}
 				// init next seq
-				currentSeqDelegate = delegates[i];
-				currentUncappedStake = uncappedStakes[currentSeqDelegate];
-				seqDelegates[sequenceCount] = currentSeqDelegate;
-				prevUncappedStakes[sequenceCount];
-				isSelfDelegatingDelegates[sequenceCount] = _isSelfDelegating(currentSeqDelegate);
-				sequenceCount++;
-			}
+				sequenceDelegate = delegates[i];
+				currentUncappedStake = uncappedStakes[sequenceDelegate];
+				seqDelegates[sequenceCount] = sequenceDelegate;
+				prevUncappedStakes[sequenceCount] = currentUncappedStake;
+				isSelfDelegatingDelegates[sequenceCount] = _isSelfDelegating(sequenceDelegate);
 
-			if (_signs[i]) {
-				currentUncappedStake = currentUncappedStake.add(_amounts[i]);
+				sequenceStartIdx = i;
+				sequenceCount++;
+				sequenceLength = 0;
+
+			}
+			sequenceLength++;
+
+			if (params.signs[i]) {
+				currentUncappedStake = currentUncappedStake.add(params.amounts[i]);
 			} else {
-				currentUncappedStake = currentUncappedStake.sub(_amounts[i]);
+				currentUncappedStake = currentUncappedStake.sub(params.amounts[i]);
 			}
 		}
 
 		// close the last seq
-		uncappedStakes[currentSeqDelegate] = currentUncappedStake;
+		uncappedStakes[sequenceDelegate] = currentUncappedStake;
 		newUncappedStakes[sequenceCount - 1] = currentUncappedStake;
+		emitDelegatedStakeChangedSlice(sequenceDelegate, params.stakeOwners, params.updatedStakes, sequenceStartIdx, sequenceLength);
 
 		getElectionsContract().notifyStakeChangeBatch(prevUncappedStakes, newUncappedStakes, seqDelegates, isSelfDelegatingDelegates);
-
-		return delegates;
 	}
 
 	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign) private {
-		(uint256 prevUncappedStake, uint256 newUncappedStake, address _delegate) = _applyStakeChangeLocally(_stakeOwner, _amount, _sign);
-		getElectionsContract().notifyStakeChange(prevUncappedStake, newUncappedStake, _delegate, _isSelfDelegating(_delegate));
-	}
+		address _delegate = getDelegation(_stakeOwner);
 
-	function _applyStakeChangeLocally(address _stakeOwner, uint256 _amount, bool _sign) private returns (uint prevUncappedStake, uint256 newUncappedStake, address _delegate) {
-		_delegate = getDelegation(_stakeOwner);
+		uint256 prevUncappedStake = uncappedStakes[_delegate];
 
-		prevUncappedStake = uncappedStakes[_delegate];
-
+		uint256 newUncappedStake;
 		if (_sign) {
 			newUncappedStake = prevUncappedStake.add(_amount);
 		} else {
@@ -231,6 +219,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		}
 
 		uncappedStakes[_delegate] = newUncappedStake;
+
+		getElectionsContract().notifyStakeChange(prevUncappedStake, newUncappedStake, _delegate, _isSelfDelegating(_delegate));
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {

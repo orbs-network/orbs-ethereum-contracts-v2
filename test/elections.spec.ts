@@ -27,6 +27,7 @@ import {
     stakedEvents,
     stakeChangedEvents
 } from "./event-parsing";
+import {totalmem} from "os";
 
 const baseStake = 100;
 
@@ -561,47 +562,102 @@ describe('elections-high-level-flows', async () => {
 
     it("tracks total governance stakes", async () => {
         const d = await Driver.new();
+        async function expectTotalGovernanceStakeToBe(n) {
+            expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(n));
+        }
 
-        const s1 = 11;
-        const s2 = 13;
-        const s3 = 17;
-        const sTotal = s1+s2+s3;
+        const stakeOfA = 11;
+        const stakeOfB = 13;
+        const stakeOfC = 17;
+        const stakeOfABC = stakeOfA+stakeOfB+stakeOfC;
 
-        const p1 = d.newParticipant();
-        const p2 = d.newParticipant();
-        const unAndReStaking = d.newParticipant();
+        const a = d.newParticipant("delegating around"); // starts as self delegating
+        const b = d.newParticipant("delegating to self - debating the amount");
+        const c = d.newParticipant("delegating to a");
+        await c.delegate(a);
 
-        const awayDelegating = d.newParticipant();
-        await awayDelegating.delegate(p1);
+        await a.stake(stakeOfA);
+        await b.stake(stakeOfB);
+        await c.stake(stakeOfC);
 
-        await p1.stake(s1);
-        await p2.stake(s2);
-        await unAndReStaking.stake(s3);
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
 
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+        await b.unstake(1);
+        await expectTotalGovernanceStakeToBe(stakeOfABC - 1);
 
-        await unAndReStaking.unstake(1);
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal - 1));
+        await b.restake();
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
 
-        await unAndReStaking.restake();
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+        await a.delegate(b); // delegate from self to a self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB);
 
-        await p1.delegate(p2); // delegate from self to a self delegating other
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+        await a.delegate(c); // delegate from self to a non-self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfB);
 
-        await p1.delegate(awayDelegating); // delegate from self to a non-self delegating other
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal - s1));
+        await a.delegate(a); // delegate to self back from a non-self delegating
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
 
-        await p1.delegate(p1); // delegate to self back from a non-self delegating
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+        await a.delegate(c);
+        await a.delegate(b); // delegate to another self delegating from a non-self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB);
 
-        await p1.delegate(awayDelegating);
-        await p1.delegate(p2); // delegate to another self delegating from a non-self delegating other
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+        await a.delegate(a); // delegate to self back from a self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
 
-        await p1.delegate(p1); // delegate to self back from a self delegating other
-        expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(sTotal));
+    });
 
+    it("tracks totalGovernanceStake correctly when assigning rewards", async () => {
+        const d = await Driver.new();
+        async function expectTotalGovernanceStakeToBe(n) {
+            expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(n));
+        }
+
+        const stakeOfA = 11;
+        const stakeOfB = 13;
+        const stakeOfC = 17;
+        const stakeOfABC = stakeOfA+stakeOfB+stakeOfC;
+
+        const a = d.newParticipant("delegating around"); // starts as self delegating
+        const b = d.newParticipant("delegating to self - debating the amount");
+        const c = d.newParticipant("delegating to a");
+        await c.delegate(a);
+
+        await a.stake(stakeOfA);
+        await b.stake(stakeOfB);
+        await c.stake(stakeOfC);
+
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        const rewards = [
+            {p: d.newParticipant(), amount: 10, d: a},
+            {p: d.newParticipant(), amount: 20, d: a},
+            {p: d.newParticipant(), amount: 30, d: b},
+            {p: d.newParticipant(), amount: 40, d: b},
+            {p: d.newParticipant(), amount: 50, d: b},
+            {p: d.newParticipant(), amount: 60, d: c},
+            {p: d.newParticipant(), amount: 70, d: c}
+        ];
+        let totalRewardsForGovernanceStake = 0;
+        for (let i = 0; i < rewards.length; i++) {
+            await rewards[i].p.delegate(rewards[i].d);
+            if (await d.delegations.getDelegation(rewards[i].d.address) == rewards[i].d.address) {
+                totalRewardsForGovernanceStake += rewards[i].amount
+            }
+        }
+        const rewardsTotal = rewards.map(i=>i.amount).reduce((a,b)=>a+b);
+        await d.erc20.assign(a.address, rewardsTotal);
+        await d.erc20.approve(d.staking.address, rewardsTotal, {from: a.address});
+        let r = await d.staking.distributeRewards(rewardsTotal, rewards.map(r=>r.p.address), rewards.map(r=>r.amount), {from: a.address});
+
+        await expectTotalGovernanceStakeToBe(stakeOfABC + totalRewardsForGovernanceStake);
+
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: a.address,
+            selfDelegatedStake: bn(stakeOfA),
+            delegatedStake: bn(stakeOfA + stakeOfC + 30),
+            delegators: [rewards[0].p.address, rewards[1].p.address],
+            delegatorTotalStakes: [bn(rewards[0].amount), bn(rewards[1].amount)]
+        })
     });
 
     it("allows voting only to 3 at a time", async () => {
