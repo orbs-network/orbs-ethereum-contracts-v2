@@ -6,14 +6,12 @@ export interface CommitteeChangedEvent {
     addrs: string[];
     orbsAddrs: string[];
     weights: (number | BN)[];
-    ips: string[];
 }
 
 export interface StandbysChangedEvent {
     addrs: string[];
     orbsAddrs: string[];
     weights: (number | BN)[];
-    ips: string[];
 }
 
 export interface CommitteeContract extends Contract {
