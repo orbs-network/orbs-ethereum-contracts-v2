@@ -137,12 +137,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             // TODO ignore the pool here, update only on withdrawal
 
             uint256 duration = now.sub(lastPayedAt);
-            uint48 amountPerGeneralValidator = uint48(Math.min(uint(pools.generalCommitteeAnnualBootstrap).mul(duration).div(365 days), pools.bootstrapPool.div(committee.length)));
-            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length));
-
-            uint48 amountPerCompliantValidator = uint48(nCompliance == 0 ? 0 :
-                Math.min(uint(pools.complianceCommitteeAnnualBootstrap).mul(duration).div(365 days), pools.bootstrapPool.div(nCompliance)));
-            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerCompliantValidator * nCompliance));
+            uint48 amountPerGeneralValidator = uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            uint48 amountPerCompliantValidator = uint48(nCompliance == 0 ? 0 : pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
 
             for (uint i = 0; i < committee.length; i++) {
                 assignedRewards[i] = uint48(amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0)); // todo may overflow
@@ -151,8 +147,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
 
     function withdrawBootstrapFunds() external {
-        uint48 amount = balances[msg.sender].bootstrapRewards;
-        balances[msg.sender].bootstrapRewards = 0;
+        uint48 balance = balances[msg.sender].bootstrapRewards;
+        uint48 pool = bootstrapAndStaking.bootstrapPool;
+        uint48 amount = uint48(Math.min(balance, pool));
+        balances[msg.sender].bootstrapRewards = uint48(balance.sub(amount));
+        bootstrapAndStaking.bootstrapPool = uint48(pool.sub(amount));
         require(transfer(bootstrapToken, msg.sender, amount), "Rewards::claimbootstrapTokenRewards - insufficient funds");
     }
 
