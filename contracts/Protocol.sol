@@ -8,7 +8,7 @@ contract Protocol is IProtocol, Ownable {
     struct DeploymentSubset {
         bool exists;
         uint256 nextVersion;
-        uint asOfBlock;
+        uint fromTimestamp;
         uint256 currentVersion;
     }
 
@@ -27,31 +27,31 @@ contract Protocol is IProtocol, Ownable {
 
         deploymentSubsets[deploymentSubset].currentVersion = initialProtocolVersion;
         deploymentSubsets[deploymentSubset].nextVersion = initialProtocolVersion;
-        deploymentSubsets[deploymentSubset].asOfBlock = block.number;
+        deploymentSubsets[deploymentSubset].fromTimestamp = now;
         deploymentSubsets[deploymentSubset].exists = true;
 
-        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, block.number); // TODO different event?
+        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now); // TODO different event?
     }
 
-    function setProtocolVersion(string calldata deploymentSubset, uint256 protocolVersion, uint256 asOfBlock) external onlyOwner {
+    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyOwner {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
-        require(asOfBlock > block.number, "protocol update can only be scheduled for a future block");
+        require(fromTimestamp > now, "a protocol update can only be scheduled for the future");
 
         (bool prevUpgradeExecuted, uint256 currentVersion) = checkPrevUpgrades(deploymentSubset);
 
-        require(protocolVersion >= currentVersion, "protocol version must be greater or equal to current version");
+        require(nextVersion >= currentVersion, "protocol version must be greater or equal to current version");
 
-        deploymentSubsets[deploymentSubset].nextVersion = protocolVersion;
-        deploymentSubsets[deploymentSubset].asOfBlock = asOfBlock;
+        deploymentSubsets[deploymentSubset].nextVersion = nextVersion;
+        deploymentSubsets[deploymentSubset].fromTimestamp = fromTimestamp;
         if (prevUpgradeExecuted) {
             deploymentSubsets[deploymentSubset].currentVersion = currentVersion;
         }
 
-        emit ProtocolVersionChanged(deploymentSubset, protocolVersion, asOfBlock);
+        emit ProtocolVersionChanged(deploymentSubset, currentVersion, nextVersion, fromTimestamp);
     }
 
     function checkPrevUpgrades(string memory deploymentSubset) private view returns (bool prevUpgradeExecuted, uint256 currentVersion) {
-        prevUpgradeExecuted = deploymentSubsets[deploymentSubset].asOfBlock <= block.number;
+        prevUpgradeExecuted = deploymentSubsets[deploymentSubset].fromTimestamp <= now;
         currentVersion = prevUpgradeExecuted ? deploymentSubsets[deploymentSubset].nextVersion :
                                                deploymentSubsets[deploymentSubset].currentVersion;
     }

@@ -88,7 +88,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
 	function getValidatorOrbsAddress(address addr) external view returns (address orbsAddr) {
-//		require(isRegistered(addr), "getValidatorOrbsAddress: Validator is not registered");
+		require(isRegistered(addr), "getValidatorOrbsAddress: Validator is not registered");
 		return validators[addr].orbsAddr;
 	}
 

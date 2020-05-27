@@ -32,20 +32,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     mapping(address => Balance) balances;
 
-    // Bootstrap
-//    mapping(address => uint256) bootstrapBalance;
-    IERC20 bootstrapToken;
-
-    // Staking
-//    mapping(address => uint256) stakingRewardsBalance;
-
-    // Fees
     uint256 constant feeBucketTimePeriod = 30 days;
     mapping(uint256 => uint256) generalFeePoolBuckets;
     mapping(uint256 => uint256) compliantFeePoolBuckets;
-//    mapping(address => uint256) feesBalance;
 
-
+    IERC20 bootstrapToken;
     IERC20 erc20;
     uint256 lastPayedAt;
 
@@ -143,12 +134,15 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
                 if (compliance[i]) nCompliance++;
             }
 
+            // TODO ignore the pool here, update only on withdrawal
+
             uint256 duration = now.sub(lastPayedAt);
             uint48 amountPerGeneralValidator = uint48(Math.min(uint(pools.generalCommitteeAnnualBootstrap).mul(duration).div(365 days), pools.bootstrapPool.div(committee.length)));
+            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length));
+
             uint48 amountPerCompliantValidator = uint48(nCompliance == 0 ? 0 :
                 Math.min(uint(pools.complianceCommitteeAnnualBootstrap).mul(duration).div(365 days), pools.bootstrapPool.div(nCompliance)));
-
-            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerGeneralValidator * committee.length).sub(amountPerCompliantValidator * nCompliance));
+            pools.bootstrapPool = uint48(pools.bootstrapPool.sub(amountPerCompliantValidator * nCompliance));
 
             for (uint i = 0; i < committee.length; i++) {
                 assignedRewards[i] = uint48(amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0)); // todo may overflow
@@ -201,6 +195,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastPayedAt);
 
+            // TODO ignore the pool here, update only on withdrawal
+
             uint256 annualAmount = Math.min(uint(pools.annualRateInPercentMille).mul(totalWeight).div(100000), toUint256Granularity(pools.annualCap));
             uint48 amount = uint48(Math.min(uint(toUint48Granularity(uint(annualAmount).mul(duration).div(365 days))), uint(pools.stakingPool)));
             pools.stakingPool = uint48(pools.stakingPool.sub(amount));
@@ -232,31 +228,30 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
-        require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough balance for this distribution");
 
         DistributorBatchState memory ds = distributorBatchState[msg.sender];
-
         bool firstTxBySender = ds.nextTxIndex == 0;
-        if (firstTxBySender) {
-            require(fromBlock == 0, "initial distribution tx must be with fromBlock == 0");
-        }
+
+        require(!firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
 
         if (firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
+            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
             require(toBlock < block.number, "toBlock must be in the past");
             require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
-            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
             ds.fromBlock = fromBlock;
             ds.toBlock = toBlock;
             ds.split = split;
             ds.nextTxIndex = 1;
             distributorBatchState[msg.sender] = ds;
         } else {
+            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             require(toBlock == ds.toBlock, "toBlock mismatch");
             require(fromBlock == ds.fromBlock, "fromBlock mismatch");
             require(split == ds.split, "split mismatch");
-            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
         }
+
+        require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough balance for this distribution");
 
         balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount_uint48)); // todo may underflow
 

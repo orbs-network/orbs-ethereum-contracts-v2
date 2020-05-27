@@ -10,7 +10,7 @@ import {
 import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime} from "./helpers";
-import {gasReportEvents, gasReportEvents2, gasReportEvents3} from "./event-parsing";
+import {gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
 
@@ -72,7 +72,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     for (let i = 0; i < numVCs; i++) {
         await createVC(d, false, subs, monthlyRate, appOwner);
-        // await createVC(d, true, subs, monthlyRate, appOwner);
+        await createVC(d, true, subs, monthlyRate, appOwner);
     }
     tlog("VCs created - done init");
 
@@ -85,7 +85,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
 
 describe('gas usage scenarios', async () => {
-    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
+    it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         const delegator = d.newParticipant("delegator");
@@ -101,8 +101,7 @@ describe('gas usage scenarios', async () => {
             addrs: committee.map(v => v.address)
         });
 
-        // const ge = gasReportEvents(r).concat(gasReportEvents2(r));
-        const ge = gasReportEvents2(r);
+        const ge = gasReportEvents(r);
         ge.forEach(e => console.log(JSON.stringify(e)));
 
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
@@ -381,7 +380,7 @@ describe('gas usage scenarios', async () => {
         await distributeRewardsScenario(1)
     });
 
-    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
+    it("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
         await distributeRewardsScenario(50)
     });
 
@@ -396,16 +395,6 @@ describe('gas usage scenarios', async () => {
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
         await d.elections.assignRewards({from: p.address});
-        // const r = await d.rewards.assignRewards({from: p.address});
-        // const events = gasReportEvents3(r);
-        // events.forEach(e => console.log(JSON.stringify(e)));
-        // d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
-        // d.resetGasRecording();
-        // await d.bootstrapRewards.assignRewards({from: p.address});
-        // d.logGasUsageSummary("assigns rewards (bootstrap) (1 month, initial balance == 0)", [p]);
-        // d.resetGasRecording();
-        // await d.fees.assignFees({from: p.address});
-        // d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
         d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
     });
 
@@ -413,9 +402,6 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 5);
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
-        // await d.rewards.assignRewards();
-        // await d.bootstrapRewards.assignRewards();
-        // await d.fees.assignFees();
         await d.elections.assignRewards();
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
@@ -423,28 +409,8 @@ describe('gas usage scenarios', async () => {
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
         await d.elections.assignRewards({from: p.address});
-        // const r = await d.rewards.assignRewards({from: p.address});
-        // const events = gasReportEvents3(r);
-        // events.forEach(e => console.log(JSON.stringify(e)));
-        // d.logGasUsageSummary("assigns rewards (staking) (1 month, initial balance == 0)", [p]);
-        // d.resetGasRecording();
-        // await d.bootstrapRewards.assignRewards({from: p.address});
-        // d.logGasUsageSummary("assigns rewards (bootstrap) (1 month, initial balance == 0)", [p]);
-        // d.resetGasRecording();
-        // await d.fees.assignFees({from: p.address});
-        // d.logGasUsageSummary("assigns rewards (fees) (1 month, initial balance == 0)", [p]);
 
         d.logGasUsageSummary("assigns rewards (1 month, initial balance > 0)", [p]);
     });
-
-    it("test", async () => {
-        const {d} = await fullCommitteeAndStandbys(false, false, 0);
-        const p = d.newParticipant();
-        const r = await (d.committee as any).test({from: p.address});
-        const events = gasReportEvents(r);
-        events.forEach(e => console.log(JSON.stringify(e)));
-        d.logGasUsageSummary("test", [p]);
-    });
-
 
 });
