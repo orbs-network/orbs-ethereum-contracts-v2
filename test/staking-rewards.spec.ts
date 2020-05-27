@@ -145,7 +145,7 @@ describe('staking-rewards-level-flows', async () => {
     const poolAmount = fromTokenUnits(2000000000);
     const annualCap = fromTokenUnits(100);
 
-    let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
     await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
     await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
@@ -161,7 +161,7 @@ describe('staking-rewards-level-flows', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    r = await v2.notifyReadyForCommittee();
+    let r = await v2.notifyReadyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
