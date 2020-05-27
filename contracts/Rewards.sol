@@ -16,8 +16,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     struct BootstrapAndStaking {
         uint48 bootstrapPool;
-        uint48 generalCommitteeAnnualBootstrap; // TODO for entire committee of per validator?
-        uint48 complianceCommitteeAnnualBootstrap; // TODO for entire committee of per validator?
+        uint48 generalCommitteeAnnualBootstrap;
+        uint48 complianceCommitteeAnnualBootstrap;
 
         uint48 stakingPool;
         uint48 annualRateInPercentMille;
