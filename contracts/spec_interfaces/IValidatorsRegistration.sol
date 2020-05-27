@@ -39,6 +39,8 @@ interface IValidatorsRegistration {
 	/// Used also by the Election contract
 	function getValidatorOrbsAddress(address addr) external view returns (address orbsAddr);
 
+	function getValidatorsOrbsAddress(address[] calldata addrs) external view returns (address[] memory orbsAddrs);
+
 	/// @dev Returns a validator's ip
 	/// Used also by the Election contract
 	function getValidatorIp(address addr) external view returns (bytes4 ip);

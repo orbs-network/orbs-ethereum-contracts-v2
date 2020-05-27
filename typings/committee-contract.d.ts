@@ -6,17 +6,18 @@ export interface CommitteeChangedEvent {
     addrs: string[];
     orbsAddrs: string[];
     weights: (number | BN)[];
+    compliance: boolean[];
 }
 
 export interface StandbysChangedEvent {
     addrs: string[];
     orbsAddrs: string[];
     weights: (number | BN)[];
+    compliance: boolean[];
 }
 
 export interface CommitteeContract extends Contract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-    setMinimumWeight(minimumWeight: number, minimumAddress: string, minCommitteeSize: number, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberNotReadyToSync(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;
     getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;

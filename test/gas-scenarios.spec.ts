@@ -10,6 +10,7 @@ import {
 import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime} from "./helpers";
+import {gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
 
@@ -23,39 +24,45 @@ const BASE_STAKE = 1000000;
 const MAX_COMMITTEE = 22;
 const MAX_STANDBYS = 5;
 
-async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, standbysEvenStakes:boolean = false, numVCs=5): Promise<{d: Driver, committee: Participant[], standbys: Participant[]}> {
-    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, maxStandbys: MAX_STANDBYS, maxDelegationRatio: 255});
+const t0 = Date.now();
+const tlog = (s) => console.log(Math.floor(Date.now()/1000 - t0/1000), s);
 
-    const poolAmount = new BN(1000000000);
+async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, standbysEvenStakes:boolean = false, numVCs=5): Promise<{d: Driver, committee: Participant[], standbys: Participant[]}> {
+    tlog("Creating driver..");
+    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, maxStandbys: MAX_STANDBYS, maxDelegationRatio: 255});
+    tlog("Driver created");
+
+    const poolAmount = new BN(1000000000000);
     await d.erc20.assign(d.accounts[0], poolAmount);
     await d.erc20.approve(d.stakingRewards.address, poolAmount);
     await d.stakingRewards.setAnnualRate(12000, poolAmount);
     await d.stakingRewards.topUpPool(poolAmount);
+    tlog("Staking pools topped up");
 
-    const committee: Participant[] = [];
-    const standbys: Participant[] = [];
+    await d.externalToken.assign(d.accounts[0], poolAmount);
+    await d.externalToken.approve(d.bootstrapRewards.address, poolAmount);
+    await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(12000);
+    await d.bootstrapRewards.setComplianceCommitteeAnnualBootstrap(12000);
+    await d.bootstrapRewards.topUpBootstrapPool(poolAmount);
+    tlog("Bootstrap pools topped up");
 
+    let standbys: Participant[] = [];
+    for (let i = MAX_STANDBYS - 1; i >= 0; i--) {
+        const {v} = await d.newValidator(BASE_STAKE - (standbysEvenStakes ? 0 : i), false, false, false);
+        standbys = [v].concat(standbys);
+        console.log(`standby ${i}`)
+    }
+    tlog("Standbys created");
+
+    let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
-        const {v, r} = await d.newValidator(BASE_STAKE + 1 + (committeeEvenStakes ? 0 : MAX_COMMITTEE - i - 1), true, false, true);
-        committee.push(v);
-        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
-            addrs: committee.map(v => v.address)
-        });
-        expect(r).to.have.withinContract(d.committeeCompliance).a.committeeChangedEvent({
-            addrs: committee.map(v => v.address)
-        });
+        const {v} = await d.newValidator(BASE_STAKE + 1 + (committeeEvenStakes ? 0 : i), false, false, false);
+        committee = [v].concat(committee);
+        console.log(`committee ${i}`)
     }
+    tlog("Committee created");
 
-    for (let i = 0; i < MAX_STANDBYS; i++) {
-        const {v, r} = await d.newValidator(BASE_STAKE - (standbysEvenStakes ? 0 : i), true, false, true);
-        standbys.push(v);
-        expect(r).to.have.withinContract(d.committeeGeneral).a.standbysChangedEvent({
-            addrs: standbys.map(v => v.address)
-        });
-        expect(r).to.have.withinContract(d.committeeCompliance).a.standbysChangedEvent({
-            addrs: standbys.map(v => v.address)
-        });
-    }
+    await Promise.all(_.shuffle(committee.concat(standbys)).map(v => v.notifyReadyForCommittee()));
 
     const monthlyRate = 1000;
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
@@ -65,6 +72,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
         await createVC(d, false, subs, monthlyRate, appOwner);
         await createVC(d, true, subs, monthlyRate, appOwner);
     }
+    tlog("VCs created - done init");
 
     return {
         d,
@@ -81,11 +89,18 @@ describe('gas usage scenarios', async () => {
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
 
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+        await d.elections.assignRewards();
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE * 1000);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: committee.map(v => v.address)
         });
+
+        const ge = gasReportEvents(r);
+        ge.forEach(e => console.log(JSON.stringify(e)));
 
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
     });
@@ -329,7 +344,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(true);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.stakingRewards.assignRewards();
+        await d.elections.assignRewards();
 
         const v = committee[0];
 
@@ -363,12 +378,12 @@ describe('gas usage scenarios', async () => {
         await distributeRewardsScenario(1)
     });
 
-    it("Distribute rewards - all delegators delegated to same validator (batch size - 20)", async () => {
-        await distributeRewardsScenario(20)
-    });
-
     it("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
         await distributeRewardsScenario(50)
+    });
+
+    it("Distribute rewards - all delegators delegated to same validator (batch size - 200)", async () => {
+        await distributeRewardsScenario(200)
     });
 
     it("assigns rewards (1 month, initial balance == 0)", async () => {
@@ -377,31 +392,23 @@ describe('gas usage scenarios', async () => {
 
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
-        await d.stakingRewards.assignRewards({from: p.address});
-        await d.bootstrapRewards.assignRewards({from: p.address});
-        await d.fees.assignFees({from: p.address});
-
+        await d.elections.assignRewards({from: p.address});
         d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
     });
 
     it("assigns rewards (1 month, initial balance > 0)", async () => {
-        const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 100);
+        const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 5);
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
-        await d.stakingRewards.assignRewards();
-        await d.bootstrapRewards.assignRewards();
-        await d.fees.assignFees();
+        await d.elections.assignRewards();
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
-        await d.stakingRewards.assignRewards({from: p.address});
-        await d.bootstrapRewards.assignRewards({from: p.address});
-        await d.fees.assignFees({from: p.address});
+        await d.elections.assignRewards({from: p.address});
 
         d.logGasUsageSummary("assigns rewards (1 month, initial balance > 0)", [p]);
     });
-
 
 });

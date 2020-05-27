@@ -13,7 +13,7 @@ interface IFees {
      */
 
     /// @dev Calculates and assigns validator fees and bootstrap fund for the time period since the last reward calculation
-    function assignFees() external;
+    function assignFees(address[] calldata generalCommittee, bool[] calldata compliance) external /* onlyElectionContract */;
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
     function getOrbsBalance(address addr) external view returns (uint256 balance);

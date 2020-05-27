@@ -24,6 +24,12 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     IERC20 erc20;
     address rewardsGovernor;
 
+    modifier onlyElectionsContract() {
+        require(msg.sender == address(getElectionsContract()), "caller is not the elections");
+
+        _;
+    }
+
     modifier onlyRewardsGovernor() {
         require(msg.sender == rewardsGovernor, "caller is not the rewards governor");
 
@@ -39,7 +45,8 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
     }
 
     function setAnnualRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
-        _assignRewards();
+        (address[] memory committee, uint256[] memory weights,) = getCommitteeContract().getCommittee();
+        _assignRewards(committee, weights);
         annualRateInPercentMille = annual_rate_in_percent_mille;
         annualCap = annual_cap;
     }
@@ -57,16 +64,13 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
         return lastPayedAt;
     }
 
-    function assignRewards() external {
-        _assignRewards();
+    function assignRewards(address[] calldata committee, uint256[] calldata weights) external onlyElectionsContract {
+        _assignRewards(committee, weights);
     }
 
-    function _assignRewards() private {
+    function _assignRewards(address[] memory committee, uint256[] memory weights) private {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-
-        (address[] memory committee, uint256[] memory weights) = getGeneralCommitteeContract().getCommittee();
-
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
         for (uint i = 0; i < committee.length; i++) {
@@ -77,34 +81,31 @@ contract StakingRewards is IStakingRewards, ContractRegistryAccessor {
             uint256 duration = now.sub(lastPayedAt);
 
             uint256 annualAmount = Math.min(annualRateInPercentMille.mul(totalWeight).div(100000), annualCap);
-            uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), pool);
-            pool = pool.sub(amount);
-
+            uint _pool = pool;
+            uint256 amount = Math.min(annualAmount.mul(duration).div(365 days), _pool);
+            pool = _pool.sub(amount);
             uint256[] memory assignedRewards = new uint256[](committee.length);
-
+            uint validatorReward;
             for (uint i = 0; i < committee.length; i++) {
-                uint256 curAmount = amount.mul(weights[i]).div(totalWeight);
-                assignedRewards[i] = curAmount;
-                totalAssigned = totalAssigned.add(curAmount);
+                validatorReward = amount.mul(weights[i]).div(totalWeight);
+                assignedRewards[i] = validatorReward;
+                totalAssigned = totalAssigned.add(validatorReward);
             }
 
-            uint256 remainder = amount.sub(totalAssigned);
+            uint remainder = amount.sub(totalAssigned);
             if (remainder > 0 && committee.length > 0) {
                 uint ind = now % committee.length;
                 assignedRewards[ind] = assignedRewards[ind].add(remainder);
             }
 
             for (uint i = 0; i < committee.length; i++) {
-                addToBalance(committee[i], assignedRewards[i]);
+                validatorReward = orbsBalance[committee[i]] + assignedRewards[i];
+                orbsBalance[committee[i]] = validatorReward;
+                emit StakingRewardAssigned(committee[i], assignedRewards[i], validatorReward); // TODO event per committee?
             }
         }
 
         lastPayedAt = now;
-    }
-
-    function addToBalance(address addr, uint256 amount) private {
-        orbsBalance[addr] = orbsBalance[addr].add(amount);
-        emit StakingRewardAssigned(addr, amount, orbsBalance[addr]); // TODO event per committee?
     }
 
     struct DistributorBatchState {
