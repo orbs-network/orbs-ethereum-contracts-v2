@@ -23,7 +23,6 @@ contract Elections is IElections, ContractRegistryAccessor {
 	mapping (address => uint256) accumulatedStakesForBanning; // addr => total stake
 	mapping (address => uint256) bannedValidators; // addr => timestamp
 
-	uint minCommitteeSize; // TODO only used as an argument to committee.setMinimumWeight(), should probably not be here
 	uint maxDelegationRatio; // TODO consider using a hardcoded constant instead.
 	uint8 voteOutPercentageThreshold;
 	uint256 voteOutTimeoutSeconds;
@@ -42,24 +41,17 @@ contract Elections is IElections, ContractRegistryAccessor {
 		_;
 	}
 
-	modifier onlyComplianceContract() {
-		require(msg.sender == address(getComplianceContract()), "caller is not the validator registrations contract");
-
-		_;
-	}
-
 	modifier onlyNotBanned() {
 		require(!_isBanned(msg.sender), "caller is a banned validator");
 
 		_;
 	}
 
-	constructor(uint _minCommitteeSize, uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
+	constructor(uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
 		require(_banningPercentageThreshold >= 0 && _banningPercentageThreshold <= 100, "banningPercentageThreshold must be between 0 and 100");
 
-		minCommitteeSize = _minCommitteeSize;
 	    maxDelegationRatio = _maxDelegationRatio;
 		voteOutPercentageThreshold = _voteOutPercentageThreshold;
 		voteOutTimeoutSeconds = _voteOutTimeoutSeconds;
@@ -83,34 +75,27 @@ contract Elections is IElections, ContractRegistryAccessor {
 
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
-	function validatorComplianceChanged(address addr, bool isCompliant) external onlyComplianceContract {
-		if (_isBanned(addr)) {
-			return;
-		}
-
-		if (isCompliant) {
-            getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-		} else {
-			getComplianceCommitteeContract().removeMember(addr);
+	function validatorComplianceChanged(address addr, bool isCompliant) external {
+		(bool committeeChanged,) = getCommitteeContract().memberComplianceChange(addr, isCompliant);
+		if (committeeChanged) {
+			assignRewards();
 		}
 	}
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, true);
+		(bool committeeChanged,) = getCommitteeContract().memberReadyToSync(sender, true);
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().memberReadyToSync(sender, true);
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberReadyToSync(sender, false);
+		(bool committeeChanged,) = getCommitteeContract().memberReadyToSync(sender, false);
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().memberReadyToSync(sender, false);
 	}
 
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract external {
@@ -149,23 +134,41 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 	}
 
-	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, address votee) private view returns (bool) {
+	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory compliance, address votee) private view returns (bool) {
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
+		uint256 totalCompliantStake = 0;
+		uint256 totalCompliantVoteOutStake = 0;
 
+		address member;
+		uint256 memberStake;
+		bool isVoteeCompliant;
 		for (uint i = 0; i < committee.length; i++) {
-			address member = committee[i];
-			uint256 memberStake = weights[i];
+			member = committee[i];
+			memberStake = weights[i];
+
+			if (member == votee && compliance[i]) {
+				isVoteeCompliant = true;
+			}
 
 			totalCommitteeStake = totalCommitteeStake.add(memberStake);
+			if (compliance[i]) {
+				totalCompliantStake = totalCompliantStake.add(memberStake);
+			}
+
 			uint256 votedAt = voteOuts[member][votee];
 			if (votedAt != 0 && now.sub(votedAt) < voteOutTimeoutSeconds) {
 				totalVoteOutStake = totalVoteOutStake.add(memberStake);
+				if (compliance[i]) {
+					totalCompliantVoteOutStake = totalCompliantVoteOutStake.add(memberStake);
+				}
 			}
+
 			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
-		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold);
+		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold)
+			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteOutStake.mul(100).div(totalCompliantStake) >= voteOutPercentageThreshold);
 	}
 
 	function voteOut(address addr) external {
@@ -173,27 +176,16 @@ contract Elections is IElections, ContractRegistryAccessor {
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights) = getGeneralCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
 
-		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, addr);
+		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, compliance, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
-		} else if (getComplianceContract().isValidatorCompliant(addr)) {
-			(address[] memory complianceCommittee, uint256[] memory complianceWeights) = getComplianceCommitteeContract().getCommittee();
-			votedOut = isCommitteeVoteOutThresholdReached(complianceCommittee, complianceWeights, addr);
-			if (votedOut) {
-				clearCommitteeVoteOuts(complianceCommittee, addr);
-			}
-		}
-
-		if (votedOut) {
 			emit VotedOutOfCommittee(addr);
-
-			(bool committeeChanged,) = getGeneralCommitteeContract().memberNotReadyToSync(addr);
+			(bool committeeChanged,) = getCommitteeContract().memberNotReadyToSync(addr);
 			if (committeeChanged) {
-				updateComplianceCommitteeMinimumWeight();
+				assignRewards();
 			}
-			getComplianceCommitteeContract().memberNotReadyToSync(addr);
 		}
 	}
 
@@ -204,6 +196,13 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
         _setBanningVotes(msg.sender, validators);
 		emit BanningVote(msg.sender, validators);
+	}
+
+	function assignRewards() public {
+		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+		getFeesContract().assignFees(generalCommittee, compliance);
+		getBootstrapRewardsContract().assignRewards(generalCommittee, compliance);
+		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
 	}
 
 	function getTotalGovernanceStake() external view returns (uint256) {
@@ -351,12 +350,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function _applyDelegatedStake(address addr, uint256 newUncappedStake, uint256 _totalGovernanceStake) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
 		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), _totalGovernanceStake);
 
-		(bool committeeChanged,) = getGeneralCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
-
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) { // TODO reduce number of calls to other contracts
@@ -387,26 +384,16 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function removeMemberFromCommittees(address addr) private {
-		(bool committeeChanged,) = getGeneralCommitteeContract().removeMember(addr);
+		(bool committeeChanged,) = getCommitteeContract().removeMember(addr);
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		getComplianceCommitteeContract().removeMember(addr);
 	}
 
 	function addMemberToCommittees(address addr) private {
-		(bool committeeChanged,) = getGeneralCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
+		(bool committeeChanged,) = getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr), getComplianceContract().isValidatorCompliant(addr));
 		if (committeeChanged) {
-			updateComplianceCommitteeMinimumWeight();
+			assignRewards();
 		}
-		if (getComplianceContract().isValidatorCompliant(addr)) {
-			getComplianceCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr));
-		}
-	}
-
-	function updateComplianceCommitteeMinimumWeight() private {
-		address lowestMember = getGeneralCommitteeContract().getLowestCommitteeMember();
-		uint256 lowestWeight = getCommitteeEffectiveStake(lowestMember);
-		getComplianceCommitteeContract().setMinimumWeight(lowestWeight, lowestMember, minCommitteeSize);
 	}
 }

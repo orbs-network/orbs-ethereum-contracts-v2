@@ -24,9 +24,7 @@ export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
 export type DriverOptions = {
-    minCommitteeSize: number,
     maxCommitteeSize: number;
-    generalCommitteeMinimumWeight: number,
     maxStandbys: number;
     maxDelegationRatio: number;
     voteOutThreshold: number;
@@ -36,9 +34,7 @@ export type DriverOptions = {
     web3Provider : () => Web3;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
-    minCommitteeSize: 0,
     maxCommitteeSize: 2,
-    generalCommitteeMinimumWeight: 0,
     maxStandbys : 2,
     maxDelegationRatio : 10,
     voteOutThreshold : 80,
@@ -47,6 +43,8 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     banningThreshold : 80,
     web3Provider: defaultWeb3Provider,
 };
+
+export type ContractName = 'protocol' | 'fees' | 'committee-general'  | 'committee-compliance' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'bootstrapRewards' | 'stakingRewards';
 
 export class Driver {
     private static web3DriversCache = new WeakMap<DriverOptions['web3Provider'], Web3Driver>();
@@ -68,14 +66,13 @@ export class Driver {
         public protocol: Contracts["Protocol"],
         public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
-        public committeeGeneral: Contracts['Committee'],
-        public committeeCompliance: Contracts['Committee'],
+        public committee: Contracts['Committee'],
         public contractRegistry: Contracts["ContractRegistry"],
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
         const {
-            minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys,
+            maxCommitteeSize, maxStandbys,
             maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider,
             readyToSyncTimeout
         } = Object.assign({}, defaultDriverOptions, options);
@@ -91,13 +88,12 @@ export class Driver {
         const stakingRewards = await web3.deploy( 'StakingRewards', [erc20.address, accounts[0]], null, session);
         const fees = await web3.deploy( 'Fees', [erc20.address], null, session);
         const delegations = await web3.deploy( "Delegations", [], null, session);
-        const elections = await web3.deploy( "Elections", [minCommitteeSize, maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
+        const elections = await web3.deploy( "Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
-        const committeeGeneral = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, generalCommitteeMinimumWeight, maxStandbys, readyToSyncTimeout], null, session);
-        const committeeCompliance = await web3.deploy('Committee', [minCommitteeSize, maxCommitteeSize, 0, maxStandbys, readyToSyncTimeout], null, session);
+        const committee = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys, readyToSyncTimeout], null, session);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
@@ -110,8 +106,7 @@ export class Driver {
         await contractRegistry.set("protocol", protocol.address);
         await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
-        await contractRegistry.set("committee-general", committeeGeneral.address);
-        await contractRegistry.set("committee-compliance", committeeCompliance.address);
+        await contractRegistry.set("committee", committee.address);
 
         await delegations.setContractRegistry(contractRegistry.address);
         await elections.setContractRegistry(contractRegistry.address);
@@ -121,8 +116,7 @@ export class Driver {
         await subscriptions.setContractRegistry(contractRegistry.address);
         await compliance.setContractRegistry(contractRegistry.address);
         await validatorsRegistration.setContractRegistry(contractRegistry.address);
-        await committeeGeneral.setContractRegistry(contractRegistry.address);
-        await committeeCompliance.setContractRegistry(contractRegistry.address);
+        await committee.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
 
@@ -140,8 +134,7 @@ export class Driver {
             protocol,
             compliance,
             validatorsRegistration,
-            committeeGeneral,
-            committeeCompliance,
+            committee,
             contractRegistry
         );
     }

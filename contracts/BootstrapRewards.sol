@@ -25,6 +25,12 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
     IERC20 bootstrapToken;
     address rewardsGovernor;
 
+    modifier onlyElectionsContract() {
+        require(msg.sender == address(getElectionsContract()), "caller is not the elections");
+
+        _;
+    }
+
     // TODO - add functionality similar to ownable (transfer governance, etc)
     modifier onlyRewardsGovernor() {
         require(msg.sender == rewardsGovernor, "caller is not the rewards governor");
@@ -42,12 +48,14 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
     }
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        _assignRewards();
+        (address[] memory generalCommittee,, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewards(generalCommittee, compliance);
         generalCommitteeAnnualBootstrap = annual_amount;
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
-        _assignRewards();
+        (address[] memory generalCommittee,, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewards(generalCommittee, compliance);
         complianceCommitteeAnnualBootstrap = annual_amount;
     }
 
@@ -65,35 +73,35 @@ contract BootstrapRewards is IBootstrapRewards, ContractRegistryAccessor {
         return lastPayedAt;
     }
 
-    function assignRewards() external {
-        _assignRewards();
+    function assignRewards(address[] calldata generalCommittee, bool[] calldata compliance) external onlyElectionsContract {
+        _assignRewards(generalCommittee, compliance);
     }
 
-    function _assignRewards() private {
-        (address[] memory generalCommittee,) = getGeneralCommitteeContract().getCommittee();
-        _assignRewardsToCommittee(generalCommittee, generalCommitteeAnnualBootstrap);
-
-        (address[] memory complianceCommittee,) = getComplianceCommitteeContract().getCommittee();
-        _assignRewardsToCommittee(complianceCommittee, complianceCommitteeAnnualBootstrap);
-
-        lastPayedAt = now;
-    }
-
-    function _assignRewardsToCommittee(address[] memory committee, uint256 annualBootstrapRewards) private {
+    function _assignRewards(address[] memory committee, bool[] memory compliance) private {
         if (committee.length > 0) {
+            uint nCompliance = 0;
+            for (uint i = 0; i < committee.length; i++) {
+                if (compliance[i]) nCompliance++;
+            }
+
             uint256 duration = now.sub(lastPayedAt);
-            uint256 amountPerValidator = Math.min(annualBootstrapRewards.mul(duration).div(365 days), pool.div(committee.length));
-            pool = pool.sub(amountPerValidator * committee.length);
+            uint256 amountPerGeneralValidator = Math.min(generalCommitteeAnnualBootstrap.mul(duration).div(365 days), pool.div(committee.length));
+            pool = pool.sub(amountPerGeneralValidator * committee.length);
+
+            uint256 amountPerCompliantValidator = nCompliance == 0 ? 0 :
+                Math.min(complianceCommitteeAnnualBootstrap.mul(duration).div(365 days), pool.div(nCompliance));
+            pool = pool.sub(amountPerCompliantValidator * nCompliance);
 
             uint256[] memory assignedRewards = new uint256[](committee.length);
-
             for (uint i = 0; i < committee.length; i++) {
-                addToBalance(committee[i], amountPerValidator);
-                assignedRewards[i] = amountPerValidator;
+                assignedRewards[i] = amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0);
+                addToBalance(committee[i], assignedRewards[i]);
             }
 
             emit BootstrapRewardsAssigned(committee, assignedRewards); // TODO separate event per committee?
         }
+        // todo compliance committee
+        lastPayedAt = now;
     }
 
     function addToBalance(address addr, uint256 amount) private {

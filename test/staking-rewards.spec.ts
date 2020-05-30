@@ -36,7 +36,6 @@ describe('staking-rewards-level-flows', async () => {
     const annualCap = poolAmount;
 
     let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address});
-    const startTime = await txTimestamp(d.web3, r);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
 
@@ -52,7 +51,8 @@ describe('staking-rewards-level-flows', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    await v2.notifyReadyForCommittee();
+    r = await v2.notifyReadyForCommittee();
+    const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
       v: v2,
@@ -69,7 +69,7 @@ describe('staking-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardTxRes = await d.stakingRewards.assignRewards();
+    const assignRewardTxRes = await d.elections.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
@@ -146,7 +146,6 @@ describe('staking-rewards-level-flows', async () => {
     const annualCap = 100;
 
     let r = await d.stakingRewards.setAnnualRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
-    const startTime = await txTimestamp(d.web3, r);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewards.address);
     await d.stakingRewards.topUpPool(poolAmount, {from: g.address});
 
@@ -162,14 +161,15 @@ describe('staking-rewards-level-flows', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    await v2.notifyReadyForCommittee();
+    r = await v2.notifyReadyForCommittee();
+    const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
-      v: v2,
-      stake: initStakeLarger
-    }, {
       v: v1,
       stake: initStakeLesser
+    }, {
+      v: v2,
+      stake: initStakeLarger
     }];
 
     const nValidators = validators.length;
@@ -179,7 +179,7 @@ describe('staking-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardTxRes = await d.stakingRewards.assignRewards();
+    const assignRewardTxRes = await d.elections.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
@@ -265,7 +265,7 @@ describe('staking-rewards-level-flows', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-    await d.stakingRewards.assignRewards();
+    await d.elections.assignRewards();
 
     // first fromBlock must be 0
     await expectRejected(d.stakingRewards.distributeOrbsTokenRewards(

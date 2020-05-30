@@ -725,7 +725,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.withinContract(d.committeeGeneral).a.committeeChangedEvent({
+        expect(r).to.have.withinContract(d.committee).a.committeeChangedEvent({
             addrs: []
         });
     });
@@ -986,7 +986,7 @@ export async function banningScenario_voteUntilThresholdReached(driver: Driver, 
     expect(r).to.have.a.bannedEvent({
         validator: bannedValidator.address
     });
-    expect(r).to.withinContract(driver.committeeGeneral).have.a.committeeChangedEvent({
+    expect(r).to.withinContract(driver.committee).have.a.committeeChangedEvent({
         orbsAddrs: []
     });
     return r;

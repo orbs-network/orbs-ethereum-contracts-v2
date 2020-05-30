@@ -30,6 +30,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// @dev casts a banning vote by the sender to the given address
 	function setBanningVotes(address[] calldata addrs) external;
 
+	function assignRewards() external;
+
 	/*
 	 *   Methods restricted to other Orbs contracts
 	 */

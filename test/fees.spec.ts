@@ -35,9 +35,9 @@ describe('fees-contract', async () => {
     const initStakeLesser = 17000;
     const initStakeLarger = 21000;
 
-    const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
+    const {v: v1} = await d.newValidator(initStakeLarger + 1, true, false, true);
     const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
-    const {v: v3} = await d.newValidator(initStakeLesser, true, false, true);
+    const {v: v3} = await d.newValidator(initStakeLesser + 1, true, false, true);
     const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
 
     const generalCommittee = [v1, v2, v3, v4];
@@ -124,12 +124,12 @@ describe('fees-contract', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
 
-    const assignFeesTxRes = await d.fees.assignFees();
+    const assignFeesTxRes = await d.elections.assignRewards();
     const endTime = await txTimestamp(d.web3, assignFeesTxRes);
 
     // Calculate expected rewards from VC fees
 
-    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, generalCommittee);
+    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, endTime, generalCommittee);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
       assignees: generalCommittee.map(v => v.address),
       orbs_amounts: generalCommitteeRewardsArr.map(x => x.toString())
@@ -137,8 +137,8 @@ describe('fees-contract', async () => {
 
     const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      assignees: complianceCommittee.map(v => v.address),
-      orbs_amounts: complianceCommitteeRewardsArr.map(x => x.toString())
+      assignees: generalCommittee.map(v => v.address),
+      orbs_amounts: generalCommittee.map((x, i) => i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2].toString() : "0")
     });
 
     const orbsBalances:BN[] = [];

@@ -16,7 +16,7 @@ describe('contract-registry-high-level-flows', async () => {
     const governor = d.newParticipant();
     const registry = await d.newContractRegistry(governor.address);
 
-    const contract1Name = "Contract1";
+    const contract1Name = "protocol";
     const addr1 = d.newParticipant().address;
 
     // set
@@ -42,7 +42,7 @@ describe('contract-registry-high-level-flows', async () => {
 
     // set another by non governor
     const nonGovernor = d.newParticipant();
-    const contract2Name = "Contract2";
+    const contract2Name = "committee-general";
     const addr3 = d.newParticipant().address;
     await expectRejected(registry.set(contract2Name, addr3, {from: nonGovernor.address}));
 
