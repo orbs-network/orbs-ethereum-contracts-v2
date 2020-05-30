@@ -1,9 +1,5 @@
 import 'mocha';
 
-import * as _ from "lodash";
-import Web3 from "web3";
-declare const web3: Web3;
-
 import BN from "bn.js";
 import {
     defaultDriverOptions,
@@ -20,14 +16,6 @@ const expect = chai.expect;
 const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
-import {ETHEREUM_URL, Web3Driver} from "../eth";
-import {
-    committeeChangedEvents,
-    delegatedEvents,
-    stakedEvents,
-    stakeChangedEvents
-} from "./event-parsing";
-import {totalmem} from "os";
 
 const baseStake = 100;
 
