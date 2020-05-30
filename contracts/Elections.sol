@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
 import "./spec_interfaces/ICommitteeListener.sol";
+import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./IStakingContract.sol";
@@ -26,6 +27,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	uint8 voteOutPercentageThreshold;
 	uint256 voteOutTimeoutSeconds;
 	uint256 banningPercentageThreshold;
+	uint256 totalGovernanceStake;
 
 	modifier onlyDelegationsContract() {
 		require(msg.sender == address(getDelegationsContract()), "caller is not the delegations contract");
@@ -96,12 +98,34 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 	}
 
-	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) onlyDelegationsContract external {
-        _applyDelegatedStake(prevDelegatee, newStakePrevDelegatee);
-		_applyDelegatedStake(newDelegatee, newStakeNewDelegatee);
+	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract external {
+		require(newDelegate != prevDelegate, "in a delegation change the delegate must change");
 
-		_applyStakesToBanningBy(prevDelegatee, prevGovStakePrevDelegatee);
-		_applyStakesToBanningBy(newDelegatee, prevGovStakeNewDelegatee);
+		uint256 tempTotalGovernanceStake = totalGovernanceStake;
+		if (delegator == newDelegate) { // delegator != prevDelegate
+			tempTotalGovernanceStake = tempTotalGovernanceStake
+				.sub(prevSelfDelegatingPrevDelegate ? delegatorSelfStake : 0)
+				.add(newDelegateNewTotalStake);
+		} else if (delegator == prevDelegate) { // delegator != newDelegate
+			tempTotalGovernanceStake = tempTotalGovernanceStake
+				.sub(prevDelegatePrevTotalStake)
+				.add(prevSelfDelegatingNewDelegate ? delegatorSelfStake : 0);
+		} else if (prevSelfDelegatingPrevDelegate != prevSelfDelegatingNewDelegate) { // delegator != newDelegate && delegator != prevDelegate
+			if (prevSelfDelegatingPrevDelegate) {
+				tempTotalGovernanceStake = tempTotalGovernanceStake.sub(delegatorSelfStake);
+			}
+			if (prevSelfDelegatingNewDelegate) {
+				tempTotalGovernanceStake = tempTotalGovernanceStake.add(delegatorSelfStake);
+			}
+		}
+
+		_applyDelegatedStake(prevDelegate, prevDelegateNewTotalStake, tempTotalGovernanceStake);
+		_applyDelegatedStake(newDelegate, newDelegateNewTotalStake, tempTotalGovernanceStake);
+
+		_applyStakesToBanningBy(prevDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingPrevDelegate, prevDelegatePrevTotalStake), tempTotalGovernanceStake);
+		_applyStakesToBanningBy(newDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingNewDelegate, newDelegatePrevTotalStake), tempTotalGovernanceStake);
+
+		totalGovernanceStake = tempTotalGovernanceStake;
 	}
 
 	function clearCommitteeVoteOuts(address[] memory committee, address votee) private {
@@ -181,8 +205,12 @@ contract Elections is IElections, ContractRegistryAccessor {
 		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
 	}
 
-	function getTotalGovernanceStake() internal view returns (uint256) {
-		return getDelegationsContract().getTotalGovernanceStake();
+	function getTotalGovernanceStake() external view returns (uint256) {
+		return totalGovernanceStake;
+	}
+
+	function calcGovernanceEffectiveStake(bool selfDelegating, uint256 totalDelegatedStake) private pure returns (uint256) {
+		return selfDelegating ? totalDelegatedStake : 0;
 	}
 
 	function getBanningVotes(address addrs) external view returns (address[] memory) {
@@ -193,7 +221,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return accumulatedStakesForBanning[addrs];
 	}
 
-	function _applyStakesToBanningBy(address voter, uint256 previousStake) private {
+	function _applyStakesToBanningBy(address voter, uint256 previousStake, uint256 _totalGovernanceStake) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
 		address[] memory votes = banningVotes[voter];
 		uint256 currentStake = getGovernanceEffectiveStake(voter);
 
@@ -202,13 +230,14 @@ contract Elections is IElections, ContractRegistryAccessor {
 			accumulatedStakesForBanning[validator] = accumulatedStakesForBanning[validator].
 				sub(previousStake).
 				add(currentStake);
-			_applyBanningVotesFor(validator);
+			_applyBanningVotesFor(validator, _totalGovernanceStake);
 		}
 	}
 
     function _setBanningVotes(address voter, address[] memory validators) private {
 		address[] memory prevAddrs = banningVotes[voter];
 		banningVotes[voter] = validators;
+		uint256 _totalGovernanceStake = totalGovernanceStake;
 
 		for (uint i = 0; i < prevAddrs.length; i++) {
 			address addr = prevAddrs[i];
@@ -221,7 +250,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 			}
 			if (isRemoved) {
 				accumulatedStakesForBanning[addr] = accumulatedStakesForBanning[addr].sub(getGovernanceEffectiveStake(msg.sender));
-				_applyBanningVotesFor(addr);
+				_applyBanningVotesFor(addr, _totalGovernanceStake);
 			}
 		}
 
@@ -237,11 +266,11 @@ contract Elections is IElections, ContractRegistryAccessor {
 			if (isAdded) {
 				accumulatedStakesForBanning[addr] = accumulatedStakesForBanning[addr].add(getGovernanceEffectiveStake(msg.sender));
 			}
-			_applyBanningVotesFor(addr); // recheck also if not new
+			_applyBanningVotesFor(addr, _totalGovernanceStake); // recheck also if not new
 		}
     }
 
-    function _applyBanningVotesFor(address addr) private {
+    function _applyBanningVotesFor(address addr, uint256 _totalGovernanceStake) private {
         uint256 banningTimestamp = bannedValidators[addr];
         bool isBanned = banningTimestamp != 0;
 
@@ -250,7 +279,7 @@ contract Elections is IElections, ContractRegistryAccessor {
         }
 
         uint256 banningStake = accumulatedStakesForBanning[addr];
-        bool shouldBan = getTotalGovernanceStake() > 0 && banningStake.mul(100).div(getTotalGovernanceStake()) >= banningPercentageThreshold;
+        bool shouldBan = _totalGovernanceStake > 0 && banningStake.mul(100).div(_totalGovernanceStake) >= banningPercentageThreshold;
 
         if (isBanned != shouldBan) {
 			if (shouldBan) {
@@ -271,25 +300,43 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return bannedValidators[addr] != 0;
 	}
 
-	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external onlyDelegationsContract {
-		_applyDelegatedStake(delegatee, newUncappedStake);
+	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract {
 
-		_applyStakesToBanningBy(delegatee, prevGovStakeDelegatee);
+		uint256 prevGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, prevDelegateTotalStake);
+		uint256 newGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, newDelegateTotalStake);
+
+		uint256 _totalGovernanceStake = totalGovernanceStake;
+		if (prevGovStakeDelegate != newGovStakeDelegate) {
+			_totalGovernanceStake = _totalGovernanceStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
+		}
+
+		_applyDelegatedStake(delegate, newDelegateTotalStake, _totalGovernanceStake);
+
+		_applyStakesToBanningBy(delegate, prevGovStakeDelegate, _totalGovernanceStake);
+
+		totalGovernanceStake = _totalGovernanceStake;
 	}
 
-	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external onlyDelegationsContract {
-		require(stakeOwners.length == newUncappedStakes.length, "arrays must be of same length");
-		require(stakeOwners.length == prevGovStakeOwners.length, "arrays must be of same length");
-		require(stakeOwners.length == delegatees.length, "arrays must be of same length");
-		require(stakeOwners.length == prevGovStakeDelegatees.length, "arrays must be of same length");
+	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract {
+		require(prevDelegateTotalStakes.length == newDelegateTotalStakes.length, "arrays must be of same length");
+		require(prevDelegateTotalStakes.length == delegates.length, "arrays must be of same length");
+		require(prevDelegateTotalStakes.length == isSelfDelegatingDelegates.length, "arrays must be of same length");
 
-		for (uint i = 0; i < stakeOwners.length; i++) {
+		uint256 tempTotalGovStake = totalGovernanceStake;
+		for (uint i = 0; i < prevDelegateTotalStakes.length; i++) {
+			uint256 prevGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegates[i], prevDelegateTotalStakes[i]);
+			uint256 newGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegates[i], newDelegateTotalStakes[i]);
 
-			// this mimics notifyStakeChange. TODO optimize to minimize calls to committe contract assuming similar delegatees are consecutive in order. careful not to break banning logic...
-			_applyDelegatedStake(delegatees[i], newUncappedStakes[i]);
+			if (prevGovStakeDelegate != newGovStakeDelegate) {
+				tempTotalGovStake = tempTotalGovStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
+			}
 
-			_applyStakesToBanningBy(delegatees[i], prevGovStakeDelegatees[i]);
+			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i], tempTotalGovStake);
+
+			// TODO add tests to show banning votes are evaluated equally when stake change is batched and not batched
+			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate, tempTotalGovStake);
 		}
+		totalGovernanceStake = tempTotalGovStake; // flush
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
@@ -300,8 +347,8 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return sender;
 	}
 
-	function _applyDelegatedStake(address addr, uint256 newUncappedStake) private { // TODO newStake is getUncappedStakes(addr) at this point. governance and committee "effective" stakes can also be passed into this method, or alternately, use a getter for newStake also
-		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), getTotalGovernanceStake());
+	function _applyDelegatedStake(address addr, uint256 newUncappedStake, uint256 _totalGovernanceStake) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
+		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), _totalGovernanceStake);
 
 		(bool committeeChanged,) = getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 		if (committeeChanged) {
@@ -309,9 +356,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 		}
 	}
 
-	function getCommitteeEffectiveStake(address v) private view returns (uint256) {
+	function getCommitteeEffectiveStake(address v) private view returns (uint256) { // TODO reduce number of calls to other contracts
 		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
-		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v; // TODO optimized three sequential calls to delegations in this function
+		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v;
 		if (!isSelfDelegating || ownStake == 0) {
 			return 0;
 		}
@@ -328,8 +375,12 @@ contract Elections is IElections, ContractRegistryAccessor {
 		return getDelegationsContract().getDelegatedStakes(addr);
 	}
 
+	// TODO remove use of this function where possible - use pure function with bool and stake instead
 	function getGovernanceEffectiveStake(address addr) internal view returns (uint256) {
-		return getDelegationsContract().getGovernanceEffectiveStake(addr);
+		IDelegations d = getDelegationsContract();
+		uint256 stakes = d.getDelegatedStakes(addr);
+		bool isSelfDelegating = d.getDelegation(addr) == addr;
+		return calcGovernanceEffectiveStake(isSelfDelegating, stakes);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
@@ -345,9 +396,4 @@ contract Elections is IElections, ContractRegistryAccessor {
 			assignRewards();
 		}
 	}
-
-	function compareStrings(string memory a, string memory b) private pure returns (bool) { // TODO find a better way
-		return keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b)));
-	}
-
 }

@@ -10,7 +10,8 @@
     "coverage": "solidity-coverage",
     "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
     "migrate": "truffle migrate --reset",
-    "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log"
+    "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log & tail -f _out/ganache.log",
+    "stop-ganache": "ps -x    | grep \"ganache-cli -p 7545 -i 5777\" | grep -v grep | cut -f 1 -d \" \" | xargs echo | xargs kill"
   },
   "author": "",
   "license": "ISC",
