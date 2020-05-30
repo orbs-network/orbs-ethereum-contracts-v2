@@ -42,7 +42,7 @@ describe('contract-registry-high-level-flows', async () => {
 
     // set another by non governor
     const nonGovernor = d.newParticipant();
-    const contract2Name = "committee-general";
+    const contract2Name = "committee";
     const addr3 = d.newParticipant().address;
     await expectRejected(registry.set(contract2Name, addr3, {from: nonGovernor.address}));
 
