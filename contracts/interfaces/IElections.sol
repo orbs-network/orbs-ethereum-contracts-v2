@@ -48,8 +48,9 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies on a validator compliance change
 	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
 
-	function notifyStakeChange(address stakeOwner, uint256 newUncappedStake, uint256 prevGovStakeOwner, address delegatee, uint256 prevGovStakeDelegatee) external /*onlyDelegationsContract*/;
-	function notifyStakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata  newUncappedStakes, uint256[] calldata prevGovStakeOwners, address[] calldata delegatees, uint256[] calldata prevGovStakeDelegatees) external /*onlyDelegationsContract*/;
-	function notifyDelegationChange(address newDelegatee, address prevDelegatee, uint256 newStakePrevDelegatee, uint256 newStakeNewDelegatee, uint256 prevGovStakePrevDelegatee, uint256 prevGovStakeNewDelegatee) external /*onlyDelegationsContract*/;
+	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external /*onlyDelegationsContract*/;
+	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external /*onlyDelegationsContract*/;
+	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) external /*onlyDelegationsContract*/;
+	function getTotalGovernanceStake() external view returns (uint256);
 }
 

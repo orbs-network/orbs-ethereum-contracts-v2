@@ -17,7 +17,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	// TODO consider using structs instead of multiple mappings
 	mapping (address => uint256) uncappedStakes;
-	uint256 totalGovernanceStake; // TODO - move to elections
 
 	mapping (address => address) delegations;
 
@@ -36,22 +35,34 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		require(to != address(0), "cannot delegate to a zero address");
 		require(to != prevDelegate, "delegation already in place");
 
-		uint256 prevGovStakePrevDelegate = getGovernanceEffectiveStake(prevDelegate);
-		uint256 prevGovStakeNewDelegate = getGovernanceEffectiveStake(to);
+		uint256 prevStakePrevDelegate = uncappedStakes[prevDelegate];
+		uint256 prevStakeNewDelegate = uncappedStakes[to];
+
+		bool prevSelfDelegatingPrevDelegate = _isSelfDelegating(prevDelegate);
+		bool prevSelfDelegatingNewDelegate = _isSelfDelegating(to);
 
 		delegations[msg.sender] = to; // delegation!
 
 		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(msg.sender);
 
-		uint256 newStakePrevDelegate = uncappedStakes[prevDelegate].sub(delegatorStake);
+		uint256 newStakePrevDelegate = prevStakePrevDelegate.sub(delegatorStake);
 		uncappedStakes[prevDelegate] = newStakePrevDelegate;
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakePrevDelegate).add(getGovernanceEffectiveStake(prevDelegate));
 
-		uint256 newStakeNewDelegate = uncappedStakes[to].add(delegatorStake);
+		uint256 newStakeNewDelegate = prevStakeNewDelegate.add(delegatorStake);
 		uncappedStakes[to] = newStakeNewDelegate;
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeNewDelegate).add(getGovernanceEffectiveStake(to));
 
-    	getElectionsContract().notifyDelegationChange(to, prevDelegate, newStakePrevDelegate, newStakeNewDelegate, prevGovStakePrevDelegate, prevGovStakeNewDelegate);
+    	getElectionsContract().notifyDelegationChange(
+			msg.sender,
+			delegatorStake,
+			to,
+			prevDelegate,
+			newStakePrevDelegate,
+			newStakeNewDelegate,
+			prevStakePrevDelegate,
+			prevSelfDelegatingPrevDelegate,
+			prevStakeNewDelegate,
+			prevSelfDelegatingNewDelegate
+		);
 
 		emit Delegated(msg.sender, to);
 
@@ -100,44 +111,20 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		);
 	}
 
-	function emitDelegatedStakeChangedBatch(address[] memory delegators, uint256[] memory delegatorsStakes, address[] memory delegates) private {
-		uint delegatorsLength = delegators.length;
-
-		address streakDelegate = (delegatorsLength > 0) ? getDelegation(delegators[0]): address(0);
-		uint streakStartIdx = 0;
-
-		for (uint i = 1; i < delegatorsLength; i++) { // group delegators by delegates. assume sorted by delegate
-			address currentDelegate = delegates[i];
-
-			if (currentDelegate == streakDelegate) {
-				continue; // delegate streak continues
-			}
-
-			// end of common delegate streak - emit event
-			emitDelegatedStakeChangedSlice(streakDelegate, delegators, delegatorsStakes, streakStartIdx, i - streakStartIdx);
-
-			// reset vars for next streak
-			streakDelegate = currentDelegate;
-			streakStartIdx = i;
-		}
-
-		// final streak
-		if (delegatorsLength > 0) {
-			emitDelegatedStakeChangedSlice(streakDelegate, delegators, delegatorsStakes, streakStartIdx, delegatorsLength - streakStartIdx);
-		}
-	}
-
-	// TODO add testing to this method - not sure a "late" notification will not break assumptions in Elections contract
+	// TODO add tests to equivalence of batched and non batched notifications
 	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
 		require(batchLength == _updatedStakes.length, "_stakeOwners, _updatedStakes - array length mismatch");
 
-		address[] memory delegates = _stakeChangeBatch(_stakeOwners, _amounts, _signs);
+		ProcessSequencesParams memory params;
+		params.stakeOwners = _stakeOwners;
+		params.amounts = _amounts;
+		params.signs = _signs;
+		params.updatedStakes = _updatedStakes;
 
-		emitDelegatedStakeChangedBatch(_stakeOwners, _updatedStakes, delegates);
-
+		_processStakeChangeBatch(params);
 	}
 
 	function getDelegation(address addr) public view returns (address) {
@@ -147,55 +134,97 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
 
-	function _stakeChangeBatch(address[] memory _stakeOwners, uint256[] memory _amounts, bool[] memory _signs) private returns (address[] memory delegates){
-		uint256[] memory newUncappedStakes = new uint256[](_stakeOwners.length);
-		uint256[] memory prevGovStakeOwners = new uint256[](_stakeOwners.length);
-		uint256[] memory prevGovStakeDelegates = new uint256[](_stakeOwners.length);
-		delegates = new address[](_stakeOwners.length);
+	struct ProcessSequencesParams {
+		address[] stakeOwners;
+		uint256[] amounts;
+		bool[] signs;
+		uint256[] updatedStakes;
+	}
 
-		for (uint i = 0; i < _stakeOwners.length; i++) {
-			(newUncappedStakes[i], prevGovStakeOwners[i], delegates[i], prevGovStakeDelegates[i]) = _applyStakeChangeLocally(_stakeOwners[i], _amounts[i], _signs[i]);
+	function _processStakeChangeBatch(ProcessSequencesParams memory params) private {
+		uint batchLength = params.stakeOwners.length;
+		if (batchLength == 0) {
+			return;
+		}
+		address[] memory delegates = new address[](batchLength);
+
+		// find delegates and number of sequences
+		uint sequenceCount = 0;
+		address sequenceDelegate = address(0);
+		for (uint i = 0; i < batchLength; i++) { // count sequences and gather addresses
+			delegates[i] = getDelegation(params.stakeOwners[i]);
+			if (sequenceDelegate != delegates[i]) { // init record new delegate, and close previous one
+				sequenceCount++;
+				sequenceDelegate == delegates[i];
+			}
 		}
 
-		getElectionsContract().notifyStakeChangeBatch(_stakeOwners, newUncappedStakes, prevGovStakeOwners, delegates, prevGovStakeDelegates);
+		uint256[] memory prevUncappedStakes = new uint256[](sequenceCount);
+		uint256[] memory newUncappedStakes = new uint256[](sequenceCount);
+		bool[] memory isSelfDelegatingDelegates = new bool[](sequenceCount);
+		address[] memory seqDelegates = new address[](sequenceCount);
 
-		return delegates;
+		sequenceCount = 0;
+		sequenceDelegate = address(0);
+		uint currentUncappedStake;
+		uint sequenceStartIdx;
+		uint sequenceLength;
+
+		for (uint i = 0; i < batchLength; i++) {
+			if (sequenceDelegate != delegates[i]) {
+				if (sequenceCount > 0) { // close prev seq
+					uncappedStakes[sequenceDelegate] = currentUncappedStake;
+					newUncappedStakes[sequenceCount - 1] = currentUncappedStake;
+					emitDelegatedStakeChangedSlice(sequenceDelegate, params.stakeOwners, params.updatedStakes, sequenceStartIdx, sequenceLength);
+				}
+				// init next seq
+				sequenceDelegate = delegates[i];
+				currentUncappedStake = uncappedStakes[sequenceDelegate];
+				seqDelegates[sequenceCount] = sequenceDelegate;
+				prevUncappedStakes[sequenceCount] = currentUncappedStake;
+				isSelfDelegatingDelegates[sequenceCount] = _isSelfDelegating(sequenceDelegate);
+
+				sequenceStartIdx = i;
+				sequenceCount++;
+				sequenceLength = 0;
+
+			}
+			sequenceLength++;
+
+			if (params.signs[i]) {
+				currentUncappedStake = currentUncappedStake.add(params.amounts[i]);
+			} else {
+				currentUncappedStake = currentUncappedStake.sub(params.amounts[i]);
+			}
+		}
+
+		// close the last seq
+		uncappedStakes[sequenceDelegate] = currentUncappedStake;
+		newUncappedStakes[sequenceCount - 1] = currentUncappedStake;
+		emitDelegatedStakeChangedSlice(sequenceDelegate, params.stakeOwners, params.updatedStakes, sequenceStartIdx, sequenceLength);
+
+		getElectionsContract().notifyStakeChangeBatch(prevUncappedStakes, newUncappedStakes, seqDelegates, isSelfDelegatingDelegates);
 	}
 
 	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign) private {
-		(uint256 newUncappedStake, uint256 prevGovStakeOwner, address _delegate, uint256 prevGovStakeDelegate) = _applyStakeChangeLocally(_stakeOwner, _amount, _sign);
-		getElectionsContract().notifyStakeChange(_stakeOwner, newUncappedStake, prevGovStakeOwner, _delegate, prevGovStakeDelegate);
-	}
+		address _delegate = getDelegation(_stakeOwner);
 
-	function _applyStakeChangeLocally(address _stakeOwner, uint256 _amount, bool _sign) private returns (uint256 newUncappedStake, uint prevGovStakeOwner, address _delegate, uint256 prevGovStakeDelegate) {
-		_delegate = getDelegation(_stakeOwner);
+		uint256 prevUncappedStake = uncappedStakes[_delegate];
 
-		prevGovStakeOwner = getGovernanceEffectiveStake(_stakeOwner);
-		prevGovStakeDelegate = getGovernanceEffectiveStake(_delegate);
-
+		uint256 newUncappedStake;
 		if (_sign) {
-			newUncappedStake = uncappedStakes[_delegate].add(_amount);
+			newUncappedStake = prevUncappedStake.add(_amount);
 		} else {
-			newUncappedStake = uncappedStakes[_delegate].sub(_amount);
+			newUncappedStake = prevUncappedStake.sub(_amount);
 		}
 
 		uncappedStakes[_delegate] = newUncappedStake;
 
-		totalGovernanceStake = totalGovernanceStake.sub(prevGovStakeDelegate).add(getGovernanceEffectiveStake(_delegate));
-
-		return (newUncappedStake, prevGovStakeOwner, _delegate, prevGovStakeDelegate);
+		getElectionsContract().notifyStakeChange(prevUncappedStake, newUncappedStake, _delegate, _isSelfDelegating(_delegate));
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {
 		return uncappedStakes[addr];
-	}
-
-	function getTotalGovernanceStake() public view returns (uint256) {
-		return totalGovernanceStake;
-	}
-
-    function getGovernanceEffectiveStake(address v) public view returns (uint256) {
-		return _isSelfDelegating(v) ? uncappedStakes[v] : 0;
 	}
 
 	function getSelfDelegatedStake(address addr) public view returns (uint256) {

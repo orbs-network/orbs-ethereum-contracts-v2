@@ -44,6 +44,8 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     web3Provider: defaultWeb3Provider,
 };
 
+export type ContractName = 'protocol' | 'fees' | 'committee-general'  | 'committee-compliance' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'bootstrapRewards' | 'stakingRewards';
+
 export class Driver {
     private static web3DriversCache = new WeakMap<DriverOptions['web3Provider'], Web3Driver>();
     private participants: Participant[] = [];
@@ -256,6 +258,10 @@ export class Participant {
 
     async unstake(amount: number|BN) {
         return this.staking.unstake(amount, {from: this.address});
+    }
+
+    async restake() {
+        return this.staking.restake({from: this.address});
     }
 
     async delegate(to: Participant) {

@@ -45,7 +45,7 @@ describe('fees-contract', async () => {
 
     // create a VCs
 
-    const createVc = async (vcRate: BN, isCompliant: boolean, payment: BN): Promise<{vcid: string, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
+    const createVc = async (vcRate: number|BN, isCompliant: boolean, payment: number|BN): Promise<{vcid: number|BN, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
       const subs = await d.newSubscriber('tier', vcRate);
 
       const appOwner = d.newParticipant();

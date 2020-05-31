@@ -1,16 +1,9 @@
 import 'mocha';
 
-import * as _ from "lodash";
-import Web3 from "web3";
-declare const web3: Web3;
-
 import BN from "bn.js";
 import {
-    defaultDriverOptions,
-    BANNING_LOCK_TIMEOUT,
     Driver,
     expectRejected,
-    Participant
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
@@ -21,8 +14,6 @@ const assert = chai.assert;
 
 import {bn} from "./helpers";
 import {TransactionReceipt} from "web3-core";
-
-const baseStake = 100;
 
 describe('delegations-contract', async () => {
 

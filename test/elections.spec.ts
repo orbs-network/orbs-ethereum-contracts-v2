@@ -1,9 +1,5 @@
 import 'mocha';
 
-import * as _ from "lodash";
-import Web3 from "web3";
-declare const web3: Web3;
-
 import BN from "bn.js";
 import {
     defaultDriverOptions,
@@ -20,13 +16,6 @@ const expect = chai.expect;
 const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
-import {ETHEREUM_URL, Web3Driver} from "../eth";
-import {
-    committeeChangedEvents,
-    delegatedEvents,
-    stakedEvents,
-    stakeChangedEvents
-} from "./event-parsing";
 
 const baseStake = 100;
 
@@ -559,6 +548,123 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent();
     });
 
+    it("tracks total governance stakes", async () => {
+        const d = await Driver.new();
+        async function expectTotalGovernanceStakeToBe(n) {
+            expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(n));
+        }
+
+        const stakeOfA = 11;
+        const stakeOfB = 13;
+        const stakeOfC = 17;
+        const stakeOfABC = stakeOfA+stakeOfB+stakeOfC;
+
+        const a = d.newParticipant("delegating around"); // starts as self delegating
+        const b = d.newParticipant("delegating to self - debating the amount");
+        const c = d.newParticipant("delegating to a");
+        await c.delegate(a);
+
+        await a.stake(stakeOfA);
+        await b.stake(stakeOfB);
+        await c.stake(stakeOfC);
+
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        await b.unstake(1);
+        await expectTotalGovernanceStakeToBe(stakeOfABC - 1);
+
+        await b.restake();
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        await a.delegate(b); // delegate from self to a self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB);
+
+        await a.delegate(c); // delegate from self to a non-self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfB);
+
+        await a.delegate(a); // delegate to self back from a non-self delegating
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        await a.delegate(c);
+        await a.delegate(b); // delegate to another self delegating from a non-self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB);
+
+        await a.delegate(a); // delegate to self back from a self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+    });
+
+    it("tracks totalGovernanceStake correctly when assigning rewards", async () => {
+        const d = await Driver.new();
+        async function expectTotalGovernanceStakeToBe(n) {
+            expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(n));
+        }
+
+        const stakeOfA = 11;
+        const stakeOfB = 13;
+        const stakeOfC = 17;
+        const stakeOfABC = stakeOfA+stakeOfB+stakeOfC;
+
+        const a = d.newParticipant("delegating around"); // starts as self delegating
+        const b = d.newParticipant("delegating to self - debating the amount");
+        const c = d.newParticipant("delegating to a");
+        await c.delegate(a);
+
+        await a.stake(stakeOfA);
+        await b.stake(stakeOfB);
+        await c.stake(stakeOfC);
+
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        const rewards = [
+            {p: d.newParticipant(), amount: 10, d: a},
+            {p: d.newParticipant(), amount: 20, d: a},
+            {p: d.newParticipant(), amount: 30, d: b},
+            {p: d.newParticipant(), amount: 40, d: b},
+            {p: d.newParticipant(), amount: 50, d: b},
+            {p: d.newParticipant(), amount: 60, d: c},
+            {p: d.newParticipant(), amount: 70, d: c}
+        ];
+        let totalRewardsForGovernanceStake = 0;
+        for (let i = 0; i < rewards.length; i++) {
+            await rewards[i].p.delegate(rewards[i].d);
+            if (await d.delegations.getDelegation(rewards[i].d.address) == rewards[i].d.address) {
+                totalRewardsForGovernanceStake += rewards[i].amount
+            }
+        }
+        const rewardsTotal = rewards.map(i=>i.amount).reduce((a,b)=>a+b);
+        await d.erc20.assign(a.address, rewardsTotal);
+        await d.erc20.approve(d.staking.address, rewardsTotal, {from: a.address});
+        let r = await d.staking.distributeRewards(rewardsTotal, rewards.map(r=>r.p.address), rewards.map(r=>r.amount), {from: a.address});
+
+        await expectTotalGovernanceStakeToBe(stakeOfABC + totalRewardsForGovernanceStake);
+
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: a.address,
+            selfDelegatedStake: bn(stakeOfA),
+            delegatedStake: bn(stakeOfA + stakeOfC + 30),
+            delegators: [rewards[0].p.address, rewards[1].p.address],
+            delegatorTotalStakes: [bn(rewards[0].amount), bn(rewards[1].amount)]
+        });
+
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: b.address,
+            selfDelegatedStake: bn(stakeOfB),
+            delegatedStake: bn(stakeOfB + 120),
+            delegators: [rewards[2].p.address, rewards[3].p.address, rewards[4].p.address],
+            delegatorTotalStakes: [bn(rewards[2].amount), bn(rewards[3].amount), bn(rewards[4].amount)]
+        });
+
+
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: c.address,
+            selfDelegatedStake: bn(0),
+            delegatedStake: bn(130),
+            delegators: [rewards[5].p.address, rewards[6].p.address],
+            delegatorTotalStakes: [bn(rewards[5].amount), bn(rewards[6].amount)]
+        })
+    });
+
     it("allows voting only to 3 at a time", async () => {
         const d = await Driver.new();
 
@@ -836,23 +942,34 @@ export async function banningScenario_setupDelegatorsAndValidators(driver: Drive
     const thresholdCrossingIndex = 1;
     const delegatees: Participant[] = [];
     const delegators: Participant[] = [];
+    let totalStake = 0;
     for (const p of stakesPercentage) {
         // stake holders will not have own stake, only delegated - to test the use of governance stake
         const delegator = driver.newParticipant();
-        await delegator.stake(baseStake * p);
+
+        const newStake = baseStake * p;
+        totalStake += newStake;
+
+        await delegator.stake(newStake);
+        expect(await driver.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(totalStake));
+
         const v = driver.newParticipant();
         await delegator.delegate(v);
+        expect(await driver.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(totalStake));
+
         delegatees.push(v);
         delegators.push(delegator);
     }
 
     const bannedValidator = delegatees[delegatees.length - 1];
     await bannedValidator.registerAsValidator();
+
     await bannedValidator.stake(baseStake);
     let r = await bannedValidator.notifyReadyForCommittee();
     expect(r).to.have.a.committeeChangedEvent({
         addrs: [bannedValidator.address]
     });
+
     return {thresholdCrossingIndex, delegatees, delegators, bannedValidator};
 }
 

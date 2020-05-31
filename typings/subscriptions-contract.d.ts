@@ -2,16 +2,18 @@ import {Contract} from "../eth";
 
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
+import { DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY } from "../test/driver";
 
 export interface SubscriptionChangedEvent {
-  vcid: string;
+  vcid: number | BN;
   genRef: number | BN;
   expiresAt: number | BN;
-  tier: string;
+  tier: 'defaultTier';
+  deploymentSubset: typeof DEPLOYMENT_SUBSET_MAIN | typeof DEPLOYMENT_SUBSET_CANARY;
 }
 
 export interface PaymentEvent {
-  vcid: string;
+  vcid: number | BN;
   by: string;
   amount: number | BN;
   tier: string;
@@ -19,19 +21,19 @@ export interface PaymentEvent {
 }
 
 export interface VcConfigRecordChangedEvent {
-  vcid: string;
+  vcid: number | BN;
   key: string,
   value: string
 }
 
 export interface VcOwnerChangedEvent {
-    vcid: string;
+    vcid: number | BN;
     previousOwner: string;
     newOwner: string;
 }
 
 export interface VcCreatedEvent {
-    vcid: string;
+    vcid: number | BN;
     owner: string;
 }
 
