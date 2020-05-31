@@ -374,9 +374,6 @@ describe('gas usage scenarios', async () => {
             delegators.map(() => balance.div(bn(batchSize)))
             , {from: committee[0].address});
 
-        const ge = gasReportEvents(r);
-        ge.forEach(e => console.log(JSON.stringify(e)));
-
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same validator (batch size - ${batchSize})`, [committee[0]]);
     };
 
