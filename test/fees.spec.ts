@@ -25,7 +25,7 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe('fees-contract', async () => {
+describe.only('fees-contract', async () => {
 
   it('should distribute fees to validators in general and compliance committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
@@ -40,8 +40,8 @@ describe('fees-contract', async () => {
     const {v: v3} = await d.newValidator(initStakeLesser.add(fromTokenUnits(1)), true, false, true);
     const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
 
-    const generalCommittee = [v1, v2, v3, v4];
-    const complianceCommittee = [v1, v3];
+    const committee = [v1, v2, v3, v4];
+    const compliantMembers = [v1, v3];
 
     // create a VCs
 
@@ -86,7 +86,7 @@ describe('fees-contract', async () => {
     const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(fromTokenUnits(3000000000), false, fromTokenUnits(12 * 3000000000));
     const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(fromTokenUnits(6000000000), true, fromTokenUnits(12 * 3000000000));
 
-    const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[]) => {
+    const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[], compliant: boolean) => {
       let rewards = bn(0);
       for (const bucket of feeBuckets) {
         const bucketStartTime = Math.max(parseInt(bucket.bucketId as string), startTime);
@@ -101,7 +101,8 @@ describe('fees-contract', async () => {
           rewards = rewards.add(amount);
         }
       }
-      const rewardsArr = committee.map(() => rewards.div(bn(committee.length)));
+      const n = bn(compliant ? compliantMembers.length : committee.length);
+      const rewardsArr = committee.map((v) => (!compliant || compliantMembers.includes(v)) ? rewards.div(n) : bn(0));
       const remainder = rewards.mod(bn(committee.length));
       const remainderWinnerIdx = endTime % committee.length;
       rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
@@ -110,14 +111,14 @@ describe('fees-contract', async () => {
 
     if (complianceStartTime > generalStartTime) {
       // the creation of the second VC triggered reward calculaton for the general committee, need to fix the buckets
-      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, generalCommittee);
+      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, committee, false);
     }
 
     // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
     // and subtract it afterwards
 
     const initialOrbsBalances:BN[] = [];
-    for (const v of generalCommittee) {
+    for (const v of committee) {
       initialOrbsBalances.push(new BN(await d.rewards.getFeeBalance(v.address)));
     }
 
@@ -129,22 +130,22 @@ describe('fees-contract', async () => {
 
     // Calculate expected rewards from VC fees
 
-    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, endTime, generalCommittee);
-    const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, complianceCommittee);
+    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, endTime, committee, false);
+    const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, committee, true);
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      assignees: generalCommittee.map(v => v.address),
-      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => (x.add((i % 2 == 0) ? complianceCommitteeRewardsArr[i / 2] : bn(0))).toString())
+      assignees: committee.map(v => v.address),
+      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => x.add(complianceCommitteeRewardsArr[i]).toString())
     });
 
     const orbsBalances:BN[] = [];
-    for (const v of generalCommittee) {
+    for (const v of committee) {
       orbsBalances.push(new BN(await d.rewards.getFeeBalance(v.address)));
     }
 
 
-    for (const v of generalCommittee) {
-      const i = generalCommittee.indexOf(v);
-      const totalExpectedRewards = generalCommitteeRewardsArr[i].add(i % 2 == 0 ? complianceCommitteeRewardsArr[i / 2] : bn(0));
+    for (const v of committee) {
+      const i = committee.indexOf(v);
+      const totalExpectedRewards = generalCommitteeRewardsArr[i].add(complianceCommitteeRewardsArr[i]);
       const expectedBalance = fromTokenUnits(totalExpectedRewards).add(initialOrbsBalances[i]);
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 

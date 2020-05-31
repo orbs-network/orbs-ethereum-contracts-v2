@@ -311,7 +311,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(totalAssigned)));
-        if (remainder > 0 && n > 0) { // todo no need to invest in this, can assign to first member in the list.
+        if (remainder > 0) {
             uint ind = now % committee.length;
             assignedFees[ind] = uint48(assignedFees[ind].add(remainder)); // todo may overflow
         }
