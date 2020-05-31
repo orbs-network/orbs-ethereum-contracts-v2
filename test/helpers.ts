@@ -57,3 +57,16 @@ export async function getTopBlockTimestamp(d: Driver) : Promise<number> {
             )
     );
 }
+
+export function fromTokenUnits(n: (number|BN)): BN {
+    return bn(n).mul(bn("1000000000000000"));
+}
+
+export function toTokenUnits(n: (number|BN)): BN {
+    return bn(n).div(bn("1000000000000000"));
+}
+
+export function bnSum(ns: BN[]): BN {
+    return ns.reduce((x, y) => x.add(y), bn(0));
+}
+

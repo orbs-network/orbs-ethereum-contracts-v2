@@ -3,15 +3,13 @@ pragma solidity 0.5.16;
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IProtocol.sol";
-import "./spec_interfaces/IFees.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
-import "./spec_interfaces/IBootstrapRewards.sol";
-import "./spec_interfaces/IStakingRewards.sol";
+import "./interfaces/IRewards.sol";
 
 contract ContractRegistryAccessor is Ownable {
 
@@ -26,16 +24,8 @@ contract ContractRegistryAccessor is Ownable {
         return IProtocol(contractRegistry.get("protocol"));
     }
 
-    function getFeesContract() public view returns (IFees) {
-        return IFees(contractRegistry.get("fees"));
-    }
-
-    function getBootstrapRewardsContract() public view returns (IBootstrapRewards) {
-        return IBootstrapRewards(contractRegistry.get("bootstrapRewards"));
-    }
-
-    function getStakingRewardsContract() public view returns (IStakingRewards) {
-        return IStakingRewards(contractRegistry.get("stakingRewards"));
+    function getRewardsContract() public view returns (IRewards) {
+        return IRewards(contractRegistry.get("rewards"));
     }
 
     function getCommitteeContract() public view returns (ICommittee) {
