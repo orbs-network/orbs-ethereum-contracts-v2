@@ -15,11 +15,11 @@ contract ERC20AccessorWithTokenGranularity {
 
     uint constant TOKEN_GRANULARITY = 1000000000000000;
 
-    function toUint48Granularity(uint256 v) internal view returns (uint48) {
+    function toUint48Granularity(uint256 v) internal pure returns (uint48) {
         return uint48(v / TOKEN_GRANULARITY);
     }
 
-    function toUint256Granularity(uint48 v) internal view returns (uint256) {
+    function toUint256Granularity(uint48 v) internal pure returns (uint256) {
         return uint256(v) * TOKEN_GRANULARITY;
     }
 
