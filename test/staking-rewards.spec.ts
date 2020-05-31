@@ -249,8 +249,8 @@ describe('staking-rewards-level-flows', async () => {
   it('should enforce totalAmount, fromBlock, toBlock, split, txIndex to be consecutive', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(1000, false, false, true);
-    const {v: v2} = await d.newValidator(1000, false, false, true);
+    const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
+    const {v: v2} = await d.newValidator(fromTokenUnits(1000), false, false, true);
 
     const delegator = d.newParticipant();
 
@@ -258,8 +258,8 @@ describe('staking-rewards-level-flows', async () => {
     const g = d.rewardsGovernor;
 
     const annualRate = 12000;
-    const poolAmount = 2000000000;
-    const annualCap = 2000000000;
+    const poolAmount = fromTokenUnits(20000000);
+    const annualCap = fromTokenUnits(20000000);
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
     await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
@@ -271,31 +271,31 @@ describe('staking-rewards-level-flows', async () => {
 
     // first fromBlock must be 0
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         1,
         100,
         1,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address})
     );
 
     // first txIndex must be 0 (initial distribution)
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         1,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address})
     );
 
     // should fail if total does not match actual total
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
@@ -306,13 +306,13 @@ describe('staking-rewards-level-flows', async () => {
     );
 
     let r = await d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
       );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -322,41 +322,41 @@ describe('staking-rewards-level-flows', async () => {
       split: bn(1),
       txIndex: bn(0),
       to: [delegator.address],
-      amounts: [bn(5)]
+      amounts: [bn(fromTokenUnits(5))]
     });
 
     // next txIndex must increment the previous one
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
       )
     );
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         2,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
       )
     );
 
     r = await d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         1,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -366,17 +366,17 @@ describe('staking-rewards-level-flows', async () => {
       split: bn(1),
       txIndex: bn(1),
       to: [delegator.address],
-      amounts: [bn(5)]
+      amounts: [bn(fromTokenUnits(5))]
     });
 
     r = await d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         2,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -386,82 +386,82 @@ describe('staking-rewards-level-flows', async () => {
       split: bn(1),
       txIndex: bn(2),
       to: [delegator.address],
-      amounts: [bn(5)]
+      amounts: [bn(fromTokenUnits(5))]
     });
 
     // next split must equal previous
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         2,
         3,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
         )
     );
 
     // next fromBlock must be previous toBlock + 1
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         99,
         200,
         2,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
         )
     );
 
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         100,
         200,
         2,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
         )
     );
 
     // next toBlock must be at least new fromBlock
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         101,
         100,
         2,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
         )
     );
 
     // on new distribution, txIndex must be 0
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         101,
         200,
         2,
         1,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
         )
     );
 
     // split can be changed on new distribution
     r = await d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         101,
         200,
         3,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -471,18 +471,18 @@ describe('staking-rewards-level-flows', async () => {
       split: bn(3),
       txIndex: bn(0),
       to: [delegator.address],
-      amounts: [bn(5)]
+      amounts: [bn(fromTokenUnits(5))]
     });
 
     // state is per address, different distributor must start from fromBlock==0
     r = await d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         0,
         100,
         1,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v2.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -492,18 +492,18 @@ describe('staking-rewards-level-flows', async () => {
       split: bn(1),
       txIndex: bn(0),
       to: [delegator.address],
-      amounts: [bn(5)]
+      amounts: [bn(fromTokenUnits(5))]
     });
 
     // toBlock must be in the past
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        5,
+        fromTokenUnits(5),
         101,
         (r.blockNumber + 10000),
         1,
         0,
         [delegator.address],
-        [5],
+        [fromTokenUnits(5)],
         {from: v2.address}
     ));
 
