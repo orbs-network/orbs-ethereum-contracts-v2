@@ -115,11 +115,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         emit BootstrapRewardsAssigned(committee, bootstrapRewards);
         emit FeesAssigned(committee, fees);
 
-        bootstrapAndStaking = pools;
         lastAssignedAt = now;
     }
 
-    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards){
+    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private view returns (uint48[] memory assignedRewards){
         assignedRewards = new uint48[](committee.length);
 
         if (committee.length > 0) {
@@ -167,7 +166,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return lastAssignedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private view returns (uint48[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
         assignedRewards = new uint48[](committee.length);
@@ -290,7 +289,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         assignAmountFixed(committee, compliance, complianceFeePoolAmount, true, assignedFees);
     }
 
-    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private {
+    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private view {
         uint n = committee.length;
         if (isCompliant)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
