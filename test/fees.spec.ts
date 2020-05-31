@@ -136,8 +136,7 @@ describe('fees-contract', async () => {
     console.log(complianceCommitteeRewardsArr.map(x => x.toString()));
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
       assignees: committee.map(v => v.address),
-      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => x.add(complianceCommitteeRewardsArr[i]).toString()),
-      duration: (endTime - complianceStartTime).toString()
+      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => x.add(complianceCommitteeRewardsArr[i]).toString())
     });
 
     const orbsBalances:BN[] = [];
