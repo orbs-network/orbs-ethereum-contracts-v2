@@ -31,7 +31,7 @@ describe('staking-rewards-level-flows', async () => {
     /* top up staking rewards pool */
     const g = d.rewardsGovernor;
 
-    const annualRate = 12000;
+    const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(200000000000);
     const annualCap = poolAmount;
 
@@ -73,12 +73,11 @@ describe('staking-rewards-level-flows', async () => {
 
     const calcRewards = () => {
       const totalCommitteeStake = bnSum(validators.map(v => v.stake));
-      const annualAmount = BN.min(totalCommitteeStake.mul(bn(annualRate)).div(bn(100000)), annualCap);
-      const rewards = toTokenUnits(annualAmount.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
-      const rewardsArr = validators.map(v => rewards.mul(v.stake).div(bn(totalCommitteeStake)));
-      const remainder =  rewards.sub(bnSum(rewardsArr));
-      const remainderWinnerIdx = endTime % nValidators;
-      rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
+      const actualAnnualRate = BN.min(annualRate, annualCap.mul(bn(100000)).div(totalCommitteeStake));
+      const rewardsArr = validators
+          .map(v => actualAnnualRate.mul(v.stake).div(bn(100000)))
+          .map(r => toTokenUnits(r))
+          .map(r => r.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
       return rewardsArr.map(x => fromTokenUnits(x));
     };
 
@@ -143,7 +142,7 @@ describe('staking-rewards-level-flows', async () => {
     /* top up staking rewards pool */
     const g = d.rewardsGovernor;
 
-    const annualRate = 12000;
+    const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(2000000000);
     const annualCap = fromTokenUnits(100);
 
@@ -187,12 +186,11 @@ describe('staking-rewards-level-flows', async () => {
 
     const calcRewards = () => {
       const totalCommitteeStake = bnSum(validators.map(v => v.stake));
-      const annualAmount = BN.min(totalCommitteeStake.mul(bn(annualRate)).div(bn(100000)), annualCap);
-      const rewards = toTokenUnits(annualAmount.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
-      const rewardsArr = validators.map(v => rewards.mul(v.stake).div(bn(totalCommitteeStake)));
-      const remainder =  rewards.sub(bnSum(rewardsArr));
-      const remainderWinnerIdx = endTime % nValidators;
-      rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
+      const actualAnnualRate = BN.min(annualRate, annualCap.mul(bn(100000)).div(totalCommitteeStake));
+      const rewardsArr = validators
+          .map(v => actualAnnualRate.mul(v.stake).div(bn(100000)))
+          .map(r => toTokenUnits(r))
+          .map(r => r.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
       return rewardsArr.map(x => fromTokenUnits(x));
     };
 
