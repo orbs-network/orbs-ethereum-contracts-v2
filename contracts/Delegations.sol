@@ -155,7 +155,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			delegates[i] = getDelegation(params.stakeOwners[i]);
 			if (sequenceDelegate != delegates[i]) { // init record new delegate, and close previous one
 				sequenceCount++;
-				sequenceDelegate == delegates[i];
+				sequenceDelegate = delegates[i];
 			}
 		}
 

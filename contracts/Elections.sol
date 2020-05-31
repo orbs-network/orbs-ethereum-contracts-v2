@@ -315,7 +315,9 @@ contract Elections is IElections, ContractRegistryAccessor {
 		totalGovernanceStake = _totalGovernanceStake;
 	}
 
+	event GasReport(string s, uint gas);
 	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract {
+		uint g = gasleft();
 		require(prevDelegateTotalStakes.length == newDelegateTotalStakes.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == delegates.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == isSelfDelegatingDelegates.length, "arrays must be of same length");
@@ -335,6 +337,8 @@ contract Elections is IElections, ContractRegistryAccessor {
 			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate, tempTotalGovStake);
 		}
 		totalGovernanceStake = tempTotalGovStake; // flush
+		emit GasReport("notifyStakeChangeBatch: all", g - gasleft());
+		emit GasReport("notifyStakeChangeBatch: iterations", prevDelegateTotalStakes.length);
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {

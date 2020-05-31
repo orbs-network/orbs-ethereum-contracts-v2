@@ -9,7 +9,7 @@ import {
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
 import {gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
@@ -20,7 +20,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-const BASE_STAKE = 1000000;
+const BASE_STAKE = fromTokenUnits(1000000);
 const MAX_COMMITTEE = 22;
 const MAX_STANDBYS = 5;
 
@@ -32,7 +32,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, maxStandbys: MAX_STANDBYS, maxDelegationRatio: 255});
     tlog("Driver created");
 
-    const poolAmount = new BN(1000000000000000);
+    const poolAmount = fromTokenUnits(1000000);
     await d.erc20.assign(d.accounts[0], poolAmount);
     await d.erc20.approve(d.rewards.address, poolAmount);
     await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount);
@@ -41,14 +41,14 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     await d.externalToken.assign(d.accounts[0], poolAmount);
     await d.externalToken.approve(d.rewards.address, poolAmount);
-    await d.rewards.setGeneralCommitteeAnnualBootstrap(12000);
-    await d.rewards.setComplianceCommitteeAnnualBootstrap(12000);
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000));
+    await d.rewards.setComplianceCommitteeAnnualBootstrap(fromTokenUnits(12000));
     await d.rewards.topUpBootstrapPool(poolAmount);
     tlog("Bootstrap pools topped up");
 
     let standbys: Participant[] = [];
     for (let i = MAX_STANDBYS - 1; i >= 0; i--) {
-        const {v} = await d.newValidator(BASE_STAKE - (standbysEvenStakes ? 0 : i), false, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.sub(fromTokenUnits(standbysEvenStakes ? 0 : i)), false, false, false);
         standbys = [v].concat(standbys);
         console.log(`standby ${i}`)
     }
@@ -56,7 +56,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
-        const {v} = await d.newValidator(BASE_STAKE + 1 + (committeeEvenStakes ? 0 : i), false, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1 + (committeeEvenStakes ? 0 : i))), false, false, false);
         committee = [v].concat(committee);
         console.log(`committee ${i}`)
     }
@@ -85,7 +85,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
 
 describe('gas usage scenarios', async () => {
-    it("New delegator stake increase, lowest committee member gets to top", async () => {
+    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         const delegator = d.newParticipant("delegator");
@@ -96,13 +96,13 @@ describe('gas usage scenarios', async () => {
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
         d.resetGasRecording();
-        let r = await delegator.stake(BASE_STAKE * 1000);
+        let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
         expect(r).to.have.a.committeeChangedEvent({
             addrs: committee.map(v => v.address)
         });
 
-        const ge = gasReportEvents(r);
-        ge.forEach(e => console.log(JSON.stringify(e)));
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
 
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
     });
@@ -112,13 +112,13 @@ describe('gas usage scenarios', async () => {
 
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[0]);
-        let r = await delegator.stake(1000 * BASE_STAKE);
+        let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
         expect(r).to.have.a.committeeChangedEvent({
             addrs: committee.map(v => v.address)
         });
 
-        await committee[0].unstake(BASE_STAKE + committee.length);
-        r = await committee[0].stake(BASE_STAKE - standbys.length - 1);
+        await committee[0].unstake(BASE_STAKE.add(bn(committee.length)));
+        r = await committee[0].stake(BASE_STAKE.sub(bn(standbys.length + 1)));
         expect(r).to.have.a.committeeChangedEvent({
             addrs: committee.map(v => v.address)
         });
@@ -167,7 +167,7 @@ describe('gas usage scenarios', async () => {
     it("Standby sends ready-to-sync for first time and gets to top of standbys list", async () => {
         const {d, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE + 1, true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(bn(1)), true, false, false);
 
         d.resetGasRecording();
         let r = await v.notifyReadyToSync();
@@ -182,7 +182,7 @@ describe('gas usage scenarios', async () => {
     it("Standby sends ready-to-sync for second time", async () => {
         const {d, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE + 1, true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(bn(1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
@@ -203,7 +203,7 @@ describe('gas usage scenarios', async () => {
     it("New validator sends ready-for-committee and immediately gets to top", async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE + committee.length + 1, true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(bn(committee.length + 1)), true, false, false);
 
         d.resetGasRecording();
         let r = await v.notifyReadyForCommittee();
@@ -220,7 +220,7 @@ describe('gas usage scenarios', async () => {
     it("Standby sends ready-for-committee and jumps to top of committee", async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE + committee.length + 1, true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(bn(committee.length + 1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
@@ -364,7 +364,7 @@ describe('gas usage scenarios', async () => {
         const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
         d.resetGasRecording();
-        await d.rewards.distributeOrbsTokenStakingRewards(
+        const r = await d.rewards.distributeOrbsTokenStakingRewards(
             balance.div(bn(batchSize)).mul(bn(batchSize)),
             0,
             100,
@@ -373,6 +373,10 @@ describe('gas usage scenarios', async () => {
             delegators.map(delegator => delegator.address),
             delegators.map(() => balance.div(bn(batchSize)))
             , {from: committee[0].address});
+
+        const ge = gasReportEvents(r);
+        ge.forEach(e => console.log(JSON.stringify(e)));
+
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same validator (batch size - ${batchSize})`, [committee[0]]);
     };
 
@@ -380,7 +384,7 @@ describe('gas usage scenarios', async () => {
         await distributeRewardsScenario(1)
     });
 
-    it("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
+    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
         await distributeRewardsScenario(50)
     });
 
