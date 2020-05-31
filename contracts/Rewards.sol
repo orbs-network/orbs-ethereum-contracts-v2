@@ -174,8 +174,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
-        uint i;
-        for (i = 0; i < committee.length; i++) {
+        for (uint i = 0; i < committee.length; i++) {
             totalWeight = totalWeight.add(weights[i]);
         }
 
@@ -184,7 +183,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
             uint annualRateInPercentMille = Math.min(uint(pools.annualRateInPercentMille), toUint256Granularity(pools.annualCap).mul(100000).div(totalWeight));
             uint48 curAmount;
-            for (i = 0; i < committee.length; i++) {
+            for (uint i = 0; i < committee.length; i++) {
                 curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).div(100000)); // todo may overflow
                 curAmount = uint48(uint(curAmount).mul(duration).div(365 days));
                 assignedRewards[i] = curAmount;
