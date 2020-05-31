@@ -85,7 +85,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
 
 describe('gas usage scenarios', async () => {
-    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
+    it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         const delegator = d.newParticipant("delegator");
@@ -384,7 +384,7 @@ describe('gas usage scenarios', async () => {
         await distributeRewardsScenario(1)
     });
 
-    it.only("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
+    it("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
         await distributeRewardsScenario(50)
     });
 
