@@ -132,8 +132,6 @@ describe('fees-contract', async () => {
 
     const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, committee, false);
     const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, committee, true);
-    console.log(generalCommitteeRewardsArr.map(x => x.toString()));
-    console.log(complianceCommitteeRewardsArr.map(x => x.toString()));
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
       assignees: committee.map(v => v.address),
       orbs_amounts: generalCommitteeRewardsArr.map((x, i) => x.add(complianceCommitteeRewardsArr[i]).toString())
