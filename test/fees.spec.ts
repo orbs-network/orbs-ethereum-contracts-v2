@@ -27,7 +27,7 @@ async function sleep(ms): Promise<void> {
 
 describe('fees-contract', async () => {
 
-  it('should distribute fees to validators in general and compliance committees', async () => {
+  it.only('should distribute fees to validators in general and compliance committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
 
     // create committee
@@ -73,7 +73,7 @@ describe('fees-contract', async () => {
         expect(l.added).to.be.bignumber.equal(new BN(vcRate));
       });
 
-      expect(await d.rewards.getLastFeesAssignment()).to.be.bignumber.equal(new BN(startTime));
+      expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
 
       return {
         vcid,

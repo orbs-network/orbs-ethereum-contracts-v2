@@ -22,7 +22,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 stakingPool;
         uint48 annualRateInPercentMille;
         uint48 annualCap;
-    }
+    } // todo add totalFeeBalance, totalStakingRewardsBalance, totalBootstrapBalance
     BootstrapAndStaking bootstrapAndStaking;
 
     struct Balance {
@@ -38,7 +38,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     IERC20 bootstrapToken;
     IERC20 erc20;
-    uint256 lastPayedAt;
+    uint256 lastAssignedAt;
 
     address rewardsGovernor;
 
@@ -62,7 +62,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
-        lastPayedAt = now;
+        lastAssignedAt = now;
         rewardsGovernor = _rewardsGovernor;
     }
 
@@ -92,10 +92,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].bootstrapRewards);
     }
 
-    function getLastBootstrapAssignment() external view returns (uint256) {
-        return lastPayedAt;
-    }
-
     function assignRewards(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyElectionsContract {
         _assignRewards(committee, committeeWeights, compliance);
     }
@@ -120,23 +116,16 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         emit FeesAssigned(committee, fees);
 
         bootstrapAndStaking = pools;
-        lastPayedAt = now;
+        lastAssignedAt = now;
     }
 
     function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards){
         assignedRewards = new uint48[](committee.length);
 
         if (committee.length > 0) {
-            uint nCompliance = 0;
-            for (uint i = 0; i < committee.length; i++) {
-                if (compliance[i]) nCompliance++;
-            }
-
-            // TODO ignore the pool here, update only on withdrawal
-
-            uint256 duration = now.sub(lastPayedAt);
+            uint256 duration = now.sub(lastAssignedAt);
             uint48 amountPerGeneralValidator = uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
-            uint48 amountPerCompliantValidator = uint48(nCompliance == 0 ? 0 : pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            uint48 amountPerCompliantValidator = uint48(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
 
             for (uint i = 0; i < committee.length; i++) {
                 assignedRewards[i] = uint48(amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0)); // todo may overflow
@@ -174,8 +163,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].stakingRewards);
     }
 
-    function getLastRewardsAssignment() external view returns (uint256) {
-        return lastPayedAt;
+    function getLastRewardAssignment() external view returns (uint256) {
+        return lastAssignedAt;
     }
 
     function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards) {
@@ -190,9 +179,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
-            uint256 duration = now.sub(lastPayedAt);
+            uint256 duration = now.sub(lastAssignedAt);
 
-            // TODO ignore the pool here, update only on withdrawal
+            // todo - cap interest rate directly, may simplify code and remove remainder logic
 
             uint256 annualAmount = Math.min(uint(pools.annualRateInPercentMille).mul(totalWeight).div(100000), toUint256Granularity(pools.annualCap));
             uint48 amount = toUint48Granularity(annualAmount.mul(duration).div(365 days));
@@ -268,10 +257,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].fees);
     }
 
-    function getLastFeesAssignment() external view returns (uint256) {
-        return lastPayedAt;
-    }
-
     uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
 
     function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint48[] memory assignedFees){
@@ -279,7 +264,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
         // Fee pool
-        uint _lastPayedAt = lastPayedAt;
+        uint _lastPayedAt = lastAssignedAt;
         uint bucketsPayed = 0;
         uint generalFeePoolAmount = 0;
         uint complianceFeePoolAmount = 0;
@@ -334,13 +319,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(totalAssigned)));
-        if (remainder > 0 && n > 0) {
+        if (remainder > 0 && n > 0) { // todo no need to invest in this, can assign to first member in the list.
             uint ind = now % committee.length;
-            if (isCompliant) {
-                while (!compliance[ind]) {
-                    ind = (ind + 1) % committee.length;
-                }
-            }
             assignedFees[ind] = uint48(assignedFees[ind].add(remainder)); // todo may overflow
         }
     }

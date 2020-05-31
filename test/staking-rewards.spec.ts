@@ -62,7 +62,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.rewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
@@ -176,7 +176,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.rewards.getLastRewardsAssignment()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);

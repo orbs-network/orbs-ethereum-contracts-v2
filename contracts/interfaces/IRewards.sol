@@ -45,9 +45,6 @@ interface IRewards {
     /// @dev Transfer all of msg.sender's outstanding balance to their account
     function withdrawFeeFunds() external;
 
-    /// @return The timestamp of the last reward assignment.
-    function getLastFeesAssignment() external view returns (uint256 time);
-
     /// @dev Called by: subscriptions contract
     /// Top-ups the compliance fee pool with the given amount at the given rate (typically called by the subscriptions contract)
     function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
@@ -72,7 +69,7 @@ interface IRewards {
     function withdrawBootstrapFunds() external;
 
     /// @return The timestamp of the last reward assignment.
-    function getLastBootstrapAssignment() external view returns (uint256 time);
+    function getLastRewardAssignment() external view returns (uint256 time);
 
     /// @dev Transfers the given amount of bootstrap tokens form the sender to this contract and update the pool.
     /// Assumes the tokens were approved for transfer
