@@ -198,12 +198,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 		emit BanningVote(msg.sender, validators);
 	}
 
-	function assignRewards() public {
-		(address[] memory generalCommittee, uint256[] memory generalCommitteeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-		getFeesContract().assignFees(generalCommittee, compliance);
-		getBootstrapRewardsContract().assignRewards(generalCommittee, compliance);
-		getStakingRewardsContract().assignRewards(generalCommittee, generalCommitteeWeights);
-	}
+    function assignRewards() public { // todo - committee contract can return the committee earlier, save an extra call to committee contract
+		(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        getRewardsContract().assignRewards(committee, committeeWeights, compliance);
+    }
 
 	function getTotalGovernanceStake() external view returns (uint256) {
 		return totalGovernanceStake;

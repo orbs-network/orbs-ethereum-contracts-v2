@@ -4,7 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, Participant} from "./driver";
 import chai from "chai";
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 import {bootstrapRewardsAssignedEvents} from "./event-parsing";
@@ -33,24 +33,17 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const g = d.rewardsGovernor;
 
-    const annualAmountGeneral = 10000000;
-    const annualAmountCompliance = 20000000;
-    const poolAmount = (annualAmountGeneral + annualAmountCompliance) * 6 * 12;
+    const annualAmountGeneral = fromTokenUnits(10000000);
+    const annualAmountCompliance = fromTokenUnits(20000000);
+    const poolAmount = annualAmountGeneral.add(annualAmountCompliance).mul(bn(6*12));
 
-    await d.bootstrapRewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
-    await d.bootstrapRewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
-
-    await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewards.address);
-    let r = await d.bootstrapRewards.topUpBootstrapPool(poolAmount, {from: g.address});
-    expect(r).to.have.a.bootstrapAddedToPoolEvent({
-      added: bn(poolAmount),
-      total: bn(poolAmount) // todo: a test where total is more than added
-    });
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
+    await d.rewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
 
     // create committee
 
-    const initStakeLesser = 17000;
-    const initStakeLarger = 21000;
+    const initStakeLesser = fromTokenUnits(17000);
+    const initStakeLarger = fromTokenUnits(21000);
 
     const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
     const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
@@ -68,7 +61,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
-    const calcRewards = (annualRate) => bn(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS));
+    const calcRewards = (annualRate) => toTokenUnits(bn(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
 
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
     const expectedComplianceCommitteeRewards = calcRewards(annualAmountCompliance);
@@ -80,17 +73,25 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const tokenBalances:BN[] = [];
     for (const v of generalCommittee) {
-      tokenBalances.push(new BN(await d.bootstrapRewards.getBootstrapBalance(v.address)));
+      tokenBalances.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
+
+    // Pool can be topped up after assignment
+    await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
+    let r = await d.rewards.topUpBootstrapPool(poolAmount, {from: g.address});
+    expect(r).to.have.a.bootstrapAddedToPoolEvent({
+      added: bn(poolAmount),
+      total: bn(poolAmount) // todo: a test where total is more than added
+    });
 
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
 
-      const expectedBalance = bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0));
+      const expectedBalance = fromTokenUnits(bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0)));
       expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds
-      await d.bootstrapRewards.withdrawFunds({from: v.address});
+      await d.rewards.withdrawBootstrapFunds({from: v.address});
       const tokenBalance = await d.externalToken.balanceOf(v.address);
       expect(new BN(tokenBalance)).to.bignumber.equal(new BN(expectedBalance));
     }
