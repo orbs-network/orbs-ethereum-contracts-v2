@@ -24,6 +24,6 @@ interface ICompliance /* is Ownable */ { // TODO rename to IValidatorIdentificat
 	 */
 
     /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
+	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
 }

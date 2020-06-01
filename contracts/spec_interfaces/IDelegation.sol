@@ -22,7 +22,7 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	 */
 
     /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
+	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
 	/*
 	 * Getters

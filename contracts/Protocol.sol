@@ -1,9 +1,10 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/IProtocol.sol";
-import "./Claimable.sol";
+import "./WithClaimableFunctionalOwnership.sol";
+import "./WithClaimableMigrationOwnership.sol";
 
-contract Protocol is IProtocol, Claimable {
+contract Protocol is IProtocol, WithClaimableMigrationOwnership, WithClaimableFunctionalOwnership {
 
     struct DeploymentSubset {
         bool exists;
@@ -22,7 +23,7 @@ contract Protocol is IProtocol, Claimable {
         (, currentVersion) = checkPrevUpgrades(deploymentSubset);
     }
 
-    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyOwner {
+    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyFunctionalOwner {
         require(!deploymentSubsets[deploymentSubset].exists, "deployment subset already exists");
 
         deploymentSubsets[deploymentSubset].currentVersion = initialProtocolVersion;
@@ -33,7 +34,7 @@ contract Protocol is IProtocol, Claimable {
         emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now); // TODO different event?
     }
 
-    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyOwner {
+    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyFunctionalOwner {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
         require(fromTimestamp > now, "a protocol update can only be scheduled for the future");
 

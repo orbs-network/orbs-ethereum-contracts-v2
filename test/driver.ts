@@ -82,7 +82,7 @@ export class Driver {
         const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]], null, session);
         const externalToken = await web3.deploy( 'TestingERC20', [], null, session);
         const erc20 = await web3.deploy( 'TestingERC20', [], null, session);
-        const rewards = await web3.deploy( 'Rewards', [erc20.address, externalToken.address, accounts[0]], null, session);
+        const rewards = await web3.deploy( 'Rewards', [erc20.address, externalToken.address], null, session);
         const delegations = await web3.deploy( "Delegations", [], null, session);
         const elections = await web3.deploy( "Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
