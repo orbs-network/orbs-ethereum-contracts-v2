@@ -1,6 +1,5 @@
 pragma solidity 0.5.16;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./spec_interfaces/ICommittee.sol";
@@ -10,8 +9,9 @@ import "./spec_interfaces/ICompliance.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IRewards.sol";
+import "./Claimable.sol";
 
-contract ContractRegistryAccessor is Ownable {
+contract ContractRegistryAccessor is Claimable {
 
     IContractRegistry contractRegistry;
 

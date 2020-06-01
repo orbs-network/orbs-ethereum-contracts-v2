@@ -1,7 +1,6 @@
 pragma solidity 0.5.16;
 
 import "./IContractRegistry.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 
 
 /// @title Elections contract interface

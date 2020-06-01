@@ -1,9 +1,9 @@
 pragma solidity 0.5.16;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IProtocol.sol";
+import "./Claimable.sol";
 
-contract Protocol is IProtocol, Ownable {
+contract Protocol is IProtocol, Claimable {
 
     struct DeploymentSubset {
         bool exists;

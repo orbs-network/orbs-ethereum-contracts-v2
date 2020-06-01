@@ -1,7 +1,6 @@
 pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -68,13 +67,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyRewardsGovernor {
         (address[] memory generalCommittee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
         _assignRewards(generalCommittee, weights, compliance);
         bootstrapAndStaking.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
+    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyRewardsGovernor {
         (address[] memory generalCommittee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
         _assignRewards(generalCommittee, weights, compliance);
         bootstrapAndStaking.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
