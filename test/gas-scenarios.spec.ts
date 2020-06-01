@@ -364,7 +364,7 @@ describe('gas usage scenarios', async () => {
         const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
         d.resetGasRecording();
-        const r = await d.rewards.distributeOrbsTokenStakingRewards(
+        await d.rewards.distributeOrbsTokenStakingRewards(
             balance.div(bn(batchSize)).mul(bn(batchSize)),
             0,
             100,
