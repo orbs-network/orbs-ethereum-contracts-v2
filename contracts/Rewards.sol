@@ -115,11 +115,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         emit BootstrapRewardsAssigned(committee, bootstrapRewards);
         emit FeesAssigned(committee, fees);
 
-        bootstrapAndStaking = pools;
         lastAssignedAt = now;
     }
 
-    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards){
+    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private view returns (uint48[] memory assignedRewards){
         assignedRewards = new uint48[](committee.length);
 
         if (committee.length > 0) {
@@ -167,7 +166,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return lastAssignedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private returns (uint48[] memory assignedRewards) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private view returns (uint48[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
         assignedRewards = new uint48[](committee.length);
@@ -181,22 +180,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastAssignedAt);
 
-            // todo - cap interest rate directly, may simplify code and remove remainder logic
-
-            uint256 annualAmount = Math.min(uint(pools.annualRateInPercentMille).mul(totalWeight).div(100000), toUint256Granularity(pools.annualCap));
-            uint48 amount = toUint48Granularity(annualAmount.mul(duration).div(365 days));
-
+            uint annualRateInPercentMille = Math.min(uint(pools.annualRateInPercentMille), toUint256Granularity(pools.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
-                curAmount = uint48(uint(amount).mul(weights[i]).div(totalWeight)); // todo may overflow
+                curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).div(100000)); // todo may overflow
+                curAmount = uint48(uint(curAmount).mul(duration).div(365 days));
                 assignedRewards[i] = curAmount;
                 totalAssigned = totalAssigned.add(curAmount);
-            }
-
-            uint256 remainder = amount.sub(totalAssigned);
-            if (remainder > 0 && committee.length > 0) {
-                uint ind = now % committee.length;
-                assignedRewards[ind] = uint48(assignedRewards[ind].add(remainder)); // todo may overflow
             }
         }
     }
@@ -299,7 +289,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         assignAmountFixed(committee, compliance, complianceFeePoolAmount, true, assignedFees);
     }
 
-    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private {
+    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private view {
         uint n = committee.length;
         if (isCompliant)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
@@ -319,7 +309,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(totalAssigned)));
-        if (remainder > 0 && n > 0) { // todo no need to invest in this, can assign to first member in the list.
+        if (remainder > 0) {
             uint ind = now % committee.length;
             assignedFees[ind] = uint48(assignedFees[ind].add(remainder)); // todo may overflow
         }
