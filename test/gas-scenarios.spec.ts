@@ -35,14 +35,14 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     const poolAmount = fromTokenUnits(1000000);
     await d.erc20.assign(d.accounts[0], poolAmount);
     await d.erc20.approve(d.rewards.address, poolAmount);
-    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount);
+    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
     await d.rewards.topUpStakingRewardsPool(poolAmount);
     tlog("Staking pools topped up");
 
     await d.externalToken.assign(d.accounts[0], poolAmount);
     await d.externalToken.approve(d.rewards.address, poolAmount);
-    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000));
-    await d.rewards.setComplianceCommitteeAnnualBootstrap(fromTokenUnits(12000));
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
+    await d.rewards.setComplianceCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
     await d.rewards.topUpBootstrapPool(poolAmount);
     tlog("Bootstrap pools topped up");
 
