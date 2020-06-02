@@ -1,13 +1,12 @@
 pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./Subscriptions.sol";
 import "./ContractRegistry.sol";
 
-contract MonthlySubscriptionPlan is ContractRegistryAccessor {
+contract MonthlySubscriptionPlan is ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 
     string public tier;
     uint256 public monthlyRate;

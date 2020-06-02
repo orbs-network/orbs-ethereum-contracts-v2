@@ -1,12 +1,12 @@
 pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
-contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
+contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
     using SafeMath for uint256;
 
     enum CommitteeType {
@@ -50,7 +50,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor {
         return virtualChains[vcid].configRecords[key];
     }
 
-    function addSubscriber(address addr) external onlyOwner {
+    function addSubscriber(address addr) external onlyFunctionalOwner {
         require(addr != address(0), "must provide a valid address");
 
         authorizedSubscribers[addr] = true;

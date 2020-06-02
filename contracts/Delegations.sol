@@ -11,8 +11,9 @@ import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
-contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor {
+contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 	using SafeMath for uint256;
 
 	// TODO consider using structs instead of multiple mappings
