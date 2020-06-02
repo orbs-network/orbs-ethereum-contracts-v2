@@ -92,7 +92,7 @@ describe('gas usage scenarios', async () => {
         await delegator.delegate(committee[committee.length - 1]);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.elections.assignRewards();
+        await d.rewards.assignRewards();
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
         d.resetGasRecording();
@@ -346,7 +346,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(true);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.elections.assignRewards();
+        await d.rewards.assignRewards();
 
         const v = committee[0];
 
@@ -395,7 +395,7 @@ describe('gas usage scenarios', async () => {
 
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
-        await d.elections.assignRewards({from: p.address});
+        await d.rewards.assignRewards({from: p.address});
         d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
     });
 
@@ -403,13 +403,13 @@ describe('gas usage scenarios', async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys(false, false, 5);
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
-        await d.elections.assignRewards();
+        await d.rewards.assignRewards();
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
 
         const p = d.newParticipant("reward assigner");
         d.resetGasRecording();
-        await d.elections.assignRewards({from: p.address});
+        await d.rewards.assignRewards({from: p.address});
 
         d.logGasUsageSummary("assigns rewards (1 month, initial balance > 0)", [p]);
     });

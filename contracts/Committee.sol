@@ -504,5 +504,6 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
 		emit CommitteeChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights, compliance);
+		getRewardsContract().assignRewardsToCommittee(addrs, weights, compliance);
 	}
 }
