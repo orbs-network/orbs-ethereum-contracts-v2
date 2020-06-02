@@ -134,17 +134,17 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
-  it('registers subsciber only by owner', async () => {
+  it('registers subsciber only by functional owner', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber('tier', 1);
 
     await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to add a subscriber");
-    await d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsOwnerAddress});
+    await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
   });
 
   it('should not add a subscriber with a zero address', async () => {
     const d = await Driver.new();
-    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.contractsOwnerAddress}), "Should not deploy a subscriber with a zero address");
+    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.functionalOwner.address}), "Should not deploy a subscriber with a zero address");
   });
 
   it('is able to create multiple VCs from the same subscriber', async () => {
