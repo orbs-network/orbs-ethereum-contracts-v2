@@ -11,16 +11,16 @@ const expect = chai.expect;
 
 describe('contract-registry-high-level-flows', async () => {
 
-  it('registers contracts only by governor and emits events', async () => {
+  it('registers contracts only by functional owner and emits events', async () => {
     const d = await Driver.new();
-    const governor = d.newParticipant();
-    const registry = await d.newContractRegistry(governor.address);
+    const owner = d.functionalOwner;
+    const registry = d.contractRegistry;
 
     const contract1Name = "protocol";
     const addr1 = d.newParticipant().address;
 
     // set
-    let r = await registry.set(contract1Name, addr1, {from: governor.address});
+    let r = await registry.set(contract1Name, addr1, {from: owner.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
       contractName: contract1Name,
       addr: addr1
@@ -31,7 +31,7 @@ describe('contract-registry-high-level-flows', async () => {
 
     // update
     const addr2 = d.newParticipant().address;
-    r = await registry.set(contract1Name, addr2, {from: governor.address});
+    r = await registry.set(contract1Name, addr2, {from: owner.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
       contractName: contract1Name,
       addr: addr2
@@ -47,7 +47,7 @@ describe('contract-registry-high-level-flows', async () => {
     await expectRejected(registry.set(contract2Name, addr3, {from: nonGovernor.address}));
 
     // now by governor
-    r = await registry.set(contract2Name, addr3, {from: governor.address});
+    r = await registry.set(contract2Name, addr3, {from: owner.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
       contractName: contract2Name,
       addr: addr3
@@ -61,17 +61,15 @@ describe('contract-registry-high-level-flows', async () => {
     const subscriber = await d.newSubscriber("tier", 1);
 
     const newAddr = d.newParticipant().address;
+    await expectRejected(d.elections.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
+    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
+    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
+    await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
 
-    const nonOwner = d.newParticipant();
-    await expectRejected(d.elections.setContractRegistry(newAddr, {from: nonOwner.address}));
-    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: nonOwner.address}));
-    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: nonOwner.address}));
-    await expectRejected(subscriber.setContractRegistry(newAddr, {from: nonOwner.address}));
-
-    await d.elections.setContractRegistry(newAddr);
-    await d.rewards.setContractRegistry(newAddr);
-    await d.subscriptions.setContractRegistry(newAddr);
-    await subscriber.setContractRegistry(newAddr);
+    await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    await d.rewards.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    await subscriber.setContractRegistry(newAddr, {from: d.migrationOwner.address});
   });
 
 });

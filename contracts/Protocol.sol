@@ -3,8 +3,9 @@ pragma solidity 0.5.16;
 import "./spec_interfaces/IProtocol.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 import "./WithClaimableMigrationOwnership.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract Protocol is IProtocol, WithClaimableMigrationOwnership, WithClaimableFunctionalOwnership {
+contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 
     struct DeploymentSubset {
         bool exists;

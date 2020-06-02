@@ -34,7 +34,7 @@ contract WithClaimableMigrationOwnership is Context{
      * @dev Throws if called by any account other than the migrationOwner.
      */
     modifier onlyMigrationOwner() {
-        require(isMigrationOwner(), "Ownable: caller is not the migrationOwner");
+        require(isMigrationOwner(), "WithClaimableMigrationOwnership: caller is not the migrationOwner");
         _;
     }
 

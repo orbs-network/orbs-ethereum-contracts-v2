@@ -184,8 +184,8 @@ describe('committee', async () => {
         });
         expect(r).to.not.have.a.standbysChangedEvent();
 
-        await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committee.memberNotReadyToSync(v.address);
+        await d.contractRegistry.set("elections", d.contractsOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
+        r = await d.committee.memberNotReadyToSync(v.address, {from: d.contractsOwnerAddress});
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [],
         });
@@ -256,8 +256,8 @@ describe('committee', async () => {
         });
         expect(r).to.not.have.a.committeeChangedEvent();
 
-        await d.contractRegistry.set("elections", d.contractsOwner); // hack to make subsequent call
-        r = await d.committee.memberNotReadyToSync(v.address);
+        await d.contractRegistry.set("elections", d.contractsNonOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
+        r = await d.committee.memberNotReadyToSync(v.address, {from: d.contractsNonOwnerAddress});
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
         });
@@ -361,7 +361,7 @@ describe('committee', async () => {
             committee.push(v);
 
             await v.registerAsValidator();
-            await v.stake(stake * 2);
+            await v.stake(stake * 2 + i);
             let r = await v.notifyReadyForCommittee();
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
@@ -377,7 +377,7 @@ describe('committee', async () => {
             standbys.push(v);
 
             await v.registerAsValidator();
-            await v.stake(i <= 1 ? stake: stake * 2);
+            await v.stake(i <= 1 ? (stake + i): stake * 2);
             let r = i <= 1 ? await v.notifyReadyForCommittee() : await v.notifyReadyToSync();
             expect(r).to.have.a.standbysChangedEvent({
                 addrs: standbys.map(s => s.address),
@@ -388,17 +388,17 @@ describe('committee', async () => {
 
         const v1 = await d.newParticipant();
         await v1.registerAsValidator();
-        await v1.stake(stake + 2);
+        await v1.stake(stake + 4);
         let r = await v1.notifyReadyToSync();
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.have.a.standbysChangedEvent({
-            addrs: [standbys[0], standbys[2], v1].map(s => s.address)
+            addrs: [standbys[1], standbys[2], v1].map(s => s.address)
         });
 
         const v2 = await d.newParticipant();
         await v2.registerAsValidator();
         await v2.notifyReadyToSync();
-        r = await v2.stake(stake + 1);
+        r = await v2.stake(stake + 3);
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [standbys[2], v1, v2].map(s => s.address)
@@ -663,7 +663,7 @@ describe('committee', async () => {
             committee.push(v);
 
             await v.registerAsValidator();
-            await v.stake(stake);
+            await v.stake(stake + i);
             let r = await v.notifyReadyForCommittee();
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
@@ -678,7 +678,7 @@ describe('committee', async () => {
             standbys.push(v);
 
             await v.registerAsValidator();
-            await v.stake(stake);
+            await v.stake(stake - i);
             let r = await v.notifyReadyToSync();
             expect(r).to.have.a.standbysChangedEvent({
                 addrs: standbys.map(s => s.address),
@@ -688,17 +688,7 @@ describe('committee', async () => {
         }
 
         await evmIncreaseTime(d.web3, readyToSyncTimeout);
-        let r = await committee[1].notifyReadyForCommittee(); // so when removed from committee, will remain a standby
-        expect(r).to.have.a.committeeChangedEvent({ // no change in committee order
-            addrs: committee.map(v => v.address)
-        });
-        expect(r).to.not.have.a.standbysChangedEvent();
-
         await standbys[1].notifyReadyToSync();
-        r = await standbys[0].stake(1);
-        expect(r).to.have.a.standbysChangedEvent({ // no change in standbys order
-            addrs: standbys.map(v => v.address)
-        });
 
 
         // all standbys are not timed-out, except the first which also has more stake
@@ -706,13 +696,13 @@ describe('committee', async () => {
 
         const v1 = await d.newParticipant();
         await v1.registerAsValidator();
-        await v1.stake(stake + 1);
-        r = await v1.notifyReadyForCommittee();
+        await v1.stake(stake + 2);
+        let r = await v1.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
-            addrs: [v1, committee[0]].map(v => v.address)
+            addrs: [v1, committee[1]].map(v => v.address)
         });
         expect(r).to.have.a.standbysChangedEvent({
-            addrs: [committee[1], standbys[1]].map(s => s.address)
+            addrs: [committee[0], standbys[1]].map(s => s.address)
         });
 
     });

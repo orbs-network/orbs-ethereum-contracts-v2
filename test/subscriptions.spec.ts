@@ -138,13 +138,13 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber('tier', 1);
 
-    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwner}), "Non-owner should not be able to add a subscriber");
-    await d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsOwner});
+    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to add a subscriber");
+    await d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsOwnerAddress});
   });
 
   it('should not add a subscriber with a zero address', async () => {
     const d = await Driver.new();
-    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.contractsOwner}), "Should not deploy a subscriber with a zero address");
+    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.contractsOwnerAddress}), "Should not deploy a subscriber with a zero address");
   });
 
   it('is able to create multiple VCs from the same subscriber', async () => {

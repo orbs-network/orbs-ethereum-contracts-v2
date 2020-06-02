@@ -17,16 +17,16 @@ import {RewardsContract} from "./rewards-contract";
  * Maps contract name to API
  */
 export type Contracts = {
-    ContractRegistry: ContractRegistryContract & Contract;
-    TestingERC20: ERC20Contract & Contract;
-    Rewards: RewardsContract & Contract;
-    Elections: ElectionsContract & Contract;
-    Subscriptions: SubscriptionsContract & Contract;
-    Protocol: ProtocolContract & Contract;
-    StakingContract: StakingContract & Contract;
-    MonthlySubscriptionPlan: MonthlySubscriptionPlanContract & Contract;
-    Compliance: ComplianceContract & Contract;
-    ValidatorsRegistration: ValidatorsRegistrationContract & Contract;
-    Committee: CommitteeContract & Contract;
-    Delegations: DelegationsContract & Contract;
+    ContractRegistry: ContractRegistryContract;
+    TestingERC20: ERC20Contract;
+    Rewards: RewardsContract;
+    Elections: ElectionsContract;
+    Subscriptions: SubscriptionsContract;
+    Protocol: ProtocolContract;
+    StakingContract: StakingContract;
+    MonthlySubscriptionPlan: MonthlySubscriptionPlanContract;
+    Compliance: ComplianceContract;
+    ValidatorsRegistration: ValidatorsRegistrationContract;
+    Committee: CommitteeContract;
+    Delegations: DelegationsContract;
 }

@@ -27,7 +27,7 @@ describe('delegations-contract', async () => {
 
         await expectRejected(participant.stake(5, rogueStakingContract), "should not accept notifications from an address other than the staking contract");
         await participant.stake(5);
-        await d.contractRegistry.set("staking", rogueStakingContract.address);
+        await d.contractRegistry.set("staking", rogueStakingContract.address, {from: d.functionalOwner.address});
         await participant.stake(5, rogueStakingContract)
 
         // TODO - to check stakeChangeBatch use a mock staking contract that would satisfy the interface but would allow sending stakeChangeBatch when there are no rewards to distribue

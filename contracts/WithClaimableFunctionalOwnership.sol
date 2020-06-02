@@ -34,7 +34,7 @@ contract WithClaimableFunctionalOwnership is Context{
      * @dev Throws if called by any account other than the functionalOwner.
      */
     modifier onlyFunctionalOwner() {
-        require(isFunctionalOwner(), "Ownable: caller is not the functionalOwner");
+        require(isFunctionalOwner(), "WithClaimableFunctionalOwnership: caller is not the functionalOwner");
         _;
     }
 
