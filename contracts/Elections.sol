@@ -11,9 +11,10 @@ import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
 
-contract Elections is IElections, ContractRegistryAccessor {
+contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 	using SafeMath for uint256;
 
     uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;

@@ -301,7 +301,7 @@ describe('elections-high-level-flows', async () => {
             committee.push(v);
         }
         expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: committee.map(v => v.orbsAddress)
+            addrs: committee.map(v => v.address)
         });
 
         r = await d.elections.voteOut(committee[1].address, {from: committee[0].orbsAddress});

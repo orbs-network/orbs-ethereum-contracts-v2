@@ -1,6 +1,7 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import {Contract} from "../eth";
 import * as BN from "bn.js";
+import {OwnedContract} from "./base-contract";
 
 export interface BootstrapRewardsAssignedEvent {
     assignees: string[],
@@ -40,7 +41,7 @@ export interface StakingRewardsDistributedEvent {
 }
 
 
-export interface RewardsContract extends Contract {
+export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // staking rewards

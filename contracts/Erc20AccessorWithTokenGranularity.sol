@@ -1,6 +1,5 @@
 pragma solidity 0.5.16;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./spec_interfaces/ICommittee.sol";

@@ -1,7 +1,6 @@
 pragma solidity 0.5.16;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -9,8 +8,9 @@ import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
-contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity {
+contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership {
     using SafeMath for uint256;
     using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
 
@@ -40,22 +40,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     IERC20 erc20;
     uint256 lastAssignedAt;
 
-    address rewardsGovernor;
-
-    // TODO - add functionality similar to ownable (transfer governance, etc)
-    modifier onlyRewardsGovernor() {
-        require(msg.sender == rewardsGovernor, "caller is not the rewards governor");
-
-        _;
-    }
-
     modifier onlyCommitteeContract() {
         require(msg.sender == address(getCommitteeContract()), "caller is not the committee contract");
 
         _;
     }
 
-    constructor(IERC20 _erc20, IERC20 _bootstrapToken, address _rewardsGovernor) public {
+    constructor(IERC20 _erc20, IERC20 _bootstrapToken) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
@@ -63,17 +54,16 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         bootstrapToken = _bootstrapToken;
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastAssignedAt = now;
-        rewardsGovernor = _rewardsGovernor;
     }
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external {
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner {
         assignRewards();
         bootstrapAndStaking.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external {
+    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner {
         assignRewards();
         bootstrapAndStaking.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
@@ -146,7 +136,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyRewardsGovernor {
+    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner {
         assignRewards();
         BootstrapAndStaking memory pools = bootstrapAndStaking;
         pools.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);

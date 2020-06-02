@@ -1,12 +1,11 @@
 pragma solidity 0.5.16;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
-
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "./interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
-contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor {
+contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 
 	modifier onlyRegisteredValidator {
 		require(isRegistered(msg.sender), "Validator is not registered");

@@ -29,7 +29,7 @@ describe('staking-rewards-level-flows', async () => {
     const d = await Driver.new();
 
     /* top up staking rewards pool */
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(200000000000);
@@ -140,7 +140,7 @@ describe('staking-rewards-level-flows', async () => {
     const d = await Driver.new();
 
     /* top up staking rewards pool */
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(2000000000);
@@ -253,7 +253,7 @@ describe('staking-rewards-level-flows', async () => {
     const delegator = d.newParticipant();
 
     /* top up staking rewards pool */
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualRate = 12000;
     const poolAmount = fromTokenUnits(20000000);

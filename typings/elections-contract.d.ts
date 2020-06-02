@@ -1,8 +1,9 @@
 import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
+import {OwnedContract} from "./base-contract";
 
-export interface ElectionsContract extends Contract {
+export interface ElectionsContract extends OwnedContract {
   registerValidator( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
   notifyReadyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
