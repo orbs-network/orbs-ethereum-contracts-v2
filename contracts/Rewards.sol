@@ -92,36 +92,32 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
         BootstrapAndStaking memory pools = bootstrapAndStaking;
 
-        uint48[] memory bootstrapRewards = collectBootstrapRewards(committee, compliance, pools);
-        uint48[] memory fees = collectFees(committee, compliance);
+        (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap) = collectBootstrapRewards(committee, pools);
+        (uint48 generalValidatorFee, uint48 certifiedValidatorFee) = collectFees(committee, compliance);
         uint48[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
 
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
-            balance.bootstrapRewards = uint48(balance.bootstrapRewards.add(bootstrapRewards[i])); // todo may overflow
-            balance.fees = uint48(balance.fees.add(fees[i])); // todo may overflow
-            balance.stakingRewards = uint48(balance.stakingRewards.add(stakingRewards[i])); // todo may overflow
+
+            balance.bootstrapRewards += (compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
+            balance.fees += (compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
+            balance.stakingRewards += stakingRewards[i]; // todo may overflow
+
             balances[committee[i]] = balance;
         }
         emit StakingRewardsAssigned(committee, stakingRewards);
-        emit BootstrapRewardsAssigned(committee, bootstrapRewards);
-        emit FeesAssigned(committee, fees);
+        emit BootstrapRewardsAssigned(toUint256Granularity(generalValidatorBootstrap), toUint256Granularity(certifiedValidatorBootstrap));
+        emit FeesAssigned(toUint256Granularity(generalValidatorFee), toUint256Granularity(certifiedValidatorFee));
 
         lastAssignedAt = now;
     }
 
-    function collectBootstrapRewards(address[] memory committee, bool[] memory compliance, BootstrapAndStaking memory pools) private view returns (uint48[] memory assignedRewards){
-        assignedRewards = new uint48[](committee.length);
-
+    function collectBootstrapRewards(address[] memory committee, BootstrapAndStaking memory pools) private view returns (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap){
         if (committee.length > 0) {
             uint256 duration = now.sub(lastAssignedAt);
-            uint48 amountPerGeneralValidator = uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
-            uint48 amountPerCompliantValidator = uint48(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
-
-            for (uint i = 0; i < committee.length; i++) {
-                assignedRewards[i] = uint48(amountPerGeneralValidator + (compliance[i] ? amountPerCompliantValidator : 0)); // todo may overflow
-            }
+            generalValidatorBootstrap = uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            certifiedValidatorBootstrap = generalValidatorBootstrap + uint48(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
         }
     }
 
@@ -241,7 +237,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
 
-    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint48[] memory assignedFees){
+    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint48 generalValidatorFee, uint48 certifiedValidatorFee) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -282,12 +278,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             bucketsPayed++;
         }
 
-        assignedFees = new uint48[](committee.length);
-        assignFees(committee, compliance, generalFeePoolAmount, false, assignedFees);
-        assignFees(committee, compliance, complianceFeePoolAmount, true, assignedFees);
+        generalValidatorFee = divideFees(committee, compliance, generalFeePoolAmount, false);
+        certifiedValidatorFee = generalValidatorFee + divideFees(committee, compliance, complianceFeePoolAmount, true);
     }
 
-    function assignFees(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private {
+    function divideFees(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant) private returns (uint48 validatorFee) {
         uint n = committee.length;
         if (isCompliant)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
@@ -295,18 +290,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
                 if (compliance[i]) n++;
             }
         }
-        if (n == 0) return;
-
-        uint48 totalAssigned = 0;
-        uint48 curAmount = toUint48Granularity(amount.div(n));
-        for (uint i = 0; i < committee.length; i++) {
-            if (!isCompliant || compliance[i]) {
-                assignedFees[i] = uint48(assignedFees[i].add(curAmount)); // todo may overflow
-                totalAssigned = uint48(totalAssigned.add(curAmount));
-            }
+        if (n > 0) {
+            validatorFee = toUint48Granularity(amount.div(n));
         }
 
-        uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(totalAssigned)));
+        uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(validatorFee).mul(n)));
         if (remainder > 0) {
             fillFeeBucket(_bucketTime(now), remainder, isCompliant);
         }

@@ -25,7 +25,7 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe.only('fees-contract', async () => {
+describe('fees-contract', async () => {
 
   it('should distribute fees to validators in general and compliance committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
@@ -102,8 +102,7 @@ describe.only('fees-contract', async () => {
         }
       }
       const n = bn(compliant ? compliantMembers.length : committee.length);
-      const rewardsArr = committee.map(v => (!compliant || compliantMembers.includes(v)) ? fromTokenUnits(toTokenUnits(rewards.div(n))) : bn(0));
-      return rewardsArr.map(x => toTokenUnits(x));
+      return fromTokenUnits(toTokenUnits(rewards.div(n)))
     };
 
     if (complianceStartTime > generalStartTime) {
@@ -127,11 +126,11 @@ describe.only('fees-contract', async () => {
 
     // Calculate expected rewards from VC fees
 
-    const generalCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, committee, false);
-    const complianceCommitteeRewardsArr = calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, committee, true);
+    const generalValidatorRewards = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, committee, false);
+    const complianceValidatorRewards = generalValidatorRewards.add(calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, committee, true));
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      assignees: committee.map(v => v.address),
-      orbs_amounts: generalCommitteeRewardsArr.map((x, i) => x.add(complianceCommitteeRewardsArr[i]).toString())
+      generalValidatorAmount: generalValidatorRewards.toString(),
+      certifiedValidatorAmount: complianceValidatorRewards.toString()
     });
 
     const orbsBalances:BN[] = [];
@@ -142,8 +141,8 @@ describe.only('fees-contract', async () => {
 
     for (const v of committee) {
       const i = committee.indexOf(v);
-      const totalExpectedRewards = generalCommitteeRewardsArr[i].add(complianceCommitteeRewardsArr[i]);
-      const expectedBalance = fromTokenUnits(totalExpectedRewards).add(initialOrbsBalances[i]);
+      const totalExpectedRewards = compliantMembers.includes(v) ? complianceValidatorRewards : generalValidatorRewards;
+      const expectedBalance = totalExpectedRewards.add(initialOrbsBalances[i]);
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
