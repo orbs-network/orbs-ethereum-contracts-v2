@@ -6,7 +6,8 @@ import "../spec_interfaces/IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IRewards {
 
-    function assignRewards(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata compliance) external /* onlyElectionsContract */;
+    function assignRewards() external;
+    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata compliance) external /* onlyCommitteeContract */;
 
     // staking
 

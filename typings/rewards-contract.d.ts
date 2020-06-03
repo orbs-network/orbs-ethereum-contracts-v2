@@ -42,6 +42,8 @@ export interface StakingRewardsDistributedEvent {
 
 
 export interface RewardsContract extends OwnedContract {
+    assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
+
     // staking rewards
     distributeOrbsTokenStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;

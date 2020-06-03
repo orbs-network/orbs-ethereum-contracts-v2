@@ -40,8 +40,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     IERC20 erc20;
     uint256 lastAssignedAt;
 
-    modifier onlyElectionsContract() {
-        require(msg.sender == address(getElectionsContract()), "caller is not the elections");
+    modifier onlyCommitteeContract() {
+        require(msg.sender == address(getCommitteeContract()), "caller is not the committee contract");
 
         _;
     }
@@ -59,14 +59,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     // bootstrap rewards
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner {
-        (address[] memory generalCommittee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-        _assignRewards(generalCommittee, weights, compliance);
+        assignRewards();
         bootstrapAndStaking.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner {
-        (address[] memory generalCommittee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-        _assignRewards(generalCommittee, weights, compliance);
+        assignRewards();
         bootstrapAndStaking.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
@@ -82,11 +80,16 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].bootstrapRewards);
     }
 
-    function assignRewards(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyElectionsContract {
-        _assignRewards(committee, committeeWeights, compliance);
+    function assignRewards() public {
+        (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+        _assignRewardsToCommittee(committee, weights, compliance);
     }
 
-    function _assignRewards(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
+    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyCommitteeContract {
+        _assignRewardsToCommittee(committee, committeeWeights, compliance);
+    }
+
+    function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
         BootstrapAndStaking memory pools = bootstrapAndStaking;
 
         uint48[] memory bootstrapRewards = collectBootstrapRewards(committee, compliance, pools);
@@ -134,8 +137,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     // staking rewards
 
     function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner {
-        (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-        _assignRewards(committee, weights, compliance);
+        assignRewards();
         BootstrapAndStaking memory pools = bootstrapAndStaking;
         pools.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
         pools.annualCap = toUint48Granularity(annual_cap);
@@ -327,8 +329,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
 
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCompliant) private {
-        (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-        _assignRewards(committee, weights, compliance); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
+        assignRewards(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(fromTimestamp);
         uint256 _amount = amount;
