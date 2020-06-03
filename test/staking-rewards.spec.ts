@@ -129,7 +129,6 @@ describe('staking-rewards-level-flows', async () => {
         totalStakedAmount: totalOrbsRewardsArr[i]
       });
       expect(r).to.have.a.committeeChangedEvent({
-        orbsAddrs: validators.map(v => v.v.orbsAddress),
         addrs: validators.map(v => v.v.address),
         weights: validators.map((_v, _i) => (_i <= i) ? new BN(_v.stake).add(totalOrbsRewardsArr[_i]) : new BN(_v.stake))
       });
@@ -237,7 +236,6 @@ describe('staking-rewards-level-flows', async () => {
         totalStakedAmount: totalOrbsRewardsArr[i]
       });
       expect(r).to.have.a.committeeChangedEvent({
-        orbsAddrs: validators.map(v => v.v.orbsAddress),
         addrs: validators.map(v => v.v.address),
         weights: validators.map((_v, _i) => (_i <= i) ? new BN(_v.stake).add(totalOrbsRewardsArr[_i]) : new BN(_v.stake))
       });

@@ -4,8 +4,8 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface ICommittee {
-    event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] weights, bool[] compliance);
-	event StandbysChanged(address[] addrs, address[] orbsAddrs, uint256[] weights, bool[] compliance);
+    event CommitteeChanged(address[] addrs, uint256[] weights, bool[] compliance);
+	event StandbysChanged(address[] addrs, uint256[] weights, bool[] compliance);
 
     // No events
     // No external functions

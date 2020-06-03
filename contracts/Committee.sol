@@ -499,10 +499,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
-		emit StandbysChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights, compliance);
+		emit StandbysChanged(addrs, weights, compliance);
 	}
 
 	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
-		emit CommitteeChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights, compliance);
+		emit CommitteeChanged(addrs, weights, compliance);
 	}
 }

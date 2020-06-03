@@ -5,14 +5,12 @@ import {OwnedContract} from "./base-contract";
 
 export interface CommitteeChangedEvent {
     addrs: string[];
-    orbsAddrs: string[];
     weights: (number | BN)[];
     compliance: boolean[];
 }
 
 export interface StandbysChangedEvent {
     addrs: string[];
-    orbsAddrs: string[];
     weights: (number | BN)[];
     compliance: boolean[];
 }
