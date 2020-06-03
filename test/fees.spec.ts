@@ -25,7 +25,7 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe('fees-contract', async () => {
+describe.only('fees-contract', async () => {
 
   it('should distribute fees to validators in general and compliance committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
@@ -56,7 +56,7 @@ describe('fees-contract', async () => {
       const vcid = vcCreatedEvents(r)[0].vcid;
       let startTime = await txTimestamp(d.web3, r);
 
-      const feeBuckets = feesAddedToBucketEvents(r);
+      const feeBuckets = feesAddedToBucketEvents(r).filter(e => e.isCompliant == isCompliant);
 
       // all the payed rewards were added to a bucket
       const totalAdded = feeBuckets.reduce((t, l) => t.add(new BN(l.added)), new BN(0));
@@ -103,9 +103,6 @@ describe('fees-contract', async () => {
       }
       const n = bn(compliant ? compliantMembers.length : committee.length);
       const rewardsArr = committee.map(v => (!compliant || compliantMembers.includes(v)) ? fromTokenUnits(toTokenUnits(rewards.div(n))) : bn(0));
-      const remainder = rewards.sub(bnSum(rewardsArr));
-      const remainderWinnerIdx = endTime % committee.length;
-      rewardsArr[remainderWinnerIdx] = rewardsArr[remainderWinnerIdx].add(remainder);
       return rewardsArr.map(x => toTokenUnits(x));
     };
 

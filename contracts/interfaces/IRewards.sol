@@ -34,6 +34,7 @@ interface IRewards {
     // fees
 
     event FeesAssigned(address[] assignees, uint48[] orbs_amounts);
+    event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total, bool isCompliant);
     event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCompliant);
 
     /*

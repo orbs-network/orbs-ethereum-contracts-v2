@@ -20,6 +20,13 @@ export interface FeesAddedToBucketEvent {
     isCompliant: boolean
 }
 
+export interface FeesWithdrawnFromBucketEvent {
+    bucketId: string|BN,
+    withdrawen: string|BN,
+    total: string|BN,
+    isCompliant: boolean
+}
+
 export interface FeesAssignedEvent {
     assignees: string[],
     orbs_amounts: Array<string|BN>

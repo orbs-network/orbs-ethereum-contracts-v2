@@ -246,29 +246,35 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
         // Fee pool
-        uint _lastPayedAt = lastAssignedAt;
+        uint _lastAssignedAt = lastAssignedAt;
         uint bucketsPayed = 0;
         uint generalFeePoolAmount = 0;
         uint complianceFeePoolAmount = 0;
-        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastPayedAt < now) {
-            uint256 bucketStart = _bucketTime(_lastPayedAt);
+        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastAssignedAt < now) {
+            uint256 bucketStart = _bucketTime(_lastAssignedAt);
             uint256 bucketEnd = bucketStart.add(feeBucketTimePeriod);
             uint256 payUntil = Math.min(bucketEnd, now);
-            uint256 bucketDuration = payUntil.sub(_lastPayedAt);
-            uint256 remainingBucketTime = bucketEnd.sub(_lastPayedAt);
+            uint256 bucketDuration = payUntil.sub(_lastAssignedAt);
+            uint256 remainingBucketTime = bucketEnd.sub(_lastAssignedAt);
 
-            uint256 amount = generalFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
+            uint256 bucketTotal = generalFeePoolBuckets[bucketStart];
+            uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
             generalFeePoolAmount += amount;
-            generalFeePoolBuckets[bucketStart] = generalFeePoolBuckets[bucketStart].sub(amount);
+            bucketTotal = bucketTotal.sub(amount);
+            generalFeePoolBuckets[bucketStart] = bucketTotal;
+            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, false);
 
-            amount = compliantFeePoolBuckets[bucketStart] * bucketDuration / remainingBucketTime;
+            bucketTotal = compliantFeePoolBuckets[bucketStart];
+            amount = bucketTotal * bucketDuration / remainingBucketTime;
             complianceFeePoolAmount += amount;
-            compliantFeePoolBuckets[bucketStart] = compliantFeePoolBuckets[bucketStart].sub(amount);
+            bucketTotal = bucketTotal.sub(amount);
+            compliantFeePoolBuckets[bucketStart] = bucketTotal;
+            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, true);
 
-            _lastPayedAt = payUntil;
+            _lastAssignedAt = payUntil;
 
-            assert(_lastPayedAt <= bucketEnd);
-            if (_lastPayedAt == bucketEnd) {
+            assert(_lastAssignedAt <= bucketEnd);
+            if (_lastAssignedAt == bucketEnd) {
                 delete generalFeePoolBuckets[bucketStart];
                 delete compliantFeePoolBuckets[bucketStart];
             }
@@ -277,11 +283,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         assignedFees = new uint48[](committee.length);
-        assignAmountFixed(committee, compliance, generalFeePoolAmount, false, assignedFees);
-        assignAmountFixed(committee, compliance, complianceFeePoolAmount, true, assignedFees);
+        assignFees(committee, compliance, generalFeePoolAmount, false, assignedFees);
+        assignFees(committee, compliance, complianceFeePoolAmount, true, assignedFees);
     }
 
-    function assignAmountFixed(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private view {
+    function assignFees(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant, uint48[] memory assignedFees) private {
         uint n = committee.length;
         if (isCompliant)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
@@ -302,8 +308,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(totalAssigned)));
         if (remainder > 0) {
-            uint ind = now % committee.length;
-            assignedFees[ind] = uint48(assignedFees[ind].add(remainder)); // todo may overflow
+            fillFeeBucket(_bucketTime(now), remainder, isCompliant);
         }
     }
 
