@@ -125,7 +125,7 @@ describe('fees-contract', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
 
-    const assignFeesTxRes = await d.elections.assignRewards();
+    const assignFeesTxRes = await d.rewards.assignRewards();
     const endTime = await txTimestamp(d.web3, assignFeesTxRes);
 
     // Calculate expected rewards from VC fees

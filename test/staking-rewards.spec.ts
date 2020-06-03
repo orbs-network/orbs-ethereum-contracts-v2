@@ -67,7 +67,7 @@ describe('staking-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardTxRes = await d.elections.assignRewards();
+    const assignRewardTxRes = await d.rewards.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
@@ -179,7 +179,7 @@ describe('staking-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardTxRes = await d.elections.assignRewards();
+    const assignRewardTxRes = await d.rewards.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
@@ -263,7 +263,7 @@ describe('staking-rewards-level-flows', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-    await d.elections.assignRewards();
+    await d.rewards.assignRewards();
 
     // first fromBlock must be 0
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
