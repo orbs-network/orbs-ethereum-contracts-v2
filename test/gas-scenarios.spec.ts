@@ -9,7 +9,7 @@ import {
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
-import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
@@ -117,8 +117,8 @@ describe('gas usage scenarios', async () => {
             addrs: committee.map(v => v.address)
         });
 
-        await committee[0].unstake(BASE_STAKE.add(bn(committee.length)));
-        r = await committee[0].stake(BASE_STAKE.sub(bn(standbys.length + 1)));
+        await committee[0].unstake(BASE_STAKE.add(fromTokenUnits(committee.length)));
+        r = await committee[0].stake(BASE_STAKE.sub(fromTokenUnits(standbys.length + 1)));
         expect(r).to.have.a.committeeChangedEvent({
             addrs: committee.map(v => v.address)
         });
@@ -167,7 +167,7 @@ describe('gas usage scenarios', async () => {
     it("Standby sends ready-to-sync for first time and gets to top of standbys list", async () => {
         const {d, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE.add(bn(1)), true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
         d.resetGasRecording();
         let r = await v.notifyReadyToSync();
@@ -182,7 +182,7 @@ describe('gas usage scenarios', async () => {
     it("Standby sends ready-to-sync for second time", async () => {
         const {d, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE.add(bn(1)), true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
@@ -203,7 +203,7 @@ describe('gas usage scenarios', async () => {
     it("New validator sends ready-for-committee and immediately gets to top", async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE.add(bn(committee.length + 1)), true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         d.resetGasRecording();
         let r = await v.notifyReadyForCommittee();
@@ -220,7 +220,7 @@ describe('gas usage scenarios', async () => {
     it("Standby sends ready-for-committee and jumps to top of committee", async () => {
         const {d, committee, standbys} = await fullCommitteeAndStandbys();
 
-        const {v} = await d.newValidator(BASE_STAKE.add(bn(committee.length + 1)), true, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
@@ -383,10 +383,6 @@ describe('gas usage scenarios', async () => {
 
     it("Distribute rewards - all delegators delegated to same validator (batch size - 50)", async () => {
         await distributeRewardsScenario(50)
-    });
-
-    it("Distribute rewards - all delegators delegated to same validator (batch size - 200)", async () => {
-        await distributeRewardsScenario(200)
     });
 
     it("assigns rewards (1 month, initial balance == 0)", async () => {
