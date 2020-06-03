@@ -56,7 +56,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardsTxRes = await d.elections.assignRewards();
+    const assignRewardsTxRes = await d.rewards.assignRewards();
     const events = bootstrapRewardsAssignedEvents(assignRewardsTxRes);
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
