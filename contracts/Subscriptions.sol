@@ -18,7 +18,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         string tier;
         uint256 rate;
         uint expiresAt;
-        uint genRef;
+        uint256 genRefTime;
         address owner;
         string deploymentSubset;
         bool isCompliant;
@@ -63,7 +63,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         uint vcid = nextVcid++;
         VirtualChain memory vc = VirtualChain({
             expiresAt: block.timestamp,
-            genRef: block.number + 300,
+            genRefTime: now + (3 hours),
             owner: owner,
             tier: tier,
             rate: rate,
@@ -75,7 +75,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         emit VcCreated(vcid, owner);
 
         _extendSubscription(vcid, amount, owner);
-        return (vcid, vc.genRef);
+        return (vcid, vc.genRefTime);
     }
 
     function extendSubscription(uint256 vcid, uint256 amount, address payer) external {
@@ -101,7 +101,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         }
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
-        emit SubscriptionChanged(vcid, vc.genRef, vc.expiresAt, vc.tier, vc.deploymentSubset);
+        emit SubscriptionChanged(vcid, vc.genRefTime, vc.expiresAt, vc.tier, vc.deploymentSubset);
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 

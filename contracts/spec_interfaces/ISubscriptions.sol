@@ -4,7 +4,7 @@ import "./IContractRegistry.sol";
 
 /// @title Subscriptions contract interface
 interface ISubscriptions {
-    event SubscriptionChanged(uint256 vcid, uint256 genRef, uint256 expiresAt, string tier, string deploymentSubset);
+    event SubscriptionChanged(uint256 vcid, uint256 genRefTime, uint256 expiresAt, string tier, string deploymentSubset);
     event Payment(uint256 vcid, address by, uint256 amount, string tier, uint256 rate);
     event VcConfigRecordChanged(uint256 vcid, string key, string value);
     event SubscriberAdded(address subscriber);

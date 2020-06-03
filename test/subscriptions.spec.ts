@@ -31,13 +31,13 @@ describe('subscriptions-high-level-flows', async () => {
 
     const blockNumber = new BN(r.blockNumber);
     const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
-    const expectedGenRef = blockNumber.add(new BN('300'));
+    const expectedGenRefTime = blockTimestamp.add(bn(3*60*60));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
     let expectedExpiration = new BN(blockTimestamp).add(payedDurationInSeconds);
 
     expect(firstSubsc.vcid).to.exist;
-    expect(firstSubsc.genRef).to.be.bignumber.equal(expectedGenRef);
+    expect(firstSubsc.genRefTime).to.be.bignumber.equal(expectedGenRefTime);
     expect(firstSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(firstSubsc.tier).to.equal("defaultTier");
 
@@ -60,7 +60,7 @@ describe('subscriptions-high-level-flows', async () => {
     expectedExpiration = new BN(firstSubsc.expiresAt).add(extendedDurationInSeconds);
 
     expect(secondSubsc.vcid).to.equal(firstSubsc.vcid);
-    expect(secondSubsc.genRef).to.be.equal(firstSubsc.genRef);
+    expect(secondSubsc.genRefTime).to.be.equal(firstSubsc.genRefTime);
     expect(secondSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(secondSubsc.tier).to.equal("defaultTier");
 
@@ -92,13 +92,13 @@ describe('subscriptions-high-level-flows', async () => {
 
     const blockNumber = new BN(r.blockNumber);
     const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
-    const expectedGenRef = blockNumber.add(new BN('300'));
+    const expectedGenRef = blockTimestamp.add(bn(3*60*60));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
     let expectedExpiration = new BN(blockTimestamp).add(payedDurationInSeconds);
 
     expect(firstSubsc.vcid).to.exist;
-    expect(firstSubsc.genRef).to.be.bignumber.equal(expectedGenRef);
+    expect(firstSubsc.genRefTime).to.be.bignumber.equal(expectedGenRef);
     expect(firstSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(firstSubsc.tier).to.equal("defaultTier");
 
@@ -121,7 +121,7 @@ describe('subscriptions-high-level-flows', async () => {
     expectedExpiration = new BN(firstSubsc.expiresAt).add(extendedDurationInSeconds);
 
     expect(secondSubsc.vcid).to.equal(firstSubsc.vcid);
-    expect(secondSubsc.genRef).to.be.equal(firstSubsc.genRef);
+    expect(secondSubsc.genRefTime).to.be.equal(firstSubsc.genRefTime);
     expect(secondSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(secondSubsc.tier).to.equal("defaultTier");
 

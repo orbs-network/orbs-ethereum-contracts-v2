@@ -7,7 +7,7 @@ import {OwnedContract} from "./base-contract";
 
 export interface SubscriptionChangedEvent {
   vcid: number | BN;
-  genRef: number | BN;
+  genRefTime: number | BN;
   expiresAt: number | BN;
   tier: 'defaultTier';
   deploymentSubset: typeof DEPLOYMENT_SUBSET_MAIN | typeof DEPLOYMENT_SUBSET_CANARY;
