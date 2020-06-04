@@ -23,7 +23,7 @@ describe('compliance-contract', async () => {
         expect(defaultCompliance).to.equal(false);
 
         // Set
-        let r = await d.compliance.setValidatorCompliance(v1.address, true);
+        let r = await d.compliance.setValidatorCompliance(v1.address, true, {from: d.functionalOwner.address});
         expect(r).to.have.a.validatorComplianceUpdateEvent({
             validator: v1.address,
             isCompliant: true
@@ -34,7 +34,7 @@ describe('compliance-contract', async () => {
         expect(currentCompliance).to.equal(true);
 
         // Update
-        r = await d.compliance.setValidatorCompliance(v1.address, false);
+        r = await d.compliance.setValidatorCompliance(v1.address, false, {from: d.functionalOwner.address});
         expect(r).to.have.a.validatorComplianceUpdateEvent({
             validator: v1.address,
             isCompliant: false

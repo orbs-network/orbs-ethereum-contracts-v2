@@ -2,6 +2,7 @@ import {Contract} from "../eth";
 
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
+import {OwnedContract} from "./base-contract";
 
 export interface ValidatorRegisteredEvent {
     addr: string,
@@ -32,7 +33,7 @@ export interface ValidatorMetadataChangedEvent {
     newValue: string,
 }
 
-export interface ValidatorsRegistrationContract extends Contract {
+export interface ValidatorsRegistrationContract extends OwnedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     registerValidator(ip: string, orbsAddr: string, name: string, website: string, contact: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     unregisterValidator(params?: TransactionConfig): Promise<TransactionReceipt>;

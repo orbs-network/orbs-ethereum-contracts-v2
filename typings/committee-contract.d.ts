@@ -1,6 +1,7 @@
 import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
+import {OwnedContract} from "./base-contract";
 
 export interface CommitteeChangedEvent {
     addrs: string[];
@@ -16,7 +17,7 @@ export interface StandbysChangedEvent {
     compliance: boolean[];
 }
 
-export interface CommitteeContract extends Contract {
+export interface CommitteeContract extends OwnedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberNotReadyToSync(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;

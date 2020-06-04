@@ -18,6 +18,7 @@ import {ComplianceContract} from "../typings/compliance-contract";
 import {TransactionReceipt} from "web3-core";
 import {GasRecorder} from "../gas-recorder";
 import {stakedEvents} from "./event-parsing";
+import {OwnedContract} from "../typings/base-contract";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -94,7 +95,7 @@ export class Driver {
         const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
         const externalToken = await web3.deploy('TestingERC20', [], null, session);
         const erc20 = await web3.deploy('TestingERC20', [], null, session);
-        const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address, accounts[0]], null, session);
+        const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
         const delegations = await web3.deploy("Delegations", [], null, session);
         const elections = await web3.deploy("Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
@@ -116,6 +117,7 @@ export class Driver {
         await contractRegistry.set("_bootstrapToken", externalToken.address);
         await contractRegistry.set("_erc20", erc20.address);
 
+        await protocol.setContractRegistry(contractRegistry.address);
         await delegations.setContractRegistry(contractRegistry.address);
         await elections.setContractRegistry(contractRegistry.address);
         await rewards.setContractRegistry(contractRegistry.address);
@@ -125,6 +127,21 @@ export class Driver {
         await committee.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
+
+        await Promise.all([
+            elections,
+            delegations,
+            subscriptions,
+            rewards,
+            protocol,
+            compliance,
+            validatorsRegistration,
+            committee,
+            contractRegistry
+        ].map(async (c: OwnedContract) => {
+            await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
+            await c.claimFunctionalOwnership({from: accounts[1]})
+        }));
 
         return new Driver(web3, session,
             accounts,
@@ -175,10 +192,6 @@ export class Driver {
         );
     }
 
-    async newContractRegistry(governorAddr: string): Promise<ContractRegistryContract> {
-        return await this.web3.deploy('ContractRegistry', [governorAddr],{from: this.accounts[0]}, this.session) as ContractRegistryContract;
-    }
-
     async newStakingContract(delegationsAddr: string, erc20Addr: string): Promise<StakingContract> {
         return await Driver.newStakingContract(this.web3, delegationsAddr, erc20Addr, this.session);
     }
@@ -190,28 +203,34 @@ export class Driver {
         return staking;
     }
 
-    get contractsOwner() {
+    get contractsOwnerAddress() {
         return this.accounts[0];
     }
 
-    get contractsNonOwner() {
-        return this.accounts[1];
+    get contractsNonOwnerAddress() {
+        return this.accounts[2];
     }
 
-    get rewardsGovernor(): Participant {
-        return new Participant("rewards-governor", "rewards-governor-website", "rewards-governor-contact", this.accounts[0], this.accounts[0], this);
+    get migrationOwner(): Participant {
+        return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[0], this.accounts[0], this);
+    }
+
+    get functionalOwner(): Participant {
+        return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[1], this.accounts[1], this);
     }
 
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
         const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.erc20.address, tier, monthlyRate], null, this.session);
         await subscriber.setContractRegistry(this.contractRegistry.address);
-        await this.subscriptions.addSubscriber(subscriber.address);
+        await subscriber.transferFunctionalOwnership(this.functionalOwner.address);
+        await subscriber.claimFunctionalOwnership({from: this.functionalOwner.address});
+        await this.subscriptions.addSubscriber(subscriber.address, {from: this.functionalOwner.address});
         return subscriber;
     }
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
         name = name || `Validator${this.participants.length}`;
-        const RESERVED_ACCOUNTS = 2;
+        const RESERVED_ACCOUNTS = 3;
         const v = new Participant(
             name,
             `${name}-website`,
@@ -256,14 +275,7 @@ export class Driver {
 export class Participant {
     // TODO Consider implementing validator methods in a child class.
     public ip: string;
-    private erc20: ERC20Contract;
-    private externalToken: ERC20Contract;
-    private staking: StakingContract;
-    private elections: ElectionsContract;
-    private delegations: DelegationsContract;
-    private validatorsRegistration: ValidatorsRegistrationContract;
-    private compliance: ComplianceContract;
-    private gasRecorder: GasRecorder;
+    private driver: Driver;
 
     constructor(public name: string,
                 public website: string,
@@ -273,18 +285,11 @@ export class Participant {
                 driver: Driver) {
         this.name = name;
         this.ip = address.substring(0, 10).toLowerCase(); // random IP using the 4 first bytes from address string TODO simplify
-        this.erc20 = driver.erc20;
-        this.externalToken = driver.externalToken;
-        this.staking = driver.staking;
-        this.elections = driver.elections;
-        this.delegations = driver.delegations;
-        this.validatorsRegistration = driver.validatorsRegistration;
-        this.compliance = driver.compliance;
-        this.gasRecorder = driver.session.gasRecorder;
+        this.driver = driver;
     }
 
     async stake(amount: number|BN, staking?: StakingContract) : Promise<TransactionReceipt> {
-        staking = staking || this.staking;
+        staking = staking || this.driver.staking;
         await this.assignAndApproveOrbs(amount, staking.address);
         return staking.stake(amount, {from: this.address});
     }
@@ -295,43 +300,43 @@ export class Participant {
     }
 
     async assignAndApproveOrbs(amount: number|BN, to: string) {
-        return this.assignAndApprove(amount, to, this.erc20);
+        return this.assignAndApprove(amount, to, this.driver.erc20);
     }
 
     async assignAndApproveExternalToken(amount: number|BN, to: string) {
-        return this.assignAndApprove(amount, to, this.externalToken);
+        return this.assignAndApprove(amount, to, this.driver.externalToken);
     }
 
     async unstake(amount: number|BN) {
-        return this.staking.unstake(amount, {from: this.address});
+        return this.driver.staking.unstake(amount, {from: this.address});
     }
 
     async restake() {
-        return this.staking.restake({from: this.address});
+        return this.driver.staking.restake({from: this.address});
     }
 
     async delegate(to: Participant) {
-        return this.delegations.delegate(to.address, {from: this.address});
+        return this.driver.delegations.delegate(to.address, {from: this.address});
     }
 
     async registerAsValidator() {
-        return await this.validatorsRegistration.registerValidator(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
+        return await this.driver.validatorsRegistration.registerValidator(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
     }
 
     async notifyReadyForCommittee() {
-        return await this.elections.notifyReadyForCommittee({from: this.orbsAddress});
+        return await this.driver.elections.notifyReadyForCommittee({from: this.orbsAddress});
     }
 
     async notifyReadyToSync() {
-        return await this.elections.notifyReadyToSync({from: this.orbsAddress});
+        return await this.driver.elections.notifyReadyToSync({from: this.orbsAddress});
     }
 
     async becomeCompliant() {
-        return await this.compliance.setValidatorCompliance(this.address, true);
+        return await this.driver.compliance.setValidatorCompliance(this.address, true, {from: this.driver.functionalOwner.address});
     }
 
     async becomeNotCompliant() {
-        return await this.compliance.setValidatorCompliance(this.address, false);
+        return await this.driver.compliance.setValidatorCompliance(this.address, false, {from: this.driver.functionalOwner.address});
     }
 
     async becomeValidator(stake: number|BN, compliant: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
@@ -350,11 +355,11 @@ export class Participant {
     }
 
     async unregisterAsValidator() {
-        return await this.validatorsRegistration.unregisterValidator({from: this.address});
+        return await this.driver.validatorsRegistration.unregisterValidator({from: this.address});
     }
 
     gasUsed(): number {
-        return this.gasRecorder.gasUsedBy(this.address) + this.gasRecorder.gasUsedBy(this.orbsAddress);
+        return this.driver.session.gasRecorder.gasUsedBy(this.address) + this.driver.session.gasRecorder.gasUsedBy(this.orbsAddress);
     }
 
 }

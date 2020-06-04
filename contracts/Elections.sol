@@ -11,9 +11,10 @@ import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
 
-contract Elections is IElections, ContractRegistryAccessor {
+contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 	using SafeMath for uint256;
 
     uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;
@@ -76,26 +77,17 @@ contract Elections is IElections, ContractRegistryAccessor {
 	/// @dev Called by: validator registration contract
 	/// Notifies on a validator compliance change
 	function validatorComplianceChanged(address addr, bool isCompliant) external {
-		(bool committeeChanged,) = getCommitteeContract().memberComplianceChange(addr, isCompliant);
-		if (committeeChanged) {
-			assignRewards();
-		}
+		getCommitteeContract().memberComplianceChange(addr, isCompliant);
 	}
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getCommitteeContract().memberReadyToSync(sender, true);
-		if (committeeChanged) {
-			assignRewards();
-		}
+		getCommitteeContract().memberReadyToSync(sender, true);
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		(bool committeeChanged,) = getCommitteeContract().memberReadyToSync(sender, false);
-		if (committeeChanged) {
-			assignRewards();
-		}
+		getCommitteeContract().memberReadyToSync(sender, false);
 	}
 
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract external {
@@ -182,10 +174,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
 			emit VotedOutOfCommittee(addr);
-			(bool committeeChanged,) = getCommitteeContract().memberNotReadyToSync(addr);
-			if (committeeChanged) {
-				assignRewards();
-			}
+			getCommitteeContract().memberNotReadyToSync(addr);
 		}
 	}
 
@@ -197,11 +186,6 @@ contract Elections is IElections, ContractRegistryAccessor {
         _setBanningVotes(msg.sender, validators);
 		emit BanningVote(msg.sender, validators);
 	}
-
-    function assignRewards() public { // todo - committee contract can return the committee earlier, save an extra call to committee contract
-		(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-        getRewardsContract().assignRewards(committee, committeeWeights, compliance);
-    }
 
 	function getTotalGovernanceStake() external view returns (uint256) {
 		return totalGovernanceStake;
@@ -348,10 +332,7 @@ contract Elections is IElections, ContractRegistryAccessor {
 	function _applyDelegatedStake(address addr, uint256 newUncappedStake, uint256 _totalGovernanceStake) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
 		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), _totalGovernanceStake);
 
-		(bool committeeChanged,) = getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
-		if (committeeChanged) {
-			assignRewards();
-		}
+		getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
 	}
 
 	function getCommitteeEffectiveStake(address v) private view returns (uint256) { // TODO reduce number of calls to other contracts
@@ -382,16 +363,10 @@ contract Elections is IElections, ContractRegistryAccessor {
 	}
 
 	function removeMemberFromCommittees(address addr) private {
-		(bool committeeChanged,) = getCommitteeContract().removeMember(addr);
-		if (committeeChanged) {
-			assignRewards();
-		}
+		getCommitteeContract().removeMember(addr);
 	}
 
 	function addMemberToCommittees(address addr) private {
-		(bool committeeChanged,) = getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr), getComplianceContract().isValidatorCompliant(addr));
-		if (committeeChanged) {
-			assignRewards();
-		}
+		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr), getComplianceContract().isValidatorCompliant(addr));
 	}
 }

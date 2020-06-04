@@ -1,6 +1,7 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import {Contract} from "../eth";
 import * as BN from "bn.js";
+import {OwnedContract} from "./base-contract";
 
 export interface BootstrapRewardsAssignedEvent {
     assignees: string[],
@@ -40,7 +41,9 @@ export interface StakingRewardsDistributedEvent {
 }
 
 
-export interface RewardsContract extends Contract {
+export interface RewardsContract extends OwnedContract {
+    assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
+
     // staking rewards
     distributeOrbsTokenStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;

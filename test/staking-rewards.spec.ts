@@ -29,7 +29,7 @@ describe('staking-rewards-level-flows', async () => {
     const d = await Driver.new();
 
     /* top up staking rewards pool */
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(200000000000);
@@ -67,7 +67,7 @@ describe('staking-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardTxRes = await d.elections.assignRewards();
+    const assignRewardTxRes = await d.rewards.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
@@ -140,7 +140,7 @@ describe('staking-rewards-level-flows', async () => {
     const d = await Driver.new();
 
     /* top up staking rewards pool */
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(2000000000);
@@ -180,7 +180,7 @@ describe('staking-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardTxRes = await d.elections.assignRewards();
+    const assignRewardTxRes = await d.rewards.assignRewards();
     const endTime = await txTimestamp(d.web3, assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
@@ -253,7 +253,7 @@ describe('staking-rewards-level-flows', async () => {
     const delegator = d.newParticipant();
 
     /* top up staking rewards pool */
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualRate = 12000;
     const poolAmount = fromTokenUnits(20000000);
@@ -265,7 +265,7 @@ describe('staking-rewards-level-flows', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-    await d.elections.assignRewards();
+    await d.rewards.assignRewards();
 
     // first fromBlock must be 0
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(

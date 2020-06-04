@@ -1,13 +1,13 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/ICommittee.sol";
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "./spec_interfaces/IValidatorsRegistration.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
+import "./WithClaimableFunctionalOwnership.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, ContractRegistryAccessor {
+contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
 	address[] participantAddresses;
 
 	struct MemberData { // TODO can be reduced to 1 state entry
@@ -504,5 +504,6 @@ contract Committee is ICommittee, ContractRegistryAccessor {
 
 	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
 		emit CommitteeChanged(addrs, getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs), weights, compliance);
+		getRewardsContract().assignRewardsToCommittee(addrs, weights, compliance);
 	}
 }

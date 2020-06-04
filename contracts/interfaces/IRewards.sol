@@ -6,7 +6,8 @@ import "../spec_interfaces/IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IRewards {
 
-    function assignRewards(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata compliance) external /* onlyElectionsContract */;
+    function assignRewards() external;
+    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata compliance) external /* onlyCommitteeContract */;
 
     // staking
 
@@ -27,7 +28,7 @@ interface IRewards {
     */
 
     /// @dev Assigns rewards and sets a new monthly rate for the pro-rata pool.
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyRewardsGovernor */;
+    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyFunctionalOwner */;
 
 
     // fees
@@ -80,10 +81,10 @@ interface IRewards {
      */
 
     /// @dev Assigns rewards and sets a new monthly rate for the geenral commitee bootstrap.
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external;
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
 
     /// @dev Assigns rewards and sets a new monthly rate for the compliance commitee bootstrap.
-    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external;
+    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
 
 
     /*
@@ -91,7 +92,7 @@ interface IRewards {
      */
 
     /// @dev Updates the address of the contract registry
-    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyOwner */;
+    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
 
 }

@@ -31,7 +31,7 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     /* top up bootstrap reward  pool */
 
-    const g = d.rewardsGovernor;
+    const g = d.functionalOwner;
 
     const annualAmountGeneral = fromTokenUnits(10000000);
     const annualAmountCompliance = fromTokenUnits(20000000);
@@ -56,7 +56,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
-    const assignRewardsTxRes = await d.elections.assignRewards();
+    const assignRewardsTxRes = await d.rewards.assignRewards();
     const events = bootstrapRewardsAssignedEvents(assignRewardsTxRes);
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
