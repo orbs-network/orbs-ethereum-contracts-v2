@@ -33,6 +33,7 @@ export type DriverOptions = {
     readyToSyncTimeout: number;
     banningThreshold: number;
     web3Provider : () => Web3;
+    contractRegistryAddress?: string;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
@@ -46,6 +47,8 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
 };
 
 export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'rewards';
+
+export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
 export class Driver {
     private static web3DriversCache = new WeakMap<DriverOptions['web3Provider'], Web3Driver>();
@@ -70,24 +73,34 @@ export class Driver {
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
-        const {
-            maxCommitteeSize, maxStandbys,
-            maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold, web3Provider,
-            readyToSyncTimeout
-        } = Object.assign({}, defaultDriverOptions, options);
+        const { web3Provider, contractRegistryAddress } = Object.assign({}, defaultDriverOptions, options);
+
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
         const session = new Web3Session();
         const accounts = await web3.eth.getAccounts();
 
-        const contractRegistry = await web3.deploy( 'ContractRegistry',[accounts[0]], null, session);
-        const externalToken = await web3.deploy( 'TestingERC20', [], null, session);
-        const erc20 = await web3.deploy( 'TestingERC20', [], null, session);
-        const rewards = await web3.deploy( 'Rewards', [erc20.address, externalToken.address], null, session);
-        const delegations = await web3.deploy( "Delegations", [], null, session);
-        const elections = await web3.deploy( "Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
+        if (contractRegistryAddress) {
+            return await this.withExistingContracts(web3, contractRegistryAddress, session, accounts);
+        } else {
+            return await this.withFreshContracts(web3, accounts, session, options);
+        }
+    }
+
+    private static async withFreshContracts(web3, accounts, session, options: Partial<DriverOptions> = {}) {
+        const {
+            maxCommitteeSize, maxStandbys,
+            maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold,
+            readyToSyncTimeout
+        } = Object.assign({}, defaultDriverOptions, options);
+        const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
+        const externalToken = await web3.deploy('TestingERC20', [], null, session);
+        const erc20 = await web3.deploy('TestingERC20', [], null, session);
+        const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
+        const delegations = await web3.deploy("Delegations", [], null, session);
+        const elections = await web3.deploy("Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
-        const subscriptions = await web3.deploy( 'Subscriptions', [erc20.address] , null, session);
+        const subscriptions = await web3.deploy('Subscriptions', [erc20.address], null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
         const committee = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys, readyToSyncTimeout], null, session);
@@ -102,6 +115,8 @@ export class Driver {
         await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
         await contractRegistry.set("committee", committee.address);
+        await contractRegistry.set("_bootstrapToken", externalToken.address);
+        await contractRegistry.set("_erc20", erc20.address);
 
         await protocol.setContractRegistry(contractRegistry.address);
         await delegations.setContractRegistry(contractRegistry.address);
@@ -128,6 +143,38 @@ export class Driver {
             await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})
         }));
+
+        return new Driver(web3, session,
+            accounts,
+            elections,
+            erc20,
+            externalToken,
+            staking,
+            delegations,
+            subscriptions,
+            rewards,
+            protocol,
+            compliance,
+            validatorsRegistration,
+            committee,
+            contractRegistry
+        );
+    }
+
+    private static async withExistingContracts(web3, preExistingContractRegistryAddress, session, accounts) {
+        const contractRegistry = await web3.getExisting('ContractRegistry', preExistingContractRegistryAddress, session);
+
+        const rewards = await web3.getExisting('Rewards', await contractRegistry.get('rewards'), session);
+        const externalToken = await web3.getExisting('TestingERC20', await contractRegistry.get('_bootstrapToken'), session);
+        const erc20 = await web3.getExisting('TestingERC20', await contractRegistry.get('_erc20'), session);
+        const delegations = await web3.getExisting('Delegations', await contractRegistry.get('delegations'), session);
+        const elections = await web3.getExisting('Elections', await contractRegistry.get('elections'), session);
+        const staking = await web3.getExisting('StakingContract', await contractRegistry.get('staking'), session);
+        const subscriptions = await web3.getExisting('Subscriptions', await contractRegistry.get('subscriptions'), session);
+        const protocol = await web3.getExisting('Protocol', await contractRegistry.get('protocol'), session);
+        const compliance = await web3.getExisting('Compliance', await contractRegistry.get('compliance'), session);
+        const committee = await web3.getExisting('Committee', await contractRegistry.get('committee'), session);
+        const validatorsRegistration = await web3.getExisting('ValidatorsRegistration', await contractRegistry.get('validatorsRegistration'), session);
 
         return new Driver(web3, session,
             accounts,
