@@ -85,7 +85,7 @@ describe('staking-rewards-level-flows', async () => {
 
     expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
       assignees: validators.map(v => v.v.address),
-      amounts: totalOrbsRewardsArr.map(x => toTokenUnits(x))
+      amounts: totalOrbsRewardsArr
     });
 
     const orbsBalances:BN[] = [];
@@ -203,7 +203,7 @@ describe('staking-rewards-level-flows', async () => {
 
     expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
       assignees: validators.map(v => v.v.address),
-      amounts: totalOrbsRewardsArr.map(x => toTokenUnits(x))
+      amounts: totalOrbsRewardsArr
     });
 
     for (const v of validators) {

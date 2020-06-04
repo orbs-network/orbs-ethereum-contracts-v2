@@ -42,7 +42,7 @@ export const subscriptionChangedEvents = (txResult, contractAddress?: string): S
 export const paymentEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)", contractAddress);
 export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, rewards, "FeesAddedToBucket(uint256,uint256,uint256,bool)", contractAddress);
 export const feesWithdrawnFromBucketEvents = (txResult, contractAddress?: string): FeesWithdrawnFromBucketEvent[] => parseLogs(txResult, rewards, "FeesWithdrawnToBucket(uint256,uint256,uint256,bool)", contractAddress);
-export const stakingRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsAssigned(address[],uint48[])", contractAddress);
+export const stakingRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsAssigned(address[],uint256[])", contractAddress);
 export const stakingRewardsDistributed = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsDistributed(address,uint256,uint256,uint256,uint256,address[],uint256[])", contractAddress);
 export const feesAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "FeesAssigned(uint256,uint256)", contractAddress);
 export const bootstrapRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "BootstrapRewardsAssigned(uint256,uint256)", contractAddress);

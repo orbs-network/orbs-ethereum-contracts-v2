@@ -94,7 +94,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap) = collectBootstrapRewards(committee, pools);
         (uint48 generalValidatorFee, uint48 certifiedValidatorFee) = collectFees(committee, compliance);
-        uint48[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
+        uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
 
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
@@ -102,7 +102,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
             balance.bootstrapRewards += (compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
             balance.fees += (compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
-            balance.stakingRewards += stakingRewards[i]; // todo may overflow
+            balance.stakingRewards += toUint48Granularity(stakingRewards[i]); // todo may overflow
 
             balances[committee[i]] = balance;
         }
@@ -154,12 +154,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return lastAssignedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private view returns (uint48[] memory assignedRewards) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private view returns (uint256[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-        assignedRewards = new uint48[](committee.length);
+        assignedRewards = new uint256[](committee.length);
 
-        uint256 totalAssigned = 0;
         uint256 totalWeight = 0;
         for (uint i = 0; i < committee.length; i++) {
             totalWeight = totalWeight.add(weights[i]);
@@ -173,8 +172,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             for (uint i = 0; i < committee.length; i++) {
                 curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).div(100000)); // todo may overflow
                 curAmount = uint48(uint(curAmount).mul(duration).div(365 days));
-                assignedRewards[i] = curAmount;
-                totalAssigned = totalAssigned.add(curAmount);
+                assignedRewards[i] = toUint256Granularity(curAmount);
             }
         }
     }
