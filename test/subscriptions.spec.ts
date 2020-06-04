@@ -1,7 +1,7 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {DEFAULT_GENESIS_REF_TIME_DELAY, Driver, expectRejected, ZERO_ADDR} from "./driver";
+import {Driver, expectRejected, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
 import {bn, txTimestamp} from "./helpers";
@@ -29,9 +29,10 @@ describe('subscriptions-high-level-flows', async () => {
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
 
+    const genesisRefTimeDelay = await d.subscriptions.getGenesisRefTimeDelay();
     const blockNumber = new BN(r.blockNumber);
     const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
-    const expectedGenRefTime = blockTimestamp.add(bn(DEFAULT_GENESIS_REF_TIME_DELAY));
+    const expectedGenRefTime = blockTimestamp.add(bn(genesisRefTimeDelay));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
     let expectedExpiration = new BN(blockTimestamp).add(payedDurationInSeconds);

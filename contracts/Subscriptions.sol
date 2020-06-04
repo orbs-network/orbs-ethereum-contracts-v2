@@ -110,4 +110,8 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner {
         genesisRefTimeDelay = newGenesisRefTimeDelay;
     }
+
+    function getGenesisRefTimeDelay() external view returns (uint) {
+        return genesisRefTimeDelay;
+    }
 }

@@ -32,6 +32,9 @@ interface ISubscriptions {
     /// @dev Transfers VC ownership to a new owner (can only be called by the current owner)
     function setVcOwner(uint256 vcid, address owner) external /* onlyVcOwner */;
 
+    /// @dev Returns the genesis ref time delay
+    function getGenesisRefTimeDelay() external view returns (uint256);
+
     /*
      *   Governance methods
      */

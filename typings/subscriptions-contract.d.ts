@@ -45,4 +45,5 @@ export interface SubscriptionsContract extends OwnedContract {
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcOwner(vcid: number|BN, owner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGenesisRefTimeDelay(genRefTimeDelay: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  getGenesisRefTimeDelay(params?: TransactionConfig): Promise<string>;
 }
