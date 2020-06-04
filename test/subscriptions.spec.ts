@@ -1,10 +1,10 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, expectRejected, ZERO_ADDR} from "./driver";
+import {DEFAULT_GENESIS_REF_TIME_DELAY, Driver, expectRejected, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
-import {bn} from "./helpers";
+import {bn, txTimestamp} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
@@ -31,7 +31,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     const blockNumber = new BN(r.blockNumber);
     const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
-    const expectedGenRefTime = blockTimestamp.add(bn(3*60*60));
+    const expectedGenRefTime = blockTimestamp.add(bn(DEFAULT_GENESIS_REF_TIME_DELAY));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
     let expectedExpiration = new BN(blockTimestamp).add(payedDurationInSeconds);
@@ -258,5 +258,24 @@ describe('subscriptions-high-level-flows', async () => {
     });
 
   });
+
+  it('allows only the functional owner to set default genesis ref time delay', async () => {
+    const d = await Driver.new();
+
+    const newDelay = 4*60*60;
+    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}));
+    await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+
+    const subs = await d.newSubscriber("tier", 1);
+
+    const owner = d.newParticipant();
+
+    const amount = 10;
+    await owner.assignAndApproveOrbs(amount, subs.address);
+    let r = await subs.createVC(amount, false, "main", {from: owner.address});
+    expect(r).to.have.a.subscriptionChangedEvent({
+      genRefTime: bn(await txTimestamp(d.web3, r) + newDelay)
+    });
+  })
 
 });

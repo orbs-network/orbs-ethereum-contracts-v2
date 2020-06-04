@@ -39,6 +39,9 @@ interface ISubscriptions {
     /// @dev Called by the owner to authorize a subscriber (plan)
     function addSubscriber(address addr) external /* onlyFunctionalOwner */;
 
+    /// @dev Called by the owner to set the genesis ref time delay
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalOwner */;
+
     /// @dev Updates the address of the contract registry
     function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 

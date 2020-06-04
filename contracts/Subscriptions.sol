@@ -30,6 +30,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     mapping (uint => VirtualChain) virtualChains;
 
     uint nextVcid;
+    uint genesisRefTimeDelay;
 
     IERC20 erc20;
 
@@ -37,6 +38,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         nextVcid = 1000000;
+        genesisRefTimeDelay = 3 hours;
         erc20 = _erc20;
     }
 
@@ -63,7 +65,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         uint vcid = nextVcid++;
         VirtualChain memory vc = VirtualChain({
             expiresAt: block.timestamp,
-            genRefTime: now + (3 hours),
+            genRefTime: now + genesisRefTimeDelay,
             owner: owner,
             tier: tier,
             rate: rate,
@@ -105,4 +107,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner {
+        genesisRefTimeDelay = newGenesisRefTimeDelay;
+    }
 }

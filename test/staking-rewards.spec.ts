@@ -4,7 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, expectRejected} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 
@@ -12,10 +12,6 @@ chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
 const YEAR_IN_SECONDS = 365*24*60*60;
-
-async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
-  return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
-}
 
 const expect = chai.expect;
 

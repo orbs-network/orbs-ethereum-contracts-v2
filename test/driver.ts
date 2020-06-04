@@ -23,6 +23,7 @@ import {OwnedContract} from "../typings/base-contract";
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
 export const DEPLOYMENT_SUBSET_CANARY = "canary";
+export const DEFAULT_GENESIS_REF_TIME_DELAY = 3*60*60;
 
 export type DriverOptions = {
     maxCommitteeSize: number;
