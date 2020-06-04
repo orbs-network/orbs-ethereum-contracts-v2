@@ -5,7 +5,6 @@ import { SubscriptionsContract } from "./subscriptions-contract";
 import { ProtocolContract } from "./protocol-contract";
 import { StakingContract } from "./staking-contract";
 import { MonthlySubscriptionPlanContract } from "./monthly-subscription-plan-contract";
-import { Contract } from "../eth";
 import { ValidatorsRegistrationContract } from "./validator-registration-contract";
 import { CommitteeContract } from "./committee-contract";
 import { ComplianceContract } from "./compliance-contract";
