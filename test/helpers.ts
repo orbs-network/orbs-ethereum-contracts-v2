@@ -3,6 +3,7 @@ import BN from "bn.js";
 import * as _ from "lodash";
 import { Web3Driver } from "../eth";
 import {Driver} from "./driver";
+import {TransactionReceipt} from "web3-core";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
     for (let i = 0; i < n; i++) {
@@ -56,6 +57,10 @@ export async function getTopBlockTimestamp(d: Driver) : Promise<number> {
                     err ? reject(err): resolve(block.timestamp)
             )
     );
+}
+
+export async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
+    return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
 }
 
 export function fromTokenUnits(n: (number|BN)): BN {

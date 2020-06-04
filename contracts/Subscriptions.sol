@@ -18,7 +18,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         string tier;
         uint256 rate;
         uint expiresAt;
-        uint genRef;
+        uint256 genRefTime;
         address owner;
         string deploymentSubset;
         bool isCompliant;
@@ -30,6 +30,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     mapping (uint => VirtualChain) virtualChains;
 
     uint nextVcid;
+    uint genesisRefTimeDelay;
 
     IERC20 erc20;
 
@@ -37,6 +38,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         nextVcid = 1000000;
+        genesisRefTimeDelay = 3 hours;
         erc20 = _erc20;
     }
 
@@ -63,7 +65,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         uint vcid = nextVcid++;
         VirtualChain memory vc = VirtualChain({
             expiresAt: block.timestamp,
-            genRef: block.number + 300,
+            genRefTime: now + genesisRefTimeDelay,
             owner: owner,
             tier: tier,
             rate: rate,
@@ -75,7 +77,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         emit VcCreated(vcid, owner);
 
         _extendSubscription(vcid, amount, owner);
-        return (vcid, vc.genRef);
+        return (vcid, vc.genRefTime);
     }
 
     function extendSubscription(uint256 vcid, uint256 amount, address payer) external {
@@ -101,8 +103,15 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         }
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
-        emit SubscriptionChanged(vcid, vc.genRef, vc.expiresAt, vc.tier, vc.deploymentSubset);
+        emit SubscriptionChanged(vcid, vc.genRefTime, vc.expiresAt, vc.tier, vc.deploymentSubset);
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner {
+        genesisRefTimeDelay = newGenesisRefTimeDelay;
+    }
+
+    function getGenesisRefTimeDelay() external view returns (uint) {
+        return genesisRefTimeDelay;
+    }
 }

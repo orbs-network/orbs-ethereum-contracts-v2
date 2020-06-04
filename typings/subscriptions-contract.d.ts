@@ -7,7 +7,7 @@ import {OwnedContract} from "./base-contract";
 
 export interface SubscriptionChangedEvent {
   vcid: number | BN;
-  genRef: number | BN;
+  genRefTime: number | BN;
   expiresAt: number | BN;
   tier: 'defaultTier';
   deploymentSubset: typeof DEPLOYMENT_SUBSET_MAIN | typeof DEPLOYMENT_SUBSET_CANARY;
@@ -44,4 +44,6 @@ export interface SubscriptionsContract extends OwnedContract {
   getVcConfigRecord(vcid: number|BN, key: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcOwner(vcid: number|BN, owner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setGenesisRefTimeDelay(genRefTimeDelay: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  getGenesisRefTimeDelay(params?: TransactionConfig): Promise<string>;
 }
