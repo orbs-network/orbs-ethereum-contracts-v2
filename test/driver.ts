@@ -33,7 +33,7 @@ export type DriverOptions = {
     readyToSyncTimeout: number;
     banningThreshold: number;
     web3Provider : () => Web3;
-    contractRegistryAddress: string | undefined;
+    contractRegistryAddress?: string;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
@@ -44,7 +44,6 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     readyToSyncTimeout: 7*24*60*60,
     banningThreshold : 80,
     web3Provider: defaultWeb3Provider,
-    contractRegistryAddress: undefined,
 };
 
 export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'rewards' | '_bootstrapToken' | '_erc20';
