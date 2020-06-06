@@ -10,12 +10,13 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
+import "./Lockable.sol";
 
-contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
+contract ContractRegistryAccessor is Lockable {
 
     IContractRegistry contractRegistry;
 
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner {
+    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner onlyWhenUnlocked {
         require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
         contractRegistry = _contractRegistry;
     }

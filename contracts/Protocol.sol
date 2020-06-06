@@ -24,7 +24,7 @@ contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctiona
         (, currentVersion) = checkPrevUpgrades(deploymentSubset);
     }
 
-    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyFunctionalOwner {
+    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyFunctionalOwner onlyWhenUnlocked {
         require(!deploymentSubsets[deploymentSubset].exists, "deployment subset already exists");
 
         deploymentSubsets[deploymentSubset].currentVersion = initialProtocolVersion;
@@ -35,7 +35,7 @@ contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctiona
         emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now); // TODO different event?
     }
 
-    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyFunctionalOwner {
+    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyFunctionalOwner onlyWhenUnlocked {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
         require(fromTimestamp > now, "a protocol update can only be scheduled for the future");
 

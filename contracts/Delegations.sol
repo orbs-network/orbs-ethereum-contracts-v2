@@ -30,7 +30,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	constructor() public {
 	}
 
-	function delegate(address to) external {
+	function delegate(address to) external onlyWhenUnlocked {
 		address prevDelegate = getDelegation(msg.sender);
 
 		require(to != address(0), "cannot delegate to a zero address");
@@ -73,7 +73,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		}
 	}
 
-	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract {
+	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract onlyWhenUnlocked {
 		_stakeChange(_stakeOwner, _amount, _sign);
 		emitDelegatedStakeChanged(getDelegation(_stakeOwner), _stakeOwner, _updatedStake);
 	}
@@ -113,7 +113,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	// TODO add tests to equivalence of batched and non batched notifications
-	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract {
+	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract onlyWhenUnlocked {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
@@ -133,7 +133,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		return (d == address(0)) ? addr : d;
 	}
 
-	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {}
+	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract onlyWhenUnlocked {}
 
 	struct ProcessSequencesParams {
 		address[] stakeOwners;
