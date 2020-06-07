@@ -57,18 +57,17 @@ describe('bootstrap-rewards-level-flows', async () => {
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardsTxRes = await d.rewards.assignRewards();
-    const events = bootstrapRewardsAssignedEvents(assignRewardsTxRes);
     const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = (annualRate) => toTokenUnits(bn(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
 
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
-    const expectedComplianceCommitteeRewards = calcRewards(annualAmountCompliance);
+    const expectedComplianceCommitteeRewards = expectedGeneralCommitteeRewards.add(calcRewards(annualAmountCompliance));
 
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
-      assignees: generalCommittee.map(v => v.address),
-      amounts: generalCommittee.map((v, i) => bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0))).map(x => x.toString())
+      generalValidatorAmount: fromTokenUnits(expectedGeneralCommitteeRewards).toString(),
+      certifiedValidatorAmount: fromTokenUnits(expectedComplianceCommitteeRewards).toString()
     });
 
     const tokenBalances:BN[] = [];
@@ -87,7 +86,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
 
-      const expectedBalance = fromTokenUnits(bn(expectedGeneralCommitteeRewards).add((i % 2 == 0) ? bn(expectedComplianceCommitteeRewards) : bn(0)));
+      const expectedBalance = fromTokenUnits((i % 2 == 0) ? expectedComplianceCommitteeRewards : expectedGeneralCommitteeRewards);
       expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds

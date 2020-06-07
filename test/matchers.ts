@@ -182,10 +182,10 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("paymentEvent", containEvent(paymentEvents));
   chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
-  chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents, true, 'assignees'));
+  chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents));
   chai.Assertion.overwriteMethod("stakingRewardsAssignedEvent", containEvent(stakingRewardsAssignedEvents, true, 'assignees'));
   chai.Assertion.overwriteMethod("stakingRewardsDistributedEvent", containEvent(stakingRewardsDistributed));
-  chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents, true, 'assignees'));
+  chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
   chai.Assertion.overwriteMethod("votedOutOfCommitteeEvent", containEvent(votedOutOfCommitteeEvents));
