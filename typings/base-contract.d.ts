@@ -7,5 +7,8 @@ export interface OwnedContract extends Contract {
     transferMigrationOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     claimMigrationOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
 
+    lock(params?: TransactionConfig): Promise<TransactionReceipt>;
+    unlock(params?: TransactionConfig): Promise<TransactionReceipt>;
+
     setContractRegistry(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 }
