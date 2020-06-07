@@ -250,7 +250,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].fees);
     }
 
-    uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
+    uint constant MAX_FEE_BUCKET_ITERATIONS = 24;
 
     function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint256 generalValidatorFee, uint256 certifiedValidatorFee) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
