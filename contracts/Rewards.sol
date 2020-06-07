@@ -103,8 +103,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
         Settings memory _settings = settings;
 
-        (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap) = collectBootstrapRewards(committee, _settings);
-        (uint48 generalValidatorFee, uint48 certifiedValidatorFee) = collectFees(committee, compliance);
+        (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap) = collectBootstrapRewards(_settings);
+        (uint256 generalValidatorFee, uint256 certifiedValidatorFee) = collectFees(committee, compliance);
         uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, _settings);
 
         TotalBalances memory totals = totalBalances;
@@ -112,12 +112,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
 
-            balance.bootstrapRewards += (compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
-            balance.fees += (compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
-            balance.stakingRewards += toUint48Granularity(stakingRewards[i]); // todo may overflow
+            balance.bootstrapRewards += toUint48Granularity(compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap);
+            balance.fees += toUint48Granularity(compliance[i] ? certifiedValidatorFee : generalValidatorFee);
+            balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
 
-            totals.bootstrapRewardsTotalBalance += (compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
-            totals.feesTotalBalance += (compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
+            totals.bootstrapRewardsTotalBalance += toUint48Granularity(compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
+            totals.feesTotalBalance += toUint48Granularity(compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
             totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]); // todo may overflow
 
             balances[committee[i]] = balance;
@@ -127,16 +127,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         lastAssignedAt = now;
 
         emit StakingRewardsAssigned(committee, stakingRewards);
-        emit BootstrapRewardsAssigned(toUint256Granularity(generalValidatorBootstrap), toUint256Granularity(certifiedValidatorBootstrap));
-        emit FeesAssigned(toUint256Granularity(generalValidatorFee), toUint256Granularity(certifiedValidatorFee));
+        emit BootstrapRewardsAssigned(generalValidatorBootstrap, certifiedValidatorBootstrap);
+        emit FeesAssigned(generalValidatorFee, certifiedValidatorFee);
     }
 
-    function collectBootstrapRewards(address[] memory committee, Settings memory _settings) private view returns (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap){
-        if (committee.length > 0) {
-            uint256 duration = now.sub(lastAssignedAt);
-            generalValidatorBootstrap = uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
-            certifiedValidatorBootstrap = generalValidatorBootstrap + uint48(_settings.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
-        }
+    function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap){
+        uint256 duration = now.sub(lastAssignedAt);
+        generalValidatorBootstrap = toUint256Granularity(uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        certifiedValidatorBootstrap = generalValidatorBootstrap + toUint256Granularity(uint48(_settings.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
     function withdrawBootstrapFunds() external {
@@ -189,8 +187,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
-                curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).div(100000)); // todo may overflow
-                curAmount = uint48(uint(curAmount).mul(duration).div(365 days));
+                curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days));
                 assignedRewards[i] = toUint256Granularity(curAmount);
             }
         }
@@ -255,7 +252,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
 
-    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint48 generalValidatorFee, uint48 certifiedValidatorFee) {
+    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint256 generalValidatorFee, uint256 certifiedValidatorFee) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -300,7 +297,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         certifiedValidatorFee = generalValidatorFee + divideFees(committee, compliance, complianceFeePoolAmount, true);
     }
 
-    function divideFees(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant) private returns (uint48 validatorFee) {
+    function divideFees(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant) private returns (uint256 validatorFee) {
         uint n = committee.length;
         if (isCompliant)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
@@ -309,10 +306,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             }
         }
         if (n > 0) {
-            validatorFee = toUint48Granularity(amount.div(n));
+            validatorFee = toUint256Granularity(toUint48Granularity(amount.div(n)));
         }
 
-        uint48 remainder = toUint48Granularity(amount.sub(toUint256Granularity(validatorFee).mul(n)));
+        uint256 remainder = amount.sub(validatorFee.mul(n));
         if (remainder > 0) {
             fillFeeBucket(_bucketTime(now), remainder, isCompliant);
         }
