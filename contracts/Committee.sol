@@ -79,7 +79,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
 	/// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract onlyWhenUnlocked returns (bool committeeChanged, bool standbysChanged) {
+	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		require(uint256(uint128(weight)) == weight, "weight is out of range");
 
 		MemberData memory memberData = membersData[addr];
@@ -93,7 +93,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract onlyWhenUnlocked returns (bool committeeChanged, bool standbysChanged) {
+	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
 			return (false, false);
@@ -107,7 +107,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberNotReadyToSync(address addr) external onlyElectionsContract onlyWhenUnlocked returns (bool committeeChanged, bool standbysChanged) {
+	function memberNotReadyToSync(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
 			return (false, false);
@@ -121,7 +121,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenUnlocked returns (bool commiteeChanged, bool standbysChanged) {
+	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool commiteeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
 			return (false, false);
@@ -134,7 +134,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract onlyWhenUnlocked returns (bool committeeChanged, bool standbysChanged) {
+	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		require(uint256(uint128(weight)) == weight, "weight is out of range");
 
 		if (membersData[addr].isMember) {
@@ -157,7 +157,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external onlyElectionsContract onlyWhenUnlocked returns (bool committeeChanged, bool standbysChanged) {
+	function removeMember(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		memberData.isMember = false;
 		(committeeChanged, standbysChanged) = _rankAndUpdateMember(Member({

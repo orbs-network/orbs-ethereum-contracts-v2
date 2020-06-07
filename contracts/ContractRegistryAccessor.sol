@@ -16,7 +16,7 @@ contract ContractRegistryAccessor is Lockable {
 
     IContractRegistry contractRegistry;
 
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner onlyWhenUnlocked {
+    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner onlyWhenActive {
         require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
         contractRegistry = _contractRegistry;
     }

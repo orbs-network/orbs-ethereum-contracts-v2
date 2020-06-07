@@ -42,7 +42,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         erc20 = _erc20;
     }
 
-    function setVcConfigRecord(uint256 vcid, string calldata key, string calldata value) external onlyWhenUnlocked {
+    function setVcConfigRecord(uint256 vcid, string calldata key, string calldata value) external onlyWhenActive {
         require(msg.sender == virtualChains[vcid].owner, "only vc owner can set a vc config record");
         virtualChains[vcid].configRecords[key] = value;
         emit VcConfigRecordChanged(vcid, key, value);
@@ -52,13 +52,13 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         return virtualChains[vcid].configRecords[key];
     }
 
-    function addSubscriber(address addr) external onlyFunctionalOwner onlyWhenUnlocked {
+    function addSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
         require(addr != address(0), "must provide a valid address");
 
         authorizedSubscribers[addr] = true;
     }
 
-    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, bool isCompliant, string calldata deploymentSubset) external onlyWhenUnlocked returns (uint, uint) {
+    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, bool isCompliant, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         require(getProtocolContract().deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
 
@@ -80,11 +80,11 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         return (vcid, vc.genRefTime);
     }
 
-    function extendSubscription(uint256 vcid, uint256 amount, address payer) external onlyWhenUnlocked {
+    function extendSubscription(uint256 vcid, uint256 amount, address payer) external onlyWhenActive {
         _extendSubscription(vcid, amount, payer);
     }
 
-    function setVcOwner(uint256 vcid, address owner) external onlyWhenUnlocked {
+    function setVcOwner(uint256 vcid, address owner) external onlyWhenActive {
         require(msg.sender == virtualChains[vcid].owner, "only the vc owner can transfer ownership");
 
         virtualChains[vcid].owner = owner;
@@ -107,7 +107,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 
-    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner onlyWhenUnlocked {
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner onlyWhenActive {
         genesisRefTimeDelay = newGenesisRefTimeDelay;
     }
 
