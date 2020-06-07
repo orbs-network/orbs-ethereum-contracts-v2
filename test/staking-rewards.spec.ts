@@ -81,7 +81,7 @@ describe('staking-rewards-level-flows', async () => {
 
     expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
       assignees: validators.map(v => v.v.address),
-      amounts: totalOrbsRewardsArr.map(x => toTokenUnits(x))
+      amounts: totalOrbsRewardsArr
     });
 
     const orbsBalances:BN[] = [];
@@ -184,9 +184,11 @@ describe('staking-rewards-level-flows', async () => {
       const totalCommitteeStake = bnSum(validators.map(v => v.stake));
       const actualAnnualRate = BN.min(annualRate, annualCap.mul(bn(100000)).div(totalCommitteeStake));
       const rewardsArr = validators
-          .map(v => actualAnnualRate.mul(v.stake).div(bn(100000)))
-          .map(r => toTokenUnits(r))
-          .map(r => r.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
+          .map(v => actualAnnualRate
+              .mul(v.stake)
+              .mul(bn(elapsedTime))
+              .div(bn(YEAR_IN_SECONDS).mul(bn(100000)))
+          ).map(r => toTokenUnits(r));
       return rewardsArr.map(x => fromTokenUnits(x));
     };
 
@@ -199,7 +201,7 @@ describe('staking-rewards-level-flows', async () => {
 
     expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
       assignees: validators.map(v => v.v.address),
-      amounts: totalOrbsRewardsArr.map(x => toTokenUnits(x))
+      amounts: totalOrbsRewardsArr.map(x => x.toString())
     });
 
     for (const v of validators) {
