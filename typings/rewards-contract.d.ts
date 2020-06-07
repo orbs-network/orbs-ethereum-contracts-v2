@@ -4,8 +4,8 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface BootstrapRewardsAssignedEvent {
-    assignees: string[],
-    amounts: Array<string|BN>
+    generalValidatorAmount: string|BN,
+    certifiedValidatorAmount: string|BN
 }
 
 export interface BootstrapAddedToPoolEvent {
@@ -20,9 +20,16 @@ export interface FeesAddedToBucketEvent {
     isCompliant: boolean
 }
 
+export interface FeesWithdrawnFromBucketEvent {
+    bucketId: string|BN,
+    withdrawen: string|BN,
+    total: string|BN,
+    isCompliant: boolean
+}
+
 export interface FeesAssignedEvent {
-    assignees: string[],
-    orbs_amounts: Array<string|BN>
+    generalValidatorAmount: string|BN,
+    certifiedValidatorAmount: string|BN
 }
 
 export interface StakingRewardAssignedEvent {
