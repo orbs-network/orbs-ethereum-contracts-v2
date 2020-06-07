@@ -124,11 +124,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         lastAssignedAt = now;
     }
 
-    function collectBootstrapRewards(address[] memory committee, Settings memory pools) private view returns (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap){
+    function collectBootstrapRewards(address[] memory committee, Settings memory _settings) private view returns (uint48 generalValidatorBootstrap, uint48 certifiedValidatorBootstrap){
         if (committee.length > 0) {
             uint256 duration = now.sub(lastAssignedAt);
-            generalValidatorBootstrap = uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
-            certifiedValidatorBootstrap = generalValidatorBootstrap + uint48(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            generalValidatorBootstrap = uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            certifiedValidatorBootstrap = generalValidatorBootstrap + uint48(_settings.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days));
         }
     }
 
@@ -165,7 +165,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return lastAssignedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, Settings memoru pools) private view returns (uint256[] memory assignedRewards) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, Settings memory _settings) private view returns (uint256[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
         assignedRewards = new uint256[](committee.length);
