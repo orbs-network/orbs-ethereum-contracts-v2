@@ -20,7 +20,7 @@ contract Lockable is WithClaimableMigrationOwnership{
         locked = false;
     }
 
-    modifier onlyWhenActive() {
+    modifier onlyWhenUnlocked() {
         require(!locked, "contract is locked for this operation");
 
         _;

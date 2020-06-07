@@ -33,7 +33,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
      */
 
     /// @dev Called by a participant who wishes to register as a validator
-	function onlyWhenActive(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenUnlocked {
+	function registerValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenUnlocked {
 		require(!isRegistered(msg.sender), "registerValidator: Validator is already registered");
 		validators[msg.sender].registrationTime = now;
 		_updateValidator(ip, orbsAddr, name, website, contact);
@@ -43,13 +43,13 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
-	function onlyWhenActive(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator onlyWhenUnlocked {
+	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator onlyWhenUnlocked {
 		_updateValidator(ip, orbsAddr, name, website, contact);
 		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
 	}
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
-    function onlyWhenActive(string calldata key, string calldata value) external onlyRegisteredValidator onlyWhenUnlocked {
+    function setMetadata(string calldata key, string calldata value) external onlyRegisteredValidator onlyWhenUnlocked {
 		string memory oldValue = validators[msg.sender].validatorMetadata[key];
 		validators[msg.sender].validatorMetadata[key] = value;
 		emit ValidatorMetadataChanged(msg.sender, key, value, oldValue);
@@ -61,7 +61,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
 	/// @dev Called by a participant who wishes to unregister
-	function onlyWhenActive() external onlyRegisteredValidator onlyWhenUnlocked {
+	function unregisterValidator() external onlyRegisteredValidator onlyWhenUnlocked {
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
 		delete ipToValidator[validators[msg.sender].ip];
 		delete validators[msg.sender];

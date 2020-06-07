@@ -90,7 +90,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberReadyToSync(sender, false);
 	}
 
-	function onlyWhenActive(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenUnlocked external {
+	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenUnlocked external {
 		require(newDelegate != prevDelegate, "in a delegation change the delegate must change");
 
 		uint256 tempTotalGovernanceStake = totalGovernanceStake;
@@ -163,7 +163,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteOutStake.mul(100).div(totalCompliantStake) >= voteOutPercentageThreshold);
 	}
 
-	function onlyWhenActive(address addr) external onlyWhenUnlocked {
+	function voteOut(address addr) external onlyWhenUnlocked {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
@@ -178,7 +178,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function onlyWhenActive(address[] calldata validators) external onlyWhenUnlocked {
+	function setBanningVotes(address[] calldata validators) external onlyWhenUnlocked {
 		require(validators.length <= 3, "up to 3 concurrent votes are supported");
 		for (uint i = 0; i < validators.length; i++) {
 			require(validators[i] != address(0), "all votes must non zero addresses");
@@ -282,7 +282,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return bannedValidators[addr] != 0;
 	}
 
-	function onlyWhenActive(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract onlyWhenUnlocked {
+	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract onlyWhenUnlocked {
 
 		uint256 prevGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, prevDelegateTotalStake);
 		uint256 newGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, newDelegateTotalStake);
@@ -299,7 +299,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		totalGovernanceStake = _totalGovernanceStake;
 	}
 
-	function onlyWhenActive(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract onlyWhenUnlocked {
+	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract onlyWhenUnlocked {
 		require(prevDelegateTotalStakes.length == newDelegateTotalStakes.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == delegates.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == isSelfDelegatingDelegates.length, "arrays must be of same length");

@@ -16,7 +16,7 @@ contract Compliance is ICompliance, ContractRegistryAccessor, WithClaimableFunct
         return validatorCompliance[addr];
     }
 
-    function onlyWhenActive(address addr, bool isCompliant) external onlyFunctionalOwner onlyWhenUnlocked {
+    function setValidatorCompliance(address addr, bool isCompliant) external onlyFunctionalOwner onlyWhenUnlocked {
         validatorCompliance[addr] = isCompliant;
         emit ValidatorComplianceUpdate(addr, isCompliant);
         getElectionsContract().validatorComplianceChanged(addr, isCompliant);
