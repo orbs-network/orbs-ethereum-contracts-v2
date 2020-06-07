@@ -24,7 +24,7 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe.only('bootstrap-rewards-level-flows', async () => {
+describe('bootstrap-rewards-level-flows', async () => {
 
   it('should distribute bootstrap rewards to validators in committee', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
