@@ -25,7 +25,7 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe('fees-contract', async () => {
+describe.only('fees-contract', async () => {
 
   it('should distribute fees to validators in general and compliance committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
