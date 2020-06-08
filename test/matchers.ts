@@ -211,6 +211,11 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
   chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
+  chai.Assertion.overwriteMethod("voteOutTimeoutSecondsChangedEvent", containEvent(voteOutTimeoutSecondsChangedEvents));
+  chai.Assertion.overwriteMethod("maxDelegationRatioChangedEvent", containEvent(maxDelegationRatioChangedEvents));
+  chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
+  chai.Assertion.overwriteMethod("voteOutPercentageThresholdChangedEvent", containEvent(voteOutPercentageThresholdChangedEvents));
+  chai.Assertion.overwriteMethod("banningPercentageThresholdChangedEvent", containEvent(banningPercentageThresholdChangedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
