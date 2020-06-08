@@ -11,13 +11,17 @@ import "./WithClaimableMigrationOwnership.sol";
 contract Lockable is WithClaimableMigrationOwnership{
 
     bool locked;
+    event Locked();
+    event Unlocked();
 
     function lock() external onlyMigrationOwner {
         locked = true;
+        emit Locked();
     }
 
     function unlock() external onlyMigrationOwner {
         locked = false;
+        emit Unlocked();
     }
 
     modifier onlyWhenActive() {

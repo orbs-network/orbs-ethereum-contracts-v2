@@ -12,7 +12,7 @@ const expect = chai.expect;
 
 import {bn, evmIncreaseTimeForQueries, getTopBlockTimestamp} from "./helpers";
 
-describe.only('protocol-contract', async () => {
+describe('protocol-contract', async () => {
 
   // functional owner
 
@@ -20,9 +20,11 @@ describe.only('protocol-contract', async () => {
     const d = await Driver.new();
 
     await expectRejected(d.protocol.lock({from: d.functionalOwner.address}));
-    await d.protocol.lock({from: d.migrationOwner.address});
+    let r = await d.protocol.lock({from: d.migrationOwner.address});
+    expect(r).to.have.a.lockedEvent();
     await expectRejected(d.protocol.unlock({from: d.functionalOwner.address}));
-    await d.protocol.unlock({from: d.migrationOwner.address});
+    r = await d.protocol.unlock({from: d.migrationOwner.address});
+    expect(r).to.have.a.unlockedEvent();
   });
 
   it('rejects calls to createNewDeploymentSubset and setProtocolVersion when locked', async () => {

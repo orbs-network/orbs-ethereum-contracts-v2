@@ -27,7 +27,12 @@ import {
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
   validatorDataUpdatedEvents,
-  validatorMetadataChangedEvents, committeeChangedEvents, standbysChangedEvents, stakingRewardsDistributed
+  validatorMetadataChangedEvents,
+  committeeChangedEvents,
+  standbysChangedEvents,
+  stakingRewardsDistributed,
+  lockedEvents,
+  unlockedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -61,6 +66,7 @@ import {
 import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
+import {LockedEvent, UnlockedEvent} from "../typings/base-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -198,6 +204,8 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
   chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
+  chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
+  chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -239,6 +247,8 @@ declare global {
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
+      lockedEvent(data?: Partial<LockedEvent>);
+      unlockedEvent(data?: Partial<UnlockedEvent>);
       withinContract(contract: Contract): Assertion;
     }
 

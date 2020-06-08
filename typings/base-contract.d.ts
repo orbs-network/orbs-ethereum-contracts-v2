@@ -1,6 +1,9 @@
 import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 
+export interface LockedEvent {}
+export interface UnlockedEvent {}
+
 export interface OwnedContract extends Contract {
     transferFunctionalOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     claimFunctionalOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
