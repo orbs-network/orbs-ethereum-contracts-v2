@@ -400,13 +400,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
-		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be not more then 100");
+		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
 		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
 		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
 	}
 
 	function setBanningPercentageThreshold(uint8 banningPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
-		require(banningPercentageThreshold <= 100, "banningPercentageThreshold must be not more then 100");
+		require(banningPercentageThreshold <= 100, "banningPercentageThreshold must not be larger than 100");
 		emit BanningPercentageThresholdChanged(banningPercentageThreshold, settings.banningPercentageThreshold);
 		settings.banningPercentageThreshold = banningPercentageThreshold;
 	}
