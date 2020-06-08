@@ -34,7 +34,9 @@ import {
   voteOutTimeoutSecondsChangedEvents,
   maxDelegationRatioChangedEvents,
   banningLockTimeoutSecondsChangedEvents,
-  voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents
+  voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents,
+  lockedEvents,
+  unlockedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -71,6 +73,7 @@ import {
 import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
+import {LockedEvent, UnlockedEvent} from "../typings/base-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -213,6 +216,8 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
   chai.Assertion.overwriteMethod("voteOutPercentageThresholdChangedEvent", containEvent(voteOutPercentageThresholdChangedEvents));
   chai.Assertion.overwriteMethod("banningPercentageThresholdChangedEvent", containEvent(banningPercentageThresholdChangedEvents));
+  chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
+  chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -259,6 +264,8 @@ declare global {
       banningLockTimeoutSecondsChangedEvent(data?: Partial<BanningLockTimeoutSecondsChangedEvent>);
       voteOutPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
       banningPercentageThresholdChangedEvent(data?: Partial<BanningPercentageThresholdChangedEvent>);
+      lockedEvent(data?: Partial<LockedEvent>);
+      unlockedEvent(data?: Partial<UnlockedEvent>);
       withinContract(contract: Contract): Assertion;
 
     }
