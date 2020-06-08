@@ -56,7 +56,6 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked100.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked100.address],
-            orbsAddrs: [validatorStaked100.orbsAddress],
             weights: [stake100]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -64,12 +63,10 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked100.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address],
-            orbsAddrs: [validatorStaked100.orbsAddress],
             weights: [stake100],
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
-            orbsAddrs: [],
             weights: []
         });
 
@@ -86,7 +83,6 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked200.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked200.address],
-            orbsAddrs: [validatorStaked200.orbsAddress],
             weights: [stake200]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -94,12 +90,10 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked200.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked200.address, validatorStaked100.address],
-            orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked100.orbsAddress],
             weights: [stake200, stake100]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
-            orbsAddrs: [],
             weights: []
         });
 
@@ -117,7 +111,6 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked300.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address],
-            orbsAddrs: [validatorStaked300.orbsAddress],
             weights: [stake300]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -125,19 +118,16 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked300.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked300.address, validatorStaked200.address],
-            orbsAddrs: [validatorStaked300.orbsAddress, validatorStaked200.orbsAddress],
             weights: [stake300, stake200]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked100.address],
-            orbsAddrs: [validatorStaked100.orbsAddress],
             weights: [stake100]
         });
 
         r = await d.delegateMoreStake(stake300, validatorStaked200);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked200.address, validatorStaked300.address],
-            orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked300.orbsAddress],
             weights: [stake200.add(stake300), stake300]
         });
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -145,12 +135,10 @@ describe('elections-high-level-flows', async () => {
         r = await d.delegateMoreStake(stake500, validatorStaked100);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
-            orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
             weights: [stake100.add(stake500), stake500]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address],
-            orbsAddrs: [validatorStaked300.orbsAddress],
             weights: [stake300]
         });
 
@@ -163,7 +151,6 @@ describe('elections-high-level-flows', async () => {
         r = await inTopologyValidator.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address, inTopologyValidator.address],
-            orbsAddrs: [validatorStaked300.orbsAddress, inTopologyValidator.orbsAddress],
             weights: [stake300, stake100]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -176,7 +163,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent(); // no change in the committee
         expect(r).to.have.a.standbysChangedEvent({ // standbys change order
             addrs: [inTopologyValidator.address, validatorStaked300.address],
-            orbsAddrs: [inTopologyValidator.orbsAddress, validatorStaked300.orbsAddress],
             weights: [stake100.addn(201), stake300]
         });
 
@@ -197,24 +183,20 @@ describe('elections-high-level-flows', async () => {
         r = await validator.stake(stake1000); // now top of committee
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validator.address, validatorStaked100.address],
-            orbsAddrs: [validator.orbsAddress, validatorStaked100.orbsAddress],
             weights: [stake1000, stake100.add(stake500)]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked200.address, inTopologyValidator.address],
-            orbsAddrs: [validatorStaked200.orbsAddress, inTopologyValidator.orbsAddress],
             weights: [stake500, stake100.addn(201)]
         });
 
         r = await validator.unstake(501); // becomes a standby
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
-            orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
             weights: [stake100.add(stake500), stake500]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validator.address, inTopologyValidator.address],
-            orbsAddrs: [validator.orbsAddress, inTopologyValidator.orbsAddress],
             weights: [bn(499), stake100.addn(201)]
         });
     });
@@ -490,7 +472,7 @@ describe('elections-high-level-flows', async () => {
 
         r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: [v.orbsAddress]
+            addrs: [v.address]
         });
     });
 
@@ -987,7 +969,7 @@ export async function banningScenario_voteUntilThresholdReached(driver: Driver, 
         validator: bannedValidator.address
     });
     expect(r).to.withinContract(driver.committee).have.a.committeeChangedEvent({
-        orbsAddrs: []
+        addrs: []
     });
     return r;
 }
