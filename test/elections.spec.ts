@@ -937,30 +937,35 @@ describe('elections-high-level-flows', async () => {
         const voteOutPercentageThreshold  = bn(current[3]);
         const banningPercentageThreshold  = bn(current[4]);
 
+        await expectRejected(d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
         let r = await d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteOutTimeoutSecondsChangedEvent({
             newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
             oldValue: voteOutTimeoutSeconds.toString()
         });
 
+        await expectRejected(d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.maxDelegationRatioChangedEvent({
             newValue: maxDelegationRatio.add(bn(1)).toString(),
             oldValue: maxDelegationRatio.toString()
         });
 
+        await expectRejected(d.elections.setBanningLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.elections.setBanningLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.banningLockTimeoutSecondsChangedEvent({
             newValue: banningLockTimeoutSeconds.add(bn(1)).toString(),
             oldValue: banningLockTimeoutSeconds.toString()
         });
 
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
             newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
             oldValue: voteOutPercentageThreshold.toString()
         });
 
+        await expectRejected(d.elections.setBanningPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.elections.setBanningPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.banningPercentageThresholdChangedEvent({
             newValue: banningPercentageThreshold.add(bn(1)).toString(),
