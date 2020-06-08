@@ -336,6 +336,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         assert(_amount == 0);
+
+        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriptions to rewards");
     }
 
     function withdrawFeeFunds() external {

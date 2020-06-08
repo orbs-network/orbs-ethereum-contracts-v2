@@ -26,8 +26,8 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor, WithClaimableFunct
 
         ISubscriptions subs = getSubscriptionsContract();
 
-        // TODO TBD subs has to trust this contract to transfer the funds. alternatively, transfer to this account and then approve subs to pull same amount.
-        require(erc20.transferFrom(msg.sender, address(subs), amount), "failed to transfer subscription fees");
+        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees");
+        require(erc20.approve(address(subs), amount), "failed to transfer subscription fees");
         subs.createVC(tier, monthlyRate, amount, msg.sender, isCompliant, deploymentSubset);
     }
 
@@ -36,8 +36,8 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor, WithClaimableFunct
 
         ISubscriptions subs = getSubscriptionsContract();
 
-        // TODO TBD subs has to trust this contract to transfer the funds. alternatively, transfer to this account and then approve subs to pull same amount.
-        require(erc20.transferFrom(msg.sender, address(subs), amount), "failed to transfer subscription fees");
+        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from vc payer to subscriber");
+        require(erc20.approve(address(subs), amount), "failed to approve subscription fees to subscriptions by subscriber");
         subs.extendSubscription(vcid, amount, msg.sender);
     }
 }
