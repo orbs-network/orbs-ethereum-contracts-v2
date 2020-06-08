@@ -12,7 +12,7 @@ import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./Lockable.sol";
 
-contract ContractRegistryAccessor {
+contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
     IContractRegistry contractRegistry;
 
