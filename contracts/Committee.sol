@@ -242,22 +242,22 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		settings.readyToSyncTimeout = readyToSyncTimeout;
 	}
 
-	function setMaxCommitteeSize(uint8 maxCommitteeSize) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setMaxCommitteeAndStandbys(uint8 maxCommitteeSize, uint8 maxStandbys) external onlyFunctionalOwner /* todo onlyWhenActive */ {
 		require(maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(maxCommitteeSize + settings.maxStandbys <= MAX_TOPOLOGY, "maxCommitteeSize + maxStandbys must be 32 at most");
-		emit MaxCommitteeSizeChanged(maxCommitteeSize, settings.maxCommitteeSize);
-		settings.maxCommitteeSize = maxCommitteeSize;
-
-		updateCommittee(NullMember(), settings);
-	}
-
-	function setMaxStandbys(uint8 maxStandbys) external onlyFunctionalOwner /* todo onlyWhenActive */ {
 		require(maxStandbys > 0, "maxStandbys must be larger than 0");
-		require(maxStandbys + settings.maxCommitteeSize <= MAX_TOPOLOGY, "maxCommitteeSize + maxStandbys must be 32 at most");
-		emit MaxStandbysChanged(maxStandbys, settings.maxStandbys);
-		settings.maxStandbys = maxStandbys;
+		require(maxCommitteeSize + maxStandbys <= MAX_TOPOLOGY, "maxCommitteeSize + maxStandbys must be 32 at most");
+		Settings memory _settings = settings;
+		if (_settings.maxStandbys != maxStandbys) {
+			emit MaxStandbysChanged(maxStandbys, _settings.maxStandbys);
+			_settings.maxStandbys = maxStandbys;
+		}
+		if (_settings.maxCommitteeSize != maxCommitteeSize) {
+			emit MaxCommitteeSizeChanged(maxCommitteeSize, _settings.maxCommitteeSize);
+			_settings.maxCommitteeSize = maxCommitteeSize;
+		}
 
-		updateCommittee(NullMember(), settings);
+		settings = _settings;
+		updateCommittee(DummyMember(), _settings);
 	}
 
 	/*
@@ -343,10 +343,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function updateCommittee(Member memory changedMember, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) {
-		if (!isNullMember(changedMember)) {
-			committeeChanged = changedMember.data.inCommittee;
-			standbysChanged = changedMember.data.isStandby;
-		}
+		committeeChanged = changedMember.data.inCommittee;
+		standbysChanged = changedMember.data.isStandby;
 
 		address[] memory _participantsAddresses = participantAddresses;
 		(Participant[] memory _participants, Participant memory changedMemberAsParticipant) = loadParticipantsSortedByWeights(_participantsAddresses, changedMember); // override stored member with preloaded one
@@ -415,7 +413,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		// check if changed member is a new participant
 		if (
-			!isNullMember(changedMember) &&
 			(changedMemberAsParticipant.data.inCommittee || changedMemberAsParticipant.data.isStandby) &&
 			(_participantsAddresses.length == changedMemberAsParticipant.pos || _participantsAddresses[changedMemberAsParticipant.pos] == address(0))
 		) {
@@ -474,7 +471,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private view returns (Participant[] memory _participants, Participant memory memberAsParticipant) {
 		uint nParticipants;
-		bool newMember = !isNullMember(preloadedMember) && !preloadedMember.data.inCommittee && !preloadedMember.data.isStandby;
+		bool newMember = !preloadedMember.data.inCommittee && !preloadedMember.data.isStandby;
 		address addr;
 		uint firstFreeSlot = participantsAddrs.length;
 		for (uint i = 0; i < participantsAddrs.length; i++) {
@@ -502,7 +499,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			if (addr != preloadedMember.addr) {
 				md = membersData[addr];
 				if (
-					!isNullMember(preloadedMember) &&
 					preloadedInd == uint(-1) &&
 					(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr)))
 				) {
@@ -524,19 +520,17 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			sortBytes = sortBytes >> 8;
 		}
 
-		if (!isNullMember(preloadedMember)) {
-			if (preloadedInd == uint(-1)) {
-				preloadedInd = 0;
-				p = _participants[preloadedInd];
-				p.addr = preloadedMember.addr;
-				p.data = preloadedMember.data;
-				memberAsParticipant = p;
-			}
-			if (newMember) {
-				_participants[preloadedInd].pos = uint8(firstFreeSlot);
-			} else {
-				_participants[preloadedInd].pos = uint8(preloadedPos);
-			}
+		if (preloadedInd == uint(-1)) {
+			preloadedInd = 0;
+			p = _participants[preloadedInd];
+			p.addr = preloadedMember.addr;
+			p.data = preloadedMember.data;
+			memberAsParticipant = p;
+		}
+		if (newMember) {
+			_participants[preloadedInd].pos = uint8(firstFreeSlot);
+		} else {
+			_participants[preloadedInd].pos = uint8(preloadedPos);
 		}
 	}
 
@@ -549,16 +543,12 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		getRewardsContract().assignRewardsToCommittee(addrs, weights, compliance);
 	}
 
-	function NullMember() private pure returns (Member memory member) {
+	function DummyMember() private pure returns (Member memory member) {
 		MemberData memory data;
 		member = Member({
 			addr: address(0),
 			data: data
 		});
-	}
-
-	function isNullMember(Member memory member) private pure returns (bool) {
-		return member.addr == address(0);
 	}
 
 }

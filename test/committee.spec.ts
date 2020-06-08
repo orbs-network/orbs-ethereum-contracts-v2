@@ -934,8 +934,8 @@ describe('committee', async () => {
             oldValue: readyToSyncTimeout.toString()
         });
 
-        await expectRejected(d.committee.setMaxCommitteeSize(maxCommitteeSize.add(bn(1)), {from: d.migrationOwner.address}));
-        r = await d.committee.setMaxCommitteeSize(maxCommitteeSize.add(bn(1)), {from: d.functionalOwner.address});
+        await expectRejected(d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys, {from: d.migrationOwner.address}));
+        r = await d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys, {from: d.functionalOwner.address});
         expect(r).to.have.a.maxCommitteeSizeChangedEvent({
             newValue: maxCommitteeSize.add(bn(1)).toString(),
             oldValue: maxCommitteeSize.toString()
@@ -947,8 +947,8 @@ describe('committee', async () => {
             addrs: standbys.slice(1, maxStandbys.toNumber()).map(v => v.address)
         });
 
-        await expectRejected(d.committee.setMaxStandbys(maxStandbys.add(bn(1)), {from: d.migrationOwner.address}));
-        r = await d.committee.setMaxStandbys(maxStandbys.add(bn(1)), {from: d.functionalOwner.address});
+        await expectRejected(d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.maxStandbysChangedEvent({
             newValue: maxStandbys.add(bn(1)).toString(),
             oldValue: maxStandbys.toString()
@@ -970,20 +970,13 @@ describe('committee', async () => {
     it("does not allow to set a topology larger than 32, maxCommittee and maxStandby must be larger than 0", async () => {
        const d = await Driver.new();
 
-       await d.committee.setMaxCommitteeSize(1, {from: d.functionalOwner.address});
-       await d.committee.setMaxStandbys(2, {from: d.functionalOwner.address});
+       await d.committee.setMaxCommitteeAndStandbys(1, 2,{from: d.functionalOwner.address});
 
-       await expectRejected(d.committee.setMaxCommitteeSize(31, {from: d.functionalOwner.address}));
-       await expectRejected(d.committee.setMaxStandbys(32, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(2, 31, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(0, 1, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(1, 0, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(0, 0, {from: d.functionalOwner.address}));
 
-        await expectRejected(d.committee.setMaxCommitteeSize(0, {from: d.functionalOwner.address}));
-        await expectRejected(d.committee.setMaxStandbys(0, {from: d.functionalOwner.address}));
-
-        await d.committee.setMaxCommitteeSize(1, {from: d.functionalOwner.address});
-        await d.committee.setMaxStandbys(31, {from: d.functionalOwner.address});
-
-        await d.committee.setMaxStandbys(1, {from: d.functionalOwner.address});
-        await d.committee.setMaxCommitteeSize(31, {from: d.functionalOwner.address});
-
+        await d.committee.setMaxCommitteeAndStandbys(31, 1,{from: d.functionalOwner.address});
     });
 });

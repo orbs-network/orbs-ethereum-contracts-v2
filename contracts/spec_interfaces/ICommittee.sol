@@ -51,8 +51,7 @@ interface ICommittee {
 	 */
 
 	function setReadyToSyncTimeout(uint48 readyToSyncTimeout) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setMaxCommitteeSize(uint8 maxCommitteeSize) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setMaxStandbys(uint8 maxStandbys) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxCommitteeAndStandbys(uint8 maxCommitteeSize, uint8 maxStandbys) external /* onlyFunctionalOwner onlyWhenActive */;
 
 	event ReadyToSyncTimeoutChanged(uint48 newValue, uint48 oldValue);
 	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
