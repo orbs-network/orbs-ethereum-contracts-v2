@@ -16,6 +16,7 @@ const expect = chai.expect;
 const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
+import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
@@ -907,6 +908,61 @@ describe('elections-high-level-flows', async () => {
             addrs: []
         });
     });
+
+    it("sets and gets settings, only functional owner allowed to set", async () => {
+        const d = await Driver.new();
+
+        const current = await d.elections.getSettings();
+        const voteOutTimeoutSeconds  = bn(current[0]);
+        const maxDelegationRatio  = bn(current[1]);
+        const banningLockTimeoutSeconds  = bn(current[2]);
+        const voteOutPercentageThreshold  = bn(current[3]);
+        const banningPercentageThreshold  = bn(current[4]);
+
+        await expectRejected(d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        let r = await d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.voteOutTimeoutSecondsChangedEvent({
+            newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
+            oldValue: voteOutTimeoutSeconds.toString()
+        });
+
+        await expectRejected(d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.maxDelegationRatioChangedEvent({
+            newValue: maxDelegationRatio.add(bn(1)).toString(),
+            oldValue: maxDelegationRatio.toString()
+        });
+
+        await expectRejected(d.elections.setBanningLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setBanningLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.banningLockTimeoutSecondsChangedEvent({
+            newValue: banningLockTimeoutSeconds.add(bn(1)).toString(),
+            oldValue: banningLockTimeoutSeconds.toString()
+        });
+
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
+            newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
+            oldValue: voteOutPercentageThreshold.toString()
+        });
+
+        await expectRejected(d.elections.setBanningPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setBanningPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.banningPercentageThresholdChangedEvent({
+            newValue: banningPercentageThreshold.add(bn(1)).toString(),
+            oldValue: banningPercentageThreshold.toString()
+        });
+
+        const afterUpdate = await d.elections.getSettings();
+        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3], afterUpdate[4]]).to.deep.eq([
+            voteOutTimeoutSeconds.add(bn(1)).toString(),
+            maxDelegationRatio.add(bn(1)).toString(),
+            banningLockTimeoutSeconds.add(bn(1)).toString(),
+            voteOutPercentageThreshold.add(bn(1)).toString(),
+            banningPercentageThreshold.add(bn(1)).toString()
+        ]);
+    })
 
 });
 
