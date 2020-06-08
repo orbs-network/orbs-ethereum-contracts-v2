@@ -36,11 +36,7 @@ import {
   banningLockTimeoutSecondsChangedEvents,
   voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents,
   lockedEvents,
-  unlockedEvents
-  validatorMetadataChangedEvents,
-  committeeChangedEvents,
-  standbysChangedEvents,
-  stakingRewardsDistributed,
+  unlockedEvents,
   readyToSyncTimeoutChangedEvents, maxCommitteeSizeChangedEvents, maxStandbysChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
