@@ -10,6 +10,7 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
+import "./Lockable.sol";
 
 contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
@@ -55,6 +56,5 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
     function getSubscriptionsContract() public view returns (ISubscriptions) {
         return ISubscriptions(contractRegistry.get("subscriptions"));
     }
-
 
 }

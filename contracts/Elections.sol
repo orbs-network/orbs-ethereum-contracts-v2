@@ -14,7 +14,7 @@ import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
 
-contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
 
 	mapping (address => mapping (address => uint256)) voteOuts; // by => to => timestamp
@@ -96,7 +96,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberReadyToSync(sender, false);
 	}
 
-	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract external {
+	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenActive external {
 		require(newDelegate != prevDelegate, "in a delegation change the delegate must change");
 
 		uint256 tempTotalGovernanceStake = totalGovernanceStake;
@@ -173,7 +173,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteOutStake.mul(100).div(totalCompliantStake) >= _settings.voteOutPercentageThreshold);
 	}
 
-	function voteOut(address addr) external {
+	function voteOut(address addr) external onlyWhenActive {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
@@ -188,7 +188,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function setBanningVotes(address[] calldata validators) external {
+	function setBanningVotes(address[] calldata validators) external onlyWhenActive {
 		require(validators.length <= 3, "up to 3 concurrent votes are supported");
 		for (uint i = 0; i < validators.length; i++) {
 			require(validators[i] != address(0), "all votes must non zero addresses");
@@ -290,11 +290,11 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
         }
     }
 
-	function _isBanned(address addr) private view returns (bool){
+	function _isBanned(address addr) private view returns (bool) {
 		return bannedValidators[addr] != 0;
 	}
 
-	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract {
+	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract onlyWhenActive {
 
 		uint256 prevGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, prevDelegateTotalStake);
 		uint256 newGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, newDelegateTotalStake);
@@ -311,7 +311,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		totalGovernanceStake = _totalGovernanceStake;
 	}
 
-	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract {
+	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract onlyWhenActive {
 		require(prevDelegateTotalStakes.length == newDelegateTotalStakes.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == delegates.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == isSelfDelegatingDelegates.length, "arrays must be of same length");

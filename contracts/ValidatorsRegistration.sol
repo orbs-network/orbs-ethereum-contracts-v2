@@ -5,7 +5,7 @@ import "./interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 
 	modifier onlyRegisteredValidator {
 		require(isRegistered(msg.sender), "Validator is not registered");
@@ -33,7 +33,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
      */
 
     /// @dev Called by a participant who wishes to register as a validator
-	function registerValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external {
+	function registerValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerValidator: Validator is already registered");
 		validators[msg.sender].registrationTime = now;
 		_updateValidator(ip, orbsAddr, name, website, contact);
@@ -43,13 +43,13 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
-	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator {
+	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator onlyWhenActive {
 		_updateValidator(ip, orbsAddr, name, website, contact);
 		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
 	}
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
-    function setMetadata(string calldata key, string calldata value) external onlyRegisteredValidator {
+    function setMetadata(string calldata key, string calldata value) external onlyRegisteredValidator onlyWhenActive {
 		string memory oldValue = validators[msg.sender].validatorMetadata[key];
 		validators[msg.sender].validatorMetadata[key] = value;
 		emit ValidatorMetadataChanged(msg.sender, key, value, oldValue);
@@ -61,7 +61,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
 	/// @dev Called by a participant who wishes to unregister
-	function unregisterValidator() external onlyRegisteredValidator {
+	function unregisterValidator() external onlyRegisteredValidator onlyWhenActive {
 		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
 		delete ipToValidator[validators[msg.sender].ip];
 		delete validators[msg.sender];

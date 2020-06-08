@@ -63,5 +63,7 @@ export const maxDelegationRatioChangedEvents = (txResult, contractAddress?: stri
 export const banningLockTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningLockTimeoutSecondsChanged(uint32,uint32)");
 export const voteOutPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutPercentageThresholdChanged(uint8,uint8)");
 export const banningPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningPercentageThresholdChanged(uint8,uint8)");
+export const lockedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "Locked()", contractAddress);
+export const unlockedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "Unlocked()", contractAddress);
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);
