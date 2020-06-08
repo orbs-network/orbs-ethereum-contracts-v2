@@ -240,8 +240,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		require(readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
 		emit ReadyToSyncTimeoutChanged(readyToSyncTimeout, settings.readyToSyncTimeout);
 		settings.readyToSyncTimeout = readyToSyncTimeout;
-
-		updateCommittee(NullMember(), settings);
 	}
 
 	function setMaxCommitteeSize(uint8 maxCommitteeSize) external onlyFunctionalOwner /* todo onlyWhenActive */ {
