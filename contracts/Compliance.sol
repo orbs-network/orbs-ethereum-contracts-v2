@@ -4,7 +4,7 @@ import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract Compliance is ICompliance, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Compliance is ICompliance, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 
     mapping (address => bool) validatorCompliance;
 
@@ -16,7 +16,7 @@ contract Compliance is ICompliance, ContractRegistryAccessor, WithClaimableFunct
         return validatorCompliance[addr];
     }
 
-    function setValidatorCompliance(address addr, bool isCompliant) external onlyFunctionalOwner {
+    function setValidatorCompliance(address addr, bool isCompliant) external onlyFunctionalOwner onlyWhenActive {
         validatorCompliance[addr] = isCompliant;
         emit ValidatorComplianceUpdate(addr, isCompliant);
         getElectionsContract().validatorComplianceChanged(addr, isCompliant);

@@ -1,3 +1,5 @@
+[![Version](https://img.shields.io/npm/v/@orbs-network/orbs-ethereum-contracts-v2)](https://www.npmjs.com/package/@orbs-network/orbs-ethereum-contracts-v2)
+![Licence](https://img.shields.io/npm/l/@orbs-network/orbs-ethereum-contracts-v2)
 # orbs-ethereum-contracts-v2
 Orbs PoS V2 contracts and testkit
 

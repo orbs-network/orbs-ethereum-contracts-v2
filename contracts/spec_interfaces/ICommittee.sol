@@ -50,6 +50,13 @@ interface ICommittee {
 	 * Governance
 	 */
 
+	function setReadyToSyncTimeout(uint48 readyToSyncTimeout) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxCommitteeAndStandbys(uint8 maxCommitteeSize, uint8 maxStandbys) external /* onlyFunctionalOwner onlyWhenActive */;
+
+	event ReadyToSyncTimeoutChanged(uint48 newValue, uint48 oldValue);
+	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
+	event MaxStandbysChanged(uint8 newValue, uint8 oldValue);
+
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
@@ -59,9 +66,11 @@ interface ICommittee {
 
     /// @dev returns the current committee
     /// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips);
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips);
 
     /// @dev returns the current standbys (out of commiteee) topology
-	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips);
+	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips);
 
+	/// @dev returns the current settings of the committee contract
+	function getSettings() external view returns (uint48 readyToSyncTimeout, uint8 maxCommitteeSize, uint8 maxStandbys);
 }
