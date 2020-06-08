@@ -390,6 +390,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function setMaxDelegationRatio(uint32 maxDelegationRatio) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		emit MaxDelegationRatioChanged(maxDelegationRatio, settings.maxDelegationRatio);
 		settings.maxDelegationRatio = maxDelegationRatio;
 	}
