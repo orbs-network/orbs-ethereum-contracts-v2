@@ -56,7 +56,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
-        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1 + (committeeEvenStakes ? 0 : i))), false, false, false);
+        const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1 + (committeeEvenStakes ? 0 : i))), true, false, false);
         committee = [v].concat(committee);
         console.log(`committee ${i}`)
     }
@@ -64,7 +64,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
 
     await Promise.all(_.shuffle(committee.concat(standbys)).map(v => v.notifyReadyForCommittee()));
 
-    const monthlyRate = 1000;
+    const monthlyRate = fromTokenUnits(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
     const appOwner = d.newParticipant();
 
