@@ -36,7 +36,8 @@ import {
   banningLockTimeoutSecondsChangedEvents,
   voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents,
   lockedEvents,
-  unlockedEvents
+  unlockedEvents,
+  readyToSyncTimeoutChangedEvents, maxCommitteeSizeChangedEvents, maxStandbysChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -70,7 +71,11 @@ import {
   DelegatedEvent,
   DelegatedStakeChangedEvent
 } from "../typings/delegations-contract";
-import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
+import {
+  CommitteeChangedEvent, MaxCommitteeSizeChangedEvent, MaxStandbysChangedEvent,
+  ReadyToSyncTimeoutChangedEvent,
+  StandbysChangedEvent
+} from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 import {LockedEvent, UnlockedEvent} from "../typings/base-contract";
@@ -211,6 +216,9 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
   chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
+  chai.Assertion.overwriteMethod("readyToSyncTimeoutChangedEvent", containEvent(readyToSyncTimeoutChangedEvents));
+  chai.Assertion.overwriteMethod("maxCommitteeSizeChangedEvent", containEvent(maxCommitteeSizeChangedEvents));
+  chai.Assertion.overwriteMethod("maxStandbysChangedEvent", containEvent(maxStandbysChangedEvents));
   chai.Assertion.overwriteMethod("voteOutTimeoutSecondsChangedEvent", containEvent(voteOutTimeoutSecondsChangedEvents));
   chai.Assertion.overwriteMethod("maxDelegationRatioChangedEvent", containEvent(maxDelegationRatioChangedEvents));
   chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
@@ -266,6 +274,12 @@ declare global {
       banningPercentageThresholdChangedEvent(data?: Partial<BanningPercentageThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
+      bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);
+      bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>);
+      readyToSyncTimeoutChangedEvent(data?: Partial<ReadyToSyncTimeoutChangedEvent>);
+      maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
+      maxStandbysChangedEvent(data?: Partial<MaxStandbysChangedEvent>);
+
       withinContract(contract: Contract): Assertion;
 
     }

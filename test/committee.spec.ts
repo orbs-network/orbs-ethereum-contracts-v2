@@ -19,7 +19,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, minAddress} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits, minAddress} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
 
 
@@ -924,4 +924,67 @@ describe('committee', async () => {
         });
     });
 
+    it("sets and gets settings, only functional owner allowed to set", async () => {
+        const d = await Driver.new();
+
+        const current = await d.committee.getSettings();
+        const readyToSyncTimeout = bn(current[0]);
+        const maxCommitteeSize = bn(current[1]);
+        const maxStandbys = bn(current[2]);
+
+        const committee: Participant[] = await Promise.all(_.range(maxCommitteeSize.toNumber()).map(async (i) => (await d.newValidator(fromTokenUnits(100 + i), false, false, true)).v));
+        const standbys: Participant[] = await Promise.all(_.range(maxCommitteeSize.toNumber() + 1).map(async (i) => (await d.newValidator(fromTokenUnits(100 - i), false, false, true)).v));
+
+        await expectRejected(d.committee.setReadyToSyncTimeout(readyToSyncTimeout.add(bn(1)), {from: d.migrationOwner.address}));
+        let r = await d.committee.setReadyToSyncTimeout(readyToSyncTimeout.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.readyToSyncTimeoutChangedEvent({
+            newValue: readyToSyncTimeout.add(bn(1)).toString(),
+            oldValue: readyToSyncTimeout.toString()
+        });
+
+        await expectRejected(d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys, {from: d.migrationOwner.address}));
+        r = await d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys, {from: d.functionalOwner.address});
+        expect(r).to.have.a.maxCommitteeSizeChangedEvent({
+            newValue: maxCommitteeSize.add(bn(1)).toString(),
+            oldValue: maxCommitteeSize.toString()
+        });
+        expect(r).to.have.a.committeeChangedEvent({
+            addrs: committee.concat([standbys[0]]).map(v => v.address)
+        });
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: standbys.slice(1, maxStandbys.toNumber()).map(v => v.address)
+        });
+
+        await expectRejected(d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.committee.setMaxCommitteeAndStandbys(maxCommitteeSize.add(bn(1)), maxStandbys.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.maxStandbysChangedEvent({
+            newValue: maxStandbys.add(bn(1)).toString(),
+            oldValue: maxStandbys.toString()
+        });
+
+        r = await standbys[2].notifyReadyToSync();
+        expect(r).to.have.a.standbysChangedEvent({
+            addrs: standbys.slice(1).map(v => v.address)
+        });
+
+        const afterUpdate = await d.committee.getSettings();
+        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2]]).to.deep.eq([
+            readyToSyncTimeout.add(bn(1)).toString(),
+            maxCommitteeSize.add(bn(1)).toString(),
+            maxStandbys.add(bn(1)).toString(),
+        ]);
+    });
+
+    it("does not allow to set a topology larger than 32, maxCommittee and maxStandby must be larger than 0", async () => {
+       const d = await Driver.new();
+
+       await d.committee.setMaxCommitteeAndStandbys(1, 2,{from: d.functionalOwner.address});
+
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(2, 31, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(0, 1, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(1, 0, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommitteeAndStandbys(0, 0, {from: d.functionalOwner.address}));
+
+        await d.committee.setMaxCommitteeAndStandbys(31, 1,{from: d.functionalOwner.address});
+    });
 });
