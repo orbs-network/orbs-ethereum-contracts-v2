@@ -16,6 +16,7 @@ const expect = chai.expect;
 const assert = chai.assert;
 
 import {bn, evmIncreaseTime} from "./helpers";
+import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
@@ -56,7 +57,6 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked100.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked100.address],
-            orbsAddrs: [validatorStaked100.orbsAddress],
             weights: [stake100]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -64,12 +64,10 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked100.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address],
-            orbsAddrs: [validatorStaked100.orbsAddress],
             weights: [stake100],
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
-            orbsAddrs: [],
             weights: []
         });
 
@@ -86,7 +84,6 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked200.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked200.address],
-            orbsAddrs: [validatorStaked200.orbsAddress],
             weights: [stake200]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -94,12 +91,10 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked200.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked200.address, validatorStaked100.address],
-            orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked100.orbsAddress],
             weights: [stake200, stake100]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [],
-            orbsAddrs: [],
             weights: []
         });
 
@@ -117,7 +112,6 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked300.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address],
-            orbsAddrs: [validatorStaked300.orbsAddress],
             weights: [stake300]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -125,19 +119,16 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked300.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked300.address, validatorStaked200.address],
-            orbsAddrs: [validatorStaked300.orbsAddress, validatorStaked200.orbsAddress],
             weights: [stake300, stake200]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked100.address],
-            orbsAddrs: [validatorStaked100.orbsAddress],
             weights: [stake100]
         });
 
         r = await d.delegateMoreStake(stake300, validatorStaked200);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked200.address, validatorStaked300.address],
-            orbsAddrs: [validatorStaked200.orbsAddress, validatorStaked300.orbsAddress],
             weights: [stake200.add(stake300), stake300]
         });
         expect(r).to.not.have.a.standbysChangedEvent();
@@ -145,12 +136,10 @@ describe('elections-high-level-flows', async () => {
         r = await d.delegateMoreStake(stake500, validatorStaked100);
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
-            orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
             weights: [stake100.add(stake500), stake500]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address],
-            orbsAddrs: [validatorStaked300.orbsAddress],
             weights: [stake300]
         });
 
@@ -163,7 +152,6 @@ describe('elections-high-level-flows', async () => {
         r = await inTopologyValidator.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address, inTopologyValidator.address],
-            orbsAddrs: [validatorStaked300.orbsAddress, inTopologyValidator.orbsAddress],
             weights: [stake300, stake100]
         });
         expect(r).to.not.have.a.committeeChangedEvent();
@@ -176,7 +164,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeChangedEvent(); // no change in the committee
         expect(r).to.have.a.standbysChangedEvent({ // standbys change order
             addrs: [inTopologyValidator.address, validatorStaked300.address],
-            orbsAddrs: [inTopologyValidator.orbsAddress, validatorStaked300.orbsAddress],
             weights: [stake100.addn(201), stake300]
         });
 
@@ -197,24 +184,20 @@ describe('elections-high-level-flows', async () => {
         r = await validator.stake(stake1000); // now top of committee
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validator.address, validatorStaked100.address],
-            orbsAddrs: [validator.orbsAddress, validatorStaked100.orbsAddress],
             weights: [stake1000, stake100.add(stake500)]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked200.address, inTopologyValidator.address],
-            orbsAddrs: [validatorStaked200.orbsAddress, inTopologyValidator.orbsAddress],
             weights: [stake500, stake100.addn(201)]
         });
 
         r = await validator.unstake(501); // becomes a standby
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
-            orbsAddrs: [validatorStaked100.orbsAddress, validatorStaked200.orbsAddress],
             weights: [stake100.add(stake500), stake500]
         });
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validator.address, inTopologyValidator.address],
-            orbsAddrs: [validator.orbsAddress, inTopologyValidator.orbsAddress],
             weights: [bn(499), stake100.addn(201)]
         });
     });
@@ -490,7 +473,7 @@ describe('elections-high-level-flows', async () => {
 
         r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeChangedEvent({
-            orbsAddrs: [v.orbsAddress]
+            addrs: [v.address]
         });
     });
 
@@ -926,6 +909,61 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
+    it("sets and gets settings, only functional owner allowed to set", async () => {
+        const d = await Driver.new();
+
+        const current = await d.elections.getSettings();
+        const voteOutTimeoutSeconds  = bn(current[0]);
+        const maxDelegationRatio  = bn(current[1]);
+        const banningLockTimeoutSeconds  = bn(current[2]);
+        const voteOutPercentageThreshold  = bn(current[3]);
+        const banningPercentageThreshold  = bn(current[4]);
+
+        await expectRejected(d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        let r = await d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.voteOutTimeoutSecondsChangedEvent({
+            newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
+            oldValue: voteOutTimeoutSeconds.toString()
+        });
+
+        await expectRejected(d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.maxDelegationRatioChangedEvent({
+            newValue: maxDelegationRatio.add(bn(1)).toString(),
+            oldValue: maxDelegationRatio.toString()
+        });
+
+        await expectRejected(d.elections.setBanningLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setBanningLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.banningLockTimeoutSecondsChangedEvent({
+            newValue: banningLockTimeoutSeconds.add(bn(1)).toString(),
+            oldValue: banningLockTimeoutSeconds.toString()
+        });
+
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
+            newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
+            oldValue: voteOutPercentageThreshold.toString()
+        });
+
+        await expectRejected(d.elections.setBanningPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setBanningPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.banningPercentageThresholdChangedEvent({
+            newValue: banningPercentageThreshold.add(bn(1)).toString(),
+            oldValue: banningPercentageThreshold.toString()
+        });
+
+        const afterUpdate = await d.elections.getSettings();
+        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3], afterUpdate[4]]).to.deep.eq([
+            voteOutTimeoutSeconds.add(bn(1)).toString(),
+            maxDelegationRatio.add(bn(1)).toString(),
+            banningLockTimeoutSeconds.add(bn(1)).toString(),
+            voteOutPercentageThreshold.add(bn(1)).toString(),
+            banningPercentageThreshold.add(bn(1)).toString()
+        ]);
+    })
+
 });
 
 export async function banningScenario_setupDelegatorsAndValidators(driver: Driver) {
@@ -987,7 +1025,7 @@ export async function banningScenario_voteUntilThresholdReached(driver: Driver, 
         validator: bannedValidator.address
     });
     expect(r).to.withinContract(driver.committee).have.a.committeeChangedEvent({
-        orbsAddrs: []
+        addrs: []
     });
     return r;
 }

@@ -31,6 +31,14 @@ import {
   committeeChangedEvents,
   standbysChangedEvents,
   stakingRewardsDistributed,
+  voteOutTimeoutSecondsChangedEvents,
+  maxDelegationRatioChangedEvents,
+  banningLockTimeoutSecondsChangedEvents,
+  voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents
+  validatorMetadataChangedEvents,
+  committeeChangedEvents,
+  standbysChangedEvents,
+  stakingRewardsDistributed,
   lockedEvents,
   unlockedEvents
 } from "./event-parsing";
@@ -46,7 +54,10 @@ import {
   VotedOutOfCommitteeEvent,
   BanningVoteEvent,
   BannedEvent,
-  UnbannedEvent
+  UnbannedEvent,
+  VoteOutTimeoutSecondsChangedEvent,
+  MaxDelegationRatioChangedEvent,
+  BanningLockTimeoutSecondsChangedEvent, VoteOutPercentageThresholdChangedEvent, BanningPercentageThresholdChangedEvent
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
@@ -204,8 +215,6 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
   chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
-  chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
-  chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -247,9 +256,15 @@ declare global {
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
+      voteOutTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
+      maxDelegationRatioChangedEvent(data?: Partial<MaxDelegationRatioChangedEvent>);
+      banningLockTimeoutSecondsChangedEvent(data?: Partial<BanningLockTimeoutSecondsChangedEvent>);
+      voteOutPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
+      banningPercentageThresholdChangedEvent(data?: Partial<BanningPercentageThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
       withinContract(contract: Contract): Assertion;
+
     }
 
     export interface Assertion {
