@@ -7,7 +7,7 @@ import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	uint constant MAX_TOPOLOGY = 32; // Cannot be greater than 32 (number of bytes in uint256)
 
 	address[] participantAddresses;
@@ -80,7 +80,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
 	/// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		require(uint256(uint128(weight)) == weight, "weight is out of range");
 
 		MemberData memory memberData = membersData[addr];
@@ -94,7 +94,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
 			return (false, false);
@@ -108,7 +108,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberNotReadyToSync(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function memberNotReadyToSync(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
 			return (false, false);
@@ -122,7 +122,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract returns (bool commiteeChanged, bool standbysChanged) {
+	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool commiteeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
 			return (false, false);
@@ -135,7 +135,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		require(uint256(uint128(weight)) == weight, "weight is out of range");
 
 		if (membersData[addr].isMember) {
@@ -158,7 +158,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external onlyElectionsContract returns (bool committeeChanged, bool standbysChanged) {
+	function removeMember(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
 		MemberData memory memberData = membersData[addr];
 		memberData.isMember = false;
 		(committeeChanged, standbysChanged) = _rankAndUpdateMember(Member({
@@ -266,15 +266,15 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	/// @dev returns the current committee
 	/// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) { // todo also compliance
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
 		(address[] memory _committee, uint256[] memory _weights,) = _getCommittee();
-		return (_committee, _weights, _loadOrbsAddresses(_committee), _loadIps(_committee));
+		return (_committee, _weights, _loadOrbsAddresses(_committee), _loadCompliance(_committee), _loadIps(_committee));
 	}
 
 	/// @dev returns the current standbys (out of commiteee) topology
-	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips) {
+	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
 		(address[] memory _standbys, uint256[] memory _weights) = _getStandbys();
-		return (_standbys, _weights, _loadOrbsAddresses(_standbys), _loadIps(_standbys));
+		return (_standbys, _weights, _loadOrbsAddresses(_standbys), _loadCompliance(_standbys) ,_loadIps(_standbys));
 	}
 
 	function getSettings() external view returns (uint48 readyToSyncTimeout, uint8 maxCommitteeSize, uint8 maxStandbys) {
@@ -299,6 +299,14 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			ips[i] = validatorsRegistrationContract.getValidatorIp(addrs[i]);
 		}
 		return ips;
+	}
+
+	function _loadCompliance(address[] memory addrs) private view returns (bool[] memory) {
+		bool[] memory compliance = new bool[](addrs.length);
+		for (uint i = 0; i < addrs.length; i++) {
+			compliance[i] = membersData[addrs[i]].isCompliant;
+		}
+		return compliance;
 	}
 
 	function _rankAndUpdateMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {

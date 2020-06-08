@@ -50,5 +50,30 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external /*onlyDelegationsContract*/;
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) external /*onlyDelegationsContract*/;
 	function getTotalGovernanceStake() external view returns (uint256);
+
+	function getSettings() external view returns (
+		uint32 voteOutTimeoutSeconds,
+		uint32 maxDelegationRatio,
+		uint32 banningLockTimeoutSeconds,
+		uint8 voteOutPercentageThreshold,
+		uint8 banningPercentageThreshold
+	);
+
+	/*
+     * Governance
+	 */
+
+	function setVoteOutTimeoutSeconds(uint32 voteOutTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxDelegationRatio(uint32 maxDelegationRatio) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setBanningLockTimeoutSeconds(uint32 banningLockTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setBanningPercentageThreshold(uint8 banningPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
+
+	event VoteOutTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
+	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
+	event BanningLockTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
+	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+	event BanningPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+
 }
 

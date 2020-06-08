@@ -10,7 +10,7 @@ import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership {
+contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
     using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
 
@@ -58,17 +58,17 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner {
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
         bootstrapAndStaking.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner {
+    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
         bootstrapAndStaking.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function topUpBootstrapPool(uint256 amount) external {
+    function topUpBootstrapPool(uint256 amount) external onlyWhenActive {
         uint48 _amount48 = toUint48Granularity(amount);
         uint48 bootstrapPool = uint48(bootstrapAndStaking.bootstrapPool.add(_amount48)); // todo may overflow
         bootstrapAndStaking.bootstrapPool = bootstrapPool;
@@ -80,12 +80,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].bootstrapRewards);
     }
 
-    function assignRewards() public {
+    function assignRewards() public onlyWhenActive {
         (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
         _assignRewardsToCommittee(committee, weights, compliance);
     }
 
-    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyCommitteeContract {
+    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyCommitteeContract onlyWhenActive {
         _assignRewardsToCommittee(committee, committeeWeights, compliance);
     }
 
@@ -119,7 +119,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         certifiedValidatorBootstrap = generalValidatorBootstrap + toUint256Granularity(uint48(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
-    function withdrawBootstrapFunds() external {
+    function withdrawBootstrapFunds() external onlyWhenActive {
         uint48 amount = balances[msg.sender].bootstrapRewards;
         uint48 pool = bootstrapAndStaking.bootstrapPool;
         require(amount <= pool, "not enough balance in the bootstrap pool for this withdrawal");
@@ -130,7 +130,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner {
+    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
         BootstrapAndStaking memory pools = bootstrapAndStaking;
         pools.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
@@ -138,7 +138,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         bootstrapAndStaking = pools;
     }
 
-    function topUpStakingRewardsPool(uint256 amount) external {
+    function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
         uint48 amount48 = toUint48Granularity(amount);
         bootstrapAndStaking.stakingPool = uint48(bootstrapAndStaking.stakingPool.add(amount48)); // todo overflow
         require(transferFrom(erc20, msg.sender, address(this), amount48), "Rewards::topUpProRataPool - insufficient allowance");
@@ -182,7 +182,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     mapping (address => DistributorBatchState) distributorBatchState;
 
-    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external {
+    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
@@ -295,11 +295,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
     }
 
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
+    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
         fillFeeBuckets(amount, monthlyRate, fromTimestamp, false);
     }
 
-    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
+    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
         fillFeeBuckets(amount, monthlyRate, fromTimestamp, true);
     }
 
@@ -336,9 +336,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
 
         assert(_amount == 0);
+
+        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriptions to rewards");
     }
 
-    function withdrawFeeFunds() external {
+    function withdrawFeeFunds() external onlyWhenActive {
         uint48 amount = balances[msg.sender].fees;
         balances[msg.sender].fees = 0;
         require(transfer(erc20, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");

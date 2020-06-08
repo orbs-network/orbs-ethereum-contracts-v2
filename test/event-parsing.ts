@@ -58,6 +58,13 @@ export const banningVoteEvents = (txResult, contractAddress?: string) => parseLo
 export const electionsBanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Banned(address)", contractAddress);
 export const electionsUnbanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Unbanned(address)", contractAddress);
 export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,bool)", contractAddress);
+export const voteOutTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutTimeoutSecondsChanged(uint32,uint32)");
+export const maxDelegationRatioChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "MaxDelegationRatioChanged(uint32,uint32)");
+export const banningLockTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningLockTimeoutSecondsChanged(uint32,uint32)");
+export const voteOutPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutPercentageThresholdChanged(uint8,uint8)");
+export const banningPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningPercentageThresholdChanged(uint8,uint8)");
+export const lockedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "Locked()", contractAddress);
+export const unlockedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "Unlocked()", contractAddress);
 export const readyToSyncTimeoutChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "ReadyToSyncTimeoutChanged(uint48,uint48)");
 export const maxCommitteeSizeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxCommitteeSizeChanged(uint8,uint8)");
 export const maxStandbysChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxStandbysChanged(uint8,uint8)");

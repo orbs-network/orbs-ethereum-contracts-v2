@@ -14,21 +14,24 @@ import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
 
-contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
-
-    uint256 constant BANNING_LOCK_TIMEOUT = 1 weeks;
 
 	mapping (address => mapping (address => uint256)) voteOuts; // by => to => timestamp
 	mapping (address => address[]) banningVotes; // by => to[]]
 	mapping (address => uint256) accumulatedStakesForBanning; // addr => total stake
 	mapping (address => uint256) bannedValidators; // addr => timestamp
 
-	uint maxDelegationRatio; // TODO consider using a hardcoded constant instead.
-	uint8 voteOutPercentageThreshold;
-	uint256 voteOutTimeoutSeconds;
-	uint256 banningPercentageThreshold;
 	uint256 totalGovernanceStake;
+
+	struct Settings {
+		uint32 voteOutTimeoutSeconds;
+		uint32 maxDelegationRatio;
+		uint32 banningLockTimeoutSeconds;
+		uint8 voteOutPercentageThreshold;
+		uint8 banningPercentageThreshold;
+	}
+	Settings settings;
 
 	modifier onlyDelegationsContract() {
 		require(msg.sender == address(getDelegationsContract()), "caller is not the delegations contract");
@@ -48,15 +51,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	constructor(uint8 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint256 _voteOutTimeoutSeconds, uint256 _banningPercentageThreshold) public {
+	constructor(uint32 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint32 _voteOutTimeoutSeconds, uint8 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
 		require(_banningPercentageThreshold >= 0 && _banningPercentageThreshold <= 100, "banningPercentageThreshold must be between 0 and 100");
 
-	    maxDelegationRatio = _maxDelegationRatio;
-		voteOutPercentageThreshold = _voteOutPercentageThreshold;
-		voteOutTimeoutSeconds = _voteOutTimeoutSeconds;
-		banningPercentageThreshold = _banningPercentageThreshold;
+		settings = Settings({
+			maxDelegationRatio: _maxDelegationRatio,
+			voteOutPercentageThreshold: _voteOutPercentageThreshold,
+			voteOutTimeoutSeconds: _voteOutTimeoutSeconds,
+			banningPercentageThreshold: _banningPercentageThreshold,
+			banningLockTimeoutSeconds: 1 weeks
+		});
 	}
 
 	/// @dev Called by: validator registration contract
@@ -65,7 +71,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		if (_isBanned(addr)) {
 			return;
 		}
-		addMemberToCommittees(addr);
+		addMemberToCommittees(addr, settings);
 	}
 
 	/// @dev Called by: validator registration contract
@@ -90,7 +96,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberReadyToSync(sender, false);
 	}
 
-	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract external {
+	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenActive external {
 		require(newDelegate != prevDelegate, "in a delegation change the delegate must change");
 
 		uint256 tempTotalGovernanceStake = totalGovernanceStake;
@@ -111,11 +117,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			}
 		}
 
-		_applyDelegatedStake(prevDelegate, prevDelegateNewTotalStake, tempTotalGovernanceStake);
-		_applyDelegatedStake(newDelegate, newDelegateNewTotalStake, tempTotalGovernanceStake);
+		Settings memory _settings = settings;
 
-		_applyStakesToBanningBy(prevDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingPrevDelegate, prevDelegatePrevTotalStake), tempTotalGovernanceStake);
-		_applyStakesToBanningBy(newDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingNewDelegate, newDelegatePrevTotalStake), tempTotalGovernanceStake);
+		_applyDelegatedStake(prevDelegate, prevDelegateNewTotalStake, tempTotalGovernanceStake, _settings);
+		_applyDelegatedStake(newDelegate, newDelegateNewTotalStake, tempTotalGovernanceStake, _settings);
+
+		_applyStakesToBanningBy(prevDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingPrevDelegate, prevDelegatePrevTotalStake), tempTotalGovernanceStake, _settings);
+		_applyStakesToBanningBy(newDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingNewDelegate, newDelegatePrevTotalStake), tempTotalGovernanceStake, _settings);
 
 		totalGovernanceStake = tempTotalGovernanceStake;
 	}
@@ -127,6 +135,8 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function isCommitteeVoteOutThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory compliance, address votee) private view returns (bool) {
+		Settings memory _settings = settings;
+
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteOutStake = 0;
 		uint256 totalCompliantStake = 0;
@@ -149,7 +159,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			}
 
 			uint256 votedAt = voteOuts[member][votee];
-			if (votedAt != 0 && now.sub(votedAt) < voteOutTimeoutSeconds) {
+			if (votedAt != 0 && now.sub(votedAt) < _settings.voteOutTimeoutSeconds) {
 				totalVoteOutStake = totalVoteOutStake.add(memberStake);
 				if (compliance[i]) {
 					totalCompliantVoteOutStake = totalCompliantVoteOutStake.add(memberStake);
@@ -159,11 +169,11 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
-		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= voteOutPercentageThreshold)
-			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteOutStake.mul(100).div(totalCompliantStake) >= voteOutPercentageThreshold);
+		return (totalCommitteeStake > 0 && totalVoteOutStake.mul(100).div(totalCommitteeStake) >= _settings.voteOutPercentageThreshold)
+			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteOutStake.mul(100).div(totalCompliantStake) >= _settings.voteOutPercentageThreshold);
 	}
 
-	function voteOut(address addr) external {
+	function voteOut(address addr) external onlyWhenActive {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
 		voteOuts[sender][addr] = now;
 		emit VoteOut(sender, addr);
@@ -178,7 +188,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function setBanningVotes(address[] calldata validators) external {
+	function setBanningVotes(address[] calldata validators) external onlyWhenActive {
 		require(validators.length <= 3, "up to 3 concurrent votes are supported");
 		for (uint i = 0; i < validators.length; i++) {
 			require(validators[i] != address(0), "all votes must non zero addresses");
@@ -203,7 +213,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return accumulatedStakesForBanning[addrs];
 	}
 
-	function _applyStakesToBanningBy(address voter, uint256 previousStake, uint256 _totalGovernanceStake) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
+	function _applyStakesToBanningBy(address voter, uint256 previousStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
 		address[] memory votes = banningVotes[voter];
 		uint256 currentStake = getGovernanceEffectiveStake(voter);
 
@@ -212,11 +222,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			accumulatedStakesForBanning[validator] = accumulatedStakesForBanning[validator].
 				sub(previousStake).
 				add(currentStake);
-			_applyBanningVotesFor(validator, _totalGovernanceStake);
+			_applyBanningVotesFor(validator, _totalGovernanceStake, _settings);
 		}
 	}
 
     function _setBanningVotes(address voter, address[] memory validators) private {
+		Settings memory _settings = settings;
+
 		address[] memory prevAddrs = banningVotes[voter];
 		banningVotes[voter] = validators;
 		uint256 _totalGovernanceStake = totalGovernanceStake;
@@ -232,7 +244,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			}
 			if (isRemoved) {
 				accumulatedStakesForBanning[addr] = accumulatedStakesForBanning[addr].sub(getGovernanceEffectiveStake(msg.sender));
-				_applyBanningVotesFor(addr, _totalGovernanceStake);
+				_applyBanningVotesFor(addr, _totalGovernanceStake, _settings);
 			}
 		}
 
@@ -248,20 +260,20 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			if (isAdded) {
 				accumulatedStakesForBanning[addr] = accumulatedStakesForBanning[addr].add(getGovernanceEffectiveStake(msg.sender));
 			}
-			_applyBanningVotesFor(addr, _totalGovernanceStake); // recheck also if not new
+			_applyBanningVotesFor(addr, _totalGovernanceStake, _settings); // recheck also if not new
 		}
     }
 
-    function _applyBanningVotesFor(address addr, uint256 _totalGovernanceStake) private {
+    function _applyBanningVotesFor(address addr, uint256 _totalGovernanceStake, Settings memory _settings) private {
         uint256 banningTimestamp = bannedValidators[addr];
         bool isBanned = banningTimestamp != 0;
 
-        if (isBanned && now.sub(banningTimestamp) >= BANNING_LOCK_TIMEOUT) { // no unbanning after 7 days
+        if (isBanned && now.sub(banningTimestamp) >= _settings.banningLockTimeoutSeconds) { // no unbanning after 7 days
             return;
         }
 
         uint256 banningStake = accumulatedStakesForBanning[addr];
-        bool shouldBan = _totalGovernanceStake > 0 && banningStake.mul(100).div(_totalGovernanceStake) >= banningPercentageThreshold;
+        bool shouldBan = _totalGovernanceStake > 0 && banningStake.mul(100).div(_totalGovernanceStake) >= _settings.banningPercentageThreshold;
 
         if (isBanned != shouldBan) {
 			if (shouldBan) {
@@ -273,16 +285,16 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
                 bannedValidators[addr] = 0;
 				emit Unbanned(addr);
 
-				addMemberToCommittees(addr);
+				addMemberToCommittees(addr, _settings);
 			}
         }
     }
 
-	function _isBanned(address addr) private view returns (bool){
+	function _isBanned(address addr) private view returns (bool) {
 		return bannedValidators[addr] != 0;
 	}
 
-	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract {
+	function notifyStakeChange(uint256 prevDelegateTotalStake, uint256 newDelegateTotalStake, address delegate, bool isSelfDelegatingDelegate) external onlyDelegationsContract onlyWhenActive {
 
 		uint256 prevGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, prevDelegateTotalStake);
 		uint256 newGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegate, newDelegateTotalStake);
@@ -292,18 +304,19 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			_totalGovernanceStake = _totalGovernanceStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
 		}
 
-		_applyDelegatedStake(delegate, newDelegateTotalStake, _totalGovernanceStake);
-
-		_applyStakesToBanningBy(delegate, prevGovStakeDelegate, _totalGovernanceStake);
+		Settings memory _settings = settings;
+		_applyDelegatedStake(delegate, newDelegateTotalStake, _totalGovernanceStake, _settings);
+		_applyStakesToBanningBy(delegate, prevGovStakeDelegate, _totalGovernanceStake, _settings);
 
 		totalGovernanceStake = _totalGovernanceStake;
 	}
 
-	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract {
+	function notifyStakeChangeBatch(uint256[] calldata prevDelegateTotalStakes, uint256[] calldata newDelegateTotalStakes, address[] calldata delegates, bool[] calldata isSelfDelegatingDelegates) external onlyDelegationsContract onlyWhenActive {
 		require(prevDelegateTotalStakes.length == newDelegateTotalStakes.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == delegates.length, "arrays must be of same length");
 		require(prevDelegateTotalStakes.length == isSelfDelegatingDelegates.length, "arrays must be of same length");
 
+		Settings memory _settings = settings;
 		uint256 tempTotalGovStake = totalGovernanceStake;
 		for (uint i = 0; i < prevDelegateTotalStakes.length; i++) {
 			uint256 prevGovStakeDelegate = calcGovernanceEffectiveStake(isSelfDelegatingDelegates[i], prevDelegateTotalStakes[i]);
@@ -313,10 +326,10 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 				tempTotalGovStake = tempTotalGovStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
 			}
 
-			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i], tempTotalGovStake);
+			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i], tempTotalGovStake, _settings);
 
 			// TODO add tests to show banning votes are evaluated equally when stake change is batched and not batched
-			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate, tempTotalGovStake);
+			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate, tempTotalGovStake, _settings);
 		}
 		totalGovernanceStake = tempTotalGovStake; // flush
 	}
@@ -329,13 +342,14 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return sender;
 	}
 
-	function _applyDelegatedStake(address addr, uint256 newUncappedStake, uint256 _totalGovernanceStake) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
-		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), getCommitteeEffectiveStake(addr), _totalGovernanceStake);
+	function _applyDelegatedStake(address addr, uint256 newUncappedStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
+		uint effectiveStake = getCommitteeEffectiveStake(addr, _settings);
+		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), effectiveStake, _totalGovernanceStake);
 
-		getCommitteeContract().memberWeightChange(addr, getCommitteeEffectiveStake(addr));
+		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(address v) private view returns (uint256) { // TODO reduce number of calls to other contracts
+	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) { // TODO reduce number of calls to other contracts
 		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
 		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v;
 		if (!isSelfDelegating || ownStake == 0) {
@@ -343,7 +357,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 
 		uint256 uncappedStake = getUncappedStakes(v);
-		uint256 maxRatio = maxDelegationRatio;
+		uint256 maxRatio = _settings.maxDelegationRatio;
 		if (uncappedStake.div(ownStake) < maxRatio) {
 			return uncappedStake;
 		}
@@ -366,7 +380,51 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().removeMember(addr);
 	}
 
-	function addMemberToCommittees(address addr) private {
-		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr), getComplianceContract().isValidatorCompliant(addr));
+	function addMemberToCommittees(address addr, Settings memory _settings) private {
+		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getComplianceContract().isValidatorCompliant(addr));
 	}
+
+	function setVoteOutTimeoutSeconds(uint32 voteOutTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		emit VoteOutTimeoutSecondsChanged(voteOutTimeoutSeconds, settings.voteOutTimeoutSeconds);
+		settings.voteOutTimeoutSeconds = voteOutTimeoutSeconds;
+	}
+
+	function setMaxDelegationRatio(uint32 maxDelegationRatio) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		require(maxDelegationRatio >= 1, "max delegation ration must be at least 1");
+		emit MaxDelegationRatioChanged(maxDelegationRatio, settings.maxDelegationRatio);
+		settings.maxDelegationRatio = maxDelegationRatio;
+	}
+
+	function setBanningLockTimeoutSeconds(uint32 banningLockTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		emit BanningLockTimeoutSecondsChanged(banningLockTimeoutSeconds, settings.banningLockTimeoutSeconds);
+		settings.banningLockTimeoutSeconds = banningLockTimeoutSeconds;
+	}
+
+	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
+		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
+		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
+	}
+
+	function setBanningPercentageThreshold(uint8 banningPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		require(banningPercentageThreshold <= 100, "banningPercentageThreshold must not be larger than 100");
+		emit BanningPercentageThresholdChanged(banningPercentageThreshold, settings.banningPercentageThreshold);
+		settings.banningPercentageThreshold = banningPercentageThreshold;
+	}
+
+	function getSettings() external view returns (
+		uint32 voteOutTimeoutSeconds,
+		uint32 maxDelegationRatio,
+		uint32 banningLockTimeoutSeconds,
+		uint8 voteOutPercentageThreshold,
+		uint8 banningPercentageThreshold
+	) {
+		Settings memory _settings = settings;
+		voteOutTimeoutSeconds = _settings.voteOutTimeoutSeconds;
+		maxDelegationRatio = _settings.maxDelegationRatio;
+		banningLockTimeoutSeconds = _settings.banningLockTimeoutSeconds;
+		voteOutPercentageThreshold = _settings.voteOutPercentageThreshold;
+		banningPercentageThreshold = _settings.banningPercentageThreshold;
+	}
+
 }
