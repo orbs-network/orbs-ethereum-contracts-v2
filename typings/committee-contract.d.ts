@@ -23,7 +23,7 @@ export interface CommitteeContract extends OwnedContract {
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;
     getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
     getStandbys(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
-    getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
-    getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
+    getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
+    getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
     getTopology(): Promise<TransactionReceipt>;
 }

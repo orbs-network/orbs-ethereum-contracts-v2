@@ -783,6 +783,9 @@ describe('committee', async () => {
 
             await v.registerAsValidator();
             await v.stake(stake*(maxCommitteeSize - i));
+            if (i % 2 == 0) {
+                await v.becomeCompliant();
+            }
             let r = await v.notifyReadyForCommittee();
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.map(s => s.address),
@@ -798,6 +801,9 @@ describe('committee', async () => {
 
             await v.registerAsValidator();
             await v.stake(stake*(maxStandbys - i));
+            if (i % 2 == 0) {
+                await v.becomeCompliant();
+            }
             let r = await v.notifyReadyToSync();
             expect(r).to.have.a.standbysChangedEvent({
                 addrs: standbys.map(s => s.address),
@@ -815,11 +821,12 @@ describe('committee', async () => {
         );
 
         r = await d.committee.getCommitteeInfo();
-        expect([r[0], r[1], r[2], r[3]]).to.deep.equal(
+        expect([r[0], r[1], r[2], r[3], r[4]]).to.deep.equal(
             [
                 committee.map(v => v.address),
                 committee.map((v, i) => (stake * (maxCommitteeSize - i)).toString()),
                 committee.map(v => v.orbsAddress),
+                committee.map((v, i) => i % 2 == 0),
                 committee.map(v => v.ip),
             ]
         );
@@ -833,11 +840,12 @@ describe('committee', async () => {
         );
 
         r = await d.committee.getStandbysInfo();
-        expect([r[0], r[1], r[2], r[3]]).to.deep.equal(
+        expect([r[0], r[1], r[2], r[3], r[4]]).to.deep.equal(
             [
                 standbys.map(v => v.address),
                 standbys.map((v, i) => (stake * (maxStandbys - i)).toString()),
                 standbys.map(v => v.orbsAddress),
+                committee.map((v, i) => i % 2 == 0),
                 standbys.map(v => v.ip),
             ]
         );
