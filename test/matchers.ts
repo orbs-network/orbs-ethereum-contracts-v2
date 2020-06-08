@@ -216,6 +216,8 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
   chai.Assertion.overwriteMethod("voteOutPercentageThresholdChangedEvent", containEvent(voteOutPercentageThresholdChangedEvents));
   chai.Assertion.overwriteMethod("banningPercentageThresholdChangedEvent", containEvent(banningPercentageThresholdChangedEvents));
+  chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
+  chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
