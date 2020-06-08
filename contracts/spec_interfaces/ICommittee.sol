@@ -50,6 +50,14 @@ interface ICommittee {
 	 * Governance
 	 */
 
+	function setReadyToSyncTimeout(uint48 readyToSyncTimeout) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxCommitteeSize(uint8 maxCommitteeSize) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxStandbys(uint8 maxStandbys) external /* onlyFunctionalOwner onlyWhenActive */;
+
+	event ReadyToSyncTimeoutChanged(uint48 newValue, uint48 oldValue);
+	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
+	event MaxStandbysChanged(uint48 newValue, uint48 oldValue);
+
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
@@ -64,4 +72,6 @@ interface ICommittee {
     /// @dev returns the current standbys (out of commiteee) topology
 	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bytes4[] memory ips);
 
+	/// @dev returns the current settings of the committee contract
+	function getSettings() external view returns (uint48 readyToSyncTimeout, uint8 maxCommitteeSize, uint8 maxStandbys);
 }

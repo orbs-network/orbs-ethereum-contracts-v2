@@ -15,6 +15,21 @@ export interface StandbysChangedEvent {
     compliance: boolean[];
 }
 
+export interface ReadyToSyncTimeoutChangedEvent {
+    newValue: string|BN;
+    oldValue: string|BN;
+}
+
+export interface MaxCommitteeSizeChangedEvent {
+    newValue: string|BN;
+    oldValue: string|BN;
+}
+
+export interface MaxStandbysChangedEvent {
+    newValue: string|BN;
+    oldValue: string|BN;
+}
+
 export interface CommitteeContract extends OwnedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberNotReadyToSync(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -23,5 +38,7 @@ export interface CommitteeContract extends OwnedContract {
     getStandbys(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
     getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
     getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
+    getSettings(params?: TransactionConfig): Promise<[string /* readyToSyncTimeout */, string /* maxCommitteeSize */, string /* maxStandbys */]>;
     getTopology(): Promise<TransactionReceipt>;
+
 }

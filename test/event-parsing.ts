@@ -58,5 +58,8 @@ export const banningVoteEvents = (txResult, contractAddress?: string) => parseLo
 export const electionsBanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Banned(address)", contractAddress);
 export const electionsUnbanned = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "Unbanned(address)", contractAddress);
 export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,bool)", contractAddress);
+export const readyToSyncTimeoutChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "ReadyToSyncTimeoutChanged(uint48,uint48)");
+export const maxCommitteeSizeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxCommitteeSizeChanged(uint8,uint8)");
+export const maxStandbysChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxStandbysChanged(uint8,uint8)");
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);

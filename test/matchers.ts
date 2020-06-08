@@ -27,7 +27,11 @@ import {
   validatorRegisteredEvents,
   validatorUnregisteredEvents,
   validatorDataUpdatedEvents,
-  validatorMetadataChangedEvents, committeeChangedEvents, standbysChangedEvents, stakingRewardsDistributed
+  validatorMetadataChangedEvents,
+  committeeChangedEvents,
+  standbysChangedEvents,
+  stakingRewardsDistributed,
+  readyToSyncTimeoutChangedEvents, maxCommitteeSizeChangedEvents, maxStandbysChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -58,7 +62,11 @@ import {
   DelegatedEvent,
   DelegatedStakeChangedEvent
 } from "../typings/delegations-contract";
-import {CommitteeChangedEvent, StandbysChangedEvent} from "../typings/committee-contract";
+import {
+  CommitteeChangedEvent, MaxCommitteeSizeChangedEvent, MaxStandbysChangedEvent,
+  ReadyToSyncTimeoutChangedEvent,
+  StandbysChangedEvent
+} from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 
@@ -198,6 +206,9 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
   chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
+  chai.Assertion.overwriteMethod("readyToSyncTimeoutChangedEvent", containEvent(readyToSyncTimeoutChangedEvents));
+  chai.Assertion.overwriteMethod("maxCommitteeSizeChangedEvent", containEvent(maxCommitteeSizeChangedEvents));
+  chai.Assertion.overwriteMethod("maxStandbysChangedEvent", containEvent(maxStandbysChangedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -237,8 +248,12 @@ declare global {
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
-      bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
-      bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
+      bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);
+      bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>);
+      readyToSyncTimeoutChangedEvent(data?: Partial<ReadyToSyncTimeoutChangedEvent>);
+      maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
+      maxStandbysChangedEvent(data?: Partial<MaxStandbysChangedEvent>);
+
       withinContract(contract: Contract): Assertion;
     }
 
