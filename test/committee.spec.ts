@@ -916,4 +916,60 @@ describe('committee', async () => {
         });
     });
 
+    it("sets and gets settings, only functional owner allowed to set", async () => {
+        const d = await Driver.new();
+
+        const current = await d.committee.getSettings();
+        const readyToSyncTimeout = bn(current[0]);
+        const maxCommitteeSize = bn(current[1]);
+        const maxStandbys = bn(current[2]);
+
+        await expectRejected(d.committee.setReadyToSyncTimeout(readyToSyncTimeout.add(bn(1)), {from: d.migrationOwner.address}));
+        let r = await d.committee.setReadyToSyncTimeout(readyToSyncTimeout.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.readyToSyncTimeoutChangedEvent({
+            newValue: readyToSyncTimeout.add(bn(1)).toString(),
+            oldValue: readyToSyncTimeout.toString()
+        });
+
+        await expectRejected(d.committee.setMaxCommitteeSize(maxCommitteeSize.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.committee.setMaxCommitteeSize(maxCommitteeSize.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.maxCommitteeSizeChangedEvent({
+            newValue: maxCommitteeSize.add(bn(1)).toString(),
+            oldValue: maxCommitteeSize.toString()
+        });
+
+        await expectRejected(d.committee.setMaxStandbys(maxStandbys.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.committee.setMaxStandbys(maxStandbys.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.maxStandbysChangedEvent({
+            newValue: maxStandbys.add(bn(1)).toString(),
+            oldValue: maxStandbys.toString()
+        });
+
+        const afterUpdate = await d.committee.getSettings();
+        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2]]).to.deep.eq([
+            readyToSyncTimeout.add(bn(1)).toString(),
+            maxCommitteeSize.add(bn(1)).toString(),
+            maxStandbys.add(bn(1)).toString(),
+        ]);
+    })
+
+    it("does not allow to set a topology larger than 32, maxCommittee and maxStandby must be larger than 0", async () => {
+       const d = await Driver.new();
+
+       await d.committee.setMaxCommitteeSize(1, {from: d.functionalOwner.address});
+       await d.committee.setMaxStandbys(2, {from: d.functionalOwner.address});
+
+       await expectRejected(d.committee.setMaxCommitteeSize(31, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxStandbys(32, {from: d.functionalOwner.address}));
+
+        await expectRejected(d.committee.setMaxCommitteeSize(0, {from: d.functionalOwner.address}));
+        await expectRejected(d.committee.setMaxStandbys(0, {from: d.functionalOwner.address}));
+
+        await d.committee.setMaxCommitteeSize(1, {from: d.functionalOwner.address});
+        await d.committee.setMaxStandbys(31, {from: d.functionalOwner.address});
+
+        await d.committee.setMaxStandbys(1, {from: d.functionalOwner.address});
+        await d.committee.setMaxCommitteeSize(31, {from: d.functionalOwner.address});
+
+    });
 });

@@ -56,7 +56,7 @@ interface ICommittee {
 
 	event ReadyToSyncTimeoutChanged(uint48 newValue, uint48 oldValue);
 	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
-	event MaxStandbysChanged(uint48 newValue, uint48 oldValue);
+	event MaxStandbysChanged(uint8 newValue, uint8 oldValue);
 
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;

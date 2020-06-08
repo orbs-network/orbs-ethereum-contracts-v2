@@ -38,6 +38,10 @@ export interface CommitteeContract extends OwnedContract {
     getStandbys(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
     getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
     getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
+    setReadyToSyncTimeout(readyToSyncTimeout: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setMaxCommitteeSize(maxCommitteeSize: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setMaxStandbys(maxStandbys: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+
     getSettings(params?: TransactionConfig): Promise<[string /* readyToSyncTimeout */, string /* maxCommitteeSize */, string /* maxStandbys */]>;
     getTopology(): Promise<TransactionReceipt>;
 
