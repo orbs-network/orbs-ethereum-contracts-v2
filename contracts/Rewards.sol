@@ -23,18 +23,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     Settings settings;
 
-    struct Pools {
+    struct PoolsAndTotalBalances {
         uint48 bootstrapPool;
         uint48 stakingPool;
-    }
-    Pools pools;
-
-    struct TotalBalances {
         uint48 bootstrapRewardsTotalBalance;
         uint48 feesTotalBalance;
         uint48 stakingRewardsTotalBalance;
     }
-    TotalBalances totalBalances;
+    PoolsAndTotalBalances poolsAndTotalBalances;
 
     struct Balance {
         uint48 bootstrapRewards;
@@ -81,8 +77,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function topUpBootstrapPool(uint256 amount) external {
         uint48 _amount48 = toUint48Granularity(amount);
-        uint48 bootstrapPool = uint48(pools.bootstrapPool.add(_amount48)); // todo may overflow
-        pools.bootstrapPool = bootstrapPool;
+        uint48 bootstrapPool = uint48(poolsAndTotalBalances.bootstrapPool.add(_amount48)); // todo may overflow
+        poolsAndTotalBalances.bootstrapPool = bootstrapPool;
         require(transferFrom(bootstrapToken, msg.sender, address(this), _amount48), "Rewards::topUpFixedPool - insufficient allowance");
         emit BootstrapAddedToPool(amount, toUint256Granularity(bootstrapPool));
     }
@@ -107,7 +103,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         (uint256 generalValidatorFee, uint256 certifiedValidatorFee) = collectFees(committee, compliance);
         uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, _settings);
 
-        TotalBalances memory totals = totalBalances;
+        PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
@@ -123,7 +119,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             balances[committee[i]] = balance;
         }
 
-        totalBalances = totals;
+        poolsAndTotalBalances = totals;
         lastAssignedAt = now;
 
         emit StakingRewardsAssigned(committee, stakingRewards);
@@ -139,11 +135,15 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function withdrawBootstrapFunds() external {
         uint48 amount = balances[msg.sender].bootstrapRewards;
-        uint48 pool = pools.bootstrapPool;
-        require(amount <= pool, "not enough balance in the bootstrap pool for this withdrawal");
+
+        PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
+
+        require(amount <= _poolsAndTotalBalances.bootstrapPool, "not enough balance in the bootstrap pool for this withdrawal");
         balances[msg.sender].bootstrapRewards = 0;
-        totalBalances.bootstrapRewardsTotalBalance = uint48(totalBalances.bootstrapRewardsTotalBalance.sub(amount));
-        pools.bootstrapPool = uint48(pool.sub(amount));
+        _poolsAndTotalBalances.bootstrapRewardsTotalBalance = uint48(_poolsAndTotalBalances.bootstrapRewardsTotalBalance.sub(amount));
+        _poolsAndTotalBalances.bootstrapPool = uint48(_poolsAndTotalBalances.bootstrapPool.sub(amount));
+        poolsAndTotalBalances = _poolsAndTotalBalances;
+
         require(transfer(bootstrapToken, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
@@ -159,7 +159,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function topUpStakingRewardsPool(uint256 amount) external {
         uint48 amount48 = toUint48Granularity(amount);
-        pools.stakingPool = uint48(pools.stakingPool.add(amount48)); // todo overflow
+        poolsAndTotalBalances.stakingPool = uint48(poolsAndTotalBalances.stakingPool.add(amount48)); // todo overflow
         require(transferFrom(erc20, msg.sender, address(this), amount48), "Rewards::topUpProRataPool - insufficient allowance");
     }
 
@@ -230,12 +230,15 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough member balance for this distribution");
 
-        uint48 stakingPool = pools.stakingPool;
-        require(totalAmount_uint48 <= stakingPool, "not enough balance in the staking pool for this distribution");
+        PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
 
-        pools.stakingPool = uint48(stakingPool.sub(totalAmount_uint48));
+        require(totalAmount_uint48 <= _poolsAndTotalBalances.stakingPool, "not enough balance in the staking pool for this distribution");
+
+        _poolsAndTotalBalances.stakingPool = uint48(_poolsAndTotalBalances.stakingPool.sub(totalAmount_uint48));
         balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount_uint48));
-        totalBalances.stakingRewardsTotalBalance = uint48(totalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
+        _poolsAndTotalBalances.stakingRewardsTotalBalance = uint48(_poolsAndTotalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
+
+        poolsAndTotalBalances = _poolsAndTotalBalances;
 
         IStakingContract stakingContract = getStakingContract();
         approve(erc20, address(stakingContract), totalAmount_uint48);
@@ -361,12 +364,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function withdrawFeeFunds() external {
         uint48 amount = balances[msg.sender].fees;
         balances[msg.sender].fees = 0;
-        totalBalances.feesTotalBalance = uint48(totalBalances.feesTotalBalance.sub(amount));
+        poolsAndTotalBalances.feesTotalBalance = uint48(poolsAndTotalBalances.feesTotalBalance.sub(amount));
         require(transfer(erc20, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
     function getTotalBalances() external view returns (uint256 feesTotalBalance, uint256 stakingRewardsTotalBalance, uint256 bootstrapRewardsTotalBalance) {
-        TotalBalances memory totals = totalBalances;
+        PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
         return (toUint256Granularity(totals.feesTotalBalance), toUint256Granularity(totals.stakingRewardsTotalBalance), toUint256Granularity(totals.bootstrapRewardsTotalBalance));
     }
 
