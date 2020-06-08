@@ -5,14 +5,12 @@ import {OwnedContract} from "./base-contract";
 
 export interface CommitteeChangedEvent {
     addrs: string[];
-    orbsAddrs: string[];
     weights: (number | BN)[];
     compliance: boolean[];
 }
 
 export interface StandbysChangedEvent {
     addrs: string[];
-    orbsAddrs: string[];
     weights: (number | BN)[];
     compliance: boolean[];
 }
@@ -23,7 +21,7 @@ export interface CommitteeContract extends OwnedContract {
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;
     getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
     getStandbys(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
-    getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
-    getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], string[]]>;
+    getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
+    getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
     getTopology(): Promise<TransactionReceipt>;
 }

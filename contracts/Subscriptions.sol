@@ -95,7 +95,8 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         VirtualChain storage vc = virtualChains[vcid];
 
         IRewards rewardsContract = getRewardsContract();
-        require(erc20.transfer(address(rewardsContract), amount), "failed to transfer subscription fees");
+        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
+        require(erc20.approve(address(rewardsContract), amount), "failed to approve rewards to acquire subscription fees");
         if (vc.isCompliant) {
             rewardsContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
         } else {
