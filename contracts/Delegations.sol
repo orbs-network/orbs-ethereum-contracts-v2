@@ -13,7 +13,7 @@ import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
 
 	// TODO consider using structs instead of multiple mappings

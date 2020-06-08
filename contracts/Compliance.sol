@@ -4,7 +4,7 @@ import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract Compliance is ICompliance, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Compliance is ICompliance, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 
     mapping (address => bool) validatorCompliance;
 

@@ -10,7 +10,7 @@ import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership {
+contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
     using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
 

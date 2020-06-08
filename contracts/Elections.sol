@@ -14,7 +14,7 @@ import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
 
-contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
 
 	mapping (address => mapping (address => uint256)) voteOuts; // by => to => timestamp

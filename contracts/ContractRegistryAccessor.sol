@@ -12,11 +12,11 @@ import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./Lockable.sol";
 
-contract ContractRegistryAccessor is Lockable {
+contract ContractRegistryAccessor {
 
     IContractRegistry contractRegistry;
 
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner onlyWhenActive {
+    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner {
         require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
         contractRegistry = _contractRegistry;
     }
@@ -56,6 +56,5 @@ contract ContractRegistryAccessor is Lockable {
     function getSubscriptionsContract() public view returns (ISubscriptions) {
         return ISubscriptions(contractRegistry.get("subscriptions"));
     }
-
 
 }

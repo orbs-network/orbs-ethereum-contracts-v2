@@ -8,9 +8,10 @@ import "./WithClaimableMigrationOwnership.sol";
  * @dev Extension for the Ownable contract, where the ownership needs to be claimed.
  * This allows the new owner to accept the transfer.
  */
-contract Lockable is WithClaimableMigrationOwnership{
+contract Lockable is WithClaimableMigrationOwnership {
 
-    bool locked;
+    bool public locked;
+
     event Locked();
     event Unlocked();
 

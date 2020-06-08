@@ -6,7 +6,7 @@ import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
 
     enum CommitteeType {

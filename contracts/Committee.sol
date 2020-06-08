@@ -7,7 +7,7 @@ import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	address[] participantAddresses;
 
 	struct MemberData { // TODO can be reduced to 1 state entry

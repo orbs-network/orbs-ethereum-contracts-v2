@@ -5,7 +5,7 @@ import "./interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
-contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 
 	modifier onlyRegisteredValidator {
 		require(isRegistered(msg.sender), "Validator is not registered");

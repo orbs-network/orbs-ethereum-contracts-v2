@@ -5,7 +5,7 @@ import "./WithClaimableFunctionalOwnership.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./ContractRegistryAccessor.sol";
 
-contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 
     struct DeploymentSubset {
         bool exists;
