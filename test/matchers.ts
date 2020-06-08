@@ -34,11 +34,7 @@ import {
   voteOutTimeoutSecondsChangedEvents,
   maxDelegationRatioChangedEvents,
   banningLockTimeoutSecondsChangedEvents,
-  voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents
-  validatorMetadataChangedEvents,
-  committeeChangedEvents,
-  standbysChangedEvents,
-  stakingRewardsDistributed,
+  voteOutPercentageThresholdChangedEvents, banningPercentageThresholdChangedEvents,
   lockedEvents,
   unlockedEvents
 } from "./event-parsing";
