@@ -14,16 +14,23 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     using SafeMath for uint256;
     using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
 
-    struct BootstrapAndStaking {
-        uint48 bootstrapPool;
+
+    struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
         uint48 complianceCommitteeAnnualBootstrap;
-
-        uint48 stakingPool;
         uint48 annualRateInPercentMille;
         uint48 annualCap;
-    } // todo add totalFeeBalance, totalStakingRewardsBalance, totalBootstrapBalance
-    BootstrapAndStaking bootstrapAndStaking;
+    }
+    Settings settings;
+
+    struct PoolsAndTotalBalances {
+        uint48 bootstrapPool;
+        uint48 stakingPool;
+        uint48 bootstrapRewardsTotalBalance;
+        uint48 feesTotalBalance;
+        uint48 stakingRewardsTotalBalance;
+    }
+    PoolsAndTotalBalances poolsAndTotalBalances;
 
     struct Balance {
         uint48 bootstrapRewards;
@@ -60,18 +67,18 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
-        bootstrapAndStaking.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+        settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
-        bootstrapAndStaking.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+        settings.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
     function topUpBootstrapPool(uint256 amount) external onlyWhenActive {
         uint48 _amount48 = toUint48Granularity(amount);
-        uint48 bootstrapPool = uint48(bootstrapAndStaking.bootstrapPool.add(_amount48)); // todo may overflow
-        bootstrapAndStaking.bootstrapPool = bootstrapPool;
+        uint48 bootstrapPool = uint48(poolsAndTotalBalances.bootstrapPool.add(_amount48)); // todo may overflow
+        poolsAndTotalBalances.bootstrapPool = bootstrapPool;
         require(transferFrom(bootstrapToken, msg.sender, address(this), _amount48), "Rewards::topUpFixedPool - insufficient allowance");
         emit BootstrapAddedToPool(amount, toUint256Granularity(bootstrapPool));
     }
@@ -90,12 +97,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
 
     function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
-        BootstrapAndStaking memory pools = bootstrapAndStaking;
+        Settings memory _settings = settings;
 
-        (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap) = collectBootstrapRewards(pools);
+        (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap) = collectBootstrapRewards(_settings);
         (uint256 generalValidatorFee, uint256 certifiedValidatorFee) = collectFees(committee, compliance);
-        uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, pools);
+        uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, _settings);
 
+        PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
@@ -104,27 +112,38 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             balance.fees += toUint48Granularity(compliance[i] ? certifiedValidatorFee : generalValidatorFee);
             balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
 
+            totals.bootstrapRewardsTotalBalance += toUint48Granularity(compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
+            totals.feesTotalBalance += toUint48Granularity(compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
+            totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]); // todo may overflow
+
             balances[committee[i]] = balance;
         }
+
+        poolsAndTotalBalances = totals;
+        lastAssignedAt = now;
+
         emit StakingRewardsAssigned(committee, stakingRewards);
         emit BootstrapRewardsAssigned(generalValidatorBootstrap, certifiedValidatorBootstrap);
         emit FeesAssigned(generalValidatorFee, certifiedValidatorFee);
-
-        lastAssignedAt = now;
     }
 
-    function collectBootstrapRewards(BootstrapAndStaking memory pools) private view returns (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap){
+    function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap){
         uint256 duration = now.sub(lastAssignedAt);
-        generalValidatorBootstrap = toUint256Granularity(uint48(pools.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
-        certifiedValidatorBootstrap = generalValidatorBootstrap + toUint256Granularity(uint48(pools.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        generalValidatorBootstrap = toUint256Granularity(uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        certifiedValidatorBootstrap = generalValidatorBootstrap + toUint256Granularity(uint48(_settings.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
     function withdrawBootstrapFunds() external onlyWhenActive {
         uint48 amount = balances[msg.sender].bootstrapRewards;
-        uint48 pool = bootstrapAndStaking.bootstrapPool;
-        require(amount <= pool, "not enough balance in the bootstrap pool for this withdrawal");
+
+        PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
+
+        require(amount <= _poolsAndTotalBalances.bootstrapPool, "not enough balance in the bootstrap pool for this withdrawal");
         balances[msg.sender].bootstrapRewards = 0;
-        bootstrapAndStaking.bootstrapPool = uint48(pool.sub(amount));
+        _poolsAndTotalBalances.bootstrapRewardsTotalBalance = uint48(_poolsAndTotalBalances.bootstrapRewardsTotalBalance.sub(amount));
+        _poolsAndTotalBalances.bootstrapPool = uint48(_poolsAndTotalBalances.bootstrapPool.sub(amount));
+        poolsAndTotalBalances = _poolsAndTotalBalances;
+
         require(transfer(bootstrapToken, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
@@ -132,15 +151,15 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
-        BootstrapAndStaking memory pools = bootstrapAndStaking;
-        pools.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
-        pools.annualCap = toUint48Granularity(annual_cap);
-        bootstrapAndStaking = pools;
+        Settings memory _settings = settings;
+        _settings.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
+        _settings.annualCap = toUint48Granularity(annual_cap);
+        settings = _settings;
     }
 
     function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
         uint48 amount48 = toUint48Granularity(amount);
-        bootstrapAndStaking.stakingPool = uint48(bootstrapAndStaking.stakingPool.add(amount48)); // todo overflow
+        poolsAndTotalBalances.stakingPool = uint48(poolsAndTotalBalances.stakingPool.add(amount48)); // todo overflow
         require(transferFrom(erc20, msg.sender, address(this), amount48), "Rewards::topUpProRataPool - insufficient allowance");
     }
 
@@ -152,7 +171,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return lastAssignedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, BootstrapAndStaking memory pools) private view returns (uint256[] memory assignedRewards) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, Settings memory _settings) private view returns (uint256[] memory assignedRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
         assignedRewards = new uint256[](committee.length);
@@ -165,7 +184,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastAssignedAt);
 
-            uint annualRateInPercentMille = Math.min(uint(pools.annualRateInPercentMille), toUint256Granularity(pools.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
+            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
                 curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days));
@@ -211,11 +230,15 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough member balance for this distribution");
 
-        uint48 stakingPool = bootstrapAndStaking.stakingPool;
-        require(totalAmount_uint48 <= stakingPool, "not enough balance in the staking pool for this distribution");
+        PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
 
-        bootstrapAndStaking.stakingPool = uint48(stakingPool.sub(totalAmount_uint48));
+        require(totalAmount_uint48 <= _poolsAndTotalBalances.stakingPool, "not enough balance in the staking pool for this distribution");
+
+        _poolsAndTotalBalances.stakingPool = uint48(_poolsAndTotalBalances.stakingPool.sub(totalAmount_uint48));
         balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount_uint48));
+        _poolsAndTotalBalances.stakingRewardsTotalBalance = uint48(_poolsAndTotalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
+
+        poolsAndTotalBalances = _poolsAndTotalBalances;
 
         IStakingContract stakingContract = getStakingContract();
         approve(erc20, address(stakingContract), totalAmount_uint48);
@@ -230,7 +253,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].fees);
     }
 
-    uint constant MAX_FEE_BUCKET_ITERATIONS = 6;
+    uint constant MAX_FEE_BUCKET_ITERATIONS = 24;
 
     function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint256 generalValidatorFee, uint256 certifiedValidatorFee) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
@@ -343,7 +366,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function withdrawFeeFunds() external onlyWhenActive {
         uint48 amount = balances[msg.sender].fees;
         balances[msg.sender].fees = 0;
+        poolsAndTotalBalances.feesTotalBalance = uint48(poolsAndTotalBalances.feesTotalBalance.sub(amount));
         require(transfer(erc20, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
+    }
+
+    function getTotalBalances() external view returns (uint256 feesTotalBalance, uint256 stakingRewardsTotalBalance, uint256 bootstrapRewardsTotalBalance) {
+        PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
+        return (toUint256Granularity(totals.feesTotalBalance), toUint256Granularity(totals.stakingRewardsTotalBalance), toUint256Granularity(totals.bootstrapRewardsTotalBalance));
     }
 
     function _bucketTime(uint256 time) private pure returns (uint256) {

@@ -56,6 +56,8 @@ interface IRewards {
     /// Top-ups the general fee pool with the given amount at the given rate (typically called by the subscriptions contract)
     function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
 
+    function getTotalBalances() external view returns (uint256 feesTotalBalance, uint256 stakingRewardsTotalBalance, uint256 bootstrapRewardsTotalBalance);
+
     // bootstrap
 
     event BootstrapRewardsAssigned(uint256 generalValidatorAmount, uint256 certifiedValidatorAmount);
