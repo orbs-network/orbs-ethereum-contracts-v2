@@ -12,6 +12,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	address[] participantAddresses;
 
+	uint8 constant ROLE_EXCLUDED = 0;
+	uint8 constant ROLE_COMMITTEE = 1;
+	uint8 constant ROLE_STANDBY = 2;
+
 	struct MemberData { // TODO can be reduced to 1 state entry
 		uint128 weight;
 		uint48 readyToSyncTimestamp;
@@ -19,8 +23,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		bool readyForCommittee;
 		bool isCompliant;
 
-		bool isStandby;
-		bool inCommittee;
+		uint8 role;
 	}
 	mapping (address => MemberData) membersData;
 
@@ -34,8 +37,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		address addr;
 		uint8 pos;
 
-		bool shouldBeInCommittee;
-		bool shouldBeStandby;
+		uint8 oldRole;
+		uint8 newRole;
 	} // Never in state, only in memory
 
 	struct Settings { // TODO can be reduced to 2-3 state entries
@@ -71,6 +74,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			maxStandbys: uint8(_maxStandbys),
 			readyToSyncTimeout: uint48(_readyToSyncTimeout)
 		});
+
+		participantAddresses.length = MAX_TOPOLOGY + 1;
 	}
 
 	/*
@@ -150,9 +155,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				readyToSyncTimestamp: 0,
 				weight: uint128(weight),
 				isCompliant: isCompliant,
-				isStandby: false,
-				inCommittee: false
-				})
+				role: ROLE_EXCLUDED
+			})
 		}));
 	}
 
@@ -317,128 +321,105 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	function _rankMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
 		Settings memory _settings = settings;
 
-		bool isParticipant = member.data.inCommittee || member.data.isStandby;
-		if (!isParticipant && !qualifiesAsStandby(member)) {
+		if (!isCommitteeMemberOrStandby(member.data) && !qualifiesAsStandby(member.data)) {
 			return (false, false);
 		}
 
 		return updateCommittee(member, _settings);
 	}
 
-	function isReadyToSyncStale(uint48 timestamp, bool currentlyInCommittee, Settings memory _settings) private view returns (bool) {
-		return timestamp == 0 || !currentlyInCommittee && timestamp <= uint48(now) - _settings.readyToSyncTimeout;
+	function isTimedOut(Participant memory p, Settings memory _settings) private view returns (bool) {
+		return p.data.readyToSyncTimestamp == 0 || (p.oldRole != ROLE_COMMITTEE && p.data.readyToSyncTimestamp <= uint48(now) - _settings.readyToSyncTimeout);
 	}
 
-	function qualifiesAsStandby(Member memory member) private pure returns (bool) {
-		return member.data.isMember && member.data.readyToSyncTimestamp != 0 && member.data.weight != 0;
+	function qualifiesAsStandby(MemberData memory data) private pure returns (bool) {
+		return data.isMember && data.readyToSyncTimestamp != 0 && data.weight != 0;
 	}
 
-	function qualifiesAsStandby(Participant memory p) private pure returns (bool) {
-		return qualifiesAsStandby(Member({
-			data: p.data,
-			addr: p.addr
-		}));
-	}
-
-	function qualifiesForCommittee(Participant memory participant, Settings memory _settings, uint committeeSize) private view returns (bool) {
+	function qualifiesForCommittee(MemberData memory data) private pure returns (bool) {
 		return (
-			participant.data.isMember &&
-			participant.data.weight > 0 &&
-			participant.data.readyForCommittee &&
-			!isReadyToSyncStale(participant.data.readyToSyncTimestamp, participant.data.inCommittee, _settings) &&
-			committeeSize < _settings.maxCommitteeSize
+			data.isMember &&
+			data.weight > 0 &&
+			data.readyForCommittee
 		);
 	}
 
 	function updateCommittee(Member memory changedMember, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = changedMember.data.inCommittee;
-		standbysChanged = changedMember.data.isStandby;
+		committeeChanged = changedMember.data.role == ROLE_COMMITTEE;
+		standbysChanged = changedMember.data.role == ROLE_STANDBY;
 
-		address[] memory _participantsAddresses = participantAddresses;
-		(Participant[] memory _participants, Participant memory changedMemberAsParticipant) = loadParticipantsSortedByWeights(_participantsAddresses, changedMember); // override stored member with preloaded one
+		Participant[] memory sortedParticipants = loadParticipantsSortedByWeights(changedMember); // override stored member with preloaded one
 
 		CommitteeInfo memory newCommitteeInfo;
 
-		uint maxPos;
 		Participant memory p;
-		uint256 newWeightSortIndicesOneBasedBytes;
-		bool changed;
-		for (uint i = 0; i < _participants.length; i++) {
-			p = _participants[i];
-			if (qualifiesForCommittee(p, _settings, newCommitteeInfo.committeeSize)) {
-				p.shouldBeInCommittee = true;
+		for (uint i = 0; i < sortedParticipants.length; i++) {
+			p = sortedParticipants[i];
+
+			if (isTimedOut(p, _settings)) continue;
+
+			if (
+				newCommitteeInfo.committeeSize < _settings.maxCommitteeSize &&
+				qualifiesForCommittee(p.data)
+			) {
+				p.newRole = ROLE_COMMITTEE;
 				newCommitteeInfo.committeeSize++;
 				newCommitteeInfo.committeeBitmap |= uint64(uint(1) << p.pos);
 			} else if (
 				newCommitteeInfo.standbysCount < _settings.maxStandbys &&
-				qualifiesAsStandby(p) &&
-				!isReadyToSyncStale(p.data.readyToSyncTimestamp, p.data.inCommittee, _settings)
+				qualifiesAsStandby(p.data)
 			) {
-				p.shouldBeStandby = true;
+				p.newRole = ROLE_STANDBY;
 				newCommitteeInfo.standbysCount++;
 			}
 		}
 
-		for (uint i = 0; i < _participants.length; i++) {
-			p = _participants[i];
-			changed = false;
-			if (p.shouldBeStandby != p.data.isStandby) {
-				if (
-					!p.shouldBeInCommittee && p.data.isStandby &&
-					newCommitteeInfo.standbysCount < _settings.maxStandbys &&
-					qualifiesAsStandby(p)
-				) {
-					p.shouldBeStandby = true;
-					newCommitteeInfo.standbysCount++;
-				}
-				if (p.shouldBeStandby != p.data.isStandby) {
-					p.data.isStandby = p.shouldBeStandby;
-					if (p.shouldBeStandby && p.data.inCommittee) {
-						p.data.readyToSyncTimestamp = uint48(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
-					}
-					changed = true;
-					standbysChanged = true;
-				}
+		Participant memory changedParticipant;
+		uint256 newWeightSortIndicesOneBasedBytes;
+		for (uint i = 0; i < sortedParticipants.length; i++) {
+			p = sortedParticipants[i];
+			if (
+				p.newRole == ROLE_EXCLUDED &&
+				newCommitteeInfo.standbysCount < _settings.maxStandbys &&
+				qualifiesAsStandby(p.data)
+			) {
+				p.newRole = ROLE_STANDBY;
+				newCommitteeInfo.standbysCount++;
 			}
-			if (p.shouldBeInCommittee != p.data.inCommittee) {
-				p.data.inCommittee = p.shouldBeInCommittee;
-				changed = true;
-				committeeChanged = true;
-			}
-			if (changed) {
+
+			if (p.newRole != p.oldRole) {
+				if (p.oldRole == ROLE_COMMITTEE && p.newRole == ROLE_STANDBY) {
+					p.data.readyToSyncTimestamp = uint48(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
+				}
+				committeeChanged = committeeChanged || p.oldRole == ROLE_COMMITTEE || p.newRole == ROLE_COMMITTEE;
+				standbysChanged = standbysChanged || p.oldRole == ROLE_STANDBY || p.newRole == ROLE_STANDBY;
+
+				p.data.role = p.newRole;
 				membersData[p.addr] = p.data;
 			}
-			if (!p.data.inCommittee && !p.data.isStandby) {
-				// no longer a participant
-				if (p.pos < _participantsAddresses.length) {
-					participantAddresses[p.pos] = address(0);
-				}
-			} else {
+
+			if (isCommitteeMemberOrStandby(p.data)) {
 				newWeightSortIndicesOneBasedBytes = (newWeightSortIndicesOneBasedBytes << 8) | uint8(p.pos + 1);
-				if (maxPos < p.pos) maxPos = p.pos;
+			} else {
+				participantAddresses[p.pos] = address(0); // no longer a participant
 			}
+
+			if (p.addr == changedMember.addr) changedParticipant = p;
 		}
 
 		// check if changed member is a new participant
-		if (
-			(changedMemberAsParticipant.data.inCommittee || changedMemberAsParticipant.data.isStandby) &&
-			(_participantsAddresses.length == changedMemberAsParticipant.pos || _participantsAddresses[changedMemberAsParticipant.pos] == address(0))
-		) {
-			if (_participantsAddresses.length == changedMemberAsParticipant.pos) {
-				participantAddresses.length++;
-				maxPos = changedMemberAsParticipant.pos;
-			}
-			participantAddresses[changedMemberAsParticipant.pos] = changedMemberAsParticipant.addr;
-		}
-
-		if (_participantsAddresses.length > maxPos + 1) {
-			participantAddresses.length = maxPos + 1;
+		if (changedParticipant.oldRole == ROLE_EXCLUDED && changedParticipant.newRole != ROLE_EXCLUDED) {
+			participantAddresses[changedParticipant.pos] = changedParticipant.addr;
 		}
 
 		weightSortIndicesOneBasedBytes = newWeightSortIndicesOneBasedBytes;
 		committeeInfo = newCommitteeInfo; // todo check if changed before writing
 
-		notifyChanges(_participants, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged);
+		notifyChanges(sortedParticipants, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged);
+	}
+
+	function isCommitteeMemberOrStandby(MemberData memory md) private pure returns (bool) {
+		return md.role != ROLE_EXCLUDED;
 	}
 
 	function notifyChanges(Participant[] memory participants, uint committeeSize, uint standbysCount, bool committeeChanged, bool standbysChanged) private {
@@ -452,7 +433,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			ind = 0;
 			for (uint i = 0; i < participants.length; i++) {
 				p = participants[i];
-				if (p.data.inCommittee) {
+				if (p.data.role == ROLE_COMMITTEE) {
 					committeeAddrs[ind] = p.addr;
 					committeeCompliance[ind] = p.data.isCompliant;
 					committeeWeights[ind++] = p.data.weight;
@@ -467,7 +448,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			ind = 0;
 			for (uint i = 0; i < participants.length; i++) {
 				p = participants[i];
-				if (p.data.isStandby) {
+				if (p.data.role == ROLE_STANDBY) {
 					standbyAddrs[ind] = p.addr;
 					standbysCompliance[ind] = p.data.isCompliant;
 					standbyWeights[ind++] = p.data.weight;
@@ -477,69 +458,68 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function loadParticipantsSortedByWeights(address[] memory participantsAddrs, Member memory preloadedMember) private view returns (Participant[] memory _participants, Participant memory memberAsParticipant) {
-		uint nParticipants;
-		bool newMember = !preloadedMember.data.inCommittee && !preloadedMember.data.isStandby;
-		address addr;
-		uint firstFreeSlot = participantsAddrs.length;
-		for (uint i = 0; i < participantsAddrs.length; i++) {
-			addr = participantsAddrs[i];
-			if (addr != address(0)) {
-				nParticipants++;
-			} else if (firstFreeSlot == participantsAddrs.length) {
-				firstFreeSlot = i;
-			}
-		}
+	function loadParticipantsSortedByWeights(Member memory preloadedMember) private view returns (Participant[] memory participants) {
+		address[] memory _participantAddresses = participantAddresses;
+		bool newMember = !isCommitteeMemberOrStandby(preloadedMember.data);
+
+		CommitteeInfo memory _committeeInfo = committeeInfo;
+		uint nParticipants = _committeeInfo.committeeSize + _committeeInfo.standbysCount;
 		if (newMember) nParticipants++;
+		participants = new Participant[](nParticipants);
 
-		uint sortBytes = weightSortIndicesOneBasedBytes;
-		_participants = new Participant[](nParticipants);
-		uint pind = nParticipants - 1;
-		uint pos;
-
-		Participant memory p;
 		MemberData memory md;
+		address addr;
+		uint pos;
 		uint preloadedInd = uint(-1);
 		uint preloadedPos = uint(-1);
-		while (sortBytes != 0) {
+
+		uint pind = nParticipants - 1;
+		for (uint sortBytes = weightSortIndicesOneBasedBytes; sortBytes != 0; sortBytes >>= 8) {
 			pos = uint(sortBytes & 0xFF) - 1;
-			addr = participantsAddrs[pos];
-			if (addr != preloadedMember.addr) {
-				md = membersData[addr];
-				if (
-					preloadedInd == uint(-1) &&
-					(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr)))
-				) {
-					p = _participants[pind];
-					p.addr = preloadedMember.addr;
-					p.data = preloadedMember.data;
-					preloadedInd = pind;
-					memberAsParticipant = p;
-					pind--;
-				}
-				p = _participants[pind];
-				p.addr = addr;
-				p.data = md;
-				p.pos = uint8(pos);
-				pind--;
-			} else {
+
+			addr = _participantAddresses[pos];
+			if (addr == preloadedMember.addr) {
 				preloadedPos = pos;
+				continue;
 			}
-			sortBytes = sortBytes >> 8;
+
+			md = membersData[addr];
+			if (
+				preloadedInd == uint(-1) &&
+				(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr)))
+			) {
+				preloadedInd = pind;
+				pind--;
+			}
+
+			participants[pind] = Participant({
+				addr: addr,
+				data: md,
+				pos : uint8(pos),
+				oldRole: md.role,
+				newRole: ROLE_EXCLUDED
+			});
+			pind--;
 		}
 
-		if (preloadedInd == uint(-1)) {
-			preloadedInd = 0;
-			p = _participants[preloadedInd];
-			p.addr = preloadedMember.addr;
-			p.data = preloadedMember.data;
-			memberAsParticipant = p;
+		if (preloadedInd == uint(-1)) preloadedInd = 0;
+
+		participants[preloadedInd] = Participant({
+			addr: preloadedMember.addr,
+			data: preloadedMember.data,
+			pos : uint8(newMember ? findFirstFreeSlotIndex(_participantAddresses) : preloadedPos),
+			oldRole: preloadedMember.data.role,
+			newRole: ROLE_EXCLUDED
+		});
+	}
+
+	function findFirstFreeSlotIndex(address[] memory addrs) private pure returns (uint) {
+		for (uint i = 0; i < addrs.length; i++) {
+			if (addrs[i] == address(0)) {
+				return i;
+			}
 		}
-		if (newMember) {
-			_participants[preloadedInd].pos = uint8(firstFreeSlot);
-		} else {
-			_participants[preloadedInd].pos = uint8(preloadedPos);
-		}
+		revert("unreachable - free slot must always be present");
 	}
 
 	function _notifyStandbysChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
