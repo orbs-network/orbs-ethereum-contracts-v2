@@ -27,6 +27,9 @@ describe('validator-registration', async () => {
         v.contact
     , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -79,6 +82,10 @@ describe('validator-registration', async () => {
       last_update_time: secondUpdateTime.toString()
     });
 
+    r = await d.validatorsRegistration.unregisterValidator({from: v.address});
+    expect(r).to.have.a.validatorUnregisteredEvent({
+      addr: v.address
+    })
   });
 
   it("does not register if already registered", async () => {
@@ -93,6 +100,9 @@ describe('validator-registration', async () => {
         v.contact
     , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -138,6 +148,9 @@ describe('validator-registration', async () => {
         v.contact
         , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -177,6 +190,9 @@ describe('validator-registration', async () => {
         v.contact
         , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -215,6 +231,9 @@ describe('validator-registration', async () => {
         v.contact
         , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -527,6 +546,9 @@ describe('validator-registration', async () => {
         v.contact
         , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -592,6 +614,9 @@ describe('validator-registration', async () => {
         v.contact
         , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -615,6 +640,9 @@ describe('validator-registration', async () => {
         v.contact
         , {from: v.address});
     expect(r).to.have.a.validatorRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.validatorDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,

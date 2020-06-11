@@ -35,17 +35,18 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
     /// @dev Called by a participant who wishes to register as a validator
 	function registerValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerValidator: Validator is already registered");
+
 		validators[msg.sender].registrationTime = now;
+		emit ValidatorRegistered(msg.sender);
+
 		_updateValidator(ip, orbsAddr, name, website, contact);
 
-		emit ValidatorRegistered(msg.sender, ip, orbsAddr, name, website, contact);
 		getElectionsContract().validatorRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
 	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
 		_updateValidator(ip, orbsAddr, name, website, contact);
-		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
 	}
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
@@ -94,6 +95,13 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	function getValidatorIp(address addr) external view returns (bytes4 ip) {
 		require(isRegistered(addr), "getValidatorIp: Validator is not registered");
 		return validators[addr].ip;
+	}
+
+	function getValidatorIps(address[] calldata addrs) external view returns (bytes4[] memory ips) {
+		ips = new bytes4[](addrs.length);
+		for (uint i = 0; i < addrs.length; i++) {
+			ips[i] = validators[addrs[i]].ip;
+		}
 	}
 
 	function isRegistered(address addr) public view returns (bool) { // todo: should this be public?
@@ -155,6 +163,8 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		validators[sender].website = website;
 		validators[sender].contact = contact;
 		validators[sender].lastUpdateTime = now;
-	}
+
+        emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
+    }
 
 }
