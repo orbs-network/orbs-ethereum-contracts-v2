@@ -21,6 +21,8 @@ const assert = chai.assert;
 
 import {bn, evmIncreaseTime, fromTokenUnits, minAddress} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
+import {createVC} from "./consumer-macros";
+import {stakingRewardsAssignedEvents} from "./event-parsing";
 
 
 describe('committee', async () => {
@@ -986,5 +988,35 @@ describe('committee', async () => {
        await expectRejected(d.committee.setMaxCommitteeAndStandbys(0, 0, {from: d.functionalOwner.address}));
 
         await d.committee.setMaxCommitteeAndStandbys(31, 1,{from: d.functionalOwner.address});
+    });
+
+    it("assigns rewards to the previous committee", async () => {
+        const d = await Driver.new();
+
+        const poolAmount = fromTokenUnits(1000000);
+        await d.erc20.assign(d.accounts[0], poolAmount);
+        await d.erc20.approve(d.rewards.address, poolAmount);
+        await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
+        await d.rewards.topUpStakingRewardsPool(poolAmount);
+
+        await d.externalToken.assign(d.accounts[0], poolAmount);
+        await d.externalToken.approve(d.rewards.address, poolAmount);
+        await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
+        await d.rewards.setComplianceCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
+        await d.rewards.topUpBootstrapPool(poolAmount);
+
+        const monthlyRate = fromTokenUnits(1000);
+        const subs = await d.newSubscriber('defaultTier', monthlyRate);
+        const appOwner = d.newParticipant();
+
+        await createVC(d, false, subs, monthlyRate, appOwner);
+        await createVC(d, true, subs, monthlyRate, appOwner);
+
+        const {v: v1} = await d.newValidator(fromTokenUnits(1000), true, false, true);
+        await evmIncreaseTime(d.web3, 10);
+        const {r: assignRewardsTx} = await d.newValidator(fromTokenUnits(1000), true, false, true);
+        expect(assignRewardsTx).to.have.a.stakingRewardsAssignedEvent({
+            assignees: [v1.address]
+        });
     });
 });

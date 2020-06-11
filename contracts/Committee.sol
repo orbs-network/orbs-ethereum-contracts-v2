@@ -37,6 +37,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		address addr;
 		uint8 pos;
 
+		MemberData oldData;
 		uint8 oldRole;
 		uint8 newRole;
 	} // Never in state, only in memory
@@ -348,9 +349,11 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		committeeChanged = changedMember.data.role == ROLE_COMMITTEE;
 		standbysChanged = changedMember.data.role == ROLE_STANDBY;
 
-		Participant[] memory sortedParticipants = loadParticipantsSortedByWeights(changedMember); // override stored member with preloaded one
-
+		CommitteeInfo memory curInfo = committeeInfo;
 		CommitteeInfo memory newInfo;
+
+		Participant[] memory sortedParticipants = loadParticipantsSortedByWeights(changedMember, curInfo); // override stored member with preloaded one
+
 
 		// First iteration - find all committee members and non-timed-out standbys
 
@@ -421,18 +424,20 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		weightSortIndicesOneBasedBytes = newSortBytes;
 		committeeInfo = newInfo; // todo check if changed before writing
 
-		notifyChanges(sortedParticipants, newInfo.committeeSize, newInfo.standbysCount, committeeChanged, standbysChanged);
+		notifyChanges(sortedParticipants, newInfo.committeeSize, newInfo.standbysCount, curInfo.committeeSize, committeeChanged, standbysChanged);
 	}
 
 	function isCommitteeMemberOrStandby(MemberData memory md) private pure returns (bool) {
 		return md.role != ROLE_EXCLUDED;
 	}
 
-	function notifyChanges(Participant[] memory participants, uint committeeSize, uint standbysCount, bool committeeChanged, bool standbysChanged) private {
+	function notifyChanges(Participant[] memory participants, uint committeeSize, uint standbysCount, uint prevCommitteeSize, bool committeeChanged, bool standbysChanged) private {
 		Participant memory p;
 		uint ind;
 
 		if (committeeChanged) {
+			assignRewardsToPreviousCommittee(participants, prevCommitteeSize);
+
 			address[] memory committeeAddrs = new address[](committeeSize);
 			uint[] memory committeeWeights = new uint[](committeeSize);
 			bool[] memory committeeCompliance = new bool[](committeeSize); // todo - bitmap?
@@ -464,12 +469,29 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function loadParticipantsSortedByWeights(Member memory preloadedMember) private view returns (Participant[] memory participants) {
+	function assignRewardsToPreviousCommittee(Participant[] memory participants, uint prevCommitteeSize) private {
+		address[] memory addrs = new address[](prevCommitteeSize);
+		uint[] memory weights = new uint[](prevCommitteeSize);
+		bool[] memory compliance = new bool[](prevCommitteeSize);
+		uint ind = 0;
+		Participant memory p;
+		for (uint i = 0; i < participants.length; i++) {
+			p = participants[i];
+			if (p.oldRole == ROLE_COMMITTEE) {
+				addrs[ind] = p.addr;
+				compliance[ind] = p.oldData.isCompliant;
+				weights[ind++] = p.oldData.weight;
+			}
+		}
+
+		getRewardsContract().assignRewardsToCommittee(addrs, weights, compliance);
+	}
+
+	function loadParticipantsSortedByWeights(Member memory preloadedMember, CommitteeInfo memory info) private view returns (Participant[] memory participants) {
 		address[] memory _participantAddresses = participantAddresses;
 		bool newMember = !isCommitteeMemberOrStandby(preloadedMember.data);
 
-		CommitteeInfo memory _committeeInfo = committeeInfo;
-		uint nParticipants = _committeeInfo.committeeSize + _committeeInfo.standbysCount;
+		uint nParticipants = info.committeeSize + info.standbysCount;
 		if (newMember) nParticipants++;
 		participants = new Participant[](nParticipants);
 
@@ -505,8 +527,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				addr: addr,
 				data: md,
 				pos : uint8(pos),
+				newRole: ROLE_EXCLUDED,
 				oldRole: md.role,
-				newRole: ROLE_EXCLUDED
+				oldData: md
 			});
 			pind--;
 		}
@@ -518,8 +541,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			addr: preloadedMember.addr,
 			data: preloadedMember.data,
 			pos : uint8(newMember ? findFirstFreeSlotIndex(_participantAddresses) : preloadedPos),
+			newRole: ROLE_EXCLUDED,
 			oldRole: preloadedMember.data.role,
-			newRole: ROLE_EXCLUDED
+			oldData: membersData[preloadedMember.addr]
 		});
 	}
 
@@ -538,7 +562,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	function _notifyCommitteeChanged(address[] memory addrs, uint256[] memory weights, bool[] memory compliance) private {
 		emit CommitteeChanged(addrs, weights, compliance);
-		getRewardsContract().assignRewardsToCommittee(addrs, weights, compliance);
 	}
 
 	function DummyMember() private pure returns (Member memory member) {
