@@ -77,11 +77,18 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     // Pool can be topped up after assignment
     await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
-    let r = await d.rewards.topUpBootstrapPool(poolAmount, {from: g.address});
+    let r = await d.rewards.topUpBootstrapPool(fromTokenUnits(1), {from: g.address});
     expect(r).to.have.a.bootstrapAddedToPoolEvent({
-      added: bn(poolAmount),
-      total: bn(poolAmount) // todo: a test where total is more than added
+      added: fromTokenUnits(1),
+      total: fromTokenUnits(1)
     });
+
+    r = await d.rewards.topUpBootstrapPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
+    expect(r).to.have.a.bootstrapAddedToPoolEvent({
+      added: poolAmount.sub(fromTokenUnits(1)),
+      total: poolAmount
+    });
+
 
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
@@ -90,8 +97,13 @@ describe('bootstrap-rewards-level-flows', async () => {
       expect(tokenBalances[i]).to.be.bignumber.equal(expectedBalance.toString());
 
       // claim the funds
-      await d.rewards.withdrawBootstrapFunds({from: v.address});
+      const r = await d.rewards.withdrawBootstrapFunds({from: v.address});
       const tokenBalance = await d.externalToken.balanceOf(v.address);
+      expect(r).to.have.a.bootstrapRewardsWithdrawnEvent({
+        validator: v.address,
+        amount: bn(tokenBalance)
+      });
+
       expect(new BN(tokenBalance)).to.bignumber.equal(new BN(expectedBalance));
     }
   })
