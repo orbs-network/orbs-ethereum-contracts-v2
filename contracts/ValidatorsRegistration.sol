@@ -164,7 +164,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		validators[sender].contact = contact;
 		validators[sender].lastUpdateTime = now;
 
-        emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
+        emit ValidatorDataUpdated(sender, ip, orbsAddr, name, website, contact);
     }
 
 }

@@ -508,7 +508,7 @@ describe('validator-registration', async () => {
 
   });
 
-  it.only('allows a registered validator to update from its orbs address', async () => {
+  it('allows a registered validator to update from its orbs address', async () => {
     const d = await Driver.new();
 
     const v = d.newParticipant();
