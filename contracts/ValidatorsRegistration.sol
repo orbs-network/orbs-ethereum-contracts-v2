@@ -35,17 +35,18 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
     /// @dev Called by a participant who wishes to register as a validator
 	function registerValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerValidator: Validator is already registered");
+
 		validators[msg.sender].registrationTime = now;
+		emit ValidatorRegistered(msg.sender);
+
 		_updateValidator(ip, orbsAddr, name, website, contact);
 
-		emit ValidatorRegistered(msg.sender, ip, orbsAddr, name, website, contact);
 		getElectionsContract().validatorRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
 	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator onlyWhenActive {
 		_updateValidator(ip, orbsAddr, name, website, contact);
-		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
 	}
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
@@ -155,6 +156,8 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		validators[msg.sender].website = website;
 		validators[msg.sender].contact = contact;
 		validators[msg.sender].lastUpdateTime = now;
+
+		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
 	}
 
 }

@@ -6,11 +6,6 @@ import {OwnedContract} from "./base-contract";
 
 export interface ValidatorRegisteredEvent {
     addr: string,
-    ip: string,
-    orbsAddr: string,
-    name: string,
-    website: string,
-    contact: string
 }
 
 export interface ValidatorDataUpdatedEvent {

@@ -4,7 +4,7 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface IValidatorsRegistration {
-	event ValidatorRegistered(address addr, bytes4 ip, address orbsAddr, string name, string website, string contact);
+	event ValidatorRegistered(address addr);
 	event ValidatorDataUpdated(address addr, bytes4 ip, address orbsAddr, string name, string website, string contact);
 	event ValidatorUnregistered(address addr);
 	event ValidatorMetadataChanged(address addr, string key, string newValue, string oldValue);
