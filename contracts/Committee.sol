@@ -392,7 +392,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				newInfo.standbysCount++;
 			}
 
-			// Update changed participants
+			// Update a participant that changed its role
 			if (p.newRole != p.oldRole) {
 				if (p.oldRole == ROLE_COMMITTEE && p.newRole == ROLE_STANDBY) {
 					p.data.readyToSyncTimestamp = uint48(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
