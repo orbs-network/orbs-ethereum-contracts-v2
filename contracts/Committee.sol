@@ -386,7 +386,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			// Check if an excluded participant can become a standby
 			if (
 				p.newRole == ROLE_EXCLUDED && // we decided to exclude it in the first iteration
-				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data) // But it qualifies as a standby the there's room
+				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data) // But it qualifies as a standby and there's room
 			) {
 				p.newRole = ROLE_STANDBY;
 				newInfo.standbysCount++;
