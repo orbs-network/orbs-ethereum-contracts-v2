@@ -361,7 +361,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		uint maxPos;
 		Participant memory p;
-		uint256 newWeightSortIndicesOneBasedBytes;
+		uint256 newSortBytes;
 		bool changed;
 		for (uint i = 0; i < _participants.length; i++) {
 			p = _participants[i];
@@ -414,7 +414,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 					participantAddresses[p.pos] = address(0);
 				}
 			} else {
-				newWeightSortIndicesOneBasedBytes = (newWeightSortIndicesOneBasedBytes << 8) | uint8(p.pos + 1);
+				newSortBytes = (newSortBytes << 8) | uint8(p.pos + 1);
 				if (maxPos < p.pos) maxPos = p.pos;
 			}
 		}
@@ -435,7 +435,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			participantAddresses.length = maxPos + 1;
 		}
 
-		weightSortIndicesOneBasedBytes = newWeightSortIndicesOneBasedBytes;
+		weightSortIndicesOneBasedBytes = newSortBytes;
 		committeeInfo = newCommitteeInfo; // todo check if changed before writing
 
 		notifyChanges(_participants, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged);
