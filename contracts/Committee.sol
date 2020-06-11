@@ -511,9 +511,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			pind--;
 		}
 
-		if (preloadedInd == uint(-1)) preloadedInd = 0; // Preloaded member was not added yet - meaning that it has the highest weight
+		if (preloadedInd == uint(-1)) preloadedInd = 0; // Preloaded member was not added yet - meaning that it has the highest weight and should be placed first
 
-		// Add the preloaded member to the list in the determined position
+		// Fill data of preloaded member to the list in the determined position
 		participants[preloadedInd] = Participant({
 			addr: preloadedMember.addr,
 			data: preloadedMember.data,
