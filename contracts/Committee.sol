@@ -350,7 +350,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		Participant[] memory sortedParticipants = loadParticipantsSortedByWeights(changedMember); // override stored member with preloaded one
 
-		CommitteeInfo memory newCommitteeInfo;
+		CommitteeInfo memory newInfo;
 
 		Participant memory p;
 		for (uint i = 0; i < sortedParticipants.length; i++) {
@@ -358,33 +358,29 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 			if (isTimedOut(p, _settings)) continue;
 
-			if (
-				newCommitteeInfo.committeeSize < _settings.maxCommitteeSize &&
-				qualifiesForCommittee(p.data)
-			) {
+			if (newInfo.committeeSize < _settings.maxCommitteeSize && qualifiesForCommittee(p.data)) {
 				p.newRole = ROLE_COMMITTEE;
-				newCommitteeInfo.committeeSize++;
-				newCommitteeInfo.committeeBitmap |= uint64(uint(1) << p.pos);
-			} else if (
-				newCommitteeInfo.standbysCount < _settings.maxStandbys &&
-				qualifiesAsStandby(p.data)
-			) {
+				newInfo.committeeSize++;
+				newInfo.committeeBitmap |= uint64(uint(1) << p.pos);
+				continue;
+			}
+
+			if (newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data)) {
 				p.newRole = ROLE_STANDBY;
-				newCommitteeInfo.standbysCount++;
+				newInfo.standbysCount++;
 			}
 		}
 
 		Participant memory changedParticipant;
-		uint256 newWeightSortIndicesOneBasedBytes;
+		uint256 newSortBytes;
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
 			if (
 				p.newRole == ROLE_EXCLUDED &&
-				newCommitteeInfo.standbysCount < _settings.maxStandbys &&
-				qualifiesAsStandby(p.data)
+				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data)
 			) {
 				p.newRole = ROLE_STANDBY;
-				newCommitteeInfo.standbysCount++;
+				newInfo.standbysCount++;
 			}
 
 			if (p.newRole != p.oldRole) {
@@ -399,7 +395,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			}
 
 			if (isCommitteeMemberOrStandby(p.data)) {
-				newWeightSortIndicesOneBasedBytes = (newWeightSortIndicesOneBasedBytes << 8) | uint8(p.pos + 1);
+				newSortBytes = (newSortBytes << 8) | uint8(p.pos + 1);
 			} else {
 				participantAddresses[p.pos] = address(0); // no longer a participant
 			}
@@ -412,10 +408,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			participantAddresses[changedParticipant.pos] = changedParticipant.addr;
 		}
 
-		weightSortIndicesOneBasedBytes = newWeightSortIndicesOneBasedBytes;
-		committeeInfo = newCommitteeInfo; // todo check if changed before writing
+		weightSortIndicesOneBasedBytes = newSortBytes;
+		committeeInfo = newInfo; // todo check if changed before writing
 
-		notifyChanges(sortedParticipants, newCommitteeInfo.committeeSize, newCommitteeInfo.standbysCount, committeeChanged, standbysChanged);
+		notifyChanges(sortedParticipants, newInfo.committeeSize, newInfo.standbysCount, committeeChanged, standbysChanged);
 	}
 
 	function isCommitteeMemberOrStandby(MemberData memory md) private pure returns (bool) {
