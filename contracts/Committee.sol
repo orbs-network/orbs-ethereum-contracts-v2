@@ -492,7 +492,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 			md = membersData[addr];
 
-			// Check if the preloaded member should have less weight than the current member, if so add the preloaded member first
+			// Check if the preloaded member has less weight than the current member, if so add the preloaded member first
 			if (
 				preloadedInd == uint(-1) && // was not previously added
 				(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr))) // has less weight than current
