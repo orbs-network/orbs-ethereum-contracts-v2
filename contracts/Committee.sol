@@ -352,12 +352,15 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		CommitteeInfo memory newInfo;
 
+		// First iteration - find all committee members and non-timed-out standbys
+
 		Participant memory p;
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
 
 			if (isTimedOut(p, _settings)) continue;
 
+			// Can current participant join the committee?
 			if (newInfo.committeeSize < _settings.maxCommitteeSize && qualifiesForCommittee(p.data)) {
 				p.newRole = ROLE_COMMITTEE;
 				newInfo.committeeSize++;
@@ -365,24 +368,31 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				continue;
 			}
 
+			// Otherwise, can it be a standby?
 			if (newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data)) {
 				p.newRole = ROLE_STANDBY;
 				newInfo.standbysCount++;
 			}
 		}
 
+		// Second iteration: - Add timed out standbys until reaching the maxStandbys limitation.
+		//					 - Update metadata of changed participants
+
 		Participant memory changedParticipant;
 		uint256 newSortBytes;
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
+
+			// Check if an excluded participant can become a standby
 			if (
-				p.newRole == ROLE_EXCLUDED &&
-				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data)
+				p.newRole == ROLE_EXCLUDED && // we decided to exclude it in the first iteration
+				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data) // But it qualifies as a standby the there's room
 			) {
 				p.newRole = ROLE_STANDBY;
 				newInfo.standbysCount++;
 			}
 
+			// Update changed participants
 			if (p.newRole != p.oldRole) {
 				if (p.oldRole == ROLE_COMMITTEE && p.newRole == ROLE_STANDBY) {
 					p.data.readyToSyncTimestamp = uint48(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
@@ -474,15 +484,18 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			pos = uint(sortBytes & 0xFF) - 1;
 
 			addr = _participantAddresses[pos];
-			if (addr == preloadedMember.addr) {
+
+			if (addr == preloadedMember.addr) { // Skip the preloaded member, it will be added later
 				preloadedPos = pos;
 				continue;
 			}
 
 			md = membersData[addr];
+
+			// Check if the preloaded member should have less weight than the current member, if so add the preloaded member first
 			if (
-				preloadedInd == uint(-1) &&
-				(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr)))
+				preloadedInd == uint(-1) && // was not previously added
+				(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr))) // has less weight than current
 			) {
 				preloadedInd = pind;
 				pind--;
@@ -498,8 +511,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			pind--;
 		}
 
-		if (preloadedInd == uint(-1)) preloadedInd = 0;
+		if (preloadedInd == uint(-1)) preloadedInd = 0; // Preloaded member was not added yet - meaning that it has the highest weight
 
+		// Add the preloaded member to the list in the determined position
 		participants[preloadedInd] = Participant({
 			addr: preloadedMember.addr,
 			data: preloadedMember.data,
