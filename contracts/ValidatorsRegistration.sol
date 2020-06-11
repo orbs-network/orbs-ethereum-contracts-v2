@@ -43,7 +43,7 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	}
 
     /// @dev Called by a participant who wishes to update its propertires
-	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator onlyWhenActive {
+	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
 		_updateValidator(ip, orbsAddr, name, website, contact);
 		emit ValidatorDataUpdated(msg.sender, ip, orbsAddr, name, website, contact);
 	}
@@ -100,6 +100,11 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		return validators[addr].registrationTime != 0;
 	}
 
+	function resolveEthereumAddress(address ethereumOrOrbsAddress) public view returns (address ethereumAddress) {
+		ethereumAddress = isRegistered(ethereumOrOrbsAddress) ? ethereumOrOrbsAddress : orbsAddressToEthereumAddress[ethereumOrOrbsAddress];
+		require(ethereumAddress != address(0), "Cannot resolve address");
+	}
+
 	/*
      * Methods restricted to other Orbs contracts
      */
@@ -134,20 +139,22 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		require(bytes(contact).length != 0, "contact must be given");
 		// TODO which are mandatory?
 
-		delete ipToValidator[validators[msg.sender].ip];
+		address sender = resolveEthereumAddress(msg.sender);
+
+		delete ipToValidator[validators[sender].ip];
 		require(ipToValidator[ip] == address(0), "ip is already in use");
-		ipToValidator[ip] = msg.sender;
+		ipToValidator[ip] = sender;
 
-		delete orbsAddressToEthereumAddress[validators[msg.sender].orbsAddr];
+		delete orbsAddressToEthereumAddress[validators[sender].orbsAddr];
 		require(orbsAddressToEthereumAddress[orbsAddr] == address(0), "orbs address is already in use");
-		orbsAddressToEthereumAddress[orbsAddr] = msg.sender;
+		orbsAddressToEthereumAddress[orbsAddr] = sender;
 
-		validators[msg.sender].orbsAddr = orbsAddr;
-		validators[msg.sender].ip = ip;
-		validators[msg.sender].name = name;
-		validators[msg.sender].website = website;
-		validators[msg.sender].contact = contact;
-		validators[msg.sender].lastUpdateTime = now;
+		validators[sender].orbsAddr = orbsAddr;
+		validators[sender].ip = ip;
+		validators[sender].name = name;
+		validators[sender].website = website;
+		validators[sender].contact = contact;
+		validators[sender].lastUpdateTime = now;
 	}
 
 }

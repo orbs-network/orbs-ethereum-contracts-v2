@@ -489,6 +489,32 @@ describe('validator-registration', async () => {
 
   });
 
+  it.only('allows a registered validator to update from its orbs address', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    let r = await d.validatorsRegistration.updateValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name + "new",
+        v.website,
+        v.contact
+    , {from: v.orbsAddress});
+    expect(r).to.have.a.validatorDataUpdatedEvent({
+      addr: v.address,
+      name: v.name + "new"
+    });
+  });
+
   it('sets, overrides, gets and clears validator metadata', async () => {
     const d = await Driver.new();
 
@@ -599,5 +625,32 @@ describe('validator-registration', async () => {
 
     expect(await d.validatorsRegistration.getOrbsAddresses([v.address])).to.deep.equal([v.orbsAddress])
   });
+
+  it('resolves ethereum address', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    expect(await d.validatorsRegistration.resolveEthereumAddress(v.address)).to.deep.equal(v.address);
+    expect(await d.validatorsRegistration.resolveEthereumAddress(v.orbsAddress)).to.deep.equal(v.address);
+
+    const v2 = d.newParticipant();
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v.address,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+    expect(await d.validatorsRegistration.resolveEthereumAddress(v.address)).to.deep.equal(v.address);
+  });
+
 
 });

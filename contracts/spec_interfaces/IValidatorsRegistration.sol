@@ -58,9 +58,11 @@ interface IValidatorsRegistration {
     /// Used by the Election contract
 	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddr);
 
-
 	/// @dev Translates a list validators Orbs addresses to Ethereum addresses
 	/// Used by the Election contract
 	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddr);
+
+	/// @dev Resolves the ethereum address for a validator, given an Ethereum/Orbs address
+	function resolveEthereumAddress(address ethereumOrOrbsAddress) external view returns (address mainAddress);
 
 }
