@@ -45,6 +45,9 @@ interface IValidatorsRegistration {
 	/// Used also by the Election contract
 	function getValidatorIp(address addr) external view returns (bytes4 ip);
 
+	/// @dev Returns validator ips
+	function getValidatorIps(address[] calldata addr) external view returns (bytes4[] memory ips);
+
 
 	/// @dev Returns true if the given address is of a registered validator
 	/// Used also by the Election contract

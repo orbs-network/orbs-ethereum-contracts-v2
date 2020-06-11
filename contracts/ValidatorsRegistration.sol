@@ -96,6 +96,13 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		return validators[addr].ip;
 	}
 
+	function getValidatorIps(address[] calldata addrs) external view returns (bytes4[] memory ips) {
+		ips = new bytes4[](addrs.length);
+		for (uint i = 0; i < addrs.length; i++) {
+			ips[i] = validators[addrs[i]].ip;
+		}
+	}
+
 	function isRegistered(address addr) public view returns (bool) { // todo: should this be public?
 		return validators[addr].registrationTime != 0;
 	}
