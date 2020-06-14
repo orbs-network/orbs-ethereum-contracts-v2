@@ -344,16 +344,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		);
 	}
 
-	function updateCommittee(Member memory changedMember, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = changedMember.data.role == ROLE_COMMITTEE;
-		standbysChanged = changedMember.data.role == ROLE_STANDBY;
-
-		Participant[] memory sortedParticipants = loadParticipantsSortedByWeights(changedMember); // override stored member with preloaded one
-
-		CommitteeInfo memory newInfo;
-
-		// First iteration - find all committee members and non-timed-out standbys
-
+	function updateNewRoles(Participant[] memory sortedParticipants, Settings memory _settings) private view returns (CommitteeInfo memory newInfo) {
 		Participant memory p;
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
@@ -375,15 +366,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			}
 		}
 
-		// Second iteration: - Add timed out standbys until reaching the maxStandbys limitation.
-		//					 - Update metadata of changed participants
-
-		Participant memory changedParticipant;
-		uint256 newSortBytes;
+		// Check if an excluded participant can become a standby
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
-
-			// Check if an excluded participant can become a standby
 			if (
 				p.newRole == ROLE_EXCLUDED && // we decided to exclude it in the first iteration
 				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data) // But it qualifies as a standby and there's room
@@ -391,6 +376,24 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				p.newRole = ROLE_STANDBY;
 				newInfo.standbysCount++;
 			}
+		}
+	}
+
+	function updateCommittee(Member memory changedMember, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) {
+		committeeChanged = changedMember.data.role == ROLE_COMMITTEE;
+		standbysChanged = changedMember.data.role == ROLE_STANDBY;
+
+		(Participant[] memory sortedParticipants, Participant memory changedParticipant) = loadParticipantsSortedByWeights(changedMember); // override stored member with preloaded one
+
+		// First iteration - find all committee members and non-timed-out standbys
+
+		CommitteeInfo memory newInfo = updateNewRoles(sortedParticipants, _settings);
+
+		// Update metadata of changed participants
+		uint256 newSortBytes;
+		Participant memory p;
+		for (uint i = 0; i < sortedParticipants.length; i++) {
+			p = sortedParticipants[i];
 
 			// Update a participant that changed its role
 			if (p.newRole != p.oldRole) {
@@ -409,8 +412,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			} else {
 				participantAddresses[p.pos] = address(0); // no longer a participant
 			}
-
-			if (p.addr == changedMember.addr) changedParticipant = p;
 		}
 
 		// check if changed member is a new participant
@@ -464,20 +465,20 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function loadParticipantsSortedByWeights(Member memory preloadedMember) private view returns (Participant[] memory participants) {
+	function loadParticipantsSortedByWeights(Member memory changedMember) private view returns (Participant[] memory sortedParticipants, Participant memory changedParticipant) {
 		address[] memory _participantAddresses = participantAddresses;
-		bool newMember = !isCommitteeMemberOrStandby(preloadedMember.data);
+		bool newParticipant = !isCommitteeMemberOrStandby(changedMember.data);
 
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint nParticipants = _committeeInfo.committeeSize + _committeeInfo.standbysCount;
-		if (newMember) nParticipants++;
-		participants = new Participant[](nParticipants);
+		if (newParticipant) nParticipants++;
+		sortedParticipants = new Participant[](nParticipants);
 
-		MemberData memory md;
+		MemberData memory data;
 		address addr;
 		uint pos;
-		uint preloadedInd = uint(-1);
-		uint preloadedPos = uint(-1);
+		uint changedMemberSortedInd = uint(-1);
+		uint changedMemberPos = uint(-1);
 
 		uint pind = nParticipants - 1;
 		for (uint sortBytes = weightSortIndicesOneBasedBytes; sortBytes != 0; sortBytes >>= 8) {
@@ -485,42 +486,43 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 			addr = _participantAddresses[pos];
 
-			if (addr == preloadedMember.addr) { // Skip the preloaded member, it will be added later
-				preloadedPos = pos;
+			if (addr == changedMember.addr) { // Skip the preloaded member, it will be added later
+				changedMemberPos = pos;
 				continue;
 			}
 
-			md = membersData[addr];
+			data = membersData[addr];
 
 			// Check if the preloaded member has less weight than the current member, if so add the preloaded member first
 			if (
-				preloadedInd == uint(-1) && // we did not add it already
-				(md.weight > preloadedMember.data.weight || (md.weight == preloadedMember.data.weight && uint(addr) > uint(preloadedMember.addr))) // has less weight than current
+				changedMemberSortedInd == uint(-1) && // we did not add it already
+				(data.weight > changedMember.data.weight || (data.weight == changedMember.data.weight && uint(addr) > uint(changedMember.addr))) // has less weight than current
 			) {
-				preloadedInd = pind;
+				changedMemberSortedInd = pind;
 				pind--;
 			}
 
-			participants[pind] = Participant({
+			sortedParticipants[pind] = Participant({
 				addr: addr,
-				data: md,
+				data: data,
 				pos : uint8(pos),
-				oldRole: md.role,
+				oldRole: data.role,
 				newRole: ROLE_EXCLUDED
 			});
 			pind--;
 		}
 
-		if (preloadedInd == uint(-1)) preloadedInd = 0; // Preloaded member was not added yet - meaning that it has the highest weight and should be placed first
+		if (changedMemberSortedInd == uint(-1)) changedMemberSortedInd = 0; // Preloaded member was not added yet - meaning that it has the highest weight and should be placed first
 
 		// Fill data of preloaded member to the list in the determined position
-		participants[preloadedInd] = Participant({
-			addr: preloadedMember.addr,
-			data: preloadedMember.data,
-			pos : uint8(newMember ? findFirstFreeSlotIndex(_participantAddresses) : preloadedPos),
-			oldRole: preloadedMember.data.role,
+		changedParticipant = Participant({
+			addr: changedMember.addr,
+			data: changedMember.data,
+			pos : uint8(newParticipant ? findFirstFreeSlotIndex(_participantAddresses) : changedMemberPos),
+			oldRole: changedMember.data.role,
 			newRole: ROLE_EXCLUDED
 		});
+		sortedParticipants[changedMemberSortedInd] = changedParticipant;
 	}
 
 	function findFirstFreeSlotIndex(address[] memory addrs) private pure returns (uint) {
