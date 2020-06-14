@@ -314,18 +314,12 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function _rankAndUpdateMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
-		(committeeChanged, standbysChanged) = _rankMember(member);
-		membersData[member.addr] = member.data;
-	}
-
-	function _rankMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
-		Settings memory _settings = settings;
-
 		if (!isCommitteeMemberOrStandby(member.data) && !qualifiesAsStandby(member.data)) {
+			membersData[member.addr] = member.data;
 			return (false, false);
 		}
-
-		return updateCommittee(member, _settings);
+		(committeeChanged, standbysChanged) = updateCommittee(member, settings);
+		membersData[member.addr] = member.data;
 	}
 
 	function isTimedOut(Participant memory p, Settings memory _settings) private view returns (bool) {
