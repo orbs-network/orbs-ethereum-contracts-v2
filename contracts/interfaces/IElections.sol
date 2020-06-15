@@ -13,6 +13,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	event BanningVote(address voter, address[] against);
 	event Banned(address validator);
 	event Unbanned(address validator);
+	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
 
 	/*
 	 *   External methods
