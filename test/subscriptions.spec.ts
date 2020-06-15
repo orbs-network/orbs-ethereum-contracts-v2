@@ -19,6 +19,7 @@ describe('subscriptions-high-level-flows', async () => {
     const firstPayment = monthlyRate.mul(new BN(2));
 
     const subscriber = await d.newSubscriber("defaultTier", monthlyRate);
+
     // buy subscription for a new VC
     const appOwner = d.newParticipant();
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
