@@ -96,7 +96,7 @@ export class Driver {
         const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
         const externalToken = await web3.deploy('TestingERC20', [], null, session);
         const erc20 = await web3.deploy('TestingERC20', [], null, session);
-        const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
+        const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address, accounts[3]], null, session);
         const delegations = await web3.deploy("Delegations", [], null, session);
         const elections = await web3.deploy("Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
@@ -128,6 +128,10 @@ export class Driver {
         await committee.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
+
+        const MAX_UINT256 = new BN("1".repeat(256), 2);
+        await erc20.approve(rewards.address, MAX_UINT256,{from: accounts[3]});
+        await externalToken.approve(rewards.address, MAX_UINT256,{from: accounts[3]});
 
         await Promise.all([
             elections,
@@ -220,6 +224,10 @@ export class Driver {
         return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[1], this.accounts[1], this);
     }
 
+    get fundsWalletAddress() {
+        return this.accounts[3];
+    }
+
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
         const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.erc20.address, tier, monthlyRate], null, this.session);
         await subscriber.setContractRegistry(this.contractRegistry.address);
@@ -231,7 +239,7 @@ export class Driver {
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
         name = name || `Validator${this.participants.length}`;
-        const RESERVED_ACCOUNTS = 3;
+        const RESERVED_ACCOUNTS = 4;
         const v = new Participant(
             name,
             `${name}-website`,

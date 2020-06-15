@@ -45,6 +45,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     IERC20 bootstrapToken;
     IERC20 erc20;
+    address fundsWallet;
     uint256 lastAssignedAt;
 
     modifier onlyCommitteeContract() {
@@ -53,12 +54,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         _;
     }
 
-    constructor(IERC20 _erc20, IERC20 _bootstrapToken) public {
+    constructor(IERC20 _erc20, IERC20 _bootstrapToken, address _fundsWallet) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
+        fundsWallet = _fundsWallet;
+
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastAssignedAt = now;
     }
@@ -79,7 +82,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 _amount48 = toUint48Granularity(amount);
         uint48 bootstrapPool = uint48(poolsAndTotalBalances.bootstrapPool.add(_amount48)); // todo may overflow
         poolsAndTotalBalances.bootstrapPool = bootstrapPool;
-        require(transferFrom(bootstrapToken, msg.sender, address(this), _amount48), "Rewards::topUpFixedPool - insufficient allowance");
+        require(transferFrom(bootstrapToken, msg.sender, fundsWallet, _amount48), "Rewards::topUpFixedPool - insufficient allowance");
         emit BootstrapAddedToPool(amount, toUint256Granularity(bootstrapPool));
     }
 
@@ -144,7 +147,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         _poolsAndTotalBalances.bootstrapPool = uint48(_poolsAndTotalBalances.bootstrapPool.sub(amount));
         poolsAndTotalBalances = _poolsAndTotalBalances;
 
-        require(transfer(bootstrapToken, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
+        require(transferFrom(bootstrapToken, fundsWallet, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
     // staking rewards
@@ -160,7 +163,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
         uint48 amount48 = toUint48Granularity(amount);
         poolsAndTotalBalances.stakingPool = uint48(poolsAndTotalBalances.stakingPool.add(amount48)); // todo overflow
-        require(transferFrom(erc20, msg.sender, address(this), amount48), "Rewards::topUpProRataPool - insufficient allowance");
+        require(transferFrom(erc20, msg.sender, fundsWallet, amount48), "Rewards::topUpProRataPool - insufficient allowance");
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {
@@ -246,6 +249,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         _poolsAndTotalBalances.stakingRewardsTotalBalance = uint48(_poolsAndTotalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
 
         poolsAndTotalBalances = _poolsAndTotalBalances;
+
+        transferFrom(erc20, fundsWallet, address(this), totalAmount_uint48);
 
         IStakingContract stakingContract = getStakingContract();
         approve(erc20, address(stakingContract), totalAmount_uint48);
@@ -367,14 +372,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         assert(_amount == 0);
 
-        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriptions to rewards");
+        require(erc20.transferFrom(msg.sender, fundsWallet, amount), "failed to transfer subscription fees from subscriptions to rewards");
     }
 
     function withdrawFeeFunds() external onlyWhenActive {
         uint48 amount = balances[msg.sender].fees;
         balances[msg.sender].fees = 0;
         poolsAndTotalBalances.feesTotalBalance = uint48(poolsAndTotalBalances.feesTotalBalance.sub(amount));
-        require(transfer(erc20, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
+        require(transferFrom(erc20, fundsWallet, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
     function getTotalBalances() external view returns (uint256 feesTotalBalance, uint256 stakingRewardsTotalBalance, uint256 bootstrapRewardsTotalBalance) {
