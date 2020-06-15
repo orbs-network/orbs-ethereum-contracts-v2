@@ -178,11 +178,6 @@ describe('committee', async () => {
 
         await d.contractRegistry.set("elections", d.contractsOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
         r = await d.committee.memberNotReadyToSync(v.address, {from: d.contractsOwnerAddress});
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
-            addr: v.address,
-            readyToSync: false,
-            readyForCommittee: false
-        });
         expect(r).to.have.a.committeeChangedEvent({
             addrs: [],
         });
