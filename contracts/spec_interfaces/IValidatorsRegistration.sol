@@ -4,7 +4,7 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface IValidatorsRegistration {
-	event ValidatorRegistered(address addr, bytes4 ip, address orbsAddr, string name, string website, string contact);
+	event ValidatorRegistered(address addr);
 	event ValidatorDataUpdated(address addr, bytes4 ip, address orbsAddr, string name, string website, string contact);
 	event ValidatorUnregistered(address addr);
 	event ValidatorMetadataChanged(address addr, string key, string newValue, string oldValue);
@@ -44,6 +44,9 @@ interface IValidatorsRegistration {
 	/// @dev Returns a validator's ip
 	/// Used also by the Election contract
 	function getValidatorIp(address addr) external view returns (bytes4 ip);
+
+	/// @dev Returns validator ips
+	function getValidatorIps(address[] calldata addr) external view returns (bytes4[] memory ips);
 
 
 	/// @dev Returns true if the given address is of a registered validator

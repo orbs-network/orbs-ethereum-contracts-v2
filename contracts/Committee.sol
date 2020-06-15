@@ -293,12 +293,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
-		bytes4[] memory ips = new bytes4[](addrs.length);
-		IValidatorsRegistration validatorsRegistrationContract = getValidatorsRegistrationContract();
-		for (uint i = 0; i < addrs.length; i++) {
-			ips[i] = validatorsRegistrationContract.getValidatorIp(addrs[i]);
-		}
-		return ips;
+		return getValidatorsRegistrationContract().getValidatorIps(addrs);
 	}
 
 	function _loadCompliance(address[] memory addrs) private view returns (bool[] memory) {
