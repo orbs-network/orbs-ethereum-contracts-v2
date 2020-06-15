@@ -12,7 +12,7 @@ const expect = chai.expect;
 
 describe('subscriptions-high-level-flows', async () => {
 
-  it('registers and pays for a general VC', async () => {
+  it.only('registers and pays for a general VC', async () => {
     const d = await Driver.new();
 
     const monthlyRate = new BN(1000);
@@ -71,7 +71,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(subscriber.address)).is.bignumber.equal('0');
     expect(await d.erc20.balanceOf(d.subscriptions.address)).is.bignumber.equal('0');
 
-    expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
+    expect(await d.erc20.balanceOf(d.fundsWalletAddress)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
   it('registers and pays for a compliance VC', async () => {
