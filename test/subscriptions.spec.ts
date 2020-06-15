@@ -12,7 +12,7 @@ const expect = chai.expect;
 
 describe('subscriptions-high-level-flows', async () => {
 
-  it.only('registers and pays for a general VC', async () => {
+  it('registers and pays for a general VC', async () => {
     const d = await Driver.new();
 
     const monthlyRate = new BN(1000);
