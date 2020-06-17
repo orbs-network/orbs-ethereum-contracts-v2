@@ -81,10 +81,14 @@ describe('contract-registry-high-level-flows', async () => {
     await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
     await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
 
-    await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
-    await d.rewards.setContractRegistry(newAddr, {from: d.migrationOwner.address});
-    await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationOwner.address});
-    await subscriber.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    let r = await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    r = await d.rewards.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    r = await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    r = await subscriber.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
   });
 
   it('does not allow to set a zero contract registry address', async () => { // TODO - consider splitting and moving this
