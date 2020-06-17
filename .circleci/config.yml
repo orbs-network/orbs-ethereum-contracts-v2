@@ -5,7 +5,17 @@ jobs:
       - image: aviramstern/aviram-orbs:ubuntu-go-node
     steps:
       - checkout
-      - run: ./test.sh
+      - run: ./test-e2e.sh
+      - store_artifacts:
+          path: _out
+      - store_test_results:
+          path: _reports
+  gas:
+    docker:
+      - image: aviramstern/aviram-orbs:ubuntu-go-node
+    steps:
+      - checkout
+      - run: ./test-gas.sh
       - store_artifacts:
           path: _out
       - store_test_results:
@@ -15,7 +25,7 @@ jobs:
       - image: aviramstern/aviram-orbs:ubuntu-go-node
     steps:
       - checkout
-      - run: ./test.sh
+      - run: ./test-coverage.sh
       - store_artifacts:
           path: _out
       - store_test_results:
@@ -37,3 +47,4 @@ workflows:
     jobs:
       - e2e
       - coverage
+      - gas
