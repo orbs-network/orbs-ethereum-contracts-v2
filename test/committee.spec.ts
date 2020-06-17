@@ -1063,8 +1063,25 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, new BN(2).pow(bn(128)), {from: elections}));
-        await d.committee.memberWeightChange(v.address, new BN(2).pow(bn(128)).sub(bn(1)), {from: elections});
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
+        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
+    });
+
+    it("validates weight is within range - less than 2^128", async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
+
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
+        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
+
+        const v2 = await d.newParticipant();
+
+        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(128)), true, {from: elections}));
+        await d.committee.addMember(v2.address, bn(2).pow(bn(128)).sub(bn(1)), true, {from: elections});
     });
 
     it("validates readyToSyncTimeout is positive", async () => {
@@ -1087,6 +1104,10 @@ describe('committee', async () => {
         expect(r).to.not.have.a.standbysChangedEvent();
 
         r = await d.committee.memberReadyToSync(nonRegistered.address, true, {from: elections});
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        r = await d.committee.memberNotReadyToSync(nonRegistered.address, {from: elections});
         expect(r).to.not.have.a.committeeChangedEvent();
         expect(r).to.not.have.a.standbysChangedEvent();
 
