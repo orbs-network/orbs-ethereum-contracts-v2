@@ -643,7 +643,7 @@ describe('staking-rewards-level-flows', async () => {
   it('ensures delegators portion in the distribution is not larger then configured threshold', async () => {
     const d = await Driver.new();
 
-                        const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
+    const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
 
     const delegator = d.newParticipant();
 
@@ -662,7 +662,8 @@ describe('staking-rewards-level-flows', async () => {
 
     await d.rewards.assignRewards();
 
-    await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalOwner.address});
+    let r = await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalOwner.address});
+    expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({maxDelegatorsStakingRewardsPercentMille: bn(66666)});
 
     await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
         fromTokenUnits(100000),
