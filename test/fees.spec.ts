@@ -146,9 +146,13 @@ describe('fees-contract', async () => {
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
-      await d.rewards.withdrawFeeFunds({from: v.address});
+      const r = await d.rewards.withdrawFeeFunds({from: v.address});
       const actualBalance = await d.erc20.balanceOf(v.address);
-      expect(new BN(actualBalance)).to.bignumber.equal(expectedBalance);
+      expect(r).to.have.a.feesWithdrawnEvent({
+        validator: v.address,
+        amount: bn(actualBalance)
+      });
+      expect(bn(actualBalance)).to.bignumber.equal(expectedBalance);
     }
 
   });
