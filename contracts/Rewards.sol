@@ -14,12 +14,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     using SafeMath for uint256;
     using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
 
-
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
         uint48 complianceCommitteeAnnualBootstrap;
         uint48 annualRateInPercentMille;
         uint48 annualCap;
+        uint32 maxDelegatorsStakingRewardsPercentMille;
     }
     Settings settings;
 
@@ -59,6 +59,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
+        settings.maxDelegatorsStakingRewardsPercentMille = 100000;
+
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastAssignedAt = now;
     }
@@ -73,6 +75,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
         assignRewards();
         settings.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+    }
+
+    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalOwner onlyWhenActive {
+        require(maxDelegatorsStakingRewardsPercentMille <= 100000, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
+        settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
+        emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
     }
 
     function topUpBootstrapPool(uint256 amount) external onlyWhenActive {
@@ -204,11 +212,16 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     mapping (address => DistributorBatchState) distributorBatchState;
 
+    function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
+        return delegatorRewards.mul(100000).div(totalRewards) <= settings.maxDelegatorsStakingRewardsPercentMille;
+    }
+
     struct Vars {
         bool firstTxBySender;
         address sender;
     }
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
+        require(to.length > 0, "list must containt at least one recipient");
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
@@ -216,6 +229,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         Vars memory vars;
 
         vars.sender = getValidatorsRegistrationContract().resolveEthereumAddress(msg.sender);
+        require(to[0] == vars.sender, "first member in list must be the sender's main address");
+        require(isDelegatorRewardsBelowThreshold(totalAmount.sub(amounts[0]), totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
+
         DistributorBatchState memory ds = distributorBatchState[vars.sender];
         vars.firstTxBySender = ds.nextTxIndex == 0;
 

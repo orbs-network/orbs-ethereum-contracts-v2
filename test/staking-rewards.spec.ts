@@ -116,8 +116,8 @@ describe('staking-rewards-level-flows', async () => {
           100,
           1,
           0,
-          [delegator.address],
-          [totalOrbsRewardsArr[i]],
+          [v.v.address, delegator.address],
+          [bn(1), totalOrbsRewardsArr[i].sub(bn(1))],
           {from: v.v.address}
         );
       expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -126,13 +126,18 @@ describe('staking-rewards-level-flows', async () => {
         toBlock: bn(100),
         split: bn(1),
         txIndex: bn(0),
-        to: [delegator.address],
-        amounts: [totalOrbsRewardsArr[i]]
+        to: [v.v.address, delegator.address],
+        amounts: [bn(1), totalOrbsRewardsArr[i].sub(bn(1))]
       });
       expect(r).to.have.a.stakedEvent({
         stakeOwner: delegator.address,
-        amount: totalOrbsRewardsArr[i],
-        totalStakedAmount: totalOrbsRewardsArr[i]
+        amount: totalOrbsRewardsArr[i].sub(bn(1)),
+        totalStakedAmount: totalOrbsRewardsArr[i].sub(bn(1)),
+      });
+      expect(r).to.have.a.stakedEvent({
+        stakeOwner: v.v.address,
+        amount: bn(1),
+        totalStakedAmount: bn(v.stake).add(bn(1))
       });
       expect(r).to.have.a.committeeChangedEvent({
         addrs: validators.map(v => v.v.address),
@@ -226,8 +231,8 @@ describe('staking-rewards-level-flows', async () => {
           100,
           1,
           0,
-          [delegator.address],
-          [totalOrbsRewardsArr[i]],
+          [v.v.address, delegator.address],
+          [bn(1), totalOrbsRewardsArr[i].sub(bn(1))],
           {from: v.v.address});
       expect(r).to.have.a.stakingRewardsDistributedEvent({
         distributer: v.v.address,
@@ -235,13 +240,18 @@ describe('staking-rewards-level-flows', async () => {
         toBlock: bn(100),
         split: bn(1),
         txIndex: bn(0),
-        to: [delegator.address],
-        amounts: [totalOrbsRewardsArr[i]]
+        to: [v.v.address, delegator.address],
+        amounts: [bn(1), totalOrbsRewardsArr[i].sub(bn(1))]
       });
       expect(r).to.have.a.stakedEvent({
         stakeOwner: delegator.address,
-        amount: totalOrbsRewardsArr[i],
-        totalStakedAmount: totalOrbsRewardsArr[i]
+        amount: totalOrbsRewardsArr[i].sub(bn(1)),
+        totalStakedAmount: totalOrbsRewardsArr[i].sub(bn(1))
+      });
+      expect(r).to.have.a.stakedEvent({
+        stakeOwner: v.v.address,
+        amount: bn(1),
+        totalStakedAmount: bn(v.stake).add(bn(1))
       });
       expect(r).to.have.a.committeeChangedEvent({
         addrs: validators.map(v => v.v.address),
@@ -255,8 +265,6 @@ describe('staking-rewards-level-flows', async () => {
 
     const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
     const {v: v2} = await d.newValidator(fromTokenUnits(1000), false, false, true);
-
-    const delegator = d.newParticipant();
 
     /* top up staking rewards pool */
     const g = d.functionalOwner;
@@ -280,7 +288,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address})
     );
@@ -292,7 +300,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         1,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address})
     );
@@ -315,7 +323,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
       );
@@ -325,7 +333,7 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(100),
       split: bn(1),
       txIndex: bn(0),
-      to: [delegator.address],
+      to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
@@ -336,7 +344,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
       )
@@ -347,7 +355,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         2,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
       )
@@ -359,7 +367,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         1,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
     );
@@ -369,7 +377,7 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(100),
       split: bn(1),
       txIndex: bn(1),
-      to: [delegator.address],
+      to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
@@ -379,7 +387,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         2,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
     );
@@ -389,7 +397,7 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(100),
       split: bn(1),
       txIndex: bn(2),
-      to: [delegator.address],
+      to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
@@ -400,7 +408,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         2,
         3,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
@@ -413,7 +421,7 @@ describe('staking-rewards-level-flows', async () => {
         200,
         2,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
@@ -425,7 +433,7 @@ describe('staking-rewards-level-flows', async () => {
         200,
         2,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
@@ -438,7 +446,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         2,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
@@ -451,7 +459,7 @@ describe('staking-rewards-level-flows', async () => {
         200,
         2,
         1,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
@@ -464,7 +472,7 @@ describe('staking-rewards-level-flows', async () => {
         200,
         3,
         0,
-        [delegator.address],
+        [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
     );
@@ -474,7 +482,7 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(200),
       split: bn(3),
       txIndex: bn(0),
-      to: [delegator.address],
+      to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
@@ -485,7 +493,7 @@ describe('staking-rewards-level-flows', async () => {
         100,
         1,
         0,
-        [delegator.address],
+        [v2.address],
         [fromTokenUnits(5)],
         {from: v2.address}
     );
@@ -495,7 +503,7 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(100),
       split: bn(1),
       txIndex: bn(0),
-      to: [delegator.address],
+      to: [v2.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
@@ -506,7 +514,7 @@ describe('staking-rewards-level-flows', async () => {
         (r.blockNumber + 10000),
         1,
         0,
-        [delegator.address],
+        [v2.address],
         [fromTokenUnits(5)],
         {from: v2.address}
     ));
@@ -536,13 +544,13 @@ describe('staking-rewards-level-flows', async () => {
     await d.rewards.assignRewards();
 
     let r = await d.rewards.distributeOrbsTokenStakingRewards(
-        fromTokenUnits(5),
+        fromTokenUnits(6),
         0,
         100,
         1,
         0,
-        [delegator.address],
-        [fromTokenUnits(5)],
+        [v.address, delegator.address],
+        [fromTokenUnits(1), fromTokenUnits(5)],
         {from: v.address}
       );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -551,18 +559,18 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(100),
       split: bn(1),
       txIndex: bn(0),
-      to: [delegator.address],
-      amounts: [bn(fromTokenUnits(5))]
+      to: [v.address, delegator.address],
+      amounts: [fromTokenUnits(1), fromTokenUnits(5)]
     });
 
     r = await d.rewards.distributeOrbsTokenStakingRewards(
-        fromTokenUnits(5),
+        fromTokenUnits(6),
         0,
         100,
         1,
         1,
-        [delegator.address],
-        [fromTokenUnits(5)],
+        [v.address, delegator.address],
+        [fromTokenUnits(1), fromTokenUnits(5)],
         {from: v.orbsAddress}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -571,9 +579,112 @@ describe('staking-rewards-level-flows', async () => {
       toBlock: bn(100),
       split: bn(1),
       txIndex: bn(1),
-      to: [delegator.address],
-      amounts: [bn(fromTokenUnits(5))]
+      to: [v.address, delegator.address],
+      amounts: [fromTokenUnits(1), fromTokenUnits(5)]
     });
+  });
+
+  it('first address in distribute must be the main address of the sender', async () => {
+    const d = await Driver.new();
+
+    const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
+
+    const delegator = d.newParticipant();
+
+    /* top up staking rewards pool */
+    const g = d.functionalOwner;
+
+    const annualRate = 12000;
+    const poolAmount = fromTokenUnits(20000000);
+    const annualCap = fromTokenUnits(20000000);
+
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    await d.rewards.assignRewards();
+
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        0,
+        [delegator.address],
+        [fromTokenUnits(5)],
+        {from: v.address}
+    ));
+
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        0,
+        [v.orbsAddress],
+        [fromTokenUnits(5)],
+        {from: v.address}
+    ));
+
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        0,
+        [v.address],
+        [fromTokenUnits(5)],
+        {from: v.address}
+    );
+  });
+
+  it.only('ensures delegators portion in the distribution is not larger then configured threshold', async () => {
+    const d = await Driver.new();
+
+                        const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
+
+    const delegator = d.newParticipant();
+
+    /* top up staking rewards pool */
+    const g = d.functionalOwner;
+
+    const annualRate = 12000;
+    const poolAmount = fromTokenUnits(20000000);
+    const annualCap = fromTokenUnits(20000000);
+
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    await d.rewards.assignRewards();
+
+    await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalOwner.address});
+
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(100000),
+        0,
+        100,
+        1,
+        0,
+        [v.address, delegator.address],
+        [fromTokenUnits(33333), fromTokenUnits(66667)],
+        {from: v.address}
+    ));
+
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(100000),
+        0,
+        100,
+        1,
+        0,
+        [v.address, delegator.address],
+        [fromTokenUnits(33334), fromTokenUnits(66666)],
+        {from: v.address}
+    );
   });
 
 });

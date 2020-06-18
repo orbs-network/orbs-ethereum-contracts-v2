@@ -354,12 +354,12 @@ describe('gas usage scenarios', async () => {
         await delegator.stake(100);
         await delegator.delegate(v);
 
-        const delegators: Participant[] = await Promise.all(_.range(batchSize).map(async () => {
+        const delegators: Participant[] =[v].concat(await Promise.all(_.range(batchSize - 1).map(async () => {
             const delegator = d.newParticipant();
             await delegator.stake(100);
             await delegator.delegate(v);
             return delegator;
-        }));
+        })));
 
         const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
@@ -372,7 +372,7 @@ describe('gas usage scenarios', async () => {
             0,
             delegators.map(delegator => delegator.address),
             delegators.map(() => balance.div(bn(batchSize)))
-            , {from: committee[0].address});
+            , {from: v.address});
 
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same validator (batch size - ${batchSize})`, [committee[0]]);
     };

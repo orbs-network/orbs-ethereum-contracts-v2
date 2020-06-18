@@ -38,8 +38,14 @@ import {
   banningPercentageThresholdChangedEvents,
   lockedEvents,
   unlockedEvents,
-  readyToSyncTimeoutChangedEvents, maxCommitteeSizeChangedEvents, maxStandbysChangedEvents,
-  validatorStatusUpdatedEvents, bootstrapRewardsWithdrawnEvents, feesWithdrawnEvents, stakingRewardsAddedToPoolEvents
+  readyToSyncTimeoutChangedEvents,
+  maxCommitteeSizeChangedEvents,
+  maxStandbysChangedEvents,
+  validatorStatusUpdatedEvents,
+  bootstrapRewardsWithdrawnEvents,
+  feesWithdrawnEvents,
+  stakingRewardsAddedToPoolEvents,
+  maxDelegatorsStakingRewardsChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -63,7 +69,7 @@ import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
 import {
   BootstrapRewardsWithdrawnEvent,
-  FeesWithdrawnEvent,
+  FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
   StakingRewardAssignedEvent, StakingRewardsAddedToPoolEvent,
   StakingRewardsDistributedEvent
 } from "../typings/rewards-contract";
@@ -237,6 +243,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
   chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
   chai.Assertion.overwriteMethod("validatorStatusUpdatedEvent", containEvent(validatorStatusUpdatedEvents));
+  chai.Assertion.overwriteMethod("maxDelegatorsStakingRewardsChangedEvent", containEvent(maxDelegatorsStakingRewardsChangedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -294,6 +301,7 @@ declare global {
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
       validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
+      maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }
