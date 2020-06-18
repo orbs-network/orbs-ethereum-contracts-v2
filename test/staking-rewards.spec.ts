@@ -640,7 +640,7 @@ describe('staking-rewards-level-flows', async () => {
     );
   });
 
-  it.only('ensures delegators portion in the distribution is not larger then configured threshold', async () => {
+  it('ensures delegators portion in the distribution is not larger then configured threshold', async () => {
     const d = await Driver.new();
 
                         const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
