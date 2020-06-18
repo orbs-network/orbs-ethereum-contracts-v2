@@ -15,12 +15,32 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
 describe('elections-high-level-flows', async () => {
+
+    it('emits events on readyForCommittee and readyToSync', async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
+
+        let r = await v.notifyReadyToSync();
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: false
+        });
+
+        r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+    });
 
     it('handle delegation requests', async () => {
         const d = await Driver.new();
@@ -242,6 +262,11 @@ describe('elections-high-level-flows', async () => {
             });
             expect(r).to.have.a.votedOutOfCommitteeEvent({
                 addr: votedOutValidator.address
+            });
+            expect(r).to.have.a.validatorStatusUpdatedEvent({
+                addr: votedOutValidator.address,
+                readyToSync: false,
+                readyForCommittee: false
             });
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.filter(v => v != votedOutValidator).map(v => v.address)

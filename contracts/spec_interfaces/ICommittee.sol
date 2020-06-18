@@ -7,7 +7,6 @@ interface ICommittee {
     event CommitteeChanged(address[] addrs, uint256[] weights, bool[] compliance);
 	event StandbysChanged(address[] addrs, uint256[] weights, bool[] compliance);
 
-    // No events
     // No external functions
 
 	/*

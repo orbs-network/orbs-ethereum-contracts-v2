@@ -88,11 +88,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	function notifyReadyForCommittee() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		emit ValidatorStatusUpdated(sender, true, true);
 		getCommitteeContract().memberReadyToSync(sender, true);
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		emit ValidatorStatusUpdated(sender, true, false);
 		getCommitteeContract().memberReadyToSync(sender, false);
 	}
 
@@ -184,6 +186,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
 			emit VotedOutOfCommittee(addr);
+			emit ValidatorStatusUpdated(addr, false, false);
 			getCommitteeContract().memberNotReadyToSync(addr);
 		}
 	}

@@ -30,6 +30,12 @@ export interface MaxStandbysChangedEvent {
     oldValue: string|BN;
 }
 
+export interface ValidatorStatusUpdatedEvent {
+    addr: string;
+    readyToSync: boolean;
+    readyForCommittee: boolean;
+}
+
 export interface CommitteeContract extends OwnedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberNotReadyToSync(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
