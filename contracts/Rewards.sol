@@ -213,7 +213,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     mapping (address => DistributorBatchState) distributorBatchState;
 
     function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
-        return delegatorRewards.mul(100000).div(totalRewards) <= settings.maxDelegatorsStakingRewardsPercentMille;
+        return delegatorRewards.mul(100000).div(totalRewards) < settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
     struct Vars {

@@ -640,7 +640,7 @@ describe('staking-rewards-level-flows', async () => {
     );
   });
 
-  it('enforces delegators portion in the distribution is not larger then configured threshold', async () => {
+  it('enforces delegators portion in the distribution is less than configured threshold', async () => {
     const d = await Driver.new();
 
     const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
@@ -672,7 +672,7 @@ describe('staking-rewards-level-flows', async () => {
         1,
         0,
         [v.address, delegator.address],
-        [fromTokenUnits(33333), fromTokenUnits(66667)],
+        [fromTokenUnits(33334), fromTokenUnits(66666)],
         {from: v.address}
     ));
 
@@ -683,7 +683,7 @@ describe('staking-rewards-level-flows', async () => {
         1,
         0,
         [v.address, delegator.address],
-        [fromTokenUnits(33334), fromTokenUnits(66666)],
+        [fromTokenUnits(33335), fromTokenUnits(66665)],
         {from: v.address}
     );
   });
