@@ -30,7 +30,7 @@ import {
   validatorMetadataChangedEvents,
   committeeSnapshotEvents,
   standbysSnapshotEvents,
-  stakingRewardsDistributed,
+  stakingRewardsDistributedEvents,
   voteOutTimeoutSecondsChangedEvents,
   maxDelegationRatioChangedEvents,
   banningLockTimeoutSecondsChangedEvents,
@@ -41,6 +41,9 @@ import {
   readyToSyncTimeoutChangedEvents,
   maxCommitteeSizeChangedEvents,
   maxStandbysChangedEvents,
+  bootstrapRewardsWithdrawnEvents,
+  feesWithdrawnEvents,
+  stakingRewardsAddedToPoolEvents
   validatorStatusUpdatedEvents, validatorCommitteeChangeEvents, maxTimeBetweenRewardAssignmentsChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
@@ -63,7 +66,12 @@ import {
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
-import {StakingRewardAssignedEvent, StakingRewardsDistributedEvent} from "../typings/rewards-contract";
+import {
+  BootstrapRewardsWithdrawnEvent,
+  FeesWithdrawnEvent,
+  StakingRewardAssignedEvent, StakingRewardsAddedToPoolEvent,
+  StakingRewardsDistributedEvent
+} from "../typings/rewards-contract";
 import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/rewards-contract";
 import {
@@ -209,8 +217,11 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("feeAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("bootstrapAddedToPoolEvent", containEvent(bootstrapAddedToPoolEvents));
   chai.Assertion.overwriteMethod("bootstrapRewardsAssignedEvent", containEvent(bootstrapRewardsAssignedEvents));
+  chai.Assertion.overwriteMethod("bootstrapRewardsWithdrawnEvent", containEvent(bootstrapRewardsWithdrawnEvents));
+  chai.Assertion.overwriteMethod("feesWithdrawnEvent", containEvent(feesWithdrawnEvents));
+  chai.Assertion.overwriteMethod("stakingRewardsAddedToPoolEvent", containEvent(stakingRewardsAddedToPoolEvents));
   chai.Assertion.overwriteMethod("stakingRewardsAssignedEvent", containEvent(stakingRewardsAssignedEvents, true, 'assignees'));
-  chai.Assertion.overwriteMethod("stakingRewardsDistributedEvent", containEvent(stakingRewardsDistributed));
+  chai.Assertion.overwriteMethod("stakingRewardsDistributedEvent", containEvent(stakingRewardsDistributedEvents));
   chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
   chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
@@ -292,10 +303,12 @@ declare global {
       maxTimeBetweenRewardAssignmentsChangedEvents(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
       maxStandbysChangedEvent(data?: Partial<MaxStandbysChangedEvent>);
+      feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
+      bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
+      stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
       validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
 
       withinContract(contract: Contract): Assertion;
-
     }
 
     export interface Assertion {

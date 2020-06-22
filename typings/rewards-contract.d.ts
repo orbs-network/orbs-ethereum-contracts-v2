@@ -47,6 +47,20 @@ export interface StakingRewardsDistributedEvent {
     amounts: (string|BN)[]
 }
 
+export interface StakingRewardsAddedToPoolEvent {
+    added: string|BN,
+    total: string|BN
+}
+
+export interface FeesWithdrawnEvent {
+    validator: string,
+    amount: string|BN
+}
+
+export interface BootstrapRewardsWithdrawnEvent {
+    validator: string,
+    amount: string|BN
+}
 
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;

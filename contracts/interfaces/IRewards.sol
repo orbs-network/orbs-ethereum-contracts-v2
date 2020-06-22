@@ -13,6 +13,7 @@ interface IRewards {
 
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
     event StakingRewardsAssigned(address[] assignees, uint256[] amounts); // todo balance?
+    event StakingRewardsAddedToPool(uint256 added, uint256 total);
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
     function getStakingRewardBalance(address addr) external view returns (uint256 balance);
@@ -34,7 +35,7 @@ interface IRewards {
     // fees
 
     event FeesAssigned(uint256 generalValidatorAmount, uint256 certifiedValidatorAmount);
-
+    event FeesWithdrawn(address validator, uint256 amount);
     event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total, bool isCompliant);
     event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCompliant);
 
@@ -62,6 +63,7 @@ interface IRewards {
 
     event BootstrapRewardsAssigned(uint256 generalValidatorAmount, uint256 certifiedValidatorAmount);
     event BootstrapAddedToPool(uint256 added, uint256 total);
+    event BootstrapRewardsWithdrawn(address validator, uint256 amount);
 
     /*
      *   External methods
