@@ -1,12 +1,9 @@
 import 'mocha';
 
-import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, expectRejected} from "./driver";
+import {Driver, expectRejected} from "./driver";
 import chai from "chai";
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
-import {TransactionReceipt} from "web3-core";
-import {Web3Driver} from "../eth";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -31,7 +28,7 @@ describe('staking-rewards-level-flows', async () => {
     const poolAmount = fromTokenUnits(200000000000);
     const annualCap = poolAmount;
 
-    let r = await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
     // create committee
 
@@ -45,7 +42,7 @@ describe('staking-rewards-level-flows', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    r = await v2.notifyReadyForCommittee();
+    let r = await v2.notifyReadyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
@@ -89,16 +86,26 @@ describe('staking-rewards-level-flows', async () => {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
 
+    // Pool can be topped up after assignment
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    r = await d.rewards.topUpStakingRewardsPool(fromTokenUnits(1), {from: g.address});
+    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
+      added: fromTokenUnits(1),
+      total: fromTokenUnits(1)
+    });
+
+    r = await d.rewards.topUpStakingRewardsPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
+    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
+      added: poolAmount.sub(fromTokenUnits(1)),
+      total: poolAmount
+    });
+
     for (const v of validators) {
       const delegator = d.newParticipant();
       await delegator.delegate(v.v);
 
       const i = validators.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(totalOrbsRewardsArr[i]);
-
-      // Pool can be topped up after assignment
-      await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-      await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
           totalOrbsRewardsArr[i],
