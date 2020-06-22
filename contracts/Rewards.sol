@@ -68,12 +68,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     // bootstrap rewards
 
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
-        assignRewards();
         settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
-        assignRewards();
         settings.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
@@ -159,7 +157,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     // staking rewards
 
     function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner onlyWhenActive {
-        assignRewards();
         Settings memory _settings = settings;
         _settings.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
         _settings.annualCap = toUint48Granularity(annual_cap);

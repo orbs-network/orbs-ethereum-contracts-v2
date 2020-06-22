@@ -44,7 +44,7 @@ import {
   validatorStatusUpdatedEvents,
   bootstrapRewardsWithdrawnEvents,
   feesWithdrawnEvents,
-  stakingRewardsAddedToPoolEvents,
+  stakingRewardsAddedToPoolEvents
   maxDelegatorsStakingRewardsChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
