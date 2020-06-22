@@ -34,8 +34,8 @@ function parseLogs(txResult, contract, eventSignature, contractAddress?: string)
 
 export const committeeChangedEvents = (txResult, contractAddress: string) => parseLogs(txResult, committee, "CommitteeChanged(address[],uint256[],bool[])", contractAddress);
 export const standbysChangedEvents = (txResult, contractAddress: string) => parseLogs(txResult, committee, "StandbysChanged(address[],uint256[],bool[])", contractAddress);
-export const validatorRegisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorRegistered(address,bytes4,address,string,string,string)", contractAddress);
-export const validatorUnregisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorUnregistered(addr)", contractAddress);
+export const validatorRegisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorRegistered(address)", contractAddress);
+export const validatorUnregisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorUnregistered(address)", contractAddress);
 export const validatorDataUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorDataUpdated(address,bytes4,address,string,string,string)", contractAddress);
 export const validatorMetadataChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorMetadataChanged(address,string,string,string)", contractAddress);
 export const stakedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, staking, "Staked(address,uint256,uint256)", contractAddress);
@@ -76,5 +76,6 @@ export const unlockedEvents = (txResult, contractAddress?: string) => parseLogs(
 export const readyToSyncTimeoutChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "ReadyToSyncTimeoutChanged(uint48,uint48)");
 export const maxCommitteeSizeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxCommitteeSizeChanged(uint8,uint8)");
 export const maxStandbysChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxStandbysChanged(uint8,uint8)");
+export const validatorStatusUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorStatusUpdated(address,bool,bool)");
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);

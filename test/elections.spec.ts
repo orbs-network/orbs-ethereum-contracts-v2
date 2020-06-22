@@ -15,12 +15,32 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime} from "./helpers";
+import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
 describe('elections-high-level-flows', async () => {
+
+    it('emits events on readyForCommittee and readyToSync', async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
+
+        let r = await v.notifyReadyToSync();
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: false
+        });
+
+        r = await v.notifyReadyForCommittee();
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+    });
 
     it('handle delegation requests', async () => {
         const d = await Driver.new();
@@ -49,11 +69,7 @@ describe('elections-high-level-flows', async () => {
         let r = await validatorStaked100.stake(stake100);
         expect(r).to.have.a.stakedEvent();
 
-        r = await validatorStaked100.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent({
-            addr: validatorStaked100.address,
-            ip: validatorStaked100.ip
-        });
+        await validatorStaked100.registerAsValidator();
         r = await validatorStaked100.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked100.address],
@@ -75,11 +91,7 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked200.stake(stake200);
         expect(r).to.have.a.stakeChangedEvent({addr: validatorStaked200.address, committeeStake: stake200});
 
-        r = await validatorStaked200.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent({
-            addr: validatorStaked200.address,
-            ip: validatorStaked200.ip,
-        });
+        await validatorStaked200.registerAsValidator();
 
         r = await validatorStaked200.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
@@ -104,11 +116,8 @@ describe('elections-high-level-flows', async () => {
         r = await validatorStaked300.stake(stake300);
         expect(r).to.have.a.stakedEvent();
 
-        r = await validatorStaked300.registerAsValidator();
-        expect(r).to.have.a.validatorRegisteredEvent({
-            addr: validatorStaked300.address,
-            ip: validatorStaked300.ip
-        });
+        await validatorStaked300.registerAsValidator();
+
         r = await validatorStaked300.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: [validatorStaked300.address],
@@ -171,7 +180,7 @@ describe('elections-high-level-flows', async () => {
         const outOfTopologyValidator = d.newParticipant();
         r = await outOfTopologyValidator.stake(stake100);
         expect(r).to.have.a.stakedEvent();
-        r = await outOfTopologyValidator.registerAsValidator();
+        await outOfTopologyValidator.registerAsValidator();
         r = await outOfTopologyValidator.notifyReadyToSync();
         expect(r).to.not.have.a.standbysChangedEvent();
         r = await outOfTopologyValidator.notifyReadyForCommittee();
@@ -253,6 +262,11 @@ describe('elections-high-level-flows', async () => {
             });
             expect(r).to.have.a.votedOutOfCommitteeEvent({
                 addr: votedOutValidator.address
+            });
+            expect(r).to.have.a.validatorStatusUpdatedEvent({
+                addr: votedOutValidator.address,
+                readyToSync: false,
+                readyForCommittee: false
             });
             expect(r).to.have.a.committeeChangedEvent({
                 addrs: committee.filter(v => v != votedOutValidator).map(v => v.address)
@@ -516,8 +530,8 @@ describe('elections-high-level-flows', async () => {
         });
 
         const newValidator = d.newParticipant();
-        r = await newValidator.registerAsValidator();
-        r = await newValidator.stake(baseStake * 2);
+        await newValidator.registerAsValidator();
+        await newValidator.stake(baseStake * 2);
         r = await newValidator.notifyReadyToSync();
         expect(r).to.have.a.standbysChangedEvent({
             addrs: topology.slice(defaultDriverOptions.maxCommitteeSize, topology.length - 1).map(v => v.address).concat(newValidator.address)

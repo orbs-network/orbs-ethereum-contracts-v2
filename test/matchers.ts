@@ -41,7 +41,10 @@ import {
   readyToSyncTimeoutChangedEvents,
   maxCommitteeSizeChangedEvents,
   maxStandbysChangedEvents,
-  bootstrapRewardsWithdrawnEvents, feesWithdrawnEvents, stakingRewardsAddedToPoolEvents
+  validatorStatusUpdatedEvents,
+  bootstrapRewardsWithdrawnEvents,
+  feesWithdrawnEvents,
+  stakingRewardsAddedToPoolEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -83,7 +86,7 @@ import {
 import {
   CommitteeChangedEvent, MaxCommitteeSizeChangedEvent, MaxStandbysChangedEvent,
   ReadyToSyncTimeoutChangedEvent,
-  StandbysChangedEvent
+  StandbysChangedEvent, ValidatorStatusUpdatedEvent
 } from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
@@ -238,6 +241,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("banningPercentageThresholdChangedEvent", containEvent(banningPercentageThresholdChangedEvents));
   chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
   chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
+  chai.Assertion.overwriteMethod("validatorStatusUpdatedEvent", containEvent(validatorStatusUpdatedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -294,6 +298,7 @@ declare global {
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
+      validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }
