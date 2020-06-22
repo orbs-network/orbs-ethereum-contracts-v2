@@ -97,7 +97,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(v => v.address)
         });
 
@@ -113,22 +113,22 @@ describe('gas usage scenarios', async () => {
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[0]);
         let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(v => v.address)
         });
 
         await committee[0].unstake(BASE_STAKE.add(fromTokenUnits(committee.length)));
         r = await committee[0].stake(BASE_STAKE.sub(fromTokenUnits(standbys.length + 1)));
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(v => v.address)
         });
 
         d.resetGasRecording();
         r = await delegator.delegate(standbys[standbys.length - 1]);
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [standbys[standbys.length - 1]].concat(committee.slice(1)).map(v => v.address)
         });
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: standbys.slice(0, standbys.length - 1).concat([committee[0]]).map(v => v.address)
         });
 
@@ -142,8 +142,8 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
 
         d.logGasUsageSummary("New delegator stakes", [delegator]);
     });
@@ -156,10 +156,9 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(v => v.address)
         });
-        expect(r).to.not.have.a.standbysChangedEvent();
 
         d.logGasUsageSummary("Delegator stake increase, no change in committee order", [delegator]);
     });
@@ -171,10 +170,9 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
-        expect(r).to.not.have.a.committeeChangedEvent();
 
         d.logGasUsageSummary("Standby sends ready-to-sync for first time and gets to top of standbys list", [v]);
     });
@@ -185,17 +183,16 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
-        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
 
         d.resetGasRecording();
         await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
-        expect(r).to.not.have.a.committeeChangedEvent();
 
         d.logGasUsageSummary("Delegator stake increase, no change in committee order", [v]);
     });
@@ -207,10 +204,10 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await v.notifyReadyForCommittee();
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [committee[committee.length - 1]].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
 
@@ -223,17 +220,17 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
-        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
 
         d.resetGasRecording();
         r = await v.notifyReadyForCommittee();
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [committee[committee.length - 1]].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
 
@@ -245,10 +242,10 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await committee[0].unregisterAsValidator();
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: standbys.slice(1).map(v => v.address)
         });
 
@@ -260,8 +257,8 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].orbsAddress});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
         expect(r).to.have.a.voteOutEvent({
             voter: committee[0].address,
             against: committee[1].address
@@ -289,10 +286,10 @@ describe('gas usage scenarios', async () => {
             addr: committee[0].address
         });
 
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: standbys.slice(1).map(v => v.address)
         });
 
@@ -304,8 +301,8 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.setBanningVotes([committee[1].address], {from: committee[0].address});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
         expect(r).to.have.a.banningVoteEvent({
             voter: committee[0].address,
             against: [committee[1].address]
@@ -332,10 +329,10 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: committee[0].address
         });
-        expect(r).to.have.a.committeeChangedEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysChangedEvent({
+        expect(r).to.have.a.standbysSnapshotEvent({
             addrs: standbys.slice(1).map(v => v.address)
         });
 

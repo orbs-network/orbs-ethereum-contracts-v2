@@ -58,7 +58,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
@@ -124,7 +124,7 @@ describe('staking-rewards-level-flows', async () => {
         amount: totalOrbsRewardsArr[i],
         totalStakedAmount: totalOrbsRewardsArr[i]
       });
-      expect(r).to.have.a.committeeChangedEvent({
+      expect(r).to.have.a.committeeSnapshotEvent({
         addrs: validators.map(v => v.v.address),
         weights: validators.map((_v, _i) => (_i <= i) ? new BN(_v.stake).add(totalOrbsRewardsArr[_i]) : new BN(_v.stake))
       });
@@ -170,7 +170,7 @@ describe('staking-rewards-level-flows', async () => {
 
     const nValidators = validators.length;
 
-    expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
+    expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
     await sleep(3000);
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
@@ -233,7 +233,7 @@ describe('staking-rewards-level-flows', async () => {
         amount: totalOrbsRewardsArr[i],
         totalStakedAmount: totalOrbsRewardsArr[i]
       });
-      expect(r).to.have.a.committeeChangedEvent({
+      expect(r).to.have.a.committeeSnapshotEvent({
         addrs: validators.map(v => v.v.address),
         weights: validators.map((_v, _i) => (_i <= i) ? new BN(_v.stake).add(totalOrbsRewardsArr[_i]) : new BN(_v.stake))
       });

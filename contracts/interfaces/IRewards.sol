@@ -74,7 +74,7 @@ interface IRewards {
     function withdrawBootstrapFunds() external;
 
     /// @return The timestamp of the last reward assignment.
-    function getLastRewardAssignment() external view returns (uint256 time);
+    function getLastRewardAssignmentTime() external view returns (uint256 time);
 
     /// @dev Transfers the given amount of bootstrap tokens form the sender to this contract and update the pool.
     /// Assumes the tokens were approved for transfer

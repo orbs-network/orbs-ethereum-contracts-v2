@@ -167,7 +167,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].stakingRewards);
     }
 
-    function getLastRewardAssignment() external view returns (uint256) {
+    function getLastRewardAssignmentTime() external view returns (uint256) {
         return lastAssignedAt;
     }
 
