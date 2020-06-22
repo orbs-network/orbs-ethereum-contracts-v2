@@ -1,7 +1,7 @@
 #!/bin/bash -xe
 mkdir -p _out
-yarn install
-yarn start-ganache &
+npm install
+npm run start-ganache &
 sleep 5 # give ganache some time to start
-yarn test
+npm run test
 
