@@ -43,7 +43,7 @@ import {
   maxStandbysChangedEvents,
   bootstrapRewardsWithdrawnEvents,
   feesWithdrawnEvents,
-  stakingRewardsAddedToPoolEvents
+  stakingRewardsAddedToPoolEvents,
   validatorStatusUpdatedEvents, validatorCommitteeChangeEvents, maxTimeBetweenRewardAssignmentsChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
