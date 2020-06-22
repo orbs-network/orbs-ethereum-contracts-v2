@@ -243,7 +243,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	 */
 
 	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external onlyFunctionalOwner /* todo onlyWhenActive */ {
-		require(maxTimeBetweenRewardAssignments > 0, "readyToSyncTimeout must be larger than 0");
 		emit MaxTimeBetweenRewardAssignmentsChanged(maxTimeBetweenRewardAssignments, settings.maxTimeBetweenRewardAssignments);
 		settings.maxTimeBetweenRewardAssignments = maxTimeBetweenRewardAssignments;
 	}
