@@ -142,6 +142,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         _poolsAndTotalBalances.bootstrapPool = uint48(_poolsAndTotalBalances.bootstrapPool.sub(amount));
         poolsAndTotalBalances = _poolsAndTotalBalances;
 
+        emit BootstrapRewardsWithdrawn(msg.sender, toUint256Granularity(amount));
         require(transfer(bootstrapToken, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
@@ -156,7 +157,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
         uint48 amount48 = toUint48Granularity(amount);
-        poolsAndTotalBalances.stakingPool = uint48(poolsAndTotalBalances.stakingPool.add(amount48)); // todo overflow
+        uint48 total48 = uint48(poolsAndTotalBalances.stakingPool.add(amount48));
+        poolsAndTotalBalances.stakingPool = total48;
+        emit StakingRewardsAddedToPool(amount, toUint256Granularity(total48));
         require(transferFrom(erc20, msg.sender, address(this), amount48), "Rewards::topUpProRataPool - insufficient allowance");
     }
 
@@ -364,6 +367,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 amount = balances[msg.sender].fees;
         balances[msg.sender].fees = 0;
         poolsAndTotalBalances.feesTotalBalance = uint48(poolsAndTotalBalances.feesTotalBalance.sub(amount));
+        emit FeesWithdrawn(msg.sender, toUint256Granularity(amount));
         require(transfer(erc20, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
