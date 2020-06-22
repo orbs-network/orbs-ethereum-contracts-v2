@@ -1,12 +1,9 @@
 import 'mocha';
 
-import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, expectRejected} from "./driver";
+import {Driver, expectRejected} from "./driver";
 import chai from "chai";
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
-import {TransactionReceipt} from "web3-core";
-import {Web3Driver} from "../eth";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
