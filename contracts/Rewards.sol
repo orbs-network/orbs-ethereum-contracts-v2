@@ -59,7 +59,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
-        settings.maxDelegatorsStakingRewardsPercentMille = 100000;
 
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastAssignedAt = now;
@@ -210,7 +209,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     mapping (address => DistributorBatchState) distributorBatchState;
 
     function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
-        return delegatorRewards.mul(100000).div(totalRewards) < settings.maxDelegatorsStakingRewardsPercentMille;
+        return delegatorRewards.mul(100000) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards);
     }
 
     struct Vars {
@@ -226,7 +225,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         Vars memory vars;
 
         vars.sender = getValidatorsRegistrationContract().resolveEthereumAddress(msg.sender);
-        require(to[0] == vars.sender, "first member in list must be the sender's main address");
+        require(to[0] == vars.sender, "first member in list must be the the guardian address");
         require(isDelegatorRewardsBelowThreshold(totalAmount.sub(amounts[0]), totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
 
         DistributorBatchState memory ds = distributorBatchState[vars.sender];

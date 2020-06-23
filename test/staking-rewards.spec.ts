@@ -669,7 +669,7 @@ describe('staking-rewards-level-flows', async () => {
         1,
         0,
         [v.address, delegator.address],
-        [fromTokenUnits(33334), fromTokenUnits(66666)],
+        [fromTokenUnits(33333), fromTokenUnits(66667)],
         {from: v.address}
     ));
 
@@ -680,7 +680,7 @@ describe('staking-rewards-level-flows', async () => {
         1,
         0,
         [v.address, delegator.address],
-        [fromTokenUnits(33335), fromTokenUnits(66665)],
+        [fromTokenUnits(33334), fromTokenUnits(66666)],
         {from: v.address}
     );
   });
