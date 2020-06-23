@@ -17,7 +17,6 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
     IContractRegistry contractRegistry;
 
     function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner {
-        require(address(_contractRegistry) != address(0), "contractRegistry must not be 0");
         contractRegistry = _contractRegistry;
     }
 
