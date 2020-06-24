@@ -195,4 +195,23 @@ describe('protocol-contract', async () => {
     expect(reportedVersionCanary).to.be.bignumber.equal(bn(3));
   });
 
+  it('does not allow re-creating a deployment subset', async () => {
+    const d = await Driver.new();
+
+    // create a second deployment subset
+    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address});
+    await expectRejected(d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address}));
+  });
+
+  it('does not allow setting a protocol version on a non-existent deploayment subset', async () => {
+    const d = await Driver.new();
+    let currTime: number = await getTopBlockTimestamp(d);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalOwner.address}));
+
+    // create a second deployment subset
+    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 0, {from: d.functionalOwner.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalOwner.address});
+  });
+
 });
+

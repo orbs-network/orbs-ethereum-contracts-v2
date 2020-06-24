@@ -77,5 +77,6 @@ export const readyToSyncTimeoutChangedEvents = (txResult, contractAddress?: stri
 export const maxCommitteeSizeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxCommitteeSizeChanged(uint8,uint8)");
 export const maxStandbysChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxStandbysChanged(uint8,uint8)");
 export const validatorStatusUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorStatusUpdated(address,bool,bool)");
+export const contractRegistryAddressUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ContractRegistryAddressUpdated(address)");
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);

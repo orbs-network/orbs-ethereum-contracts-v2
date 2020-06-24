@@ -987,4 +987,147 @@ describe('committee', async () => {
 
         await d.committee.setMaxCommitteeAndStandbys(31, 1,{from: d.functionalOwner.address});
     });
+
+    it("allows only elections to notify committee on changes", async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
+        const notElections = d.newParticipant().address;
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}));
+        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
+
+        await expectRejected(d.committee.memberReadyToSync(v.address, true,{from: notElections}));
+        await d.committee.memberReadyToSync(v.address, true, {from: elections});
+
+        await expectRejected(d.committee.memberNotReadyToSync(v.address,{from: notElections}));
+        await d.committee.memberNotReadyToSync(v.address, {from: elections});
+
+        await expectRejected(d.committee.memberComplianceChange(v.address,true, {from: notElections}));
+        await d.committee.memberComplianceChange(v.address,true,  {from: elections});
+
+        const v2 = d.newParticipant();
+        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}));
+        await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
+
+        await expectRejected(d.committee.removeMember(v2.address, {from: notElections}));
+        await d.committee.removeMember(v2.address, {from: elections});
+    });
+
+    it("allows committee methods to be called only when active", async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
+        const v2 = d.newParticipant();
+
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        await d.committee.lock({from: d.migrationOwner.address});
+
+        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}));
+        await expectRejected(d.committee.memberReadyToSync(v.address, true,{from: elections}));
+        await expectRejected(d.committee.memberNotReadyToSync(v.address,{from: elections}));
+        await expectRejected(d.committee.memberComplianceChange(v.address,true, {from: elections}));
+        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}));
+        await expectRejected(d.committee.removeMember(v2.address, {from: elections}));
+
+        await d.committee.unlock({from: d.migrationOwner.address});
+
+        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
+        await d.committee.memberReadyToSync(v.address, true, {from: elections});
+        await d.committee.memberNotReadyToSync(v.address, {from: elections});
+        await d.committee.memberComplianceChange(v.address,true,  {from: elections});
+        await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
+        await d.committee.removeMember(v2.address, {from: elections});
+
+    });
+
+    it("validate constructor arguments", async () => {
+        const d = await Driver.new();
+
+        await expectRejected(d.web3.deploy('Committee', [0, 1, 1]));
+        await expectRejected(d.web3.deploy('Committee', [1, 0, 1]));
+        await expectRejected(d.web3.deploy('Committee', [1, 1, 0]));
+        await expectRejected(d.web3.deploy('Committee', [30, 3, 1]));
+        await d.web3.deploy('Committee', [1, 1, 1]);
+    });
+
+    it("validates weight is within range - less than 2^128", async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
+
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
+        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
+    });
+
+    it("validates weight is within range - less than 2^128", async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
+
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
+        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
+
+        const v2 = await d.newParticipant();
+
+        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(128)), true, {from: elections}));
+        await d.committee.addMember(v2.address, bn(2).pow(bn(128)).sub(bn(1)), true, {from: elections});
+    });
+
+    it("validates readyToSyncTimeout is positive", async () => {
+        const d = await Driver.new();
+
+        await expectRejected(d.committee.setReadyToSyncTimeout(0, {from: d.functionalOwner.address}));
+        await d.committee.setReadyToSyncTimeout(1, {from: d.functionalOwner.address});
+    });
+
+    it("handles notifications for unregistered validators", async () => {
+        const d = await Driver.new();
+
+        const nonRegistered = await d.newParticipant();
+
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        r = await d.committee.memberReadyToSync(nonRegistered.address, true, {from: elections});
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        r = await d.committee.memberNotReadyToSync(nonRegistered.address, {from: elections});
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
+
+        r = await d.committee.memberComplianceChange(nonRegistered.address, true, {from: elections});
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
+    });
+
+    it("handles adding existing member", async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
+
+        const elections = d.newParticipant().address;
+        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+
+        const r = await d.committee.addMember(v.address, fromTokenUnits(5), false, {from: elections});
+        expect(r).to.not.have.a.committeeChangedEvent();
+        expect(r).to.not.have.a.standbysChangedEvent();
+    });
+
+
 });

@@ -42,6 +42,7 @@ import {
   maxCommitteeSizeChangedEvents,
   maxStandbysChangedEvents,
   validatorStatusUpdatedEvents,
+  contractRegistryAddressUpdatedEvents,
   bootstrapRewardsWithdrawnEvents,
   feesWithdrawnEvents,
   stakingRewardsAddedToPoolEvents
@@ -90,7 +91,7 @@ import {
 } from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
-import {LockedEvent, UnlockedEvent} from "../typings/base-contract";
+import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -242,6 +243,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
   chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
   chai.Assertion.overwriteMethod("validatorStatusUpdatedEvent", containEvent(validatorStatusUpdatedEvents));
+  chai.Assertion.overwriteMethod("contractRegistryAddressUpdatedEvent", containEvent(contractRegistryAddressUpdatedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -299,6 +301,7 @@ declare global {
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
       validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
+      contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
 
       withinContract(contract: Contract): Assertion;
     }
