@@ -1096,11 +1096,11 @@ describe('committee', async () => {
     it("validate constructor arguments", async () => {
         const d = await Driver.new();
 
-        await expectRejected(d.web3.deploy('Committee', [0, 1, 1]));
-        await expectRejected(d.web3.deploy('Committee', [1, 0, 1]));
-        await expectRejected(d.web3.deploy('Committee', [1, 1, 0]));
-        await expectRejected(d.web3.deploy('Committee', [30, 3, 1]));
-        await d.web3.deploy('Committee', [1, 1, 1]);
+        await expectRejected(d.web3.deploy('Committee', [0, 1, 1, 1]));
+        await expectRejected(d.web3.deploy('Committee', [1, 0, 1, 1]));
+        await expectRejected(d.web3.deploy('Committee', [1, 1, 0, 1]));
+        await expectRejected(d.web3.deploy('Committee', [30, 3, 1, 1]));
+        await d.web3.deploy('Committee', [1, 1, 1, 1]);
     });
 
     it("validates weight is within range - less than 2^128", async () => {
