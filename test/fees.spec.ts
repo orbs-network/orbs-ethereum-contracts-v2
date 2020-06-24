@@ -73,7 +73,7 @@ describe('fees-contract', async () => {
         expect(l.added).to.be.bignumber.equal(new BN(vcRate));
       });
 
-      expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
+      expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
       return {
         vcid,

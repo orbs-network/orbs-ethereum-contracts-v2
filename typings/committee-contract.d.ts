@@ -3,13 +3,13 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
-export interface CommitteeChangedEvent {
+export interface CommitteeSnapshotEvent {
     addrs: string[];
     weights: (number | BN)[];
     compliance: boolean[];
 }
 
-export interface StandbysChangedEvent {
+export interface StandbysSnapshotEvent {
     addrs: string[];
     weights: (number | BN)[];
     compliance: boolean[];
@@ -36,6 +36,19 @@ export interface ValidatorStatusUpdatedEvent {
     readyForCommittee: boolean;
 }
 
+export interface ValidatorCommitteeChangeEvent {
+    addr: string;
+    weight: string|BN;
+    compliance: boolean;
+    inCommittee: boolean;
+    isStandby: boolean;
+}
+
+export interface MaxTimeBetweenRewardAssignmentsChangedEvent {
+    newValue: string|BN;
+    oldValue: string|BN;
+}
+
 export interface CommitteeContract extends OwnedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberWeightChange(addr: string, weight: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -50,9 +63,10 @@ export interface CommitteeContract extends OwnedContract {
     getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
     getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
     setReadyToSyncTimeout(readyToSyncTimeout: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     setMaxCommitteeAndStandbys(maxCommitteeSize: number|BN, maxStandbys: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    getSettings(params?: TransactionConfig): Promise<[string /* readyToSyncTimeout */, string /* maxCommitteeSize */, string /* maxStandbys */]>;
+    getSettings(params?: TransactionConfig): Promise<[string /* readyToSyncTimeout */, string /* maxTimeBetweenRewardAssignments */, string /* maxCommitteeSize */, string /* maxStandbys */]>;
     getTopology(): Promise<TransactionReceipt>;
 
 }
