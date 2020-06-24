@@ -1148,20 +1148,20 @@ describe('committee', async () => {
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
         let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
 
         r = await d.committee.memberReadyToSync(nonRegistered.address, true, {from: elections});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
 
         r = await d.committee.memberNotReadyToSync(nonRegistered.address, {from: elections});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
 
         r = await d.committee.memberComplianceChange(nonRegistered.address, true, {from: elections});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
     });
 
     it("handles adding existing member", async () => {
@@ -1173,8 +1173,8 @@ describe('committee', async () => {
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
         const r = await d.committee.addMember(v.address, fromTokenUnits(5), false, {from: elections});
-        expect(r).to.not.have.a.committeeChangedEvent();
-        expect(r).to.not.have.a.standbysChangedEvent();
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.standbysSnapshotEvent();
     });
 
 

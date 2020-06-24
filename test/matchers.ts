@@ -41,12 +41,13 @@ import {
   readyToSyncTimeoutChangedEvents,
   maxCommitteeSizeChangedEvents,
   maxStandbysChangedEvents,
-  validatorStatusUpdatedEvents,
   contractRegistryAddressUpdatedEvents,
   bootstrapRewardsWithdrawnEvents,
   feesWithdrawnEvents,
   stakingRewardsAddedToPoolEvents,
-  validatorStatusUpdatedEvents, validatorCommitteeChangeEvents, maxTimeBetweenRewardAssignmentsChangedEvents
+  validatorStatusUpdatedEvents,
+  validatorCommitteeChangeEvents,
+  maxTimeBetweenRewardAssignmentsChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
