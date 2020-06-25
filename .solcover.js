@@ -11,5 +11,9 @@ module.exports = {
     },
     onCompileComplete: () => {
         fs.copySync(__dirname + '/.coverage_artifacts', __dirname + '/build');
+    },
+    mocha: {
+        grep: 'gas usage scenarios',
+        invert: true
     }
 };

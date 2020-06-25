@@ -4,8 +4,9 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface ICommittee {
-    event CommitteeChanged(address[] addrs, uint256[] weights, bool[] compliance);
-	event StandbysChanged(address[] addrs, uint256[] weights, bool[] compliance);
+	event ValidatorCommitteeChange(address addr, uint256 weight, bool compliance, bool inCommittee, bool isStandby);
+    event CommitteeSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
+	event StandbysSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
 
     // No external functions
 
@@ -49,10 +50,12 @@ interface ICommittee {
 	 * Governance
 	 */
 
-	function setReadyToSyncTimeout(uint48 readyToSyncTimeout) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setReadyToSyncTimeout(uint32 readyToSyncTimeout) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external /* onlyFunctionalOwner onlyWhenActive */;
 	function setMaxCommitteeAndStandbys(uint8 maxCommitteeSize, uint8 maxStandbys) external /* onlyFunctionalOwner onlyWhenActive */;
 
-	event ReadyToSyncTimeoutChanged(uint48 newValue, uint48 oldValue);
+	event ReadyToSyncTimeoutChanged(uint32 newValue, uint32 oldValue);
+	event MaxTimeBetweenRewardAssignmentsChanged(uint32 newValue, uint32 oldValue);
 	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
 	event MaxStandbysChanged(uint8 newValue, uint8 oldValue);
 
@@ -71,5 +74,5 @@ interface ICommittee {
 	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips);
 
 	/// @dev returns the current settings of the committee contract
-	function getSettings() external view returns (uint48 readyToSyncTimeout, uint8 maxCommitteeSize, uint8 maxStandbys);
+	function getSettings() external view returns (uint32 readyToSyncTimeout, uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize, uint8 maxStandbys);
 }

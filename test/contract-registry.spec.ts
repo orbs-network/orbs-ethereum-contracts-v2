@@ -1,7 +1,7 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, expectRejected} from "./driver";
+import {Driver, expectRejected, ZERO_ADDR} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));
@@ -56,6 +56,21 @@ describe('contract-registry-high-level-flows', async () => {
 
   });
 
+  it('does not allow to set a zero address', async () => {
+    const d = await Driver.new();
+    const owner = d.functionalOwner;
+    const registry = d.contractRegistry;
+
+    // set
+    await expectRejected(registry.set("protocol", ZERO_ADDR, {from: owner.address}));
+    await registry.set("protocol", d.newParticipant().address, {from: owner.address});
+  });
+
+  it('reverts when getting a non existent entry', async () => {
+    const d = await Driver.new();
+    await expectRejected(d.contractRegistry.get("nonexistent" as any));
+  });
+
   it('allows only the contract owner to update the address of the contract registry', async () => { // TODO - consider splitting and moving this
     const d = await Driver.new();
     const subscriber = await d.newSubscriber("tier", 1);
@@ -66,10 +81,24 @@ describe('contract-registry-high-level-flows', async () => {
     await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
     await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
 
-    await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
-    await d.rewards.setContractRegistry(newAddr, {from: d.migrationOwner.address});
-    await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationOwner.address});
-    await subscriber.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    let r = await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    r = await d.rewards.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    r = await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    r = await subscriber.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+  });
+
+  it('does not allow to set a zero contract registry address', async () => { // TODO - consider splitting and moving this
+    const d = await Driver.new();
+    const subscriber = await d.newSubscriber("tier", 1);
+
+    await expectRejected(d.elections.setContractRegistry(ZERO_ADDR, {from: d.migrationOwner.address}));
+    await expectRejected(d.rewards.setContractRegistry(ZERO_ADDR, {from: d.migrationOwner.address}));
+    await expectRejected(d.subscriptions.setContractRegistry(ZERO_ADDR, {from: d.migrationOwner.address}));
+    await expectRejected(subscriber.setContractRegistry(ZERO_ADDR, {from: d.migrationOwner.address}));
   });
 
 });

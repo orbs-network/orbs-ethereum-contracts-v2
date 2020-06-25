@@ -76,7 +76,7 @@ export interface RewardsContract extends OwnedContract {
     setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     topUpStakingRewardsPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardBalance(address: string): Promise<string>;
-    getLastRewardAssignment(): Promise<string>;
+    getLastRewardAssignmentTime(): Promise<string>;
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
