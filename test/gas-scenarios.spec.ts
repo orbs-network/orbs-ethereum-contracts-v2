@@ -9,7 +9,7 @@ import {
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
-import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, expectCommitteeStandbysToBe, fromTokenUnits, toTokenUnits} from "./helpers";
 import {gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
@@ -128,7 +128,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [standbys[standbys.length - 1]].concat(committee.slice(1)).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(0, standbys.length - 1).concat([committee[0]]).map(v => v.address)
         });
 
@@ -143,7 +143,7 @@ describe('gas usage scenarios', async () => {
         d.resetGasRecording();
         let r = await delegator.stake(1);
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         d.logGasUsageSummary("New delegator stakes", [delegator]);
     });
@@ -170,7 +170,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
 
@@ -183,14 +183,14 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         d.resetGasRecording();
         await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
 
@@ -204,7 +204,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await v.notifyReadyForCommittee();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [committee[committee.length - 1]].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
         expect(r).to.have.a.committeeSnapshotEvent({
@@ -220,7 +220,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
@@ -230,7 +230,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [committee[committee.length - 1]].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
 
@@ -245,7 +245,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(1).map(v => v.address)
         });
 
@@ -258,7 +258,7 @@ describe('gas usage scenarios', async () => {
         d.resetGasRecording();
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].orbsAddress});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.have.a.voteOutEvent({
             voter: committee[0].address,
             against: committee[1].address
@@ -289,7 +289,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(1).map(v => v.address)
         });
 
@@ -302,7 +302,7 @@ describe('gas usage scenarios', async () => {
         d.resetGasRecording();
         let r = await d.elections.setBanningVotes([committee[1].address], {from: committee[0].address});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.have.a.banningVoteEvent({
             voter: committee[0].address,
             against: [committee[1].address]
@@ -332,7 +332,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(1).map(v => v.address)
         });
 

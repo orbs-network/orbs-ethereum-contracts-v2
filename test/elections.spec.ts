@@ -15,7 +15,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, expectCommitteeStandbysToBe, fromTokenUnits} from "./helpers";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
@@ -71,7 +71,7 @@ describe('elections-high-level-flows', async () => {
 
         await validatorStaked100.registerAsValidator();
         r = await validatorStaked100.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked100.address],
             weights: [stake100]
         });
@@ -82,7 +82,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validatorStaked100.address],
             weights: [stake100],
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [],
             weights: []
         });
@@ -94,7 +94,7 @@ describe('elections-high-level-flows', async () => {
         await validatorStaked200.registerAsValidator();
 
         r = await validatorStaked200.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked200.address],
             weights: [stake200]
         });
@@ -105,7 +105,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validatorStaked200.address, validatorStaked100.address],
             weights: [stake200, stake100]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [],
             weights: []
         });
@@ -119,7 +119,7 @@ describe('elections-high-level-flows', async () => {
         await validatorStaked300.registerAsValidator();
 
         r = await validatorStaked300.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked300.address],
             weights: [stake300]
         });
@@ -132,7 +132,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validatorStaked300.address, validatorStaked200.address],
             weights: [stake300, stake200]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked100.address],
             weights: [stake100]
         });
@@ -142,7 +142,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validatorStaked200.address, validatorStaked300.address],
             weights: [stake200.add(stake300), stake300]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked100.address]
         });
 
@@ -151,7 +151,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validatorStaked100.address, validatorStaked200.address],
             weights: [stake100.add(stake500), stake500]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked300.address],
             weights: [stake300]
         });
@@ -163,7 +163,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.stakedEvent();
         await inTopologyValidator.registerAsValidator();
         r = await inTopologyValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked300.address, inTopologyValidator.address],
             weights: [stake300, stake100]
         });
@@ -172,7 +172,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await inTopologyValidator.notifyReadyForCommittee();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked300.address, inTopologyValidator.address],
         });
         expect(r).to.have.a.committeeSnapshotEvent({
@@ -184,7 +184,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [validatorStaked100.address, validatorStaked200.address],
         }); // no change in the committee
-        expect(r).to.have.a.standbysSnapshotEvent({ // standbys change order
+        await expectCommitteeStandbysToBe(d, { // standbys change order
             addrs: [inTopologyValidator.address, validatorStaked300.address],
             weights: [stake100.addn(201), stake300]
         });
@@ -194,8 +194,9 @@ describe('elections-high-level-flows', async () => {
         r = await outOfTopologyValidator.stake(stake100);
         expect(r).to.have.a.stakedEvent();
         await outOfTopologyValidator.registerAsValidator();
-        r = await outOfTopologyValidator.notifyReadyToSync();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await outOfTopologyValidator.notifyReadyToSync();
+        await expectCommitteeStandbysToBe(d, {addrs: [validatorStaked300.address, inTopologyValidator.address]});
+
         r = await outOfTopologyValidator.notifyReadyForCommittee();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
@@ -208,7 +209,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validator.address, validatorStaked100.address],
             weights: [stake1000, stake100.add(stake500)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validatorStaked200.address, inTopologyValidator.address],
             weights: [stake500, stake100.addn(201)]
         });
@@ -218,7 +219,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [validatorStaked100.address, validatorStaked200.address],
             weights: [stake100.add(stake500), stake500]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [validator.address, inTopologyValidator.address],
             weights: [bn(499), stake100.addn(201)]
         });
@@ -252,7 +253,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         // A committee member is voted out, rejoins, and voted-out again. This makes sure that once voted-out, the
         // votes are discarded and must be recast to vote-out a validator again.
@@ -285,14 +286,14 @@ describe('elections-high-level-flows', async () => {
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.filter(v => v != votedOutValidator).map(v => v.address)
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []}); // should not become a standby
+            await expectCommitteeStandbysToBe(d, {addrs: []}); // should not become a standby
 
             // voted-out validator re-joins by notifying ready-for-committee
             r = await votedOutValidator.notifyReadyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(v => v.address)
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
     });
 
@@ -344,7 +345,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [committee[0].address]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: []
         });
     });
@@ -357,7 +358,7 @@ describe('elections-high-level-flows', async () => {
         const v = d.newParticipant();
         const r = await v.stake(V1_STAKE);
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('staking before or after delegating has the same effect', async () => {
@@ -441,7 +442,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [v1.address],
             weights: [new BN(1000)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v1.stake(2);
         expect(r).to.have.a.stakeChangedEvent({
@@ -452,7 +453,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [v1.address],
             weights: [new BN(1012)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v2.stake(30);
         expect(r).to.have.a.stakeChangedEvent({
@@ -463,7 +464,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [v1.address],
             weights: [new BN(1020)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v1.stake(1);
         expect(r).to.have.a.stakeChangedEvent({
@@ -474,7 +475,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [v1.address],
             weights: [new BN(1030)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('ensures validator who delegated cannot join committee even when owning enough stake', async () => {
@@ -495,7 +496,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v2.address],
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('ensures a non-ready validator cannot join the committee even when owning enough stake', async () => {
@@ -504,7 +505,7 @@ describe('elections-high-level-flows', async () => {
         await v.stake(baseStake);
         await v.registerAsValidator();
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address],
         });
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
@@ -513,17 +514,17 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         const {v: v2, r: r2} = await d.newValidator(baseStake * 2, false, false, false);
         expect(r2).to.not.have.a.committeeSnapshotEvent();
-        expect(r2).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v2.notifyReadyToSync();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v2.address]
         });
     });
@@ -562,7 +563,7 @@ describe('elections-high-level-flows', async () => {
                 });
             }
         }
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: topology.slice(defaultDriverOptions.maxCommitteeSize).map(v => v.address)
         });
 
@@ -570,7 +571,7 @@ describe('elections-high-level-flows', async () => {
         await newValidator.registerAsValidator();
         await newValidator.stake(baseStake * 2);
         r = await newValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: topology.slice(defaultDriverOptions.maxCommitteeSize, topology.length - 1).map(v => v.address).concat(newValidator.address)
         });
 
@@ -578,7 +579,10 @@ describe('elections-high-level-flows', async () => {
         await newValidator2.registerAsValidator();
         await newValidator2.stake(baseStake);
         r = await newValidator2.notifyReadyForCommittee();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {
+            addrs: topology.slice(defaultDriverOptions.maxCommitteeSize, topology.length - 1).map(v => v.address).concat(newValidator.address)
+        });
+
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
@@ -723,7 +727,8 @@ describe('elections-high-level-flows', async () => {
                 against: [bannedValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.standbysSnapshotEvent();
+            await expectCommitteeStandbysToBe(d, {addrs: []});
+
             expect(r).to.not.have.a.bannedEvent();
         }
     });
@@ -744,7 +749,6 @@ describe('elections-high-level-flows', async () => {
                 against: [bannedValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.standbysSnapshotEvent();
             expect(r).to.not.have.a.bannedEvent();
             expect(r).to.not.have.a.unbannedEvent();
         }
@@ -759,7 +763,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: []
         });
     });
@@ -782,7 +786,7 @@ describe('elections-high-level-flows', async () => {
             validator: bannedValidator.address
         });
         r = await bannedValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [bannedValidator.address]
         });
     });
@@ -806,7 +810,7 @@ describe('elections-high-level-flows', async () => {
         r = await d.elections.setBanningVotes([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is again uncrossed
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         // -------------- DELEGATOR UNSTAKES ---------------
 
@@ -814,7 +818,7 @@ describe('elections-high-level-flows', async () => {
         r = await d.staking.unstake(tempStake, {from: delegators[thresholdCrossingIndex].address}); // threshold is un-crossed
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES ---------------
 
@@ -823,7 +827,7 @@ describe('elections-high-level-flows', async () => {
         await dilutingParticipant.stake(dilutingStake);
         expect(r).to.not.have.a.unbannedEvent(); // because we need a trigger to detect the change
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         // trigger - repeat an existing vote:
         const existingVotes = await d.elections.getBanningVotes(delegatees[0].address);
@@ -831,7 +835,7 @@ describe('elections-high-level-flows', async () => {
 
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         // -------------- ATTEMPT UNBAN BY DELEGATION - VALIDATOR --------------
         const tipValidator = delegatees[thresholdCrossingIndex];
@@ -840,7 +844,7 @@ describe('elections-high-level-flows', async () => {
         r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         // -------------- ATTEMPT UNBAN BY DELEGATION - DELEGATOR --------------
         const tipDelegator = delegators[thresholdCrossingIndex];
@@ -848,7 +852,7 @@ describe('elections-high-level-flows', async () => {
         r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.not.have.a.unbannedEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it("banning responds to changes in staking and delegating before locking", async () => {
@@ -866,7 +870,7 @@ describe('elections-high-level-flows', async () => {
             validator: bannedValidator.address
         });
         r = await bannedValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [bannedValidator.address]
         });
 
@@ -874,7 +878,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: []
         });
 
@@ -883,7 +887,7 @@ describe('elections-high-level-flows', async () => {
         const dilutingParticipant = d.newParticipant();
         const dilutingStake = baseStake * defaultDriverOptions.banningThreshold * 200;
         r = await dilutingParticipant.stake(dilutingStake);
-        expect(r).to.not.have.a.standbysSnapshotEvent(); // because we need a trigger to detect the change
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.not.have.a.bannedEvent();
         expect(r).to.not.have.a.unbannedEvent();
@@ -896,13 +900,13 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await bannedValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [bannedValidator.address]
         });
 
         r = await d.staking.unstake(dilutingStake, {from: dilutingParticipant.address}); // threshold is again crossed
         expect(r).to.not.have.a.committeeSnapshotEvent(); // because we need a trigger to detect the change
-        expect(r).to.not.have.a.standbysSnapshotEvent(); // because we need a trigger to detect the change
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.bannedEvent();
         expect(r).to.not.have.a.unbannedEvent();
 
@@ -912,7 +916,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: []
         });
 
@@ -926,7 +930,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await bannedValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [bannedValidator.address]
         });
 
@@ -934,7 +938,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: []
         });
 
@@ -947,7 +951,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await bannedValidator.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [bannedValidator.address]
         });
 
@@ -955,7 +959,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.bannedEvent({
             validator: bannedValidator.address
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: []
         });
     });
@@ -1075,7 +1079,7 @@ export async function banningScenario_voteUntilThresholdReached(driver: Driver, 
     expect(r).to.have.a.bannedEvent({
         validator: bannedValidator.address
     });
-    expect(r).to.withinContract(driver.committee).have.a.committeeSnapshotEvent({
+    expect(r).to.have.a.committeeSnapshotEvent({
         addrs: []
     });
     return r;

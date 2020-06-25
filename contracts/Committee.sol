@@ -181,7 +181,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	/// @dev Returns the standy (out of committee) members and their weights
-	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights) {
+	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		return _getStandbys();
 	}
 
@@ -213,27 +213,31 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	/// @dev Returns the standby (out of committee) members and their weights
-	function _getStandbys() public view returns (address[] memory addrs, uint256[] memory weights) {
+	function _getStandbys() public view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint bitmap = uint(_committeeInfo.committeeBitmap);
 		uint standbysCount = uint(_committeeInfo.standbysCount);
 
 		addrs = new address[](standbysCount);
 		weights = new uint[](standbysCount);
+		compliance = new bool[](standbysCount);
 		bitmap = uint(_committeeInfo.committeeBitmap);
 		uint aInd = 0;
 		uint pInd;
 		address addr;
+		MemberData memory data;
 		while (aInd < standbysCount) {
 			if (bitmap & 1 == 0) {
 				addr = participantAddresses[pInd];
 				if (addr != address(0)) {
+					data = membersData[addr];
 					addrs[aInd] = addr;
-					weights[aInd] = uint(membersData[addr].weight);
+					weights[aInd] = uint(data.weight);
+					compliance[aInd] = data.isCompliant;
 					aInd++;
 				}
 			}
-			bitmap = bitmap >> 1;
+			bitmap >>= 1;
 			pInd++;
 		}
 	}
@@ -278,14 +282,14 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev returns the current committee
 	/// used also by the rewards and fees contracts
 	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
-		(address[] memory _committee, uint256[] memory _weights,) = _getCommittee();
-		return (_committee, _weights, _loadOrbsAddresses(_committee), _loadCompliance(_committee), _loadIps(_committee));
+		(address[] memory committee, uint256[] memory weights, bool[] memory compliance) = _getCommittee();
+		return (committee, weights, _loadOrbsAddresses(committee), compliance, _loadIps(committee));
 	}
 
 	/// @dev returns the current standbys (out of commiteee) topology
 	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
-		(address[] memory _standbys, uint256[] memory _weights) = _getStandbys();
-		return (_standbys, _weights, _loadOrbsAddresses(_standbys), _loadCompliance(_standbys) ,_loadIps(_standbys));
+		(address[] memory standbys, uint256[] memory weights, bool[] memory compliance) = _getStandbys();
+		return (standbys, weights, _loadOrbsAddresses(standbys), compliance, _loadIps(standbys));
 	}
 
 	function getSettings() external view returns (uint32 readyToSyncTimeout, uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize, uint8 maxStandbys) {
@@ -441,16 +445,11 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
              return;
         }
 
-		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCompliance) = buildCommitteeArraysForRole(participants, ROLE_COMMITTEE, committeeSize);
-		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCompliance);
-
-		(address[] memory standbyAddrs, uint[] memory standbyWeights, bool[] memory standbyCompliance) = buildCommitteeArraysForRole(participants, ROLE_STANDBY, standbysCount);
-		emit StandbysSnapshot(standbyAddrs, standbyWeights, standbyCompliance);
-
+		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCompliance) = buildCommitteeArrays(participants, committeeSize);
         rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCompliance);
 	}
 
-	function buildCommitteeArraysForRole(Participant[] memory participants, uint8 role, uint expectedCount) private pure returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
+	function buildCommitteeArrays(Participant[] memory participants, uint expectedCount) private pure returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		addrs = new address[](expectedCount);
 		weights = new uint[](expectedCount);
 		compliance = new bool[](expectedCount);
@@ -458,7 +457,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		uint ind;
 		for (uint i = 0; i < participants.length; i++) {
 			p = participants[i];
-			if (p.data.role == role) {
+			if (p.data.role == ROLE_COMMITTEE) {
 				addrs[ind] = p.addr;
 				compliance[ind] = p.data.isCompliant;
 				weights[ind++] = p.data.weight;

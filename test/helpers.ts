@@ -4,6 +4,7 @@ import * as _ from "lodash";
 import { Web3Driver } from "../eth";
 import {Driver} from "./driver";
 import {TransactionReceipt} from "web3-core";
+import chai from "chai";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
     for (let i = 0; i < n; i++) {
@@ -75,3 +76,37 @@ export function bnSum(ns: BN[]): BN {
     return ns.reduce((x, y) => x.add(y), bn(0));
 }
 
+export function transpose(obj, key, fields?) {
+    if (Object.keys(obj || {}).length == 0) {
+        return {}
+    }
+    const transposed: {[key: string]: any} = {};
+    const n = _.values(obj)[0].length;
+    fields = fields || Object.keys(obj);
+    for (let i = 0; i < n; i++) {
+        const item = {};
+        for (let k of fields) {
+            item[k] = obj[k][i];
+        }
+        transposed[item[key]] = item;
+    }
+    return transposed;
+}
+
+export interface StandbysSnapshot {
+    addrs: string[];
+    weights: (number | BN)[];
+    compliance: boolean[];
+}
+export async function expectCommitteeStandbysToBe(d: Driver, standbys: Partial<StandbysSnapshot>) {
+    const normalize = (standbys: Partial<StandbysSnapshot>) => standbys.weights == null ? standbys : {...standbys, weights: standbys.weights.map(w => new BN(w).toString())};
+    const [addrs, weights, compliance] = await d.committee.getStandbys();
+
+    if (standbys.addrs == null) {
+        throw new Error("addrs field missing from standbys object")
+    }
+    const expectedStandbys = transpose(normalize(standbys), "addrs", Object.keys(standbys));
+    const actualStandbys = transpose(normalize({addrs, weights, compliance}), "addrs", Object.keys(standbys));
+
+    chai.expect(expectedStandbys).to.deep.equal(actualStandbys);
+}

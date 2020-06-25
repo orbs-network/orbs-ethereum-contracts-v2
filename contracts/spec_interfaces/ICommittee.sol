@@ -5,7 +5,6 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface ICommittee {
 	event ValidatorCommitteeChange(address addr, uint256 weight, bool compliance, bool inCommittee, bool isStandby);
-    event CommitteeSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
 	event StandbysSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
 
     // No external functions
@@ -44,7 +43,7 @@ interface ICommittee {
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance);
 
 	/// @dev Returns the standy (out of commiteee) members and their weights
-	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights);
+	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance);
 
 	/*
 	 * Governance

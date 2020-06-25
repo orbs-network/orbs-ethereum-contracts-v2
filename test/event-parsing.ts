@@ -32,8 +32,7 @@ function parseLogs(txResult, contract, eventSignature, contractAddress?: string)
         .map(e => abi.decodeLog(inputs, e.data, e.topics.slice(1) /*assume all events are non-anonymous*/));
 }
 
-export const committeeSnapshotEvents = (txResult, contractAddress: string) => parseLogs(txResult, committee, "CommitteeSnapshot(address[],uint256[],bool[])", contractAddress);
-export const standbysSnapshotEvents = (txResult, contractAddress: string) => parseLogs(txResult, committee, "StandbysSnapshot(address[],uint256[],bool[])", contractAddress);
+export const committeeSnapshotEvents = (txResult, contractAddress: string) => parseLogs(txResult, rewards, "CommitteeSnapshot(address[],uint256[],bool[])", contractAddress);
 export const validatorRegisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorRegistered(address)", contractAddress);
 export const validatorUnregisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorUnregistered(address)", contractAddress);
 export const validatorDataUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorDataUpdated(address,bytes4,address,string,string,string)", contractAddress);

@@ -29,7 +29,6 @@ import {
   validatorDataUpdatedEvents,
   validatorMetadataChangedEvents,
   committeeSnapshotEvents,
-  standbysSnapshotEvents,
   stakingRewardsDistributedEvents,
   voteOutTimeoutSecondsChangedEvents,
   maxDelegationRatioChangedEvents,
@@ -51,6 +50,8 @@ import {
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
+const expect = chai.expect;
+
 import {
   SubscriptionChangedEvent,
   PaymentEvent, VcConfigRecordChangedEvent, VcOwnerChangedEvent, VcCreatedEvent
@@ -70,7 +71,7 @@ import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
 import {
-  BootstrapRewardsWithdrawnEvent,
+  BootstrapRewardsWithdrawnEvent, CommitteeSnapshotEvent,
   FeesWithdrawnEvent,
   StakingRewardAssignedEvent, StakingRewardsAddedToPoolEvent,
   StakingRewardsDistributedEvent
@@ -87,17 +88,17 @@ import {
   DelegatedStakeChangedEvent
 } from "../typings/delegations-contract";
 import {
-  CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
   MaxStandbysChangedEvent,
   MaxTimeBetweenRewardAssignmentsChangedEvent,
   ReadyToSyncTimeoutChangedEvent,
-  StandbysSnapshotEvent, ValidatorCommitteeChangeEvent,
+  ValidatorCommitteeChangeEvent,
   ValidatorStatusUpdatedEvent
 } from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
+import {transpose} from "./helpers";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -118,23 +119,6 @@ function comparePrimitive(a: any, b: any): boolean {
     }
     return _.isEqual(a, b);
   }
-}
-
-function transpose(obj, key, fields?) {
-  if (Object.keys(obj || {}).length == 0) {
-    return {}
-  }
-  const transposed: {[key: string]: any} = [];
-  const n = _.values(obj)[0].length;
-  fields = fields || Object.keys(obj);
-  for (let i = 0; i < n; i++) {
-    const item = {};
-    for (let k of fields) {
-      item[k] = obj[k][i];
-    }
-    transposed[item[key]] = item;
-  }
-  return transposed;
 }
 
 function objectMatches(obj, against): boolean {
@@ -211,7 +195,6 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("validatorDataUpdatedEvent", containEvent(validatorDataUpdatedEvents));
   chai.Assertion.overwriteMethod("validatorMetadataChangedEvent", containEvent(validatorMetadataChangedEvents));
   chai.Assertion.overwriteMethod("committeeSnapshotEvent", containEvent(committeeSnapshotEvents, true, 'addrs'));
-  chai.Assertion.overwriteMethod("standbysSnapshotEvent", containEvent(standbysSnapshotEvents, true, 'addrs'));
   chai.Assertion.overwriteMethod("stakeChangedEvent", containEvent(stakeChangedEvents));
   chai.Assertion.overwriteMethod("stakedEvent", containEvent(stakedEvents));
   chai.Assertion.overwriteMethod("unstakedEvent", containEvent(unstakedEvents));
@@ -266,7 +249,6 @@ declare global {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
       committeeSnapshotEvent(data?: Partial<CommitteeSnapshotEvent>): void;
-      standbysSnapshotEvent(data?: Partial<StandbysSnapshotEvent>): void;
       validatorCommitteeChangeEvent(data?: Partial<ValidatorCommitteeChangeEvent>): void;
       validatorRegisteredEvent(data?: Partial<ValidatorRegisteredEvent>): void;
       validatorMetadataChangedEvent(data?: Partial<ValidatorMetadataChangedEvent>): void;

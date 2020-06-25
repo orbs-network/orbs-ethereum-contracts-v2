@@ -19,7 +19,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, fromTokenUnits, minAddress} from "./helpers";
+import {bn, evmIncreaseTime, expectCommitteeStandbysToBe, fromTokenUnits, minAddress} from "./helpers";
 import {ETHEREUM_URL} from "../eth";
 
 
@@ -34,15 +34,15 @@ describe('committee', async () => {
         const v = await d.newParticipant();
 
         let r = await v.registerAsValidator();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.stake(stake);
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d,{
             addrs: [v.address],
             weights: [bn(stake)]
         });
@@ -56,15 +56,15 @@ describe('committee', async () => {
         const v = await d.newParticipant();
 
         let r = await v.registerAsValidator();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.stake(stake);
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address],
             weights: [bn(stake)]
         });
@@ -75,7 +75,7 @@ describe('committee', async () => {
             addrs: [v.address],
             weights: [bn(stake)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [],
             weights: []
         });
@@ -88,11 +88,11 @@ describe('committee', async () => {
         const v = await d.newParticipant();
 
         let r = await v.registerAsValidator();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.stake(stake);
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.notifyReadyForCommittee();
@@ -100,7 +100,7 @@ describe('committee', async () => {
             addrs: [v.address],
             weights: [bn(stake)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('does not allow more than maxStandbys', async () => {
@@ -116,7 +116,7 @@ describe('committee', async () => {
             await v.registerAsValidator();
             await v.stake(stake);
             let r = await v.notifyReadyToSync();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
                 weights: standbys.map(s => bn(stake))
             });
@@ -127,7 +127,7 @@ describe('committee', async () => {
         await v.registerAsValidator();
         await v.stake(stake - 1);
         let r = await v.notifyReadyToSync();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: standbys.map(s => s.address),});
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
@@ -148,14 +148,14 @@ describe('committee', async () => {
                 addrs: committee.map(s => s.address),
                 weights: committee.map(s => bn(stake))
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const v = await d.newParticipant();
         await v.registerAsValidator();
         await v.stake(stake - 1);
         let r = await v.notifyReadyForCommittee();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address]
         });
         expect(r).to.have.a.committeeSnapshotEvent({addrs: committee.map(s => s.address)});
@@ -174,12 +174,12 @@ describe('committee', async () => {
             addrs: [v.address],
             weights: [bn(stake)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         await d.contractRegistry.set("elections", d.contractsOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
         r = await d.committee.memberNotReadyToSync(v.address, {from: d.contractsOwnerAddress});
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('evicts a committee member which became not-ready-for-committee because it sent ready-to-sync', async () => {
@@ -195,10 +195,10 @@ describe('committee', async () => {
             addrs: [v.address],
             weights: [bn(stake)]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address],
             weights: [bn(stake)]
         });
@@ -211,19 +211,19 @@ describe('committee', async () => {
         const stake = 100;
         const {v: v1, r: r1} = await d.newValidator(stake, false, false, true); // committee now full
         expect(r1).to.have.a.committeeSnapshotEvent({addrs: [v1.address]});
-        expect(r1).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         const {v: v2, r: r2} = await d.newValidator(stake - 1, false, false, true); // a ready standby
         expect(r2).to.have.a.committeeSnapshotEvent({addrs: [v1.address]});
-        expect(r2).to.have.a.standbysSnapshotEvent({addrs: [v2.address]});
+        await expectCommitteeStandbysToBe(d, {addrs: [v2.address]});
 
         let r = await v2.notifyReadyToSync(); // should now become not ready-for-committee
         expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address]});
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: [v2.address]});
+        await expectCommitteeStandbysToBe(d, {addrs: [v2.address]});
 
         r = await v2.stake(2); // now has more stake than committee member, but not ready so should not enter committee
         expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address]});
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: [v2.address]});
+        await expectCommitteeStandbysToBe(d, {addrs: [v2.address]});
     });
 
     it('evicts a standby which explicitly became not-ready-to-sync', async () => {
@@ -235,7 +235,7 @@ describe('committee', async () => {
         await v.registerAsValidator();
         await v.stake(stake);
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address],
             weights: [bn(stake)]
         });
@@ -243,7 +243,7 @@ describe('committee', async () => {
 
         await d.contractRegistry.set("elections", d.contractsNonOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
         r = await d.committee.memberNotReadyToSync(v.address, {from: d.contractsNonOwnerAddress});
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
     });
 
@@ -264,24 +264,24 @@ describe('committee', async () => {
                 addrs: committee.map(s => s.address),
                 weights: committee.map((s, i) => bn(stake + i))
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const v = await d.newParticipant();
         let r = await v.registerAsValidator();
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v.stake(stake - 1);
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await v.notifyReadyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({addrs: committee.map(s => s.address)});
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: [v.address]});
+        await expectCommitteeStandbysToBe(d, {addrs: [v.address]});
 
         r = await v.stake(stake);
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [committee[0].address],
         });
         expect(r).to.have.a.committeeSnapshotEvent({
@@ -307,20 +307,20 @@ describe('committee', async () => {
                 addrs: committee.map(s => s.address),
                 weights: committee.map(s => bn(stake))
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const v = await d.newParticipant();
         await v.registerAsValidator();
         await v.stake(stake);
         let r = await v.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address]
         });
         expect(r).to.have.a.committeeSnapshotEvent({addrs: committee.map(s => s.address)});
 
         r = await v.stake(stake);
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v.address],
             weights: [bn(2 * stake)]
         });
@@ -345,7 +345,7 @@ describe('committee', async () => {
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const standbys: Participant[] = [];
@@ -357,7 +357,7 @@ describe('committee', async () => {
             await v.registerAsValidator();
             await v.stake(i <= 1 ? (stake + i): stake * 2);
             let r = i <= 1 ? await v.notifyReadyForCommittee() : await v.notifyReadyToSync();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
             });
             expect(r).to.have.a.committeeSnapshotEvent({
@@ -372,7 +372,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(s => s.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standbys[1], standbys[2], v1].map(s => s.address)
         });
 
@@ -383,7 +383,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(s => s.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standbys[2], v1, v2].map(s => s.address)
         });
 
@@ -407,7 +407,7 @@ describe('committee', async () => {
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const standbys: Participant[] = [];
@@ -418,7 +418,7 @@ describe('committee', async () => {
             await v.registerAsValidator();
             await v.stake(stake - 1 - i);
             let r = await v.notifyReadyToSync();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
             });
             expect(r).to.have.a.committeeSnapshotEvent({
@@ -433,7 +433,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v1, committee[1]].map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [committee[0], standbys[0]].map(s => s.address)
         });
 
@@ -457,7 +457,7 @@ describe('committee', async () => {
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const standbys: Participant[] = [];
@@ -468,7 +468,7 @@ describe('committee', async () => {
             await v.registerAsValidator();
             await v.stake(stake + i);
             let r = await v.notifyReadyForCommittee();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
             });
             expect(r).to.have.a.committeeSnapshotEvent({
@@ -480,7 +480,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.slice(1).concat([standbys[standbys.length - 1]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(0, standbys.length - 1).map(v => v.address)
         });
     });
@@ -502,7 +502,7 @@ describe('committee', async () => {
             await v.registerAsValidator();
             await v.stake(stake);
             let r = await v.notifyReadyToSync();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
             });
             expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
@@ -521,7 +521,7 @@ describe('committee', async () => {
         await v2.notifyReadyToSync();
         r = await v2.stake(stake - 1);
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v1, v2].map(s => s.address)
         });
 
@@ -542,7 +542,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v1.address],
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         await evmIncreaseTime(d.web3, readyToSyncTimeout);
 
@@ -553,7 +553,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v2.address],
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v1.address],
         });
     });
@@ -573,7 +573,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v1.address],
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         await evmIncreaseTime(d.web3, readyToSyncTimeout);
 
@@ -584,7 +584,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v1.address],
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v2.address],
         });
     });
@@ -600,7 +600,7 @@ describe('committee', async () => {
         await v1.registerAsValidator();
         await v1.stake(stake);
         let r = await v1.notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v1.address],
         });
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
@@ -609,7 +609,7 @@ describe('committee', async () => {
 
         r = await v1.stake(1);
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
-        expect(r).to.have.a.standbysSnapshotEvent({ // due to weight change
+        await expectCommitteeStandbysToBe(d, { // due to weight change
             addrs: [v1.address],
         });
 
@@ -620,7 +620,7 @@ describe('committee', async () => {
         await v2.stake(stake);
         r = await v2.notifyReadyToSync();
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v2.address],
         });
     });
@@ -644,7 +644,7 @@ describe('committee', async () => {
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const standbys: Participant[] = [];
@@ -655,7 +655,7 @@ describe('committee', async () => {
             await v.registerAsValidator();
             await v.stake(stake - i);
             let r = await v.notifyReadyToSync();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
             });
             expect(r).to.have.a.committeeSnapshotEvent({
@@ -676,7 +676,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v1, committee[1]].map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [committee[0], standbys[1]].map(s => s.address)
         });
 
@@ -700,7 +700,7 @@ describe('committee', async () => {
         expect(r2).to.have.a.committeeSnapshotEvent({
             addrs: [v1.address]
         });
-        expect(r2).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v2.address]
         });
 
@@ -708,14 +708,14 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v2.address]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v1.address]
         });
 
         // v1's timestamp should be recent, so a now validator with less stake will not overtake it
         const {r: r3} = await d.newValidator(stake - 3, false, true, false);
         expect(r3).to.not.have.a.committeeSnapshotEvent();
-        expect(r3).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: [v1.address]});
     });
 
     it('sets last ready-to-sync timestamp to now for a validator who left the committee to became a standby by being outranked', async () => {
@@ -729,7 +729,7 @@ describe('committee', async () => {
         expect(r1).to.have.a.committeeSnapshotEvent({
             addrs: [v1.address]
         });
-        expect(r1).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         await evmIncreaseTime(d.web3, readyToSyncTimeout + 1); // v1's timestamp is now stale
 
@@ -737,14 +737,14 @@ describe('committee', async () => {
         expect(r2).to.have.a.committeeSnapshotEvent({
             addrs: [v2.address]
         });
-        expect(r2).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [v1.address]
         });
 
         // v1's timestamp should be recent, so a now validator with less stake will not overtake it
         const {r: r3} = await d.newValidator(stake - 3, false, true, false);
         expect(r3).to.not.have.a.committeeSnapshotEvent();
-        expect(r3).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: [v1.address]});
     });
 
     it('returns committee and standbys using getters', async () => {
@@ -768,7 +768,7 @@ describe('committee', async () => {
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
             });
-            expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
+            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
 
         const standbys: Participant[] = [];
@@ -782,7 +782,7 @@ describe('committee', async () => {
                 await v.becomeCompliant();
             }
             let r = await v.notifyReadyToSync();
-            expect(r).to.have.a.standbysSnapshotEvent({
+            await expectCommitteeStandbysToBe(d, {
                 addrs: standbys.map(s => s.address),
             });
             expect(r).to.have.a.committeeSnapshotEvent({
@@ -851,10 +851,10 @@ describe('committee', async () => {
         expect(r1).to.have.a.committeeSnapshotEvent({
             addrs: [committeeMember.address]
         });
-        expect(r1).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         const {v: standby, r: r2} = await d.newValidator(stake - 1, false, true, false);
-        expect(r2).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standby.address]
         });
         expect(r2).to.have.a.committeeSnapshotEvent({
@@ -866,7 +866,7 @@ describe('committee', async () => {
             addrs: [committeeMember.address],
             compliance: [true]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standby.address]
         });
 
@@ -875,12 +875,12 @@ describe('committee', async () => {
             addrs: [committeeMember.address],
             compliance: [false]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standby.address]
         });
 
         r = await standby.becomeCompliant();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standby.address],
             compliance: [true]
         });
@@ -889,7 +889,7 @@ describe('committee', async () => {
         });
 
         r = await standby.becomeNotCompliant();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standby.address],
             compliance: [false]
         });
@@ -907,17 +907,17 @@ describe('committee', async () => {
             addrs: [v1.address],
             compliance: [false]
         });
-        expect(r1).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         const {v: v2, r: r2} = await d.newValidator(stake - 1, true, false, true);
         expect(r2).to.have.a.committeeSnapshotEvent({
             addrs: [v1.address, v2.address],
             compliance: [false, true]
         });
-        expect(r2).to.have.a.standbysSnapshotEvent({addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         const {v: s1, r: r3} = await d.newValidator(stake, false, true, false);
-        expect(r3).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [s1.address],
             compliance: [false]
         });
@@ -926,7 +926,7 @@ describe('committee', async () => {
         });
 
         const {v: s2, r: r4} = await d.newValidator(stake - 1, true, true, false);
-        expect(r4).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [s1.address, s2.address],
             compliance: [false, true]
         });
@@ -951,7 +951,7 @@ describe('committee', async () => {
             r = await committee[i].becomeValidator(stake, false, false, true);
         }
 
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [standby.address],
             weights: [bn(stake)]
         });
@@ -995,7 +995,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.concat([standbys[0]]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(1, maxStandbys.toNumber()).map(v => v.address)
         });
 
@@ -1007,7 +1007,7 @@ describe('committee', async () => {
         });
 
         r = await standbys[2].notifyReadyToSync();
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: standbys.slice(1).map(v => v.address)
         });
         expect(r).to.have.a.committeeSnapshotEvent({
@@ -1149,19 +1149,19 @@ describe('committee', async () => {
 
         let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await d.committee.memberReadyToSync(nonRegistered.address, true, {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await d.committee.memberNotReadyToSync(nonRegistered.address, {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
 
         r = await d.committee.memberComplianceChange(nonRegistered.address, true, {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it("handles adding existing member", async () => {
@@ -1174,10 +1174,8 @@ describe('committee', async () => {
 
         const r = await d.committee.addMember(v.address, fromTokenUnits(5), false, {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
+        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
-
-
 
     it("emits increments committee change events", async () => {
         const d = await Driver.new({maxTimeBetweenRewardAssignments: 2*24*60*60});
@@ -1349,7 +1347,6 @@ describe('committee', async () => {
             isStandby: true,
         });
         expect(r1).to.not.have.a.committeeSnapshotEvent();
-        expect(r1).to.not.have.a.standbysSnapshotEvent();
         expect(r1).to.not.have.a.stakingRewardsAssignedEvent();
         expect(r1).to.not.have.a.feesAssignedEvent();
         expect(r1).to.not.have.a.bootstrapRewardsAssignedEvent();
@@ -1361,7 +1358,6 @@ describe('committee', async () => {
             isStandby: false,
         });
         expect(r2).to.not.have.a.committeeSnapshotEvent();
-        expect(r2).to.not.have.a.standbysSnapshotEvent();
         expect(r2).to.not.have.a.stakingRewardsAssignedEvent();
         expect(r2).to.not.have.a.feesAssignedEvent();
         expect(r2).to.not.have.a.bootstrapRewardsAssignedEvent();
@@ -1377,7 +1373,7 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [c.address]
         });
-        expect(r).to.have.a.standbysSnapshotEvent({
+        await expectCommitteeStandbysToBe(d, {
             addrs: [s.address]
         });
         expect(r).to.have.a.stakingRewardsAssignedEvent({
@@ -1393,7 +1389,6 @@ describe('committee', async () => {
             isStandby: false,
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.standbysSnapshotEvent();
         expect(r).to.not.have.a.stakingRewardsAssignedEvent();
         expect(r).to.not.have.a.feesAssignedEvent();
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
