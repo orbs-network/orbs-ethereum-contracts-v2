@@ -108,5 +108,5 @@ export async function expectCommitteeStandbysToBe(d: Driver, standbys: Partial<S
     const expectedStandbys = transpose(normalize(standbys), "addrs", Object.keys(standbys));
     const actualStandbys = transpose(normalize({addrs, weights, compliance}), "addrs", Object.keys(standbys));
 
-    chai.expect(expectedStandbys).to.deep.equal(actualStandbys);
+    chai.expect(actualStandbys).to.deep.equal(expectedStandbys);
 }

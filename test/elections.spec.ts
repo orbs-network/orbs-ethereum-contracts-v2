@@ -906,7 +906,7 @@ describe('elections-high-level-flows', async () => {
 
         r = await d.staking.unstake(dilutingStake, {from: dilutingParticipant.address}); // threshold is again crossed
         expect(r).to.not.have.a.committeeSnapshotEvent(); // because we need a trigger to detect the change
-        await expectCommitteeStandbysToBe(d, {addrs: []});
+        await expectCommitteeStandbysToBe(d, {addrs: [bannedValidator.address]});
         expect(r).to.not.have.a.bannedEvent();
         expect(r).to.not.have.a.unbannedEvent();
 
