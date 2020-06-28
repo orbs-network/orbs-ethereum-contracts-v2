@@ -3,6 +3,12 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
+export interface CommitteeSnapshotEvent {
+    addrs: string[];
+    weights: (number | BN)[];
+    compliance: boolean[];
+}
+
 export interface ReadyToSyncTimeoutChangedEvent {
     newValue: string|BN;
     oldValue: string|BN;

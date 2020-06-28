@@ -447,6 +447,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCompliance) = buildCommitteeArrays(participants, committeeSize);
         rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCompliance);
+
+		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCompliance);
 	}
 
 	function buildCommitteeArrays(Participant[] memory participants, uint expectedCount) private pure returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {

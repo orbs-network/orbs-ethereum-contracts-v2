@@ -6,8 +6,6 @@ import "../spec_interfaces/IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IRewards {
 
-    event CommitteeSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
-
     function assignRewards() external;
     function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata compliance) external /* onlyCommitteeContract */;
 

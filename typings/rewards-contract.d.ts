@@ -62,12 +62,6 @@ export interface BootstrapRewardsWithdrawnEvent {
     amount: string|BN
 }
 
-export interface CommitteeSnapshotEvent {
-    addrs: string[];
-    weights: (number | BN)[];
-    compliance: boolean[];
-}
-
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
     getTotalBalances(params?: TransactionConfig): Promise<[string /* fees */, string /* staking */, string /* bootstrap */]>;

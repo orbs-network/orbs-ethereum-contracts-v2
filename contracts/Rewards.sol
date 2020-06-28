@@ -123,7 +123,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         emit StakingRewardsAssigned(committee, stakingRewards);
         emit BootstrapRewardsAssigned(generalValidatorBootstrap, certifiedValidatorBootstrap);
         emit FeesAssigned(generalValidatorFee, certifiedValidatorFee);
-        emit CommitteeSnapshot(committee, committeeWeights, compliance);
     }
 
     function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap){

@@ -71,7 +71,7 @@ import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
 import {
-  BootstrapRewardsWithdrawnEvent, CommitteeSnapshotEvent,
+  BootstrapRewardsWithdrawnEvent,
   FeesWithdrawnEvent,
   StakingRewardAssignedEvent, StakingRewardsAddedToPoolEvent,
   StakingRewardsDistributedEvent
@@ -88,6 +88,7 @@ import {
   DelegatedStakeChangedEvent
 } from "../typings/delegations-contract";
 import {
+  CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
   MaxStandbysChangedEvent,
   MaxTimeBetweenRewardAssignmentsChangedEvent,

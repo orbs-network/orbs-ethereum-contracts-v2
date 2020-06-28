@@ -5,9 +5,9 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface ICommittee {
 	event ValidatorCommitteeChange(address addr, uint256 weight, bool compliance, bool inCommittee, bool isStandby);
-	event StandbysSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
+	event CommitteeSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
 
-    // No external functions
+	// No external functions
 
 	/*
      * Methods restricted to other Orbs contracts
