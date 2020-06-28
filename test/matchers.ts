@@ -224,7 +224,7 @@ declare global {
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>);
       readyToSyncTimeoutChangedEvent(data?: Partial<ReadyToSyncTimeoutChangedEvent>);
-      maxTimeBetweenRewardAssignmentsChangedEvents(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
+      maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
       maxStandbysChangedEvent(data?: Partial<MaxStandbysChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
