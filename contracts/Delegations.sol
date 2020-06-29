@@ -141,7 +141,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			bool isSelfDelegatingDelegate = _isSelfDelegating(sequenceDelegate);
 
 			uint sequenceStartIdx = i;
-			uint sequenceLength = 0;
 
 			do { // aggregate sequence stakes changes
 
@@ -150,12 +149,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 					currentUncappedStake.sub(amounts[i]);
 
 				i++;
-				sequenceLength++;
 			} while (i < batchLength && sequenceDelegate == getDelegation(stakeOwners[i]));
 
 			// closing sequence
 			uncappedStakes[sequenceDelegate] = currentUncappedStake;
-			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, sequenceLength);
+			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
 			getElectionsContract().notifyStakeChange(prevUncappedStake, currentUncappedStake, sequenceDelegate, isSelfDelegatingDelegate);
 		}
 	}
