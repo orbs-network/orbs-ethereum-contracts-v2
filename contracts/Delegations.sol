@@ -144,13 +144,13 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			uint sequenceLength = 0;
 
 			do { // aggregate sequence stakes changes
-				sequenceLength++;
 
 				currentUncappedStake = signs[i] ?
 					currentUncappedStake.add(amounts[i]) :
 					currentUncappedStake.sub(amounts[i]);
 
 				i++;
+				sequenceLength++;
 			} while (i < batchLength && sequenceDelegate == getDelegation(stakeOwners[i]));
 
 			// closing sequence
