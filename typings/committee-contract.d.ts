@@ -1,4 +1,3 @@
-import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
@@ -9,17 +8,7 @@ export interface CommitteeSnapshotEvent {
     compliance: boolean[];
 }
 
-export interface ReadyToSyncTimeoutChangedEvent {
-    newValue: string|BN;
-    oldValue: string|BN;
-}
-
 export interface MaxCommitteeSizeChangedEvent {
-    newValue: string|BN;
-    oldValue: string|BN;
-}
-
-export interface MaxStandbysChangedEvent {
     newValue: string|BN;
     oldValue: string|BN;
 }
@@ -35,7 +24,6 @@ export interface ValidatorCommitteeChangeEvent {
     weight: string|BN;
     compliance: boolean;
     inCommittee: boolean;
-    isStandby: boolean;
 }
 
 export interface MaxTimeBetweenRewardAssignmentsChangedEvent {
@@ -53,14 +41,10 @@ export interface CommitteeContract extends OwnedContract {
     removeMember(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;
     getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;
-    getStandbys(params?: TransactionConfig): Promise<[string[], Array<number|BN>, boolean[]]>;
     getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
-    getStandbysInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
-    setReadyToSyncTimeout(readyToSyncTimeout: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-    setMaxCommitteeAndStandbys(maxCommitteeSize: number|BN, maxStandbys: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setMaxCommittee(maxCommitteeSize: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    getSettings(params?: TransactionConfig): Promise<[string /* readyToSyncTimeout */, string /* maxTimeBetweenRewardAssignments */, string /* maxCommitteeSize */, string /* maxStandbys */]>;
+    getSettings(params?: TransactionConfig): Promise<[string /* maxTimeBetweenRewardAssignments */, string /* maxCommitteeSize */]>;
     getTopology(): Promise<TransactionReceipt>;
-
 }

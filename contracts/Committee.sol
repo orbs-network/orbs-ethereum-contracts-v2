@@ -12,18 +12,14 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	address[] participantAddresses;
 
-	uint8 constant ROLE_EXCLUDED = 0;
-	uint8 constant ROLE_COMMITTEE = 1;
-	uint8 constant ROLE_STANDBY = 2;
-
 	struct MemberData { // TODO can be reduced to 1 state entry
 		uint128 weight;
-		uint32 readyToSyncTimestamp;
 		bool isMember; // exists
+		bool readyToSync;
 		bool readyForCommittee;
 		bool isCompliant;
 
-		uint8 role;
+		bool inCommittee;
 	}
 	mapping (address => MemberData) membersData;
 
@@ -37,15 +33,13 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		address addr;
 		uint8 pos;
 
-		uint8 oldRole;
-		uint8 newRole;
+		bool inPrevCommittee;
+		bool inNextCommittee;
 	} // Never in state, only in memory
 
 	struct Settings { // TODO can be reduced to 2-3 state entries
-		uint32 readyToSyncTimeout;
 		uint32 maxTimeBetweenRewardAssignments;
 		uint8 maxCommitteeSize;
-		uint8 maxStandbys;
 	}
 	Settings settings;
 
@@ -54,7 +48,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	// Derived properties
 	struct CommitteeInfo {
 		uint64 committeeBitmap;
-		uint8 standbysCount;
 		uint8 committeeSize;
 	}
 	CommitteeInfo committeeInfo;
@@ -65,15 +58,11 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	constructor(uint _maxCommitteeSize, uint _maxStandbys, uint256 _readyToSyncTimeout, uint32 maxTimeBetweenRewardAssignments) public {
+	constructor(uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(_maxStandbys > 0, "maxStandbys must be larger than 0");
-		require(_maxCommitteeSize + _maxStandbys <= MAX_TOPOLOGY, "maxCommitteeSize + maxStandbys must be 32 at most");
-		require(_readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
+		require(_maxCommitteeSize <= MAX_TOPOLOGY, "maxCommitteeSize must be 32 at most");
 		settings = Settings({
 			maxCommitteeSize: uint8(_maxCommitteeSize),
-			maxStandbys: uint8(_maxStandbys),
-			readyToSyncTimeout: uint32(_readyToSyncTimeout),
 			maxTimeBetweenRewardAssignments: maxTimeBetweenRewardAssignments
 		});
 
@@ -87,12 +76,12 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
 	/// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
+	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint128(weight)) == weight, "weight is out of range");
 
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
-			return (false, false);
+			return false;
 		}
 		memberData.weight = uint128(weight);
 		return _rankAndUpdateMember(Member({
@@ -101,13 +90,13 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
+	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
-			return (false, false);
+			return false;
 		}
 
-		memberData.readyToSyncTimestamp = uint32(now);
+		memberData.readyToSync = true;
 		memberData.readyForCommittee = readyForCommittee;
 		return _rankAndUpdateMember(Member({
 			addr: addr,
@@ -115,13 +104,13 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberNotReadyToSync(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
+	function memberNotReadyToSync(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
-			return (false, false);
+			return false;
 		}
 
-		memberData.readyToSyncTimestamp = 0;
+		memberData.readyToSync = false;
 		memberData.readyForCommittee = false;
 		return _rankAndUpdateMember(Member({
 			addr: addr,
@@ -129,10 +118,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool commiteeChanged, bool standbysChanged) {
+	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool commiteeChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
-			return (false, false);
+			return false;
 		}
 
 		memberData.isCompliant = isCompliant;
@@ -142,32 +131,32 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
+	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint128(weight)) == weight, "weight is out of range");
 
 		if (membersData[addr].isMember) {
-			return (false, false);
+			return false;
 		}
 
 		return _rankAndUpdateMember(Member({
 			addr: addr,
 			data: MemberData({
 				isMember: true,
+				readyToSync: false,
 				readyForCommittee: false,
-				readyToSyncTimestamp: 0,
 				weight: uint128(weight),
 				isCompliant: isCompliant,
-				role: ROLE_EXCLUDED
+				inCommittee: false
 			})
 		}));
 	}
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged, bool standbysChanged) {
+	function removeMember(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberData memory memberData = membersData[addr];
 		memberData.isMember = false;
-		(committeeChanged, standbysChanged) = _rankAndUpdateMember(Member({
+		committeeChanged = _rankAndUpdateMember(Member({
 			addr: addr,
 			data: memberData
 		}));
@@ -178,11 +167,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	/// Returns the committee members and their weights
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
 		return _getCommittee();
-	}
-
-	/// @dev Returns the standy (out of committee) members and their weights
-	function getStandbys() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
-		return _getStandbys();
 	}
 
 	/// @dev Called by: Elections contract
@@ -212,36 +196,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	/// @dev Returns the standby (out of committee) members and their weights
-	function _getStandbys() public view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
-		CommitteeInfo memory _committeeInfo = committeeInfo;
-		uint bitmap = uint(_committeeInfo.committeeBitmap);
-		uint standbysCount = uint(_committeeInfo.standbysCount);
-
-		addrs = new address[](standbysCount);
-		weights = new uint[](standbysCount);
-		compliance = new bool[](standbysCount);
-		bitmap = uint(_committeeInfo.committeeBitmap);
-		uint aInd = 0;
-		uint pInd;
-		address addr;
-		MemberData memory data;
-		while (aInd < standbysCount) {
-			if (bitmap & 1 == 0) {
-				addr = participantAddresses[pInd];
-				if (addr != address(0)) {
-					data = membersData[addr];
-					addrs[aInd] = addr;
-					weights[aInd] = uint(data.weight);
-					compliance[aInd] = data.isCompliant;
-					aInd++;
-				}
-			}
-			bitmap >>= 1;
-			pInd++;
-		}
-	}
-
 	/*
 	 * Governance
 	 */
@@ -251,27 +205,14 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		settings.maxTimeBetweenRewardAssignments = maxTimeBetweenRewardAssignments;
 	}
 
-	function setReadyToSyncTimeout(uint32 readyToSyncTimeout) external onlyFunctionalOwner /* todo onlyWhenActive */ {
-		require(readyToSyncTimeout > 0, "readyToSyncTimeout must be larger than 0");
-		emit ReadyToSyncTimeoutChanged(readyToSyncTimeout, settings.readyToSyncTimeout);
-		settings.readyToSyncTimeout = readyToSyncTimeout;
-	}
-
-	function setMaxCommitteeAndStandbys(uint8 maxCommitteeSize, uint8 maxStandbys) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setMaxCommittee(uint8 maxCommitteeSize) external onlyFunctionalOwner /* todo onlyWhenActive */ {
 		require(maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(maxStandbys > 0, "maxStandbys must be larger than 0");
-		require(maxCommitteeSize + maxStandbys <= MAX_TOPOLOGY, "maxCommitteeSize + maxStandbys must be 32 at most");
+		require(maxCommitteeSize <= MAX_TOPOLOGY, "maxCommitteeSize must be 32 at most");
 		Settings memory _settings = settings;
-		if (_settings.maxStandbys != maxStandbys) {
-			emit MaxStandbysChanged(maxStandbys, _settings.maxStandbys);
-			_settings.maxStandbys = maxStandbys;
-		}
-		if (_settings.maxCommitteeSize != maxCommitteeSize) {
-			emit MaxCommitteeSizeChanged(maxCommitteeSize, _settings.maxCommitteeSize);
-			_settings.maxCommitteeSize = maxCommitteeSize;
-		}
-
+		emit MaxCommitteeSizeChanged(maxCommitteeSize, _settings.maxCommitteeSize);
+		_settings.maxCommitteeSize = maxCommitteeSize;
 		settings = _settings;
+
 		updateCommittee(DummyMember(), _settings);
 	}
 
@@ -286,18 +227,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return (committee, weights, _loadOrbsAddresses(committee), compliance, _loadIps(committee));
 	}
 
-	/// @dev returns the current standbys (out of commiteee) topology
-	function getStandbysInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
-		(address[] memory standbys, uint256[] memory weights, bool[] memory compliance) = _getStandbys();
-		return (standbys, weights, _loadOrbsAddresses(standbys), compliance, _loadIps(standbys));
-	}
-
-	function getSettings() external view returns (uint32 readyToSyncTimeout, uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize, uint8 maxStandbys) {
+	function getSettings() external view returns (uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize) {
 		Settings memory _settings = settings;
-		readyToSyncTimeout = _settings.readyToSyncTimeout;
 		maxTimeBetweenRewardAssignments = _settings.maxTimeBetweenRewardAssignments;
 		maxCommitteeSize = _settings.maxCommitteeSize;
-		maxStandbys = _settings.maxStandbys;
 	}
 
 	/*
@@ -320,21 +253,13 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return compliance;
 	}
 
-	function _rankAndUpdateMember(Member memory member) private returns (bool committeeChanged, bool standbysChanged) {
-		if (!isCommitteeMemberOrStandby(member.data) && !qualifiesAsStandby(member.data)) {
+	function _rankAndUpdateMember(Member memory member) private returns (bool committeeChanged) {
+		if (!member.data.inCommittee && !qualifiesForCommittee(member.data)) {
 			membersData[member.addr] = member.data;
-			return (false, false);
+			return false;
 		}
-		(committeeChanged, standbysChanged) = updateCommittee(member, settings);
+		committeeChanged = updateCommittee(member, settings);
 		membersData[member.addr] = member.data;
-	}
-
-	function isTimedOut(Participant memory p, Settings memory _settings) private view returns (bool) {
-		return p.data.readyToSyncTimestamp == 0 || (p.oldRole != ROLE_COMMITTEE && p.data.readyToSyncTimestamp <= uint32(now) - _settings.readyToSyncTimeout);
-	}
-
-	function qualifiesAsStandby(MemberData memory data) private pure returns (bool) {
-		return data.isMember && data.readyToSyncTimestamp != 0 && data.weight != 0;
 	}
 
 	function qualifiesForCommittee(MemberData memory data) private pure returns (bool) {
@@ -345,50 +270,28 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		);
 	}
 
-	function updateNewRoles(Participant[] memory sortedParticipants, Settings memory _settings) private view returns (CommitteeInfo memory newInfo) {
+	function markCommitteeMembers(Participant[] memory sortedParticipants, Settings memory _settings) private view returns (CommitteeInfo memory newInfo) {
 		Participant memory p;
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
 
-			if (isTimedOut(p, _settings)) continue;
-
 			// Can current participant join the committee?
 			if (newInfo.committeeSize < _settings.maxCommitteeSize && qualifiesForCommittee(p.data)) {
-				p.newRole = ROLE_COMMITTEE;
+				p.inNextCommittee = true;
 				newInfo.committeeSize++;
 				newInfo.committeeBitmap |= uint64(uint(1) << p.pos);
-				continue;
-			}
-
-			// Otherwise, can it be a standby?
-			if (newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data)) {
-				p.newRole = ROLE_STANDBY;
-				newInfo.standbysCount++;
-			}
-		}
-
-		// Check if an excluded participant can become a standby
-		for (uint i = 0; i < sortedParticipants.length; i++) {
-			p = sortedParticipants[i];
-			if (
-				p.newRole == ROLE_EXCLUDED && // we decided to exclude it in the first iteration
-				newInfo.standbysCount < _settings.maxStandbys && qualifiesAsStandby(p.data) // But it qualifies as a standby and there's room
-			) {
-				p.newRole = ROLE_STANDBY;
-				newInfo.standbysCount++;
 			}
 		}
 	}
 
-	function updateCommittee(Member memory changedMember, Settings memory _settings) private returns (bool committeeChanged, bool standbysChanged) {
-		committeeChanged = changedMember.data.role == ROLE_COMMITTEE;
-		standbysChanged = changedMember.data.role == ROLE_STANDBY;
+	function updateCommittee(Member memory changedMember, Settings memory _settings) private returns (bool committeeChanged) {
+		committeeChanged = changedMember.data.inCommittee;
 
 		(Participant[] memory sortedParticipants, Participant memory changedParticipant) = loadParticipantsSortedByWeights(changedMember); // override stored member with preloaded one
 
-		// First iteration - find all committee members and non-timed-out standbys
+		// First iteration - find all committee members
 
-		CommitteeInfo memory newInfo = updateNewRoles(sortedParticipants, _settings);
+		CommitteeInfo memory newInfo = markCommitteeMembers(sortedParticipants, _settings);
 
 		// Update metadata of changed participants
 		uint256 newSortBytes;
@@ -397,24 +300,19 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		for (uint i = 0; i < sortedParticipants.length; i++) {
 			p = sortedParticipants[i];
 
-			// Update a participant that changed its role
-			if (p.newRole != p.oldRole) {
-				if (p.oldRole == ROLE_COMMITTEE && p.newRole == ROLE_STANDBY) {
-					p.data.readyToSyncTimestamp = uint32(now); // A committee member just became a standby, set its timestamp to now so will not be considered as timed-out
-				}
-				committeeChanged = committeeChanged || p.oldRole == ROLE_COMMITTEE || p.newRole == ROLE_COMMITTEE;
-				standbysChanged = standbysChanged || p.oldRole == ROLE_STANDBY || p.newRole == ROLE_STANDBY;
-
-				p.data.role = p.newRole;
+			// Update a participant that joined/left the committee
+			if (p.inNextCommittee != p.inPrevCommittee) {
+				p.data.inCommittee = p.inNextCommittee;
 				membersData[p.addr] = p.data;
+				committeeChanged = true;
 			}
 
-            // Emit a status changed event if the role has changed, or of the changed member is not evicted (e.g. weight change of a committee member)
-            if (p.newRole != p.oldRole || p.addr == changedParticipant.addr && isCommitteeMemberOrStandby(p.data)) {
-                emit ValidatorCommitteeChange(p.addr, p.data.weight, p.data.isCompliant, p.newRole == ROLE_COMMITTEE, p.newRole == ROLE_STANDBY);
+            // Emit a status changed event if the joined/left committee, or of the changed member is not evicted (e.g. weight change of a committee member)
+            if (p.inNextCommittee != p.inPrevCommittee || p.addr == changedParticipant.addr && p.inPrevCommittee) {
+                emit ValidatorCommitteeChange(p.addr, p.data.weight, p.data.isCompliant, p.inNextCommittee == true);
             }
 
-			if (isCommitteeMemberOrStandby(p.data)) {
+			if (p.data.inCommittee) {
 				newSortBytes = (newSortBytes << 8) | uint8(p.pos + 1);
 			} else {
 				participantAddresses[p.pos] = address(0); // no longer a participant
@@ -422,23 +320,19 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 
 		// check if changed member is a new participant
-		if (changedParticipant.oldRole == ROLE_EXCLUDED && changedParticipant.newRole != ROLE_EXCLUDED) {
+		if (!changedParticipant.inPrevCommittee && changedParticipant.inNextCommittee) {
 			participantAddresses[changedParticipant.pos] = changedParticipant.addr;
 		}
 
 		weightSortIndicesOneBasedBytes = newSortBytes;
 		committeeInfo = newInfo; // todo check if changed before writing
 
-        if (committeeChanged || standbysChanged) {
-            notifyChanges(sortedParticipants, newInfo.committeeSize, newInfo.standbysCount, _settings);
+        if (committeeChanged) {
+            notifyChanges(sortedParticipants, newInfo.committeeSize, _settings);
         }
 	}
 
-	function isCommitteeMemberOrStandby(MemberData memory md) private pure returns (bool) {
-		return md.role != ROLE_EXCLUDED;
-	}
-
-	function notifyChanges(Participant[] memory participants, uint committeeSize, uint standbysCount, Settings memory _settings) private {
+	function notifyChanges(Participant[] memory participants, uint committeeSize, Settings memory _settings) private {
         IRewards rewardsContract = getRewardsContract();
         uint lastAssignment = rewardsContract.getLastRewardAssignmentTime();
         if (now - lastAssignment < _settings.maxTimeBetweenRewardAssignments) {
@@ -459,7 +353,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		uint ind;
 		for (uint i = 0; i < participants.length; i++) {
 			p = participants[i];
-			if (p.data.role == ROLE_COMMITTEE) {
+			if (p.data.inCommittee) {
 				addrs[ind] = p.addr;
 				compliance[ind] = p.data.isCompliant;
 				weights[ind++] = p.data.weight;
@@ -469,10 +363,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	function loadParticipantsSortedByWeights(Member memory changedMember) private view returns (Participant[] memory sortedParticipants, Participant memory changedParticipant) {
 		address[] memory _participantAddresses = participantAddresses;
-		bool newParticipant = !isCommitteeMemberOrStandby(changedMember.data);
+		bool newParticipant = !changedMember.data.inCommittee;
 
 		CommitteeInfo memory _committeeInfo = committeeInfo;
-		uint nParticipants = _committeeInfo.committeeSize + _committeeInfo.standbysCount;
+		uint nParticipants = _committeeInfo.committeeSize;
 		if (newParticipant) nParticipants++;
 		sortedParticipants = new Participant[](nParticipants);
 
@@ -508,8 +402,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				addr: addr,
 				data: data,
 				pos : uint8(pos),
-				oldRole: data.role,
-				newRole: ROLE_EXCLUDED
+				inPrevCommittee: data.inCommittee,
+				inNextCommittee: false
 			});
 			pind--;
 		}
@@ -521,8 +415,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			addr: changedMember.addr,
 			data: changedMember.data,
 			pos : uint8(newParticipant ? findFirstFreeSlotIndex(_participantAddresses) : changedMemberPos),
-			oldRole: changedMember.data.role,
-			newRole: ROLE_EXCLUDED
+			inPrevCommittee: changedMember.data.inCommittee,
+			inNextCommittee: false
 		});
 		sortedParticipants[changedMemberSortedInd] = changedParticipant;
 	}

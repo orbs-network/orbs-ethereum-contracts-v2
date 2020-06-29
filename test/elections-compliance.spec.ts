@@ -17,14 +17,6 @@ chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
 const expect = chai.expect;
-const assert = chai.assert;
-
-import {bn, evmIncreaseTime, expectCommitteeStandbysToBe, minAddress} from "./helpers";
-import {ETHEREUM_URL} from "../eth";
-import {
-    banningScenario_setupDelegatorsAndValidators,
-    banningScenario_voteUntilThresholdReached
-} from "./elections.spec";
 
 
 describe('elections-compliance', async () => {
@@ -55,7 +47,6 @@ describe('elections-compliance', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.filter(v => v != complianceCommittee[0]).map(v => v.address)
         });
-        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('votes out a compliance committee member from both committees when threshold is reached in general committee but not in compliance committee', async () => {
@@ -84,7 +75,6 @@ describe('elections-compliance', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.slice(1).map(v => v.address)
         });
-        await expectCommitteeStandbysToBe(d, {addrs: []});
     });
 
     it('compliance committee cannot vote out a general committee member', async () => {
@@ -107,7 +97,6 @@ describe('elections-compliance', async () => {
             let r = await d.elections.voteOut(generalCommittee[1].address, {from: v.orbsAddress});
             expect(r).to.not.have.a.votedOutOfCommitteeEvent();
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            await expectCommitteeStandbysToBe(d, {addrs: []});
         }
     });
 

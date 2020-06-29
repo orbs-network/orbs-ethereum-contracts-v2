@@ -37,9 +37,7 @@ import {
   banningPercentageThresholdChangedEvents,
   lockedEvents,
   unlockedEvents,
-  readyToSyncTimeoutChangedEvents,
   maxCommitteeSizeChangedEvents,
-  maxStandbysChangedEvents,
   contractRegistryAddressUpdatedEvents,
   bootstrapRewardsWithdrawnEvents,
   feesWithdrawnEvents,
@@ -90,9 +88,7 @@ import {
 import {
   CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
-  MaxStandbysChangedEvent,
   MaxTimeBetweenRewardAssignmentsChangedEvent,
-  ReadyToSyncTimeoutChangedEvent,
   ValidatorCommitteeChangeEvent,
   ValidatorStatusUpdatedEvent
 } from "../typings/committee-contract";
@@ -222,10 +218,8 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("contractAddressUpdatedEvent", containEvent(contractAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("protocolChangedEvent", containEvent(protocolChangedEvents));
   chai.Assertion.overwriteMethod("validatorComplianceUpdateEvent", containEvent(validatorComplianceUpdateEvents));
-  chai.Assertion.overwriteMethod("readyToSyncTimeoutChangedEvent", containEvent(readyToSyncTimeoutChangedEvents));
   chai.Assertion.overwriteMethod("maxTimeBetweenRewardAssignmentsChangedEvents", containEvent(maxTimeBetweenRewardAssignmentsChangedEvents));
   chai.Assertion.overwriteMethod("maxCommitteeSizeChangedEvent", containEvent(maxCommitteeSizeChangedEvents));
-  chai.Assertion.overwriteMethod("maxStandbysChangedEvent", containEvent(maxStandbysChangedEvents));
   chai.Assertion.overwriteMethod("voteOutTimeoutSecondsChangedEvent", containEvent(voteOutTimeoutSecondsChangedEvents));
   chai.Assertion.overwriteMethod("maxDelegationRatioChangedEvent", containEvent(maxDelegationRatioChangedEvents));
   chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
@@ -286,10 +280,8 @@ declare global {
       unlockedEvent(data?: Partial<UnlockedEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>);
-      readyToSyncTimeoutChangedEvent(data?: Partial<ReadyToSyncTimeoutChangedEvent>);
       maxTimeBetweenRewardAssignmentsChangedEvents(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
-      maxStandbysChangedEvent(data?: Partial<MaxStandbysChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
