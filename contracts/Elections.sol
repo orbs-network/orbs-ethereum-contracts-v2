@@ -68,16 +68,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
 	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
-		if (_isBanned(addr)) {
-			return;
-		}
-		addMemberToCommittees(addr, settings);
 	}
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		removeMemberFromCommittees(addr);
+		emit ValidatorStatusUpdated(addr, false, false);
+		getCommitteeContract().removeMember(addr);
 	}
 
 	/// @dev Called by: validator registration contract
@@ -87,15 +84,15 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function notifyReadyForCommittee() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		address sender = getMainAddrFromOrbsAddr(msg.sender); // This validates the validator is registered
 		emit ValidatorStatusUpdated(sender, true, true);
-		getCommitteeContract().memberReadyToSync(sender, true);
+		getCommitteeContract().addMember(sender, getCommitteeEffectiveStake(sender, settings), getComplianceContract().isValidatorCompliant(sender));
 	}
 
 	function notifyReadyToSync() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		address sender = getMainAddrFromOrbsAddr(msg.sender); // This validates the validator is registered
 		emit ValidatorStatusUpdated(sender, true, false);
-		getCommitteeContract().memberReadyToSync(sender, false);
+		getCommitteeContract().removeMember(sender);
 	}
 
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenActive external {
@@ -187,7 +184,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			clearCommitteeVoteOuts(generalCommittee, addr);
 			emit VotedOutOfCommittee(addr);
 			emit ValidatorStatusUpdated(addr, false, false);
-			getCommitteeContract().memberNotReadyToSync(addr);
+			getCommitteeContract().removeMember(addr);
 		}
 	}
 
@@ -283,12 +280,11 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
                 bannedValidators[addr] = now;
 				emit Banned(addr);
 
-				removeMemberFromCommittees(addr);
+				emit ValidatorStatusUpdated(addr, false, false);
+				getCommitteeContract().removeMember(addr);
 			} else {
                 bannedValidators[addr] = 0;
 				emit Unbanned(addr);
-
-				addMemberToCommittees(addr, _settings);
 			}
         }
     }
@@ -377,14 +373,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		uint256 stakes = d.getDelegatedStakes(addr);
 		bool isSelfDelegating = d.getDelegation(addr) == addr;
 		return calcGovernanceEffectiveStake(isSelfDelegating, stakes);
-	}
-
-	function removeMemberFromCommittees(address addr) private {
-		getCommitteeContract().removeMember(addr);
-	}
-
-	function addMemberToCommittees(address addr, Settings memory _settings) private {
-		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getComplianceContract().isValidatorCompliant(addr));
 	}
 
 	function setVoteOutTimeoutSeconds(uint32 voteOutTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {

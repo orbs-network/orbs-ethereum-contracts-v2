@@ -16,19 +16,11 @@ interface ICommittee {
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
     /// weight = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external returns (bool commiteeChanged) /* onlyElectionContract */;
-
-	/// @dev Called by: Elections contract
-	/// Notifies a validator sent a readyToSynx signal, with a flag indicating whether the validator is ready to join the committee
-	function memberReadyToSync(address addr, bool readyForCommittee) external returns (bool commiteeChanged) /* onlyElectionsContract */;
-
-	/// @dev Called by: Elections contract
-	/// Notifies a validator is no longer ready to sync
-	function memberNotReadyToSync(address addr) external returns (bool commiteeChanged) /* onlyElectionsContract */;
+	function memberWeightChange(address addr, uint256 weight) external returns (bool committeeChanged) /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a validator compliance change
-	function memberComplianceChange(address addr, bool isCompliant) external returns (bool commiteeChanged) /* onlyElectionsContract */;
+	function memberComplianceChange(address addr, bool isCompliant) external returns (bool committeeChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready

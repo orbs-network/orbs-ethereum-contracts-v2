@@ -14,9 +14,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	struct MemberData { // TODO can be reduced to 1 state entry
 		uint128 weight;
-		bool isMember; // exists
-		bool readyToSync;
-		bool readyForCommittee;
+		bool isMember;
 		bool isCompliant;
 
 		bool inCommittee;
@@ -90,34 +88,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}));
 	}
 
-	function memberReadyToSync(address addr, bool readyForCommittee) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
-		MemberData memory memberData = membersData[addr];
-		if (!memberData.isMember) {
-			return false;
-		}
-
-		memberData.readyToSync = true;
-		memberData.readyForCommittee = readyForCommittee;
-		return _rankAndUpdateMember(Member({
-			addr: addr,
-			data: memberData
-		}));
-	}
-
-	function memberNotReadyToSync(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
-		MemberData memory memberData = membersData[addr];
-		if (!memberData.isMember) {
-			return false;
-		}
-
-		memberData.readyToSync = false;
-		memberData.readyForCommittee = false;
-		return _rankAndUpdateMember(Member({
-			addr: addr,
-			data: memberData
-		}));
-	}
-
 	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool commiteeChanged) {
 		MemberData memory memberData = membersData[addr];
 		if (!memberData.isMember) {
@@ -142,8 +112,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			addr: addr,
 			data: MemberData({
 				isMember: true,
-				readyToSync: false,
-				readyForCommittee: false,
 				weight: uint128(weight),
 				isCompliant: isCompliant,
 				inCommittee: false
@@ -265,8 +233,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	function qualifiesForCommittee(MemberData memory data) private pure returns (bool) {
 		return (
 			data.isMember &&
-			data.weight > 0 &&
-			data.readyForCommittee
+			data.weight > 0
 		);
 	}
 

@@ -92,7 +92,7 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
-    it('evicts a committee member which explicitly became not-ready-to-sync', async () => {
+    it('evicts a committee member which explicitly became removed', async () => {
         const d = await Driver.new();
 
         const stake = 100;
@@ -107,7 +107,7 @@ describe('committee', async () => {
         });
 
         await d.contractRegistry.set("elections", d.contractsOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
-        r = await d.committee.memberNotReadyToSync(v.address, {from: d.contractsOwnerAddress});
+        r = await d.committee.removeMember(v.address, {from: d.contractsOwnerAddress});
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
     });
 
@@ -368,12 +368,6 @@ describe('committee', async () => {
         await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}));
         await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
 
-        await expectRejected(d.committee.memberReadyToSync(v.address, true,{from: notElections}));
-        await d.committee.memberReadyToSync(v.address, true, {from: elections});
-
-        await expectRejected(d.committee.memberNotReadyToSync(v.address,{from: notElections}));
-        await d.committee.memberNotReadyToSync(v.address, {from: elections});
-
         await expectRejected(d.committee.memberComplianceChange(v.address,true, {from: notElections}));
         await d.committee.memberComplianceChange(v.address,true,  {from: elections});
 
@@ -397,8 +391,6 @@ describe('committee', async () => {
         await d.committee.lock({from: d.migrationOwner.address});
 
         await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}));
-        await expectRejected(d.committee.memberReadyToSync(v.address, true,{from: elections}));
-        await expectRejected(d.committee.memberNotReadyToSync(v.address,{from: elections}));
         await expectRejected(d.committee.memberComplianceChange(v.address,true, {from: elections}));
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}));
         await expectRejected(d.committee.removeMember(v2.address, {from: elections}));
@@ -406,8 +398,6 @@ describe('committee', async () => {
         await d.committee.unlock({from: d.migrationOwner.address});
 
         await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
-        await d.committee.memberReadyToSync(v.address, true, {from: elections});
-        await d.committee.memberNotReadyToSync(v.address, {from: elections});
         await d.committee.memberComplianceChange(v.address,true,  {from: elections});
         await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
         await d.committee.removeMember(v2.address, {from: elections});
@@ -460,12 +450,6 @@ describe('committee', async () => {
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
         let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        r = await d.committee.memberReadyToSync(nonRegistered.address, true, {from: elections});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        r = await d.committee.memberNotReadyToSync(nonRegistered.address, {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await d.committee.memberComplianceChange(nonRegistered.address, true, {from: elections});
