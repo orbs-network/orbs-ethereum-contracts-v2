@@ -510,4 +510,67 @@ describe('staking-rewards-level-flows', async () => {
 
   });
 
+  it('allows distributing rewards from both orbs address and ethereum address accounts', async () => {
+    const d = await Driver.new();
+
+    const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
+
+    const delegator = d.newParticipant();
+
+    /* top up staking rewards pool */
+    const g = d.functionalOwner;
+
+    const annualRate = 12000;
+    const poolAmount = fromTokenUnits(20000000);
+    const annualCap = fromTokenUnits(20000000);
+
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    await d.rewards.assignRewards();
+
+    let r = await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        0,
+        [delegator.address],
+        [fromTokenUnits(5)],
+        {from: v.address}
+      );
+    expect(r).to.have.a.stakingRewardsDistributedEvent({
+      distributer: v.address,
+      fromBlock: bn(0),
+      toBlock: bn(100),
+      split: bn(1),
+      txIndex: bn(0),
+      to: [delegator.address],
+      amounts: [bn(fromTokenUnits(5))]
+    });
+
+    r = await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        1,
+        [delegator.address],
+        [fromTokenUnits(5)],
+        {from: v.orbsAddress}
+    );
+    expect(r).to.have.a.stakingRewardsDistributedEvent({
+      distributer: v.address,
+      fromBlock: bn(0),
+      toBlock: bn(100),
+      split: bn(1),
+      txIndex: bn(1),
+      to: [delegator.address],
+      amounts: [bn(fromTokenUnits(5))]
+    });
+  });
+
 });
