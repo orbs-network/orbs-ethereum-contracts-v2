@@ -19,6 +19,10 @@ export const ganacheDriver = {
                     '5777',
                     '-a',
                     '100',
+                    '--gasLimit',
+                    '0x7FFFFFFF',
+                    '--gasPrice',
+                    '1',
                     '-m',
                     'vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid'
                 ],

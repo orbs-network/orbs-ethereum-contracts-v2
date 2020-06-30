@@ -73,7 +73,7 @@ describe('fees-contract', async () => {
         expect(l.added).to.be.bignumber.equal(new BN(vcRate));
       });
 
-      expect(await d.rewards.getLastRewardAssignment()).to.be.bignumber.equal(new BN(startTime));
+      expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
       return {
         vcid,
@@ -146,9 +146,13 @@ describe('fees-contract', async () => {
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
-      await d.rewards.withdrawFeeFunds({from: v.address});
+      const r = await d.rewards.withdrawFeeFunds({from: v.address});
       const actualBalance = await d.erc20.balanceOf(v.address);
-      expect(new BN(actualBalance)).to.bignumber.equal(expectedBalance);
+      expect(r).to.have.a.feesWithdrawnEvent({
+        validator: v.address,
+        amount: bn(actualBalance)
+      });
+      expect(bn(actualBalance)).to.bignumber.equal(expectedBalance);
     }
 
   });

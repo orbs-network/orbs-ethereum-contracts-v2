@@ -21,12 +21,11 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		string contact;
 		uint256 registrationTime;
 		uint256 lastUpdateTime;
-
-		mapping(string => string) validatorMetadata; // TODO do we want this mapping here or in an external state entry?  How do we delete on unregister?
 	}
-	mapping (address => Validator) validators;
-	mapping (address => address) orbsAddressToEthereumAddress;
-	mapping (bytes4 => address) ipToValidator;
+	mapping (address => Validator) public validators;
+	mapping (address => address) public orbsAddressToEthereumAddress;
+	mapping (bytes4 => address) public ipToValidator;
+	mapping (address => mapping(string => string)) public validatorMetadata;
 
 	/*
      * External methods
@@ -51,14 +50,14 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
     function setMetadata(string calldata key, string calldata value) external onlyRegisteredValidator onlyWhenActive {
-		string memory oldValue = validators[msg.sender].validatorMetadata[key];
-		validators[msg.sender].validatorMetadata[key] = value;
+		string memory oldValue = validatorMetadata[msg.sender][key];
+		validatorMetadata[msg.sender][key] = value;
 		emit ValidatorMetadataChanged(msg.sender, key, value, oldValue);
 	}
 
 	function getMetadata(address addr, string calldata key) external view returns (string memory) {
 		require(isRegistered(addr), "getMetadata: Validator is not registered");
-		return validators[addr].validatorMetadata[key];
+		return validatorMetadata[addr][key];
 	}
 
 	/// @dev Called by a participant who wishes to unregister

@@ -47,6 +47,20 @@ export interface StakingRewardsDistributedEvent {
     amounts: (string|BN)[]
 }
 
+export interface StakingRewardsAddedToPoolEvent {
+    added: string|BN,
+    total: string|BN
+}
+
+export interface FeesWithdrawnEvent {
+    validator: string,
+    amount: string|BN
+}
+
+export interface BootstrapRewardsWithdrawnEvent {
+    validator: string,
+    amount: string|BN
+}
 
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -57,7 +71,7 @@ export interface RewardsContract extends OwnedContract {
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     topUpStakingRewardsPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardBalance(address: string): Promise<string>;
-    getLastRewardAssignment(): Promise<string>;
+    getLastRewardAssignmentTime(): Promise<string>;
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
