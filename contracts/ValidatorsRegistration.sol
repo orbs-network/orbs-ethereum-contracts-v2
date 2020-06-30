@@ -38,14 +38,20 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		validators[msg.sender].registrationTime = now;
 		emit ValidatorRegistered(msg.sender);
 
-		_updateValidator(ip, orbsAddr, name, website, contact);
+		_updateValidator(msg.sender, ip, orbsAddr, name, website, contact);
 
 		getElectionsContract().validatorRegistered(msg.sender);
 	}
 
-    /// @dev Called by a participant who wishes to update its propertires
-	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
-		_updateValidator(ip, orbsAddr, name, website, contact);
+    /// @dev Called by a participant who wishes to update its properties
+	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredValidator onlyWhenActive {
+		_updateValidator(msg.sender, ip, orbsAddr, name, website, contact);
+	}
+
+	function updateValidatorIp(bytes4 ip) external onlyWhenActive {
+		address guardianAddr = resolveGuardianAddress(msg.sender);
+		Validator memory data = validators[guardianAddr];
+		_updateValidator(guardianAddr, ip, data.orbsAddr, data.name, data.website, data.contact);
 	}
 
     /// @dev Called by a prticipant to update additional validator metadata properties.
@@ -107,8 +113,13 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 		return validators[addr].registrationTime != 0;
 	}
 
-	function resolveEthereumAddress(address ethereumOrOrbsAddress) public view returns (address ethereumAddress) {
-		ethereumAddress = isRegistered(ethereumOrOrbsAddress) ? ethereumOrOrbsAddress : orbsAddressToEthereumAddress[ethereumOrOrbsAddress];
+	function resolveGuardianAddress(address ethereumOrOrbsAddress) public view returns (address ethereumAddress) {
+		if (isRegistered(ethereumOrOrbsAddress)) {
+			ethereumAddress = ethereumOrOrbsAddress;
+		} else {
+			ethereumAddress = orbsAddressToEthereumAddress[ethereumOrOrbsAddress];
+		}
+
 		require(ethereumAddress != address(0), "Cannot resolve address");
 	}
 
@@ -140,30 +151,28 @@ contract ValidatorsRegistration is IValidatorsRegistration, ContractRegistryAcce
 	 * Private methods
 	 */
 
-	function _updateValidator(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact) private {
+	function _updateValidator(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
 		require(bytes(name).length != 0, "name must be given");
 		require(bytes(contact).length != 0, "contact must be given");
 		// TODO which are mandatory?
 
-		address sender = resolveEthereumAddress(msg.sender);
-
-		delete ipToValidator[validators[sender].ip];
+		delete ipToValidator[validators[guardianAddr].ip];
 		require(ipToValidator[ip] == address(0), "ip is already in use");
-		ipToValidator[ip] = sender;
+		ipToValidator[ip] = guardianAddr;
 
-		delete orbsAddressToEthereumAddress[validators[sender].orbsAddr];
+		delete orbsAddressToEthereumAddress[validators[guardianAddr].orbsAddr];
 		require(orbsAddressToEthereumAddress[orbsAddr] == address(0), "orbs address is already in use");
-		orbsAddressToEthereumAddress[orbsAddr] = sender;
+		orbsAddressToEthereumAddress[orbsAddr] = guardianAddr;
 
-		validators[sender].orbsAddr = orbsAddr;
-		validators[sender].ip = ip;
-		validators[sender].name = name;
-		validators[sender].website = website;
-		validators[sender].contact = contact;
-		validators[sender].lastUpdateTime = now;
+		validators[guardianAddr].orbsAddr = orbsAddr;
+		validators[guardianAddr].ip = ip;
+		validators[guardianAddr].name = name;
+		validators[guardianAddr].website = website;
+		validators[guardianAddr].contact = contact;
+		validators[guardianAddr].lastUpdateTime = now;
 
-        emit ValidatorDataUpdated(sender, ip, orbsAddr, name, website, contact);
+        emit ValidatorDataUpdated(guardianAddr, ip, orbsAddr, name, website, contact);
     }
 
 }
