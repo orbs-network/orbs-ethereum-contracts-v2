@@ -141,6 +141,7 @@ export class Driver {
             await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})
         }));
+        await rewards.setMaxDelegatorsStakingRewardsPercentMille(100000, {from: accounts[1]}); // TODO remove when setting in constructor
 
         return new Driver(web3, session,
             accounts,

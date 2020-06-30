@@ -44,7 +44,8 @@ import {
   stakingRewardsAddedToPoolEvents,
   validatorStatusUpdatedEvents,
   validatorCommitteeChangeEvents,
-  maxTimeBetweenRewardAssignmentsChangedEvents
+  maxTimeBetweenRewardAssignmentsChangedEvents,
+  maxDelegatorsStakingRewardsChangedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -70,7 +71,7 @@ import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract
 import {ProtocolChangedEvent} from "../typings/protocol-contract";
 import {
   BootstrapRewardsWithdrawnEvent,
-  FeesWithdrawnEvent,
+  FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
   StakingRewardAssignedEvent, StakingRewardsAddedToPoolEvent,
   StakingRewardsDistributedEvent
 } from "../typings/rewards-contract";
@@ -230,6 +231,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("validatorStatusUpdatedEvent", containEvent(validatorStatusUpdatedEvents));
   chai.Assertion.overwriteMethod("contractRegistryAddressUpdatedEvent", containEvent(contractRegistryAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("validatorCommitteeChangeEvent", containEvent(validatorCommitteeChangeEvents));
+  chai.Assertion.overwriteMethod("maxDelegatorsStakingRewardsChangedEvent", containEvent(maxDelegatorsStakingRewardsChangedEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
@@ -287,6 +289,7 @@ declare global {
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
       validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
+      maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

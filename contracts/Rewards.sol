@@ -14,12 +14,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     using SafeMath for uint256;
     using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
 
-
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
         uint48 complianceCommitteeAnnualBootstrap;
         uint48 annualRateInPercentMille;
         uint48 annualCap;
+        uint32 maxDelegatorsStakingRewardsPercentMille;
     }
     Settings settings;
 
@@ -59,6 +59,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
+
         // TODO - The initial lastPayedAt should be set in the first assignRewards.
         lastAssignedAt = now;
     }
@@ -71,6 +72,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
         settings.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+    }
+
+    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalOwner onlyWhenActive {
+        require(maxDelegatorsStakingRewardsPercentMille <= 100000, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
+        settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
+        emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
     }
 
     function topUpBootstrapPool(uint256 amount) external onlyWhenActive {
@@ -201,17 +208,32 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     mapping (address => DistributorBatchState) distributorBatchState;
 
+    function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
+        return delegatorRewards.mul(100000) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards);
+    }
+
+    struct VistributeOrbsTokenStakingRewardsVars {
+        bool firstTxBySender;
+        address guardianAddr;
+    }
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
+        require(to.length > 0, "list must containt at least one recipient");
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
 
-        DistributorBatchState memory ds = distributorBatchState[msg.sender];
-        bool firstTxBySender = ds.nextTxIndex == 0;
+        VistributeOrbsTokenStakingRewardsVars memory vars;
 
-        require(!firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
+        vars.guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender);
+        require(to[0] == vars.guardianAddr, "first member in list must be the the guardian address");
+        require(isDelegatorRewardsBelowThreshold(totalAmount.sub(amounts[0]), totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
 
-        if (firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
+        DistributorBatchState memory ds = distributorBatchState[vars.guardianAddr];
+        vars.firstTxBySender = ds.nextTxIndex == 0;
+
+        require(!vars.firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
+
+        if (vars.firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
             require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
             require(toBlock < block.number, "toBlock must be in the past");
             require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
@@ -219,23 +241,23 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             ds.toBlock = toBlock;
             ds.split = split;
             ds.nextTxIndex = 1;
-            distributorBatchState[msg.sender] = ds;
+            distributorBatchState[vars.guardianAddr] = ds;
         } else {
             require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             require(toBlock == ds.toBlock, "toBlock mismatch");
             require(fromBlock == ds.fromBlock, "fromBlock mismatch");
             require(split == ds.split, "split mismatch");
-            distributorBatchState[msg.sender].nextTxIndex = txIndex + 1;
+            distributorBatchState[vars.guardianAddr].nextTxIndex = txIndex + 1;
         }
 
-        require(totalAmount_uint48 <= balances[msg.sender].stakingRewards, "not enough member balance for this distribution");
+        require(totalAmount_uint48 <= balances[vars.guardianAddr].stakingRewards, "not enough member balance for this distribution");
 
         PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
 
         require(totalAmount_uint48 <= _poolsAndTotalBalances.stakingPool, "not enough balance in the staking pool for this distribution");
 
         _poolsAndTotalBalances.stakingPool = uint48(_poolsAndTotalBalances.stakingPool.sub(totalAmount_uint48));
-        balances[msg.sender].stakingRewards = uint48(balances[msg.sender].stakingRewards.sub(totalAmount_uint48));
+        balances[vars.guardianAddr].stakingRewards = uint48(balances[vars.guardianAddr].stakingRewards.sub(totalAmount_uint48));
         _poolsAndTotalBalances.stakingRewardsTotalBalance = uint48(_poolsAndTotalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
 
         poolsAndTotalBalances = _poolsAndTotalBalances;
@@ -244,7 +266,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         approve(erc20, address(stakingContract), totalAmount_uint48);
         stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
-        emit StakingRewardsDistributed(msg.sender, fromBlock, toBlock, split, txIndex, to, amounts);
+        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
 
     // fees
