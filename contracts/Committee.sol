@@ -187,7 +187,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			rank++;
 		}
 
-		CommitteeMember memory cur = committee[uint8(sortBytes[rank])];
+		CommitteeMember memory cur = CommitteeMember({addr: addr, weight: data.weight});
 		CommitteeMember memory next;
 		byte a;
 		byte b;

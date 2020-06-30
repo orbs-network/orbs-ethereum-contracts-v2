@@ -53,6 +53,8 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     }
     tlog("Committee created");
 
+    await Promise.all(_.shuffle(committee).map(v => v.notifyReadyForCommittee()));
+
     const monthlyRate = fromTokenUnits(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
     const appOwner = d.newParticipant();
@@ -91,6 +93,28 @@ describe('gas usage scenarios', async () => {
 
         // const ge = gasReportEvents(r);
         // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
+    });
+
+    it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
+        const {d, committee} = await fullCommittee();
+
+        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
+
+        const delegator = d.newParticipant("delegator");
+        await delegator.delegate(committee[committee.length - 1]);
+
+        d.resetGasRecording();
+        let r = await delegator.stake(bn(1));
+        expect(r).to.have.a.validatorCommitteeChangeEvent({
+            addr: committee[committee.length - 1].address
+        });
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
+
+        const ge = gasReportEvents(r);
+        ge.forEach(e => console.log(JSON.stringify(e)));
 
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
     });
