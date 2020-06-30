@@ -212,9 +212,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return delegatorRewards.mul(100000) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards);
     }
 
-    struct Vars {
+    struct VistributeOrbsTokenStakingRewardsVars {
         bool firstTxBySender;
-        address sender;
+        address guardianAddr;
     }
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
         require(to.length > 0, "list must containt at least one recipient");
@@ -222,13 +222,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
 
-        Vars memory vars;
+        VistributeOrbsTokenStakingRewardsVars memory vars;
 
-        vars.sender = getValidatorsRegistrationContract().resolveEthereumAddress(msg.sender);
-        require(to[0] == vars.sender, "first member in list must be the the guardian address");
+        vars.guardianAddr = getValidatorsRegistrationContract().resolveEthereumAddress(msg.sender);
+        require(to[0] == vars.guardianAddr, "first member in list must be the the guardian address");
         require(isDelegatorRewardsBelowThreshold(totalAmount.sub(amounts[0]), totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
 
-        DistributorBatchState memory ds = distributorBatchState[vars.sender];
+        DistributorBatchState memory ds = distributorBatchState[vars.guardianAddr];
         vars.firstTxBySender = ds.nextTxIndex == 0;
 
         require(!vars.firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
@@ -241,23 +241,23 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             ds.toBlock = toBlock;
             ds.split = split;
             ds.nextTxIndex = 1;
-            distributorBatchState[vars.sender] = ds;
+            distributorBatchState[vars.guardianAddr] = ds;
         } else {
             require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             require(toBlock == ds.toBlock, "toBlock mismatch");
             require(fromBlock == ds.fromBlock, "fromBlock mismatch");
             require(split == ds.split, "split mismatch");
-            distributorBatchState[vars.sender].nextTxIndex = txIndex + 1;
+            distributorBatchState[vars.guardianAddr].nextTxIndex = txIndex + 1;
         }
 
-        require(totalAmount_uint48 <= balances[vars.sender].stakingRewards, "not enough member balance for this distribution");
+        require(totalAmount_uint48 <= balances[vars.guardianAddr].stakingRewards, "not enough member balance for this distribution");
 
         PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
 
         require(totalAmount_uint48 <= _poolsAndTotalBalances.stakingPool, "not enough balance in the staking pool for this distribution");
 
         _poolsAndTotalBalances.stakingPool = uint48(_poolsAndTotalBalances.stakingPool.sub(totalAmount_uint48));
-        balances[vars.sender].stakingRewards = uint48(balances[vars.sender].stakingRewards.sub(totalAmount_uint48));
+        balances[vars.guardianAddr].stakingRewards = uint48(balances[vars.guardianAddr].stakingRewards.sub(totalAmount_uint48));
         _poolsAndTotalBalances.stakingRewardsTotalBalance = uint48(_poolsAndTotalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
 
         poolsAndTotalBalances = _poolsAndTotalBalances;
@@ -266,7 +266,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         approve(erc20, address(stakingContract), totalAmount_uint48);
         stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
-        emit StakingRewardsDistributed(vars.sender, fromBlock, toBlock, split, txIndex, to, amounts);
+        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
 
     // fees
