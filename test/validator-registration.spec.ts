@@ -11,7 +11,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 
 // todo: test that committees are updated as a result of registration changes
-describe.only('validator-registration', async () => {
+describe('validator-registration', async () => {
 
   it("registers, updates and unregisters a validator", async () => {
     const d = await Driver.new();
