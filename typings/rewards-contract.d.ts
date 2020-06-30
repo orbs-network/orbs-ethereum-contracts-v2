@@ -62,6 +62,10 @@ export interface BootstrapRewardsWithdrawnEvent {
     amount: string|BN
 }
 
+export interface MaxDelegatorsStakingRewardsChangedEvent {
+    maxDelegatorsStakingRewardsPercentMille: string|BN
+}
+
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
     getTotalBalances(params?: TransactionConfig): Promise<[string /* fees */, string /* staking */, string /* bootstrap */]>;
@@ -69,6 +73,7 @@ export interface RewardsContract extends OwnedContract {
     // staking rewards
     distributeOrbsTokenStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
+    setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     topUpStakingRewardsPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;

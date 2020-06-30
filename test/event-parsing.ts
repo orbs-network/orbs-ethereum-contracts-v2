@@ -78,6 +78,7 @@ export const maxTimeBetweenRewardAssignmentsChangedEvents = (txResult, contractA
 export const maxCommitteeSizeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxCommitteeSizeChanged(uint8,uint8)");
 export const maxStandbysChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxStandbysChanged(uint8,uint8)");
 export const validatorStatusUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorStatusUpdated(address,bool,bool)");
+export const maxDelegatorsStakingRewardsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "MaxDelegatorsStakingRewardsChanged(uint32)");
 export const contractRegistryAddressUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ContractRegistryAddressUpdated(address)");
 export const validatorCommitteeChangeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "ValidatorCommitteeChange(address,uint256,bool,bool,bool)");
 
