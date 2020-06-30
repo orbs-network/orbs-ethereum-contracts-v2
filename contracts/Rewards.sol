@@ -224,7 +224,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         VistributeOrbsTokenStakingRewardsVars memory vars;
 
-        vars.guardianAddr = getValidatorsRegistrationContract().resolveEthereumAddress(msg.sender);
+        vars.guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender);
         require(to[0] == vars.guardianAddr, "first member in list must be the the guardian address");
         require(isDelegatorRewardsBelowThreshold(totalAmount.sub(amounts[0]), totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
 
