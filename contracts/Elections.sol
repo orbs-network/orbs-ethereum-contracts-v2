@@ -83,7 +83,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberComplianceChange(addr, isCompliant);
 	}
 
-	function notifyReadyForCommittee() external onlyNotBanned {
+	function notifyReadyForCommittee() external onlyNotBanned { // TODO onlyNotBanned doesn't check etehreum address
 		address sender = getMainAddrFromOrbsAddr(msg.sender); // This validates the validator is registered
 		emit ValidatorStatusUpdated(sender, true, true);
 		getCommitteeContract().addMember(sender, getCommitteeEffectiveStake(sender, settings), getComplianceContract().isValidatorCompliant(sender));

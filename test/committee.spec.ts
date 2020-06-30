@@ -173,7 +173,7 @@ describe('committee', async () => {
         r = await v.notifyReadyForCommittee();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
-        r = await v.stake(stake);
+        r = await v.stake(stake*10);
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(1)).map(s => s.address),
         });
@@ -338,8 +338,10 @@ describe('committee', async () => {
             newValue: maxCommitteeSize.sub(bn(1)).toString(),
             oldValue: maxCommitteeSize.toString()
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: committee.slice(1).map(v => v.address)
+
+        expect(r).to.have.a.validatorCommitteeChangeEvent({
+            addr: committee[0].address,
+            inCommittee: false
         });
 
         const afterUpdate = await d.committee.getSettings();
@@ -412,7 +414,7 @@ describe('committee', async () => {
         await d.web3.deploy('Committee', [1, 1]);
     });
 
-    it("validates weight is within range - less than 2^128", async () => {
+    it("validates weight is within range - less than 2^96", async () => {
         const d = await Driver.new();
 
         const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
@@ -420,11 +422,11 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
-        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}));
+        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), {from: elections});
     });
 
-    it("validates weight is within range - less than 2^128", async () => {
+    it("validates weight is within range - less than 2^96", async () => {
         const d = await Driver.new();
 
         const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
@@ -432,13 +434,13 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
-        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}));
+        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), {from: elections});
 
         const v2 = await d.newParticipant();
 
-        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(128)), true, {from: elections}));
-        await d.committee.addMember(v2.address, bn(2).pow(bn(128)).sub(bn(1)), true, {from: elections});
+        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(96)), true, {from: elections}));
+        await d.committee.addMember(v2.address, bn(2).pow(bn(96)).sub(bn(1)), true, {from: elections});
     });
 
     it("handles notifications for unregistered validators", async () => {

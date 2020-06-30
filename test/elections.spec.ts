@@ -16,7 +16,6 @@ const expect = chai.expect;
 const assert = chai.assert;
 
 import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
-import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
