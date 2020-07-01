@@ -5,9 +5,12 @@ import "./spec_interfaces/IValidatorsRegistration.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 /// @title Elections contract interface
 contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
+	using BytesLib for bytes;
+
 	uint constant TOPOLOGY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)
 
 	struct CommitteeMember {
@@ -47,7 +50,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	function getMinMember(CommitteeInfo memory info) private returns (CommitteeMember memory minMember) {
+	function getMinMember(CommitteeInfo memory info) private view returns (CommitteeMember memory minMember) {
 		if (info.committeeSize == 0) {
 			return CommitteeMember({
 				addr: address(0),
@@ -58,7 +61,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return committee[info.minCommitteeMemberPos];
 	}
 
-	function findFreePos(CommitteeInfo memory info) private returns (uint8 pos) {
+	function findFreePos(CommitteeInfo memory info) private pure returns (uint8 pos) {
 		pos = 0;
 		uint32 bitmap = info.committeeBitmap;
 		while (bitmap & 1 == 1) {
@@ -67,7 +70,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function qualifiesToEnterCommittee(address addr, MemberData memory data, CommitteeInfo memory info, Settings memory _settings) private returns (bool qualified, uint8 entryPos) {
+	function qualifiesToEnterCommittee(address addr, MemberData memory data, CommitteeInfo memory info, Settings memory _settings) private view returns (bool qualified, uint8 entryPos) {
 		if (!data.isMember || data.weight == 0) {
 			return (false, 0);
 		}
@@ -87,7 +90,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	function updateOnMemberChange(address addr, MemberData memory data) private returns (bool committeeChanged) {
 		CommitteeInfo memory info = committeeInfo;
 		Settings memory _settings = settings;
-		bytes32 sortBytes = weightSortIndicesOneBasedBytes;
+		bytes memory sortBytes = abi.encodePacked(weightSortIndicesOneBasedBytes);
 
 		if (!data.inCommittee) {
 			(bool qualified, uint8 entryPos) = qualifiesToEnterCommittee(addr, data, info, _settings);
@@ -108,7 +111,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		(info, sortBytes) = (data.isMember && data.weight > 0) ?
 			rankMember(addr, data, sortBytes, info) :
-			_removeMember(addr, data, sortBytes, info);
+			_removeMember(data, sortBytes, info);
 
 		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, data.inCommittee);
 
@@ -119,14 +122,14 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		}
 
 		committeeInfo = info;
-		weightSortIndicesOneBasedBytes = sortBytes;
+		weightSortIndicesOneBasedBytes = sortBytes.toBytes32(0);
 
 		assignRewardsIfNeeded(_settings);
 
 		return true;
 	}
 
-	function addToCommittee(address addr, MemberData memory data, uint8 entryPos, bytes32 sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes32 newSortByes) {
+	function addToCommittee(address addr, MemberData memory data, uint8 entryPos, bytes memory sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes memory newSortByes) {
 		committee[entryPos] = CommitteeMember({
 			addr: addr,
 			weight: data.weight
@@ -136,20 +139,20 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		info.committeeBitmap |= uint32(uint(1) << entryPos);
 		info.committeeSize++;
 
-		sortBytes = bytes32Set(sortBytes, info.committeeSize - 1, byte(entryPos));
+		sortBytes[info.committeeSize - 1] = byte(entryPos);
 		return (info, sortBytes);
 	}
 
-	function _removeMember(address addr, MemberData memory data, bytes32 sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes32 newSortBytes) {
+	function _removeMember(MemberData memory data, bytes memory sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
 		uint rank = 0;
 		while (uint8(sortBytes[rank]) != data.pos) {
 			rank++;
 		}
 
 		for (; rank < info.committeeSize - 1; rank++) {
-			sortBytes = bytes32Set(sortBytes, rank, sortBytes[rank + 1]);
+			sortBytes[rank] = sortBytes[rank + 1];
 		}
-		sortBytes = bytes32Set(sortBytes, rank, 0);
+		sortBytes[rank] = 0;
 
 		info.committeeSize--;
 		if (info.committeeSize > 0) {
@@ -163,7 +166,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return (info, sortBytes);
 	}
 
-	function removeMemberAtPos(uint8 pos, bytes32 sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes32 newSortBytes) {
+	function removeMemberAtPos(uint8 pos, bytes memory sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
 		if (info.committeeBitmap & (uint(1) << pos) == 0) {
 			return (info, sortBytes);
 		}
@@ -171,14 +174,14 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		address addr = committee[pos].addr;
 		MemberData memory data = membersData[addr];
 
-		(newInfo, newSortBytes) = _removeMember(addr, data, sortBytes, info);
+		(newInfo, newSortBytes) = _removeMember(data, sortBytes, info);
 
 		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, false);
 
 		membersData[addr] = data;
 	}
 
-	function rankMember(address addr, MemberData memory data, bytes32 sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes32 newSortBytes) {
+	function rankMember(address addr, MemberData memory data, bytes memory sortBytes, CommitteeInfo memory info) private view returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
 		uint rank = 0;
 		while (uint8(sortBytes[rank]) != data.pos) {
 			rank++;
@@ -186,17 +189,12 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		CommitteeMember memory cur = CommitteeMember({addr: addr, weight: data.weight});
 		CommitteeMember memory next;
-		byte a;
-		byte b;
 
 		while (rank < info.committeeSize - 1) {
 			next = committee[uint8(sortBytes[rank + 1])];
 			if (cur.weight > next.weight || cur.weight == next.weight && cur.addr > next.addr) break;
 
-			(a, b) = (sortBytes[rank + 1], sortBytes[rank]);
-			sortBytes = bytes32Set(sortBytes, rank, a);
-			sortBytes = bytes32Set(sortBytes, rank + 1, b);
-
+			(sortBytes[rank], sortBytes[rank + 1]) = (sortBytes[rank + 1], sortBytes[rank]);
 			rank++;
 		}
 
@@ -204,10 +202,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			next = committee[uint8(sortBytes[rank - 1])];
 			if (cur.weight < next.weight || cur.weight == next.weight && cur.addr < next.addr) break;
 
-			(a, b) = (sortBytes[rank - 1], sortBytes[rank]);
-			sortBytes = bytes32Set(sortBytes, rank, a);
-			sortBytes = bytes32Set(sortBytes, rank - 1, b);
-
+			(sortBytes[rank], sortBytes[rank - 1]) = (sortBytes[rank - 1], sortBytes[rank]);
 			rank--;
 		}
 
@@ -355,12 +350,12 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			return;
 		}
 
-		bytes32 sortBytes = weightSortIndicesOneBasedBytes;
+		bytes memory sortBytes = abi.encodePacked(weightSortIndicesOneBasedBytes);
 		for (int rank = int(info.committeeSize); rank >= int(maxCommitteeSize); rank--) {
 			(info, sortBytes) = removeMemberAtPos(uint8(sortBytes[uint(rank)]), sortBytes, info);
 		}
 		committeeInfo = info;
-		weightSortIndicesOneBasedBytes = sortBytes;
+		weightSortIndicesOneBasedBytes = sortBytes.toBytes32(0);
 	}
 
 	/*
@@ -370,8 +365,8 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev returns the current committee
 	/// used also by the rewards and fees contracts
 	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
-		(address[] memory committee, uint256[] memory weights, bool[] memory compliance) = _getCommittee();
-		return (committee, weights, _loadOrbsAddresses(committee), compliance, _loadIps(committee));
+		(addrs, weights, compliance) = _getCommittee();
+		return (addrs, weights, _loadOrbsAddresses(addrs), compliance, _loadIps(addrs));
 	}
 
 	function getSettings() external view returns (uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize) {
@@ -400,8 +395,4 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return compliance;
 	}
 
-	function bytes32Set(bytes32 _bytes32, uint i, byte v) private pure returns (bytes32) {
-		i = 31 - i;
-		return _bytes32 & ~bytes32(uint(0xFF) << (i << 3)) | bytes32(uint(uint8(v)) << (i << 3));
-	}
 }
