@@ -22,7 +22,7 @@ import {
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
-import {ProtocolChangedEvent} from "../typings/protocol-contract";
+import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
   BootstrapRewardsWithdrawnEvent,
   FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
@@ -206,7 +206,7 @@ declare global {
       banningVoteEvent(data?: Partial<BanningVoteEvent>): void;
       bannedEvent(data?: Partial<BannedEvent>): void;
       unbannedEvent(data?: Partial<UnbannedEvent>): void;
-      protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
+      protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
       stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)

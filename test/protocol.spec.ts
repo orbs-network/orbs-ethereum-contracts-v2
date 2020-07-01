@@ -19,7 +19,7 @@ describe('protocol-contract', async () => {
 
     let currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
       nextVersion: bn(2),
@@ -27,7 +27,7 @@ describe('protocol-contract', async () => {
     });
 
     r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       currentVersion: bn(2),
       nextVersion: bn(2),
@@ -35,7 +35,7 @@ describe('protocol-contract', async () => {
     });
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, currTime + 100, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       currentVersion: bn(2),
       nextVersion: bn(3),
@@ -48,7 +48,7 @@ describe('protocol-contract', async () => {
 
     const currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
       nextVersion: bn(2),
@@ -66,7 +66,7 @@ describe('protocol-contract', async () => {
 
     const currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
       nextVersion: bn(2),
@@ -90,7 +90,7 @@ describe('protocol-contract', async () => {
 
     const currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
       nextVersion: bn(3),
@@ -107,7 +107,7 @@ describe('protocol-contract', async () => {
 
     const currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
       nextVersion: bn(3),
@@ -117,7 +117,7 @@ describe('protocol-contract', async () => {
     await evmIncreaseTimeForQueries(d.web3, 3);
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(3),
       nextVersion: bn(4),
@@ -125,7 +125,7 @@ describe('protocol-contract', async () => {
     });
 
     r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 50, {from: d.functionalOwner.address});
-    expect(r).to.have.a.protocolChangedEvent({
+    expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(3),
       nextVersion: bn(3),

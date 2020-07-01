@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/ICommittee.sol";
+import "./spec_interfaces/IProtocolWallet.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./WithClaimableFunctionalOwnership.sol";
@@ -101,14 +102,27 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         _assignRewardsToCommittee(committee, committeeWeights, compliance);
     }
 
+    struct Totals {
+        uint48 bootstrapRewardsTotalBalance;
+        uint48 feesTotalBalance;
+        uint48 stakingRewardsTotalBalance;
+    }
+
     function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
         Settings memory _settings = settings;
 
         (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap) = collectBootstrapRewards(_settings);
         (uint256 generalValidatorFee, uint256 certifiedValidatorFee) = collectFees(committee, compliance);
-        uint256[] memory stakingRewards = collectStakingRewards(committee, committeeWeights, _settings);
+        (uint256[] memory stakingRewards) = collectStakingRewards(committee, committeeWeights, _settings);
 
         PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
+
+        Totals memory origTotals = Totals({
+            bootstrapRewardsTotalBalance: totals.bootstrapRewardsTotalBalance,
+            feesTotalBalance: totals.feesTotalBalance,
+            stakingRewardsTotalBalance: totals.stakingRewardsTotalBalance
+        });
+
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
@@ -123,6 +137,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
             balances[committee[i]] = balance;
         }
+
+//        require(toUint256Granularity(uint48(totals.stakingRewardsTotalBalance.sub(origTotals.stakingRewardsTotalBalance))) <  20000000000000000000000, "aaaa");
+        getStakingRewardsWallet().withdraw(toUint256Granularity(uint48(totals.stakingRewardsTotalBalance.sub(origTotals.stakingRewardsTotalBalance))));
 
         poolsAndTotalBalances = totals;
         lastAssignedAt = now;
@@ -167,7 +184,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 total48 = uint48(poolsAndTotalBalances.stakingPool.add(amount48));
         poolsAndTotalBalances.stakingPool = total48;
         emit StakingRewardsAddedToPool(amount, toUint256Granularity(total48));
-        require(transferFrom(erc20, msg.sender, address(this), amount48), "Rewards::topUpProRataPool - insufficient allowance");
+        require(erc20.transferFrom(msg.sender, address(this), amount), "Rewards::topUpProRataPool - insufficient allowance");
+
+        IProtocolWallet wallet = getStakingRewardsWallet();
+        require(erc20.approve(address(wallet), amount), "Rewards::topUpProRataPool - approve failed");
+        wallet.topUp(amount);
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {
@@ -263,6 +284,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         poolsAndTotalBalances = _poolsAndTotalBalances;
 
         IStakingContract stakingContract = getStakingContract();
+
         approve(erc20, address(stakingContract), totalAmount_uint48);
         stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 

@@ -3,7 +3,7 @@ import {Contract} from "../eth";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
-export interface ProtocolChangedEvent {
+export interface ProtocolVersionChangedEvent {
   deploymentSubset: string,
   currentVersion: number,
   nextVersion: number,
