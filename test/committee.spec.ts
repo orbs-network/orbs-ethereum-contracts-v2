@@ -981,7 +981,7 @@ describe('committee', async () => {
 
         await expectRejected(d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.functionalOwner.address});
-        expect(r).to.have.a.maxTimeBetweenRewardAssignmentsChangedEvents({
+        expect(r).to.have.a.maxTimeBetweenRewardAssignmentsChangedEvent({
             newValue: maxTimeBetweenRewardAssignments.add(bn(1)).toString(),
             oldValue: maxTimeBetweenRewardAssignments.toString()
         });

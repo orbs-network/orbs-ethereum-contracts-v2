@@ -20,7 +20,7 @@ const protocol = compiledContracts["Protocol"];
 const contractRegistry = compiledContracts["ContractRegistry"];
 const delegations = compiledContracts["Delegations"];
 
-function parseLogs(txResult, contract, eventSignature, contractAddress?: string) {
+export function parseLogs(txResult, contract, eventSignature, contractAddress?: string) {
     const abi = new Web3().eth.abi;
     const inputs = contract.abi.find(e => e.name == eventSignature.split('(')[0]).inputs;
     const eventSignatureHash = abi.encodeEventSignature(eventSignature);
