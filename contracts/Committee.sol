@@ -26,8 +26,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 	mapping (address => MemberData) membersData;
 
-	uint8 constant OUT_OF_LIST = uint8(-1);
-
 	// Derived properties
 	struct CommitteeInfo {
 		uint32 committeeBitmap; // TODO redundant, sort bytes can be used instead
@@ -92,7 +90,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		bytes32 sortBytes = weightSortIndicesOneBasedBytes;
 
 		if (!data.inCommittee) {
-			(bool qualified, uint8 entryPos) = qualifiesToEnterCommittee(addr, data, info, settings);
+			(bool qualified, uint8 entryPos) = qualifiesToEnterCommittee(addr, data, info, _settings);
 			if (!qualified) {
 				if (data.isMember) {
 					membersData[addr] = data;
@@ -146,7 +144,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		uint rank = 0;
 		while (uint8(sortBytes[rank]) != data.pos) {
 			rank++;
-			require(rank != 32, "rank == 32"); // todo remove
 		}
 
 		for (; rank < info.committeeSize - 1; rank++) {
@@ -286,7 +283,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			weight: uint96(weight),
 			isCompliant: isCompliant,
 			inCommittee: false,
-			pos: OUT_OF_LIST
+			pos: uint8(-1)
 		}));
 	}
 
