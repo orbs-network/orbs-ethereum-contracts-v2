@@ -86,16 +86,24 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberComplianceChange(addr, isCompliant);
 	}
 
-	function notifyReadyForCommittee() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		emit ValidatorStatusUpdated(sender, true, true);
-		getCommitteeContract().memberReadyToSync(sender, true);
+	function requireNotBanned(address addr) private view {
+		require(!_isBanned(addr), "caller is a banned validator");
 	}
 
-	function notifyReadyToSync() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		emit ValidatorStatusUpdated(sender, true, false);
-		getCommitteeContract().memberReadyToSync(sender, false);
+	function notifyReadyForCommittee() external {
+		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		requireNotBanned(guardianAddr);
+
+		emit ValidatorStatusUpdated(guardianAddr, true, true);
+		getCommitteeContract().memberReadyToSync(guardianAddr, true);
+	}
+
+	function notifyReadyToSync() external {
+		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		requireNotBanned(guardianAddr);
+
+		emit ValidatorStatusUpdated(guardianAddr, true, false);
+		getCommitteeContract().memberReadyToSync(guardianAddr, false);
 	}
 
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenActive external {
