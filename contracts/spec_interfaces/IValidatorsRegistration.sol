@@ -19,6 +19,9 @@ interface IValidatorsRegistration {
     /// @dev Called by a participant who wishes to update its propertires
 	function updateValidator(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external;
 
+	/// @dev Called by a participant who wishes to update its IP address (can be call by both main and Orbs addresses)
+	function updateValidatorIp(bytes4 ip) external /* onlyWhenActive */;
+
     /// @dev Called by a participant to update additional validator metadata properties.
     function setMetadata(string calldata key, string calldata value) external;
 
@@ -61,9 +64,11 @@ interface IValidatorsRegistration {
     /// Used by the Election contract
 	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddr);
 
-
 	/// @dev Translates a list validators Orbs addresses to Ethereum addresses
 	/// Used by the Election contract
 	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddr);
+
+	/// @dev Resolves the ethereum address for a validator, given an Ethereum/Orbs address
+	function resolveGuardianAddress(address ethereumOrOrbsAddress) external view returns (address mainAddress);
 
 }

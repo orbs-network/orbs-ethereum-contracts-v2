@@ -485,6 +485,21 @@ describe('validator-registration', async () => {
 
   });
 
+  it('does not allow an unregistered validator to update', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await expectRejected(d.validatorsRegistration.updateValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+    , {from: v.address}));
+
+  });
+
   it('allows a registered validator to update without changing any detail', async () => {
     const d = await Driver.new();
 
@@ -506,6 +521,58 @@ describe('validator-registration', async () => {
         v.contact
     , {from: v.address});
 
+  });
+
+  it('does not allow a registered validator to update using its Orbs address', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    await expectRejected(d.validatorsRegistration.updateValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+    , {from: v.orbsAddress}));
+  });
+
+  it('allows a registered validator to update IP from both its orbs address and main address', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    let r = await d.validatorsRegistration.updateValidatorIp(
+        "0xaaaaaaaa"
+    , {from: v.orbsAddress});
+    expect(r).to.have.a.validatorDataUpdatedEvent({
+      addr: v.address,
+      ip: "0xaaaaaaaa"
+    });
+
+    r = await d.validatorsRegistration.updateValidatorIp(
+        "0xbbbbbbbb"
+    , {from: v.address});
+    expect(r).to.have.a.validatorDataUpdatedEvent({
+      addr: v.address,
+      ip: "0xbbbbbbbb"
+    });
   });
 
   it('sets, overrides, gets and clears validator metadata', async () => {
@@ -627,5 +694,32 @@ describe('validator-registration', async () => {
 
     expect(await d.validatorsRegistration.getOrbsAddresses([v.address])).to.deep.equal([v.orbsAddress])
   });
+
+  it('resolves ethereum address', async () => {
+    const d = await Driver.new();
+
+    const v = d.newParticipant();
+    await d.validatorsRegistration.registerValidator(
+        v.ip,
+        v.orbsAddress,
+        v.name,
+        v.website,
+        v.contact
+        , {from: v.address});
+
+    expect(await d.validatorsRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
+    expect(await d.validatorsRegistration.resolveGuardianAddress(v.orbsAddress)).to.deep.equal(v.address);
+
+    const v2 = d.newParticipant();
+    await d.validatorsRegistration.registerValidator(
+        v2.ip,
+        v.address,
+        v2.name,
+        v2.website,
+        v2.contact
+        , {from: v2.address});
+    expect(await d.validatorsRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
+  });
+
 
 });
