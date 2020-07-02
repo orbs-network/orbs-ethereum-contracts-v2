@@ -36,13 +36,13 @@ describe('staking-rewards-level-flows', async () => {
     const v1 = d.newParticipant();
     await v1.stake(initStakeLesser);
     await v1.registerAsValidator();
-    await v1.notifyReadyForCommittee();
+    await v1.readyForCommittee();
 
     const initStakeLarger = fromTokenUnits(21000);
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    let r = await v2.notifyReadyForCommittee();
+    let r = await v2.readyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
@@ -163,13 +163,13 @@ describe('staking-rewards-level-flows', async () => {
     const v1 = d.newParticipant();
     await v1.stake(initStakeLesser);
     await v1.registerAsValidator();
-    await v1.notifyReadyForCommittee();
+    await v1.readyForCommittee();
 
     const initStakeLarger = fromTokenUnits(21000);
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    let r = await v2.notifyReadyForCommittee();
+    let r = await v2.readyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{

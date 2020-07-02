@@ -6,23 +6,22 @@ import {OwnedContract} from "./base-contract";
 export interface ElectionsContract extends OwnedContract {
   registerValidator( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
-  notifyReadyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
-  notifyReadyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
-  voteOut(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
+  readyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
+  voteUnready(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setBanningVotes(address: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
-  refreshBanningVote(voter: string, against: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  getBanningVotes(address: string): Promise<string[]>;
+  voteOut(address: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
+  getVoteOutVotes(address: string): Promise<string[]>;
   getAccumulatedStakesForBanning(address: string): Promise<BN>;
   getTotalGovernanceStake(): Promise<BN>;
 
   setVoteOutTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMaxDelegationRatio(maxDelegationRatio: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setBanningLockTimeoutSeconds(banningLockTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteOutLockTimeoutSeconds(voteOutLockTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteOutPercentageThreshold(voteOutPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setBanningPercentageThreshold(banningPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   getSettings(params?: TransactionConfig): Promise<[
     number|BN /* voteOutTimeoutSeconds */,

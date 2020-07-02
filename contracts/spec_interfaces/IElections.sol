@@ -13,11 +13,19 @@ interface IElections /* is IStakeChangeNotifier */ {
     event VoteUnreadyCasted(address voter, address subject);
     event VoteOutCasted(address voter, address[] subjects);
     event ReadyForSync(address validator);
-    event ReadyForCommitee(address validator);
+    event ReadyForCommittee(address validator);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
 	// Validator readiness
 	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
+
+	// Governance
+	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
+	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
+	event VoteOutLockTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
+	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+
 
 	/*
      * External methods
@@ -57,12 +65,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
 
 	/// @dev Called by: validator registration contract
-	/// Notifies a validator's IP has been changed
-	function validatorIpChanged(address addr) external /*  onlyValidatorsRegistrationContract */;
-
-	/// @dev Called by: validator registration contract
-	/// Notifies a validator's Orbs address has been changed
-	function validatorOrbsAddressChanged(address addr) external /* onlyValidatorsRegistrationContract */;
+	/// Notifies on a validator compliance change
+	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
 
 	/*
 	 * Governance

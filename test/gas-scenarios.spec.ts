@@ -62,7 +62,7 @@ async function fullCommitteeAndStandbys(committeeEvenStakes:boolean = false, sta
     }
     tlog("Committee created");
 
-    await Promise.all(_.shuffle(committee.concat(standbys)).map(v => v.notifyReadyForCommittee()));
+    await Promise.all(_.shuffle(committee.concat(standbys)).map(v => v.readyForCommittee()));
 
     const monthlyRate = fromTokenUnits(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
@@ -169,7 +169,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
         d.resetGasRecording();
-        let r = await v.notifyReadyToSync();
+        let r = await v.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
@@ -182,14 +182,14 @@ describe('gas usage scenarios', async () => {
 
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
-        let r = await v.notifyReadyToSync();
+        let r = await v.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         d.resetGasRecording();
-        await v.notifyReadyToSync();
+        await v.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
@@ -203,7 +203,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         d.resetGasRecording();
-        let r = await v.notifyReadyForCommittee();
+        let r = await v.readyForCommittee();
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [committee[committee.length - 1]].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
@@ -219,14 +219,14 @@ describe('gas usage scenarios', async () => {
 
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
-        let r = await v.notifyReadyToSync();
+        let r = await v.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: [v].concat(standbys.slice(0, standbys.length - 1)).map(v => v.address)
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         d.resetGasRecording();
-        r = await v.notifyReadyForCommittee();
+        r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
@@ -256,7 +256,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         d.resetGasRecording();
-        let r = await d.elections.voteOut(committee[1].address, {from: committee[0].orbsAddress});
+        let r = await d.elections.voteUnready(committee[1].address, {from: committee[0].orbsAddress});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.not.have.a.standbysSnapshotEvent();
         expect(r).to.have.a.voteUnreadyCastedEvent({
@@ -271,13 +271,13 @@ describe('gas usage scenarios', async () => {
 
         const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteOutThreshold / 100));
         await Promise.all(
-            voters.map(v => d.elections.voteOut(committee[0].address, {from: v.orbsAddress}))
+            voters.map(v => d.elections.voteUnready(committee[0].address, {from: v.orbsAddress}))
         );
 
         d.resetGasRecording();
 
         const thresholdVoter = committee[voters.length];
-        let r = await d.elections.voteOut(committee[0].address, {from: thresholdVoter.orbsAddress});
+        let r = await d.elections.voteUnready(committee[0].address, {from: thresholdVoter.orbsAddress});
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: thresholdVoter.address,
             subject: committee[0].address
@@ -300,7 +300,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommitteeAndStandbys();
 
         d.resetGasRecording();
-        let r = await d.elections.setBanningVotes([committee[1].address], {from: committee[0].address});
+        let r = await d.elections.voteOut([committee[1].address], {from: committee[0].address});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.not.have.a.standbysSnapshotEvent();
         expect(r).to.have.a.voteOutCastedEvent({
@@ -315,13 +315,13 @@ describe('gas usage scenarios', async () => {
 
         const voters = committee.slice(0, Math.floor((MAX_COMMITTEE + MAX_STANDBYS) * defaultDriverOptions.voteOutThreshold / 100));
         await Promise.all(
-            voters.map(v => d.elections.setBanningVotes([committee[0].address], {from: v.address}))
+            voters.map(v => d.elections.voteOut([committee[0].address], {from: v.address}))
         );
 
         d.resetGasRecording();
 
         const thresholdVoter = committee[voters.length];
-        let r = await d.elections.setBanningVotes([committee[0].address], {from: thresholdVoter.address});
+        let r = await d.elections.voteOut([committee[0].address], {from: thresholdVoter.address});
         expect(r).to.have.a.voteOutCastedEvent({
             voter: thresholdVoter.address,
             subjects: [committee[0].address]

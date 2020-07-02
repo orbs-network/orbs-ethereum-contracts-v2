@@ -48,7 +48,7 @@ import {
   stakingRewardsAddedToPoolEvents,
   validatorCommitteeChangeEvents,
   maxTimeBetweenRewardAssignmentsChangedEvents,
-  maxDelegatorsStakingRewardsChangedEvents
+  maxDelegatorsStakingRewardsChangedEvents, contractRegistryAddressUpdatedEvents
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
@@ -252,6 +252,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("maxCommitteeSizeChangedEvent", containEvent(maxCommitteeSizeChangedEvents));
   chai.Assertion.overwriteMethod("maxStandbysChangedEvent", containEvent(maxStandbysChangedEvents));
   chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
+  chai.Assertion.overwriteMethod("contractRegistryAddressUpdatedEvent", containEvent(contractRegistryAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("validatorCommitteeChangeEvent", containEvent(validatorCommitteeChangeEvents));
   chai.Assertion.overwriteMethod("maxDelegatorsStakingRewardsChangedEvent", containEvent(maxDelegatorsStakingRewardsChangedEvents));
 

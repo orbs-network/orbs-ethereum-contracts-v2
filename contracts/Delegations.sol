@@ -12,6 +12,7 @@ import "./spec_interfaces/ICompliance.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./WithClaimableFunctionalOwnership.sol";
+import "./IStakeChangeNotifier.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
@@ -27,7 +28,21 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		_;
 	}
 
-	constructor() public {
+	constructor() public {}
+
+	function notifyOnDelegationChange(address delegate, bool wasSelfDelegated, uint prevTotalUncapped, bool isSelfDelegated, uint currentTotalUncapped) private {
+		uint prevTotal = wasSelfDelegated ? prevTotalUncapped : 0;
+		uint currentTotal = isSelfDelegated ? currentTotalUncapped : 0;
+		bool deltaSign = currentTotal > prevTotal;
+		uint delta = deltaSign ? currentTotal.sub(prevTotal) : prevTotal.sub(currentTotal);
+
+		getElectionsContract().delegatedStakeChange(
+			delegate,
+			getStakingContract().getStakeBalanceOf(delegate),
+			currentTotal,
+			delta,
+			deltaSign
+		);
 	}
 
 	function delegate(address to) external onlyWhenActive {
@@ -42,7 +57,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		bool prevSelfDelegatingPrevDelegate = _isSelfDelegating(prevDelegate);
 		bool prevSelfDelegatingNewDelegate = _isSelfDelegating(to);
 
-		delegations[msg.sender] = to; // delegation!
+		delegations[msg.sender] = to;
 
 		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(msg.sender);
 
@@ -52,18 +67,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uint256 newStakeNewDelegate = prevStakeNewDelegate.add(delegatorStake);
 		uncappedStakes[to] = newStakeNewDelegate;
 
-    	getElectionsContract().notifyDelegationChange(
-			msg.sender,
-			delegatorStake,
-			to,
-			prevDelegate,
-			newStakePrevDelegate,
-			newStakeNewDelegate,
-			prevStakePrevDelegate,
-			prevSelfDelegatingPrevDelegate,
-			prevStakeNewDelegate,
-			prevSelfDelegatingNewDelegate
-		);
+		notifyOnDelegationChange(prevDelegate, prevSelfDelegatingPrevDelegate, prevStakePrevDelegate, _isSelfDelegating(prevDelegate), newStakePrevDelegate);
+		notifyOnDelegationChange(to, prevSelfDelegatingNewDelegate, prevStakeNewDelegate, _isSelfDelegating(to), newStakeNewDelegate);
 
 		emit Delegated(msg.sender, to);
 
@@ -74,7 +79,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract onlyWhenActive {
-		_stakeChange(_stakeOwner, _amount, _sign);
+		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake);
 		emitDelegatedStakeChanged(getDelegation(_stakeOwner), _stakeOwner, _updatedStake);
 	}
 
@@ -131,6 +136,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory amounts, bool[] memory signs, uint256[] memory updatedStakes) private {
 		uint batchLength = stakeOwners.length;
+		uint delegateSelfStake;
+		uint delta;
+		bool deltaSign;
 
 		uint i = 0;
 		while (i < batchLength) {
@@ -143,7 +151,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			uint sequenceStartIdx = i;
 
 			do { // aggregate sequence stakes changes
-
 				currentUncappedStake = signs[i] ?
 					currentUncappedStake.add(amounts[i]) :
 					currentUncappedStake.sub(amounts[i]);
@@ -154,11 +161,19 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			// closing sequence
 			uncappedStakes[sequenceDelegate] = currentUncappedStake;
 			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
-			getElectionsContract().notifyStakeChange(prevUncappedStake, currentUncappedStake, sequenceDelegate, isSelfDelegatingDelegate);
+			delegateSelfStake = getStakingContract().getStakeBalanceOf(sequenceDelegate);
+
+			if (!isSelfDelegatingDelegate) {
+				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake, 0, true);
+			} else {
+				deltaSign = currentUncappedStake > prevUncappedStake;
+				delta = deltaSign ? currentUncappedStake.sub(prevUncappedStake) : prevUncappedStake.sub(currentUncappedStake);
+				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake, delta, deltaSign);
+			}
 		}
 	}
 
-	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign) private {
+	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _total) private {
 		address _delegate = getDelegation(_stakeOwner);
 
 		uint256 prevUncappedStake = uncappedStakes[_delegate];
@@ -172,7 +187,14 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		uncappedStakes[_delegate] = newUncappedStake;
 
-		getElectionsContract().notifyStakeChange(prevUncappedStake, newUncappedStake, _delegate, _isSelfDelegating(_delegate));
+		bool isSelfDelegating = _isSelfDelegating(_delegate);
+		getElectionsContract().delegatedStakeChange(
+			_delegate,
+			getStakingContract().getStakeBalanceOf(_delegate),
+			isSelfDelegating ? newUncappedStake : 0,
+			isSelfDelegating ? _amount : 0,
+			_sign
+		);
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {

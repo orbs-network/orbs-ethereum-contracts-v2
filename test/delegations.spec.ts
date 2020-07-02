@@ -65,14 +65,14 @@ describe('delegations-contract', async () => {
             delegatorTotalStakes: [bn(100)]
         });
 
-        r = await p1.delegate(p1);
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: p1.address,
-            selfDelegatedStake: bn(100),
-            delegatedStake: bn(100),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(100)]
-        });
+        // r = await p1.delegate(p1);
+        // expect(r).to.have.a.delegatedStakeChangedEvent({
+        //     addr: p1.address,
+        //     selfDelegatedStake: bn(100),
+        //     delegatedStake: bn(100),
+        //     delegators: [p1.address],
+        //     delegatorTotalStakes: [bn(100)]
+        // });
     });
 
     it('emits DelegatedStakeChanged and Delegated on delegation changes', async () => {
