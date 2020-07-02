@@ -5,14 +5,18 @@ import "../IStakeChangeNotifier.sol";
 
 /// @title Elections contract interface
 interface IElections /* is IStakeChangeNotifier */ {
-	event StakeChanged(address addr, uint256 ownStake, uint256 uncappedStake, uint256 governanceStake, uint256 committeeStake, uint256 totalGovernanceStake);
-	event CommitteeChanged(address[] addrs, address[] orbsAddrs, uint256[] stakes);
-	event TopologyChanged(address[] orbsAddrs, bytes4[] ips);
-	event VoteOut(address voter, address against);
-	event VotedOutOfCommittee(address addr);
-	event BanningVote(address voter, address[] against);
-	event Banned(address validator);
-	event Unbanned(address validator);
+	// Election state change events
+	event ValidatorVotedUnready(address validator);
+	event ValidatorVotedOut(address validator);
+	event ValidatorVotedIn(address validator);
+
+	// Function calls
+	event VoteUnreadyCasted(address voter, address subject);
+	event VoteOutCasted(address voter, address[] subjects);
+	event ReadyForSync(address validator);
+	event ReadyForCommitee(address validator);
+	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
+
 	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
 
 	/*

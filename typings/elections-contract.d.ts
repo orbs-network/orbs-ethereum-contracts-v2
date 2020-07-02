@@ -34,43 +34,32 @@ export interface ElectionsContract extends OwnedContract {
 
 }
 
-export interface TopologyChangedEvent {
-  orbsAddrs: string[];
-  ips: string[];
-}
-
-export interface ValidatorRegisteredEvent_deprecated {
-  addr: string;
-  ip: string;
-}
-
 export interface StakeChangeEvent {
   addr: string;
-  ownStake: number | BN;
-  uncappedStake: number | BN;
-  governanceStake: number | BN;
-  committeeStake: number | BN;
+  selfStake: number | BN;
+  delegated_stake: number | BN;
+  effective_stake: number | BN;
 }
 
-export interface VoteOutEvent {
+export interface VoteUnreadyCastedEvent {
   voter: string;
-  against: string;
+  subject: string;
 }
 
-export interface VotedOutOfCommitteeEvent {
-  addr: string;
-}
-
-export interface BanningVoteEvent {
-  voter: string;
-  against: string[];
-}
-
-export interface BannedEvent {
+export interface ValidatorVotedUnreadyEvent {
   validator: string;
 }
 
-export interface UnbannedEvent {
+export interface VoteOutCastedEvent {
+  voter: string;
+  subjects: string[];
+}
+
+export interface ValidatorVotedOutEvent {
+  validator: string;
+}
+
+export interface ValidatorVotedInEvent {
   validator: string;
 }
 

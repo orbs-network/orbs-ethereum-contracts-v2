@@ -121,8 +121,8 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 		Settings memory _settings = settings;
 
-		_applyDelegatedStake(prevDelegate, prevDelegateNewTotalStake, tempTotalGovernanceStake, _settings);
-		_applyDelegatedStake(newDelegate, newDelegateNewTotalStake, tempTotalGovernanceStake, _settings);
+		_applyDelegatedStake(prevDelegate, prevDelegateNewTotalStake, _settings);
+		_applyDelegatedStake(newDelegate, newDelegateNewTotalStake, _settings);
 
 		_applyStakesToBanningBy(prevDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingPrevDelegate, prevDelegatePrevTotalStake), tempTotalGovernanceStake, _settings);
 		_applyStakesToBanningBy(newDelegate, calcGovernanceEffectiveStake(prevSelfDelegatingNewDelegate, newDelegatePrevTotalStake), tempTotalGovernanceStake, _settings);
@@ -178,14 +178,14 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	function voteOut(address addr) external onlyWhenActive {
 		address sender = getMainAddrFromOrbsAddr(msg.sender);
 		voteOuts[sender][addr] = now;
-		emit VoteOut(sender, addr);
+		emit VoteUnreadyCasted(sender, addr);
 
 		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
 
 		bool votedOut = isCommitteeVoteOutThresholdReached(generalCommittee, generalWeights, compliance, addr);
 		if (votedOut) {
 			clearCommitteeVoteOuts(generalCommittee, addr);
-			emit VotedOutOfCommittee(addr);
+			emit ValidatorVotedUnready(addr);
 			emit ValidatorStatusUpdated(addr, false, false);
 			getCommitteeContract().memberNotReadyToSync(addr);
 		}
@@ -197,7 +197,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			require(validators[i] != address(0), "all votes must non zero addresses");
 		}
         _setBanningVotes(msg.sender, validators);
-		emit BanningVote(msg.sender, validators);
+		emit VoteOutCasted(msg.sender, validators);
 	}
 
 	function getTotalGovernanceStake() external view returns (uint256) {
@@ -281,12 +281,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
         if (isBanned != shouldBan) {
 			if (shouldBan) {
                 bannedValidators[addr] = now;
-				emit Banned(addr);
+				emit ValidatorVotedOut(addr);
 
 				removeMemberFromCommittees(addr);
 			} else {
                 bannedValidators[addr] = 0;
-				emit Unbanned(addr);
+				emit ValidatorVotedIn(addr);
 
 				addMemberToCommittees(addr, _settings);
 			}
@@ -308,7 +308,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 
 		Settings memory _settings = settings;
-		_applyDelegatedStake(delegate, newDelegateTotalStake, _totalGovernanceStake, _settings);
+		_applyDelegatedStake(delegate, newDelegateTotalStake, _settings);
 		_applyStakesToBanningBy(delegate, prevGovStakeDelegate, _totalGovernanceStake, _settings);
 
 		totalGovernanceStake = _totalGovernanceStake;
@@ -329,7 +329,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 				tempTotalGovStake = tempTotalGovStake.sub(prevGovStakeDelegate).add(newGovStakeDelegate);
 			}
 
-			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i], tempTotalGovStake, _settings);
+			_applyDelegatedStake(delegates[i], newDelegateTotalStakes[i], _settings);
 
 			// TODO add tests to show banning votes are evaluated equally when stake change is batched and not batched
 			_applyStakesToBanningBy(delegates[i], prevGovStakeDelegate, tempTotalGovStake, _settings);
@@ -345,9 +345,9 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return sender;
 	}
 
-	function _applyDelegatedStake(address addr, uint256 newUncappedStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
+	function _applyDelegatedStake(address addr, uint256 newUncappedStake, Settings memory _settings) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
 		uint effectiveStake = getCommitteeEffectiveStake(addr, _settings);
-		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, getGovernanceEffectiveStake(addr), effectiveStake, _totalGovernanceStake);
+		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, effectiveStake);
 
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}

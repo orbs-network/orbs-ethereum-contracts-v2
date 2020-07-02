@@ -49,8 +49,8 @@ describe('elections-compliance', async () => {
         for (const v of complianceCommittee.slice(1)) {
             r = await d.elections.voteOut(complianceCommittee[0].address, {from: v.orbsAddress});
         }
-        expect(r).to.have.a.votedOutOfCommitteeEvent({
-            addr: complianceCommittee[0].address
+        expect(r).to.have.a.validatorVotedUnreadyEvent({
+            validator: complianceCommittee[0].address
         });
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.filter(v => v != complianceCommittee[0]).map(v => v.address)
@@ -78,8 +78,8 @@ describe('elections-compliance', async () => {
         for (const v of generalCommittee.filter((v, i) => i % 2 == 1)) {
             r = await d.elections.voteOut(complianceCommittee[0].address, {from: v.orbsAddress});
         }
-        expect(r).to.have.a.votedOutOfCommitteeEvent({
-            addr: complianceCommittee[0].address
+        expect(r).to.have.a.validatorVotedUnreadyEvent({
+            validator: complianceCommittee[0].address
         });
         expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
             addrs: generalCommittee.slice(1).map(v => v.address)
@@ -105,7 +105,7 @@ describe('elections-compliance', async () => {
 
         for (const v of complianceCommittee) {
             let r = await d.elections.voteOut(generalCommittee[1].address, {from: v.orbsAddress});
-            expect(r).to.not.have.a.votedOutOfCommitteeEvent();
+            expect(r).to.not.have.a.validatorVotedUnreadyEvent();
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.standbysSnapshotEvent();
         }

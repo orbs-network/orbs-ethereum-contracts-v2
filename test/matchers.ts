@@ -1,22 +1,29 @@
 import BN from "bn.js";
 
 import {
+  validatorVotedUnreadyEvents,
+  validatorVotedOutEvents,
+  validatorVotedInEvents,
+  validatorStatusUpdatedEvents,
+  voteUnreadyCastedEvents,
+  voteOutCastedEvents,
+  readyForCommiteeEvents,
+  voteOutTimeoutSecondsChangedEvents,
+  maxDelegationRatioChangedEvents,
+  banningLockTimeoutSecondsChangedEvents,
+  voteOutPercentageThresholdChangedEvents,
+  banningPercentageThresholdChangedEvents,
+  stakeChangedEvents,
   delegatedEvents,
   delegatedStakeChangedEvents,
   stakedEvents,
-  stakeChangedEvents,
   subscriptionChangedEvents,
   paymentEvents,
   feesAddedToBucketEvents,
   unstakedEvents,
-  voteOutEvents,
-  votedOutOfCommitteeEvents,
   vcConfigRecordChangedEvents,
   contractAddressUpdatedEvents,
   protocolChangedEvents,
-  banningVoteEvents,
-  electionsBanned,
-  electionsUnbanned,
   vcOwnerChangedEvents,
   feesAssignedEvents,
   bootstrapAddedToPoolEvents,
@@ -31,21 +38,14 @@ import {
   committeeSnapshotEvents,
   standbysSnapshotEvents,
   stakingRewardsDistributedEvents,
-  voteOutTimeoutSecondsChangedEvents,
-  maxDelegationRatioChangedEvents,
-  banningLockTimeoutSecondsChangedEvents,
-  voteOutPercentageThresholdChangedEvents,
-  banningPercentageThresholdChangedEvents,
   lockedEvents,
   unlockedEvents,
   readyToSyncTimeoutChangedEvents,
   maxCommitteeSizeChangedEvents,
   maxStandbysChangedEvents,
-  contractRegistryAddressUpdatedEvents,
   bootstrapRewardsWithdrawnEvents,
   feesWithdrawnEvents,
   stakingRewardsAddedToPoolEvents,
-  validatorStatusUpdatedEvents,
   validatorCommitteeChangeEvents,
   maxTimeBetweenRewardAssignmentsChangedEvents
 } from "./event-parsing";
@@ -57,11 +57,11 @@ import {
 } from "../typings/subscriptions-contract";
 import {
   StakeChangeEvent,
-  VoteOutEvent,
-  VotedOutOfCommitteeEvent,
-  BanningVoteEvent,
-  BannedEvent,
-  UnbannedEvent,
+  VoteUnreadyCastedEvent,
+  ValidatorVotedUnreadyEvent,
+  VoteOutCastedEvent,
+  ValidatorVotedOutEvent,
+  ValidatorVotedInEvent,
   VoteOutTimeoutSecondsChangedEvent,
   MaxDelegationRatioChangedEvent,
   BanningLockTimeoutSecondsChangedEvent, VoteOutPercentageThresholdChangedEvent, BanningPercentageThresholdChangedEvent
@@ -227,11 +227,19 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("stakingRewardsDistributedEvent", containEvent(stakingRewardsDistributedEvents));
   chai.Assertion.overwriteMethod("feesAssignedEvent", containEvent(feesAssignedEvents));
   chai.Assertion.overwriteMethod("feesAddedToBucketEvent", containEvent(feesAddedToBucketEvents));
-  chai.Assertion.overwriteMethod("voteOutEvent", containEvent(voteOutEvents));
-  chai.Assertion.overwriteMethod("votedOutOfCommitteeEvent", containEvent(votedOutOfCommitteeEvents));
-  chai.Assertion.overwriteMethod("banningVoteEvent", containEvent(banningVoteEvents));
-  chai.Assertion.overwriteMethod("bannedEvent", containEvent(electionsBanned));
-  chai.Assertion.overwriteMethod("unbannedEvent", containEvent(electionsUnbanned));
+  chai.Assertion.overwriteMethod("validatorVotedUnreadyEvent", containEvent(validatorVotedUnreadyEvents));
+  chai.Assertion.overwriteMethod("validatorVotedOutEvent", containEvent(validatorVotedOutEvents));
+  chai.Assertion.overwriteMethod("validatorVotedInEvent", containEvent(validatorVotedInEvents));
+  chai.Assertion.overwriteMethod("validatorStatusUpdatedEvent", containEvent(validatorStatusUpdatedEvents));
+  chai.Assertion.overwriteMethod("voteUnreadyCastedEvent", containEvent(voteUnreadyCastedEvents));
+  chai.Assertion.overwriteMethod("voteOutCastedEvent", containEvent(voteOutCastedEvents));
+  chai.Assertion.overwriteMethod("voteOutTimeoutSecondsChangedEvent", containEvent(voteOutTimeoutSecondsChangedEvents));
+  chai.Assertion.overwriteMethod("readyForCommiteeEvent", containEvent(readyForCommiteeEvents));
+  chai.Assertion.overwriteMethod("maxDelegationRatioChangedEvent", containEvent(maxDelegationRatioChangedEvents));
+  chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
+  chai.Assertion.overwriteMethod("voteOutPercentageThresholdChangedEvent", containEvent(voteOutPercentageThresholdChangedEvents));
+  chai.Assertion.overwriteMethod("banningPercentageThresholdChangedEvent", containEvent(banningPercentageThresholdChangedEvents));
+  chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
   chai.Assertion.overwriteMethod("vcConfigRecordChangedEvent", containEvent(vcConfigRecordChangedEvents));
   chai.Assertion.overwriteMethod("vcOwnerChangedEvent", containEvent(vcOwnerChangedEvents));
   chai.Assertion.overwriteMethod("vcCreatedEvent", containEvent(vcCreatedEvents));
@@ -242,15 +250,7 @@ module.exports = function(chai) {
   chai.Assertion.overwriteMethod("maxTimeBetweenRewardAssignmentsChangedEvents", containEvent(maxTimeBetweenRewardAssignmentsChangedEvents));
   chai.Assertion.overwriteMethod("maxCommitteeSizeChangedEvent", containEvent(maxCommitteeSizeChangedEvents));
   chai.Assertion.overwriteMethod("maxStandbysChangedEvent", containEvent(maxStandbysChangedEvents));
-  chai.Assertion.overwriteMethod("voteOutTimeoutSecondsChangedEvent", containEvent(voteOutTimeoutSecondsChangedEvents));
-  chai.Assertion.overwriteMethod("maxDelegationRatioChangedEvent", containEvent(maxDelegationRatioChangedEvents));
-  chai.Assertion.overwriteMethod("banningLockTimeoutSecondsChangedEvent", containEvent(banningLockTimeoutSecondsChangedEvents));
-  chai.Assertion.overwriteMethod("voteOutPercentageThresholdChangedEvent", containEvent(voteOutPercentageThresholdChangedEvents));
-  chai.Assertion.overwriteMethod("banningPercentageThresholdChangedEvent", containEvent(banningPercentageThresholdChangedEvents));
-  chai.Assertion.overwriteMethod("lockedEvent", containEvent(lockedEvents));
   chai.Assertion.overwriteMethod("unlockedEvent", containEvent(unlockedEvents));
-  chai.Assertion.overwriteMethod("validatorStatusUpdatedEvent", containEvent(validatorStatusUpdatedEvents));
-  chai.Assertion.overwriteMethod("contractRegistryAddressUpdatedEvent", containEvent(contractRegistryAddressUpdatedEvents));
   chai.Assertion.overwriteMethod("validatorCommitteeChangeEvent", containEvent(validatorCommitteeChangeEvents));
 
   chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
@@ -280,12 +280,12 @@ declare global {
       vcConfigRecordChangedEvent(data?: Partial<VcConfigRecordChangedEvent>): void;
       vcCreatedEvent(data?: Partial<VcCreatedEvent>): void;
       vcOwnerChangedEvent(data?: Partial<VcOwnerChangedEvent>): void;
-      voteOutEvent(data?: Partial<VoteOutEvent>): void;
-      votedOutOfCommitteeEvent(data?: Partial<VotedOutOfCommitteeEvent>): void;
       contractAddressUpdatedEvent(data?: Partial<ContractAddressUpdatedEvent>): void;
-      banningVoteEvent(data?: Partial<BanningVoteEvent>): void;
-      bannedEvent(data?: Partial<BannedEvent>): void;
-      unbannedEvent(data?: Partial<UnbannedEvent>): void;
+      voteUnreadyCastedEvent(data?: Partial<VoteUnreadyCastedEvent>): void;
+      validatorVotedUnreadyEvent(data?: Partial<ValidatorVotedUnreadyEvent>): void;
+      validatorVotedOutEvent(data?: Partial<ValidatorVotedOutEvent>): void;
+      validatorVotedInEvent(data?: Partial<ValidatorVotedInEvent>): void;
+      voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
       stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)

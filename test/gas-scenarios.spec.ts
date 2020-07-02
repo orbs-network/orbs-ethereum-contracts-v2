@@ -259,9 +259,9 @@ describe('gas usage scenarios', async () => {
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].orbsAddress});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.not.have.a.standbysSnapshotEvent();
-        expect(r).to.have.a.voteOutEvent({
+        expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
-            against: committee[1].address
+            subject: committee[1].address
         });
         d.logGasUsageSummary("Auto-voteout is cast, threshold not reached", [committee[0]]);
     });
@@ -278,12 +278,12 @@ describe('gas usage scenarios', async () => {
 
         const thresholdVoter = committee[voters.length];
         let r = await d.elections.voteOut(committee[0].address, {from: thresholdVoter.orbsAddress});
-        expect(r).to.have.a.voteOutEvent({
+        expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: thresholdVoter.address,
-            against: committee[0].address
+            subject: committee[0].address
         });
-        expect(r).to.have.a.votedOutOfCommitteeEvent({
-            addr: committee[0].address
+        expect(r).to.have.a.validatorVotedUnreadyEvent({
+            validator: committee[0].address
         });
 
         expect(r).to.have.a.committeeSnapshotEvent({
@@ -303,9 +303,9 @@ describe('gas usage scenarios', async () => {
         let r = await d.elections.setBanningVotes([committee[1].address], {from: committee[0].address});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.not.have.a.standbysSnapshotEvent();
-        expect(r).to.have.a.banningVoteEvent({
+        expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
-            against: [committee[1].address]
+            subjects: [committee[1].address]
         });
         d.logGasUsageSummary("Manual-voteout is cast, threshold not reached", [committee[0]]);
     });
@@ -322,11 +322,11 @@ describe('gas usage scenarios', async () => {
 
         const thresholdVoter = committee[voters.length];
         let r = await d.elections.setBanningVotes([committee[0].address], {from: thresholdVoter.address});
-        expect(r).to.have.a.banningVoteEvent({
+        expect(r).to.have.a.voteOutCastedEvent({
             voter: thresholdVoter.address,
-            against: [committee[0].address]
+            subjects: [committee[0].address]
         });
-        expect(r).to.have.a.bannedEvent({
+        expect(r).to.have.a.validatorVotedOutEvent({
             validator: committee[0].address
         });
         expect(r).to.have.a.committeeSnapshotEvent({
