@@ -85,7 +85,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 _amount48 = toUint48Granularity(amount);
         uint48 bootstrapPool = uint48(poolsAndTotalBalances.bootstrapPool.add(_amount48)); // todo may overflow
         poolsAndTotalBalances.bootstrapPool = bootstrapPool;
-        require(transferFrom(bootstrapToken, msg.sender, address(this), _amount48), "Rewards::topUpFixedPool - insufficient allowance");
+
+        IERC20 _bootstrapToken = bootstrapToken;
+        require(transferFrom(_bootstrapToken, msg.sender, address(this), _amount48), "Rewards::topUpFixedPool - insufficient allowance");
+
+        IProtocolWallet wallet = getBootstrapRewardsWallet();
+        require(_bootstrapToken.approve(address(wallet), amount), "Rewards::topUpBootstrapPool - approve failed");
+        wallet.topUp(amount);
+
         emit BootstrapAddedToPool(amount, toUint256Granularity(bootstrapPool));
     }
 
@@ -138,8 +145,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             balances[committee[i]] = balance;
         }
 
-//        require(toUint256Granularity(uint48(totals.stakingRewardsTotalBalance.sub(origTotals.stakingRewardsTotalBalance))) <  20000000000000000000000, "aaaa");
         getStakingRewardsWallet().withdraw(toUint256Granularity(uint48(totals.stakingRewardsTotalBalance.sub(origTotals.stakingRewardsTotalBalance))));
+        getBootstrapRewardsWallet().withdraw(toUint256Granularity(uint48(totals.bootstrapRewardsTotalBalance.sub(origTotals.bootstrapRewardsTotalBalance))));
 
         poolsAndTotalBalances = totals;
         lastAssignedAt = now;
@@ -183,12 +190,15 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 amount48 = toUint48Granularity(amount);
         uint48 total48 = uint48(poolsAndTotalBalances.stakingPool.add(amount48));
         poolsAndTotalBalances.stakingPool = total48;
-        emit StakingRewardsAddedToPool(amount, toUint256Granularity(total48));
-        require(erc20.transferFrom(msg.sender, address(this), amount), "Rewards::topUpProRataPool - insufficient allowance");
+
+        IERC20 _erc20 = erc20;
+        require(_erc20.transferFrom(msg.sender, address(this), amount), "Rewards::topUpProRataPool - insufficient allowance");
 
         IProtocolWallet wallet = getStakingRewardsWallet();
-        require(erc20.approve(address(wallet), amount), "Rewards::topUpProRataPool - approve failed");
+        require(_erc20.approve(address(wallet), amount), "Rewards::topUpProRataPool - approve failed");
         wallet.topUp(amount);
+
+        emit StakingRewardsAddedToPool(amount, toUint256Granularity(total48));
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {

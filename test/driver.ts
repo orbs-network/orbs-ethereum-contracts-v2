@@ -73,6 +73,7 @@ export class Driver {
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
         public committee: Contracts['Committee'],
         public stakingRewardsWallet: Contracts['ProtocolWallet'],
+        public bootstrapRewardsWallet: Contracts['ProtocolWallet'],
         public contractRegistry: Contracts["ContractRegistry"]
     ) {}
 
@@ -109,6 +110,7 @@ export class Driver {
         const compliance = await web3.deploy('Compliance', [], null, session);
         const committee = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys, readyToSyncTimeout, maxTimeBetweenRewardAssignments], null, session);
         const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
+        const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
@@ -121,6 +123,7 @@ export class Driver {
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
         await contractRegistry.set("committee", committee.address);
         await contractRegistry.set("stakingRewardsWallet", stakingRewardsWallet.address);
+        await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
         await contractRegistry.set("_bootstrapToken", externalToken.address);
         await contractRegistry.set("_erc20", erc20.address);
 
@@ -145,7 +148,8 @@ export class Driver {
             validatorsRegistration,
             committee,
             contractRegistry,
-            stakingRewardsWallet
+            stakingRewardsWallet,
+            bootstrapRewardsWallet
         ].map(async (c: OwnedContract) => {
             await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})
@@ -153,6 +157,7 @@ export class Driver {
 
         await rewards.setMaxDelegatorsStakingRewardsPercentMille(100000, {from: accounts[1]}); // TODO remove when setting in constructor
         await stakingRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
+        await bootstrapRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
 
         return new Driver(web3, session,
             accounts,
@@ -168,6 +173,7 @@ export class Driver {
             validatorsRegistration,
             committee,
             stakingRewardsWallet,
+            bootstrapRewardsWallet,
             contractRegistry
         );
     }
@@ -187,6 +193,7 @@ export class Driver {
         const committee = await web3.getExisting('Committee', await contractRegistry.get('committee'), session);
         const validatorsRegistration = await web3.getExisting('ValidatorsRegistration', await contractRegistry.get('validatorsRegistration'), session);
         const stakingRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
+        const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
 
         return new Driver(web3, session,
             accounts,
@@ -202,6 +209,7 @@ export class Driver {
             validatorsRegistration,
             committee,
             stakingRewardsWallet,
+            bootstrapRewardsWallet,
             contractRegistry
         );
     }

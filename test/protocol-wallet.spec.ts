@@ -14,7 +14,7 @@ import {bn, evmIncreaseTime, evmIncreaseTimeForQueries, getTopBlockTimestamp} fr
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
-describe.only('protocol-contract', async () => {
+describe('protocol-contract', async () => {
 
   it('returns erc20 address using getter', async () => {
     const d = await Driver.new();

@@ -65,4 +65,8 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
         return IProtocolWallet(contractRegistry.get("stakingRewardsWallet"));
     }
 
+    function getBootstrapRewardsWallet() public view returns (IProtocolWallet) {
+        return IProtocolWallet(contractRegistry.get("bootstrapRewardsWallet"));
+    }
+
 }
