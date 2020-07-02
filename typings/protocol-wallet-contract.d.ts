@@ -3,20 +3,20 @@ import {Contract} from "../eth";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
-interface FundsAddedToPool {
+interface FundsAddedToPoolEvent {
   added: string|BN;
   total: string|BN;
 }
 
-interface ClientSet {
+interface ClientSetEvent {
   client: string;
 }
 
-interface MaxAnnualRateSet {
+interface MaxAnnualRateSetEvent {
   maxAnnualRate: string|BN;
 }
 
-interface EmergencyWithdrawal {
+interface EmergencyWithdrawalEvent {
   addr: string;
 }
 

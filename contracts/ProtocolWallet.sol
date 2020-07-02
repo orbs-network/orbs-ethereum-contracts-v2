@@ -23,6 +23,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client) public {
         token = _token;
         client = _client;
+        lastApprovedAt = now;
     }
 
     /// @dev Returns the address of the underlying staked token.
@@ -39,7 +40,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUp(uint256 amount) external {
-        emit FundsAddedToPool(amount, getBalance());
+        emit FundsAddedToPool(amount, getBalance() + amount);
         require(token.transferFrom(msg.sender, address(this), amount), "ProtocolWallet::topUp - insufficient allowance");
     }
 
