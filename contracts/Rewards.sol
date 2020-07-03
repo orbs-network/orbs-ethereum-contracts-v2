@@ -215,6 +215,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     struct VistributeOrbsTokenStakingRewardsVars {
         bool firstTxBySender;
         address guardianAddr;
+        uint256 delegatorsAmount;
     }
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
         require(to.length > 0, "list must containt at least one recipient");
@@ -225,8 +226,13 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         VistributeOrbsTokenStakingRewardsVars memory vars;
 
         vars.guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender);
-        require(to[0] == vars.guardianAddr, "first member in list must be the the guardian address");
-        require(isDelegatorRewardsBelowThreshold(totalAmount.sub(amounts[0]), totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
+
+        for (uint i = 0; i < to.length; i++) {
+            if (to[i] != vars.guardianAddr) {
+                vars.delegatorsAmount = vars.delegatorsAmount.add(amounts[i]);
+            }
+        }
+        require(isDelegatorRewardsBelowThreshold(vars.delegatorsAmount, totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
 
         DistributorBatchState memory ds = distributorBatchState[vars.guardianAddr];
         vars.firstTxBySender = ds.nextTxIndex == 0;
