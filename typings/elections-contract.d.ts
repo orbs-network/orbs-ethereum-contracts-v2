@@ -17,7 +17,7 @@ export interface ElectionsContract extends OwnedContract {
   getAccumulatedStakesForBanning(address: string): Promise<BN>;
   getTotalGovernanceStake(): Promise<BN>;
 
-  setVoteOutTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMaxDelegationRatio(maxDelegationRatio: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteOutLockTimeoutSeconds(voteOutLockTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteOutPercentageThreshold(voteOutPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -72,17 +72,17 @@ export interface  MaxDelegationRatioChangedEvent {
   oldValue: string|BN,
 }
 
-export interface  BanningLockTimeoutSecondsChangedEvent {
+export interface  VoteOutLockTimeoutSecondsChangedEvent {
+  newValue: string|BN,
+  oldValue: string|BN,
+}
+
+export interface  VoteUnreadyPercentageThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }
 
 export interface  VoteOutPercentageThresholdChangedEvent {
-  newValue: string|BN,
-  oldValue: string|BN,
-}
-
-export interface  BanningPercentageThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }

@@ -18,11 +18,11 @@ import {
   ValidatorVotedInEvent,
   VoteOutTimeoutSecondsChangedEvent,
   MaxDelegationRatioChangedEvent,
-  BanningLockTimeoutSecondsChangedEvent, VoteOutPercentageThresholdChangedEvent, BanningPercentageThresholdChangedEvent
+  VoteOutLockTimeoutSecondsChangedEvent, VoteUnreadyPercentageThresholdChangedEvent, VoteOutPercentageThresholdChangedEvent
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
-import {ProtocolChangedEvent} from "../typings/protocol-contract";
+import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
   BootstrapRewardsWithdrawnEvent,
   FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
@@ -206,7 +206,7 @@ declare global {
       validatorVotedOutEvent(data?: Partial<ValidatorVotedOutEvent>): void;
       validatorVotedInEvent(data?: Partial<ValidatorVotedInEvent>): void;
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
-      protocolChangedEvent(data?: Partial<ProtocolChangedEvent>): void;
+      protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
       stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
@@ -214,11 +214,11 @@ declare global {
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
-      voteOutTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
+      voteUnreadyTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
       maxDelegationRatioChangedEvent(data?: Partial<MaxDelegationRatioChangedEvent>);
-      banningLockTimeoutSecondsChangedEvent(data?: Partial<BanningLockTimeoutSecondsChangedEvent>);
-      voteOutPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
-      banningPercentageThresholdChangedEvent(data?: Partial<BanningPercentageThresholdChangedEvent>);
+      voteOutLockTimeoutSecondsChangedEvent(data?: Partial<VoteOutLockTimeoutSecondsChangedEvent>);
+      voteOutPercentageThresholdChangedEvent(data?: Partial<VoteUnreadyPercentageThresholdChangedEvent>);
+      voteUnreadyPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);

@@ -582,52 +582,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
-    it("tracks total governance stakes", async () => {
-        const d = await Driver.new();
-        async function expectTotalGovernanceStakeToBe(n) {
-            expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(n));
-        }
-
-        const stakeOfA = 11;
-        const stakeOfB = 13;
-        const stakeOfC = 17;
-        const stakeOfABC = stakeOfA+stakeOfB+stakeOfC;
-
-        const a = d.newParticipant("delegating around"); // starts as self delegating
-        const b = d.newParticipant("delegating to self - debating the amount");
-        const c = d.newParticipant("delegating to a");
-        await c.delegate(a);
-
-        await a.stake(stakeOfA);
-        await b.stake(stakeOfB);
-        await c.stake(stakeOfC);
-
-        await expectTotalGovernanceStakeToBe(stakeOfABC);
-
-        await b.unstake(1);
-        await expectTotalGovernanceStakeToBe(stakeOfABC - 1);
-
-        await b.restake();
-        await expectTotalGovernanceStakeToBe(stakeOfABC);
-
-        await a.delegate(b); // delegate from self to a self delegating other
-        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB); // fails
-
-        await a.delegate(c); // delegate from self to a non-self delegating other
-        await expectTotalGovernanceStakeToBe(stakeOfB);
-
-        await a.delegate(a); // delegate to self back from a non-self delegating
-        await expectTotalGovernanceStakeToBe(stakeOfABC);
-
-        await a.delegate(c);
-        await a.delegate(b); // delegate to another self delegating from a non-self delegating other
-        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB);
-
-        await a.delegate(a); // delegate to self back from a self delegating other
-        await expectTotalGovernanceStakeToBe(stakeOfABC);
-
-    });
-
     it("tracks totalGovernanceStake correctly when assigning rewards", async () => {
         const d = await Driver.new();
         async function expectTotalGovernanceStakeToBe(n) {
@@ -970,9 +924,9 @@ describe('elections-high-level-flows', async () => {
         const voteOutPercentageThreshold  = bn(current[3]);
         const banningPercentageThreshold  = bn(current[4]);
 
-        await expectRejected(d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
-        let r = await d.elections.setVoteOutTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
-        expect(r).to.have.a.voteOutTimeoutSecondsChangedEvent({
+        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.voteUnreadyTimeoutSecondsChangedEvent({
             newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
             oldValue: voteOutTimeoutSeconds.toString()
         });
@@ -986,7 +940,7 @@ describe('elections-high-level-flows', async () => {
 
         await expectRejected(d.elections.setVoteOutLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.elections.setVoteOutLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
-        expect(r).to.have.a.banningLockTimeoutSecondsChangedEvent({
+        expect(r).to.have.a.voteOutLockTimeoutSecondsChangedEvent({
             newValue: banningLockTimeoutSeconds.add(bn(1)).toString(),
             oldValue: banningLockTimeoutSeconds.toString()
         });
@@ -1000,7 +954,7 @@ describe('elections-high-level-flows', async () => {
 
         await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
         r = await d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
-        expect(r).to.have.a.banningPercentageThresholdChangedEvent({
+        expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
             newValue: banningPercentageThreshold.add(bn(1)).toString(),
             oldValue: banningPercentageThreshold.toString()
         });

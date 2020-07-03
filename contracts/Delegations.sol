@@ -19,8 +19,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	// TODO consider using structs instead of multiple mappings
 	mapping (address => uint256) uncappedStakes;
-
 	mapping (address => address) delegations;
+	uint256 totalDelegatedStake;
 
 	modifier onlyStakingContract() {
 		require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
@@ -30,19 +30,25 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	constructor() public {}
 
-	function notifyOnDelegationChange(address delegate, bool wasSelfDelegated, uint prevTotalUncapped, bool isSelfDelegated, uint currentTotalUncapped) private {
+	function notifyOnDelegationChange(address delegate, bool wasSelfDelegated, uint prevTotalUncapped, bool isSelfDelegated, uint currentTotalUncapped, uint _totalDelegatedStake) private returns (uint newTotal){
 		uint prevTotal = wasSelfDelegated ? prevTotalUncapped : 0;
 		uint currentTotal = isSelfDelegated ? currentTotalUncapped : 0;
-		bool deltaSign = currentTotal > prevTotal;
-		uint delta = deltaSign ? currentTotal.sub(prevTotal) : prevTotal.sub(currentTotal);
+		bool sign = currentTotal > prevTotal;
+		uint delta = sign ? currentTotal.sub(prevTotal) : prevTotal.sub(currentTotal);
 
 		getElectionsContract().delegatedStakeChange(
 			delegate,
 			getStakingContract().getStakeBalanceOf(delegate),
 			currentTotal,
 			delta,
-			deltaSign
+			sign
 		);
+
+		return sign ? _totalDelegatedStake.add(delta) : _totalDelegatedStake.sub(delta);
+	}
+
+	function getTotalDelegatedStake() external view returns (uint256) {
+		return totalDelegatedStake;
 	}
 
 	function delegate(address to) external onlyWhenActive {
@@ -67,8 +73,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uint256 newStakeNewDelegate = prevStakeNewDelegate.add(delegatorStake);
 		uncappedStakes[to] = newStakeNewDelegate;
 
-		notifyOnDelegationChange(prevDelegate, prevSelfDelegatingPrevDelegate, prevStakePrevDelegate, _isSelfDelegating(prevDelegate), newStakePrevDelegate);
-		notifyOnDelegationChange(to, prevSelfDelegatingNewDelegate, prevStakeNewDelegate, _isSelfDelegating(to), newStakeNewDelegate);
+		uint _totalDelegatedStake = totalDelegatedStake;
+
+		_totalDelegatedStake = notifyOnDelegationChange(prevDelegate, prevSelfDelegatingPrevDelegate, prevStakePrevDelegate, _isSelfDelegating(prevDelegate), newStakePrevDelegate, _totalDelegatedStake);
+		_totalDelegatedStake = notifyOnDelegationChange(to, prevSelfDelegatingNewDelegate, prevStakeNewDelegate, _isSelfDelegating(to), newStakeNewDelegate, _totalDelegatedStake);
+
+		totalDelegatedStake = _totalDelegatedStake;
 
 		emit Delegated(msg.sender, to);
 
@@ -169,6 +179,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 				deltaSign = currentUncappedStake > prevUncappedStake;
 				delta = deltaSign ? currentUncappedStake.sub(prevUncappedStake) : prevUncappedStake.sub(currentUncappedStake);
 				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake, delta, deltaSign);
+				totalDelegatedStake = deltaSign ? totalDelegatedStake.add(delta) : totalDelegatedStake.sub(delta);
 			}
 		}
 	}
@@ -195,6 +206,10 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			isSelfDelegating ? _amount : 0,
 			_sign
 		);
+
+		if (isSelfDelegating) {
+			totalDelegatedStake = _sign ? totalDelegatedStake.add(_amount) : totalDelegatedStake.sub(_amount);
+		}
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {

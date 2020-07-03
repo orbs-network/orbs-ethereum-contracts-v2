@@ -169,7 +169,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function getTotalGovernanceStake() external view returns (uint256) {
-		return totalGovernanceStake;
+		return getDelegationsContract().getTotalDelegatedStake();
 	}
 
 	function calcGovernanceEffectiveStake(bool selfDelegating, uint256 totalDelegatedStake) private pure returns (uint256) {
@@ -202,7 +202,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 		address[] memory prevAddrs = voteOutVotes[voter];
 		voteOutVotes[voter] = validators;
-		uint256 _totalGovernanceStake = totalGovernanceStake;
+		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
 
 		for (uint i = 0; i < prevAddrs.length; i++) {
 			address addr = prevAddrs[i];
@@ -266,15 +266,11 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated, uint256 deltaTotalDelegated, bool signDeltaTotalDelegated) external onlyDelegationsContract onlyWhenActive {
-		uint256 _totalGovernanceStake = signDeltaTotalDelegated ?
-			totalGovernanceStake.add(deltaTotalDelegated) :
-			totalGovernanceStake.sub(deltaTotalDelegated);
+		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
 
 		Settings memory _settings = settings;
 		_applyDelegatedStake(addr, totalDelegated, _settings);
 		_applyStakesToVoteOutBy(addr, signDeltaTotalDelegated ? totalDelegated.sub(deltaTotalDelegated) : totalDelegated.add(deltaTotalDelegated), _totalGovernanceStake, _settings);
-
-		totalGovernanceStake = _totalGovernanceStake;
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
@@ -345,8 +341,8 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
 		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
-		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteUnreadyPercentageThreshold);
-		settings.voteUnreadyPercentageThreshold = voteOutPercentageThreshold;
+		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
+		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
 	}
 
 	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
