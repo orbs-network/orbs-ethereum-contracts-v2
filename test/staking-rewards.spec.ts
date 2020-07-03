@@ -683,6 +683,31 @@ describe('staking-rewards-level-flows', async () => {
         [fromTokenUnits(33334), fromTokenUnits(66666)],
         {from: v.address}
     );
+
+    // +1 for rounding errors should allow this
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(99999),
+        0,
+        100,
+        1,
+        1,
+        [v.address, delegator.address],
+        [fromTokenUnits(33333), fromTokenUnits(66666)],
+        {from: v.address}
+    );
+
+    // Distribute only to validator
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(1),
+        0,
+        100,
+        1,
+        2,
+        [v.address],
+        [fromTokenUnits(1)],
+        {from: v.address}
+    );
+
   });
 
 });
