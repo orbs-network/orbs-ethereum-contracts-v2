@@ -1,15 +1,11 @@
 import 'mocha';
 
-import * as _ from "lodash";
 import Web3 from "web3";
 declare const web3: Web3;
 
 import BN from "bn.js";
 import {
-    defaultDriverOptions,
-    BANNING_LOCK_TIMEOUT,
     Driver,
-    expectRejected,
     Participant
 } from "./driver";
 import chai from "chai";
@@ -17,15 +13,6 @@ chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
 const expect = chai.expect;
-const assert = chai.assert;
-
-import {bn, evmIncreaseTime, minAddress} from "./helpers";
-import {ETHEREUM_URL} from "../eth";
-import {
-    banningScenario_setupDelegatorsAndValidators,
-    banningScenario_voteUntilThresholdReached
-} from "./elections.spec";
-
 
 describe('elections-compliance', async () => {
 

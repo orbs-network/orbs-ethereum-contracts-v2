@@ -47,28 +47,28 @@ describe('elections-high-level-flows', async () => {
 
         const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
 
-        let r = await d.elections.notifyReadyToSync({from: v.orbsAddress});
+        let r = await d.elections.readyToSync({from: v.orbsAddress});
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
-        r = await d.elections.notifyReadyToSync({from: v.address});
+        r = await d.elections.readyToSync({from: v.address});
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
-        r = await d.elections.notifyReadyForCommittee({from: v.orbsAddress});
+        r = await d.elections.readyForCommittee({from: v.orbsAddress});
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: true
         });
 
-        r = await d.elections.notifyReadyForCommittee({from: v.address});
+        r = await d.elections.readyForCommittee({from: v.address});
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
@@ -81,8 +81,8 @@ describe('elections-high-level-flows', async () => {
 
         const v = d.newParticipant();
 
-        await expectRejected(d.elections.notifyReadyToSync({from: v.address}));
-        await expectRejected(d.elections.notifyReadyForCommittee({from: v.address}));
+        await expectRejected(d.elections.readyToSync({from: v.address}));
+        await expectRejected(d.elections.readyForCommittee({from: v.address}));
     });
 
     it('handle delegation requests', async () => {
@@ -699,7 +699,7 @@ describe('elections-high-level-flows', async () => {
     it("VoteOut: allows voting only to 3 at a time", async () => {
         const d = await Driver.new();
 
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
 
         // -------------- VOTE FOR 3 VALIDATORS AT MOST ---------------
         await expectRejected(d.elections.voteOut(delegatees.slice(0, 4).map(v => v.address), {from: delegators[0].address}));
@@ -710,14 +710,14 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
 
         // -------------- BANNING VOTES CAST BY DELEGATORS - NO GOV STAKE, NO EFFECT ---------------
         for (const delegator of delegators) {
-            r = await d.elections.voteOut([bannedValidator.address], {from: delegator.address});
+            r = await d.elections.voteOut([votedOutValidator.address], {from: delegator.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: delegator.address,
-                subjects: [bannedValidator.address]
+                subjects: [votedOutValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.standbysSnapshotEvent();
@@ -729,16 +729,16 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
 
         // -------------- CAST VOTES UNDER THE THRESHOLD ---------------
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
-            r = await d.elections.voteOut([bannedValidator.address], {from: p.address});
+            r = await d.elections.voteOut([votedOutValidator.address], {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
-                subjects: [bannedValidator.address]
+                subjects: [votedOutValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.standbysSnapshotEvent();
@@ -748,13 +748,13 @@ describe('elections-high-level-flows', async () => {
 
         // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
 
-        r = await d.elections.voteOut([bannedValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        r = await d.elections.voteOut([votedOutValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
         expect(r).to.have.a.voteOutCastedEvent({
             voter: delegatees[thresholdCrossingIndex].address,
-            subjects: [bannedValidator.address]
+            subjects: [votedOutValidator.address]
         });
         expect(r).to.have.a.validatorVotedOutEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
         expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
             addrs: []
@@ -765,8 +765,8 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
-        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, bannedValidator);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
 
         // -------------- BANNING VOTES REVOKED BY VALIDATOR ---------------
 
@@ -776,11 +776,11 @@ describe('elections-high-level-flows', async () => {
             subjects: []
         });
         expect(r).to.have.a.validatorVotedInEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
-        r = await bannedValidator.readyToSync();
+        r = await votedOutValidator.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
-            addrs: [bannedValidator.address]
+            addrs: [votedOutValidator.address]
         });
     });
 
@@ -788,8 +788,8 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
-        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, bannedValidator);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
 
         // ...*.* TiMe wArP *.*.....
         evmIncreaseTime(d.web3, BANNING_LOCK_TIMEOUT);
@@ -852,24 +852,24 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
-        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, bannedValidator);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
 
         // -------------- DELEGATOR UNSTAKES AND RESTAKES TO REVOKE BANNING AND REINSTATE BAN ---------------
 
         const tempStake = await d.staking.getStakeBalanceOf(delegators[thresholdCrossingIndex].address);
         r = await d.staking.unstake(tempStake, {from: delegators[thresholdCrossingIndex].address}); // threshold is un-crossed
         expect(r).to.have.a.validatorVotedInEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
-        r = await bannedValidator.readyToSync();
+        r = await votedOutValidator.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
-            addrs: [bannedValidator.address]
+            addrs: [votedOutValidator.address]
         });
 
         r = await d.staking.restake({from: delegators[thresholdCrossingIndex].address}); // threshold is crossed again
         expect(r).to.have.a.validatorVotedOutEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: []
@@ -889,12 +889,12 @@ describe('elections-high-level-flows', async () => {
         const existingVotes = await d.elections.getVoteOutVotes(delegatees[0].address);
         r = await d.elections.voteOut(existingVotes, {from: delegatees[0].address});
         expect(r).to.have.a.validatorVotedInEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
 
-        r = await bannedValidator.readyToSync();
+        r = await votedOutValidator.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
-            addrs: [bannedValidator.address]
+            addrs: [votedOutValidator.address]
         });
 
         r = await d.staking.unstake(dilutingStake, {from: dilutingParticipant.address}); // threshold is again crossed
@@ -907,7 +907,7 @@ describe('elections-high-level-flows', async () => {
         r = await d.elections.voteOut(existingVotes, {from: delegatees[0].address});
 
         expect(r).to.have.a.validatorVotedOutEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: []
@@ -919,17 +919,17 @@ describe('elections-high-level-flows', async () => {
         const other = d.newParticipant();
         r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
         expect(r).to.have.a.validatorVotedInEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
 
-        r = await bannedValidator.readyToSync();
+        r = await votedOutValidator.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
-            addrs: [bannedValidator.address]
+            addrs: [votedOutValidator.address]
         });
 
         r = await d.delegations.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
         expect(r).to.have.a.validatorVotedOutEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: []
@@ -940,69 +940,69 @@ describe('elections-high-level-flows', async () => {
 
         r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
         expect(r).to.have.a.validatorVotedInEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
 
-        r = await bannedValidator.readyToSync();
+        r = await votedOutValidator.readyToSync();
         expect(r).to.have.a.standbysSnapshotEvent({
-            addrs: [bannedValidator.address]
+            addrs: [votedOutValidator.address]
         });
 
         r = await d.delegations.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
         expect(r).to.have.a.validatorVotedOutEvent({
-            validator: bannedValidator.address
+            validator: votedOutValidator.address
         });
         expect(r).to.have.a.standbysSnapshotEvent({
             addrs: []
         });
     });
 
-    it("rejects readyToSync and readyForCommittee for a banned validator", async () => {
+    it("rejects readyToSync and readyForCommittee for a voted-out validator", async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
 
         // -------------- CAST VOTES UNDER THE THRESHOLD ---------------
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
-            r = await d.elections.setBanningVotes([bannedValidator.address], {from: p.address});
-            expect(r).to.have.a.banningVoteEvent({
+            r = await d.elections.voteOut([votedOutValidator.address], {from: p.address});
+            expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
-                against: [bannedValidator.address]
+                subjects: [votedOutValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.standbysSnapshotEvent();
-            expect(r).to.not.have.a.bannedEvent();
-            expect(r).to.not.have.a.unbannedEvent();
+            expect(r).to.not.have.a.validatorVotedOutEvent();
+            expect(r).to.not.have.a.validatorVotedInEvent();
         }
 
-        // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
+        // -------------- ONE MORE VOTE TO REACH VOTE-OUT THRESHOLD ---------------
 
-        r = await d.elections.setBanningVotes([bannedValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
-        expect(r).to.have.a.banningVoteEvent({
+        r = await d.elections.voteOut([votedOutValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        expect(r).to.have.a.voteOutCastedEvent({
             voter: delegatees[thresholdCrossingIndex].address,
-            against: [bannedValidator.address]
+            subjects: [votedOutValidator.address]
         });
-        expect(r).to.have.a.bannedEvent({
-            validator: bannedValidator.address
+        expect(r).to.have.a.validatorVotedOutEvent({
+            validator: votedOutValidator.address
         });
         expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
             addrs: []
         });
 
-        await expectRejected(d.elections.notifyReadyToSync({from: bannedValidator.address}));
-        await expectRejected(d.elections.notifyReadyToSync({from: bannedValidator.orbsAddress}));
-        await expectRejected(d.elections.notifyReadyForCommittee({from: bannedValidator.address}));
-        await expectRejected(d.elections.notifyReadyForCommittee({from: bannedValidator.orbsAddress}));
+        await expectRejected(d.elections.readyToSync({from: votedOutValidator.address}));
+        await expectRejected(d.elections.readyToSync({from: votedOutValidator.orbsAddress}));
+        await expectRejected(d.elections.readyForCommittee({from: votedOutValidator.address}));
+        await expectRejected(d.elections.readyForCommittee({from: votedOutValidator.orbsAddress}));
 
-        await d.elections.setBanningVotes([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        await d.elections.voteOut([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
 
-        await d.elections.notifyReadyToSync({from: bannedValidator.address});
-        await d.elections.notifyReadyToSync({from: bannedValidator.orbsAddress});
-        await d.elections.notifyReadyForCommittee({from: bannedValidator.address});
-        await d.elections.notifyReadyForCommittee({from: bannedValidator.orbsAddress});
+        await d.elections.readyToSync({from: votedOutValidator.address});
+        await d.elections.readyToSync({from: votedOutValidator.orbsAddress});
+        await d.elections.readyForCommittee({from: votedOutValidator.address});
+        await d.elections.readyForCommittee({from: votedOutValidator.orbsAddress});
     });
 
     it("sets and gets settings, only functional owner allowed to set", async () => {
@@ -1062,7 +1062,7 @@ describe('elections-high-level-flows', async () => {
 
 });
 
-export async function banningScenario_setupDelegatorsAndValidators(driver: Driver) {
+export async function voteOutScenario_setupDelegatorsAndValidators(driver: Driver) {
     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
 
@@ -1095,30 +1095,30 @@ export async function banningScenario_setupDelegatorsAndValidators(driver: Drive
         delegators.push(delegator);
     }
 
-    const bannedValidator = delegatees[delegatees.length - 1];
-    await bannedValidator.registerAsValidator();
+    const votedOutValidator = delegatees[delegatees.length - 1];
+    await votedOutValidator.registerAsValidator();
 
-    await bannedValidator.stake(baseStake);
-    let r = await bannedValidator.readyForCommittee();
+    await votedOutValidator.stake(baseStake);
+    let r = await votedOutValidator.readyForCommittee();
     expect(r).to.have.a.committeeSnapshotEvent({
-        addrs: [bannedValidator.address]
+        addrs: [votedOutValidator.address]
     });
 
-    return {thresholdCrossingIndex, delegatees, delegators, bannedValidator};
+    return {thresholdCrossingIndex, delegatees, delegators, votedOutValidator};
 }
 
-export async function banningScenario_voteUntilThresholdReached(driver: Driver, thresholdCrossingIndex, delegatees, bannedValidator) {
+export async function banningScenario_voteUntilThresholdReached(driver: Driver, thresholdCrossingIndex, delegatees, votedOutValidator) {
     let r;
     for (let i = 0; i <= thresholdCrossingIndex; i++) {
         const p = delegatees[i];
-        r = await driver.elections.voteOut([bannedValidator.address], {from: p.address});
+        r = await driver.elections.voteOut([votedOutValidator.address], {from: p.address});
     }
     expect(r).to.have.a.voteOutCastedEvent({
         voter: delegatees[thresholdCrossingIndex].address,
-        subjects: [bannedValidator.address]
+        subjects: [votedOutValidator.address]
     });
     expect(r).to.have.a.validatorVotedOutEvent({
-        validator: bannedValidator.address
+        validator: votedOutValidator.address
     });
     expect(r).to.withinContract(driver.committee).have.a.committeeSnapshotEvent({
         addrs: []
