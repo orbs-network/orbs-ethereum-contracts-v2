@@ -45,12 +45,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	modifier onlyNotBanned() {
-		require(!_isBanned(msg.sender), "caller is a banned validator");
-
-		_;
-	}
-
 	constructor(uint32 _maxDelegationRatio, uint8 _voteUnreadyPercentageThreshold, uint32 _voteUnreadyTimeoutSeconds, uint8 _voteOutPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteUnreadyPercentageThreshold >= 0 && _voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must be between 0 and 100");
@@ -86,16 +80,24 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberComplianceChange(addr, isCompliant);
 	}
 
-	function readyForCommittee() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		emit ValidatorStatusUpdated(sender, true, true);
-		getCommitteeContract().memberReadyToSync(sender, true);
+	function requireNotVotedOut(address addr) private view {
+		require(!_isBanned(addr), "caller is voted-out");
 	}
 
-	function readyToSync() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
-		emit ValidatorStatusUpdated(sender, true, false);
-		getCommitteeContract().memberReadyToSync(sender, false);
+	function readyForCommittee() external {
+		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		requireNotVotedOut(guardianAddr);
+
+		emit ValidatorStatusUpdated(guardianAddr, true, true);
+		getCommitteeContract().memberReadyToSync(guardianAddr, true);
+	}
+
+	function readyToSync() external {
+		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		requireNotVotedOut(guardianAddr);
+
+		emit ValidatorStatusUpdated(guardianAddr, true, false);
+		getCommitteeContract().memberReadyToSync(guardianAddr, false);
 	}
 
 	function clearCommitteeUnreadyVotes(address[] memory committee, address votee) private {
