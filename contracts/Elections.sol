@@ -88,6 +88,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
 		requireNotVotedOut(guardianAddr);
 
+		emit ReadyForCommittee(guardianAddr);
 		emit ValidatorStatusUpdated(guardianAddr, true, true);
 		getCommitteeContract().memberReadyToSync(guardianAddr, true);
 	}
@@ -96,6 +97,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
 		requireNotVotedOut(guardianAddr);
 
+		emit ReadyToSync(guardianAddr);
 		emit ValidatorStatusUpdated(guardianAddr, true, false);
 		getCommitteeContract().memberReadyToSync(guardianAddr, false);
 	}
@@ -168,10 +170,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
         _voteOut(msg.sender, subjectAddrs);
 		emit VoteOutCasted(msg.sender, subjectAddrs);
-	}
-
-	function getTotalGovernanceStake() external view returns (uint256) {
-		return getDelegationsContract().getTotalDelegatedStake();
 	}
 
 	function calcGovernanceEffectiveStake(bool selfDelegating, uint256 totalDelegatedStake) private pure returns (uint256) {

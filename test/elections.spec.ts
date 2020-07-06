@@ -28,6 +28,7 @@ describe('elections-high-level-flows', async () => {
         const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
 
         let r = await v.readyToSync();
+        expect(r).to.have.a.readyToSyncEvent();
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
@@ -35,6 +36,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await v.readyForCommittee();
+        expect(r).to.have.a.readyForCommitteeEvent();
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
@@ -628,7 +630,7 @@ describe('elections-high-level-flows', async () => {
     it("tracks totalGovernanceStake correctly when assigning rewards", async () => {
         const d = await Driver.new();
         async function expectTotalGovernanceStakeToBe(n) {
-            expect(await d.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(n));
+            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(n));
         }
 
         const stakeOfA = 11;
@@ -1085,11 +1087,11 @@ export async function voteOutScenario_setupDelegatorsAndValidators(driver: Drive
         totalStake += newStake;
 
         await delegator.stake(newStake);
-        expect(await driver.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(totalStake));
+        expect(await driver.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(totalStake));
 
         const v = driver.newParticipant();
         await delegator.delegate(v);
-        expect(await driver.elections.getTotalGovernanceStake()).to.be.bignumber.equal(bn(totalStake));
+        expect(await driver.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(totalStake));
 
         delegatees.push(v);
         delegators.push(delegator);

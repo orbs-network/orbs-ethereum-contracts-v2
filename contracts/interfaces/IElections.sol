@@ -13,8 +13,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	// Function calls
 	event VoteUnreadyCasted(address voter, address subject);
 	event VoteOutCasted(address voter, address[] subjects);
-	event ReadyForSync(address validator);
-	event ReadyForCommitee(address validator);
+	event ReadyToSync(address validator);
+	event ReadyForCommittee(address validator);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
 	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
@@ -22,18 +22,17 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/*
 	 *   External methods
 	 */
+	/// @dev Called by a validator as part of the automatic vote-out flow
+	function voteUnready(address subjectAddr) external;
+
+	/// @dev casts a voteOut vote by the sender to the given address
+	function voteOut(address[] calldata subjectAddrs) external;
 
 	/// @dev Called by a validator when ready to start syncing with other nodes
 	function readyToSync() external;
 
 	/// @dev Called by a validator when ready to join the committee, typically after syncing is complete or after being voted out
 	function readyForCommittee() external;
-
-	/// @dev Called by a validator as part of the automatic vote-out flow
-	function voteUnready(address subjectAddr) external;
-
-	/// @dev casts a voteOut vote by the sender to the given address
-	function voteOut(address[] calldata subjectAddrs) external;
 
 	/*
 	 *   Methods restricted to other Orbs contracts
@@ -52,8 +51,6 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
 
 	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated, uint256 deltaTotalDelegated, bool signDeltaTotalDelegated) external /* onlyDelegationContract */;
-
-	function getTotalGovernanceStake() external view returns (uint256);
 
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
