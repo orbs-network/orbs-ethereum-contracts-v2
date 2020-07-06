@@ -3,7 +3,7 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver, expectRejected} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -16,12 +16,16 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe.only('staking-rewards-level-flows', async () => {
+describe('staking-rewards', async () => {
+
+  before(async () => {
+    const d = await Driver.new();
+    await evmMine(d.web3, 200); // tests assume block 200 is in the past
+  });
 
   it('should distribute staking rewards to validators in general committee', async () => {
-    const d = await Driver.new();
-
     /* top up staking rewards pool */
+    const d = await Driver.new();
     const g = d.functionalOwner;
 
     const annualRate = bn(12000);
