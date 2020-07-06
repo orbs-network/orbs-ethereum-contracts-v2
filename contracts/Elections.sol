@@ -45,12 +45,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	modifier onlyNotBanned() {
-		require(!_isBanned(msg.sender), "caller is a banned validator");
-
-		_;
-	}
-
 	constructor(uint32 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint32 _voteOutTimeoutSeconds, uint8 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
