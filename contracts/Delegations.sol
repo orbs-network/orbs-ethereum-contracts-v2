@@ -36,6 +36,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		bool sign = currentTotal > prevTotal;
 		uint delta = sign ? currentTotal.sub(prevTotal) : prevTotal.sub(currentTotal);
 
+		newTotalDelegatedStake = sign ? prevTotalDelegatedStake.add(delta) : prevTotalDelegatedStake.sub(delta);
+		totalDelegatedStake = newTotalDelegatedStake;
+
 		getElectionsContract().delegatedStakeChange(
 			delegate,
 			getStakingContract().getStakeBalanceOf(delegate),
@@ -43,8 +46,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			delta,
 			sign
 		);
-
-		return sign ? prevTotalDelegatedStake.add(delta) : prevTotalDelegatedStake.sub(delta);
 	}
 
 	function getTotalDelegatedStake() external view returns (uint256) {
@@ -77,8 +78,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		_totalDelegatedStake = notifyOnDelegationChange(prevDelegate, prevSelfDelegatingPrevDelegate, prevStakePrevDelegate, _isSelfDelegating(prevDelegate), newStakePrevDelegate, _totalDelegatedStake);
 		_totalDelegatedStake = notifyOnDelegationChange(to, prevSelfDelegatingNewDelegate, prevStakeNewDelegate, _isSelfDelegating(to), newStakeNewDelegate, _totalDelegatedStake);
-
-		totalDelegatedStake = _totalDelegatedStake;
 
 		emit Delegated(msg.sender, to);
 
@@ -178,8 +177,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			} else {
 				deltaSign = currentUncappedStake > prevUncappedStake;
 				delta = deltaSign ? currentUncappedStake.sub(prevUncappedStake) : prevUncappedStake.sub(currentUncappedStake);
-				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake, delta, deltaSign);
 				totalDelegatedStake = deltaSign ? totalDelegatedStake.add(delta) : totalDelegatedStake.sub(delta);
+
+				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake, delta, deltaSign);
 			}
 		}
 	}
@@ -199,6 +199,10 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uncappedStakes[_delegate] = newUncappedStake;
 
 		bool isSelfDelegating = _isSelfDelegating(_delegate);
+		if (isSelfDelegating) {
+			totalDelegatedStake = _sign ? totalDelegatedStake.add(_amount) : totalDelegatedStake.sub(_amount);
+		}
+
 		getElectionsContract().delegatedStakeChange(
 			_delegate,
 			getStakingContract().getStakeBalanceOf(_delegate),
@@ -206,10 +210,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			isSelfDelegating ? _amount : 0,
 			_sign
 		);
-
-		if (isSelfDelegating) {
-			totalDelegatedStake = _sign ? totalDelegatedStake.add(_amount) : totalDelegatedStake.sub(_amount);
-		}
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {
