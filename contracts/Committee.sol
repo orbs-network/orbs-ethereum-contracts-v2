@@ -11,7 +11,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using BytesLib for bytes;
 
-	uint constant TOPOLOGY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)
+	uint constant MAX_COMMITTEE_ARRAY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)
 
 	struct CommitteeMember {
 		address addr;
@@ -36,7 +36,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		uint8 committeeSize;
 	}
 	CommitteeInfo committeeInfo;
-	bytes32 weightSortIndicesOneBasedBytes;
+	bytes32 committeeSortBytes;
 
 	struct Settings {
 		uint32 maxTimeBetweenRewardAssignments;
@@ -48,17 +48,6 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		require(msg.sender == address(getElectionsContract()), "caller is not the elections");
 
 		_;
-	}
-
-	function getMinMember(CommitteeInfo memory info) private view returns (CommitteeMember memory minMember) {
-		if (info.committeeSize == 0) {
-			return CommitteeMember({
-				addr: address(0),
-				weight: uint96(0)
-			});
-		}
-
-		return committee[info.minCommitteeMemberPos];
 	}
 
 	function findFreePos(CommitteeInfo memory info) private pure returns (uint8 pos) {
@@ -87,42 +76,40 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return (true, info.minCommitteeMemberPos);
 	}
 
-	function updateOnMemberChange(address addr, MemberData memory data) private returns (bool committeeChanged) {
-		CommitteeInfo memory info = committeeInfo;
-		Settings memory _settings = settings;
-		bytes memory sortBytes = abi.encodePacked(weightSortIndicesOneBasedBytes);
-
-		if (!data.inCommittee) {
-			(bool qualified, uint8 entryPos) = qualifiesToEnterCommittee(addr, data, info, _settings);
-			if (!qualified) {
-				if (data.isMember) {
-					membersData[addr] = data;
-				} else {
-					delete membersData[addr];
-				}
-				return false;
-			}
-
-			(info, sortBytes) = removeMemberAtPos(entryPos, sortBytes, info);
-			(info, sortBytes) = addToCommittee(addr, data, entryPos, sortBytes, info);
-		} else {
-			committee[data.pos].weight = data.weight;
-		}
-
-		(info, sortBytes) = (data.isMember && data.weight > 0) ?
-			rankMember(addr, data, sortBytes, info) :
-			_removeMember(data, sortBytes, info);
-
-		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, data.inCommittee);
-
+	function saveMemberData(address addr, MemberData memory data) private {
 		if (data.isMember) {
 			membersData[addr] = data;
 		} else {
 			delete membersData[addr];
 		}
+	}
+
+	function updateOnMemberChange(address addr, MemberData memory data) private returns (bool committeeChanged) {
+		CommitteeInfo memory info = committeeInfo;
+		Settings memory _settings = settings;
+		bytes memory sortBytes = abi.encodePacked(committeeSortBytes);
+
+		if (!data.inCommittee) {
+			(bool qualified, uint8 entryPos) = qualifiesToEnterCommittee(addr, data, info, _settings);
+			if (!qualified) {
+				saveMemberData(addr, data);
+				return false;
+			}
+
+			(info, sortBytes) = removeMemberAtPos(entryPos, sortBytes, info);
+			(info, sortBytes) = addToCommittee(addr, data, entryPos, sortBytes, info);
+		}
+
+		(info, sortBytes) = (data.isMember && data.weight > 0) ?
+			rankMember(addr, data, sortBytes, info) :
+			removeMemberFromCommittee(data, sortBytes, info);
+
+		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, data.inCommittee);
+
+		saveMemberData(addr, data);
 
 		committeeInfo = info;
-		weightSortIndicesOneBasedBytes = sortBytes.toBytes32(0);
+		committeeSortBytes = sortBytes.toBytes32(0);
 
 		assignRewardsIfNeeded(_settings);
 
@@ -143,7 +130,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return (info, sortBytes);
 	}
 
-	function _removeMember(MemberData memory data, bytes memory sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
+	function removeMemberFromCommittee(MemberData memory data, bytes memory sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
 		uint rank = 0;
 		while (uint8(sortBytes[rank]) != data.pos) {
 			rank++;
@@ -174,7 +161,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		address addr = committee[pos].addr;
 		MemberData memory data = membersData[addr];
 
-		(newInfo, newSortBytes) = _removeMember(data, sortBytes, info);
+		(newInfo, newSortBytes) = removeMemberFromCommittee(data, sortBytes, info);
 
 		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, false);
 
@@ -229,13 +216,13 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	constructor(uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(_maxCommitteeSize <= TOPOLOGY_SIZE, "maxCommitteeSize must be 32 at most");
+		require(_maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		settings = Settings({
 			maxCommitteeSize: uint8(_maxCommitteeSize),
 			maxTimeBetweenRewardAssignments: maxTimeBetweenRewardAssignments
 		});
 
-		committee.length = TOPOLOGY_SIZE;
+		committee.length = MAX_COMMITTEE_ARRAY_SIZE;
 	}
 
 	/*
@@ -253,6 +240,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			return false;
 		}
 		data.weight = uint96(weight);
+		if (data.inCommittee) {
+			committee[data.pos].weight = data.weight;
+		}
 		return updateOnMemberChange(addr, data);
 	}
 
@@ -339,7 +329,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	function setMaxCommittee(uint8 maxCommitteeSize) external onlyFunctionalOwner /* todo onlyWhenActive */ {
 		require(maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(maxCommitteeSize <= TOPOLOGY_SIZE, "maxCommitteeSize must be 32 at most");
+		require(maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		Settings memory _settings = settings;
 		emit MaxCommitteeSizeChanged(maxCommitteeSize, _settings.maxCommitteeSize);
 		_settings.maxCommitteeSize = maxCommitteeSize;
@@ -350,12 +340,12 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			return;
 		}
 
-		bytes memory sortBytes = abi.encodePacked(weightSortIndicesOneBasedBytes);
+		bytes memory sortBytes = abi.encodePacked(committeeSortBytes);
 		for (int rank = int(info.committeeSize); rank >= int(maxCommitteeSize); rank--) {
 			(info, sortBytes) = removeMemberAtPos(uint8(sortBytes[uint(rank)]), sortBytes, info);
 		}
 		committeeInfo = info;
-		weightSortIndicesOneBasedBytes = sortBytes.toBytes32(0);
+		committeeSortBytes = sortBytes.toBytes32(0);
 	}
 
 	/*
