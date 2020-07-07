@@ -19,7 +19,7 @@ export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     ETHEREUM_MNEMONIC,
     ETHEREUM_URL,
     0,
-    200,
+    400,
     false
     ));
 

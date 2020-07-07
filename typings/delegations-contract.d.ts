@@ -6,7 +6,9 @@ import {OwnedContract} from "./base-contract";
 export interface DelegationsContract extends OwnedContract {
   stakeChange(stakeOwner: string, amount: number, sign: boolean, updatedStake: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   stakeChangeBatch(stakeOwners: string[], amounts: number[], signs: boolean[], updatedStakes: number[], params?: TransactionConfig) : Promise<TransactionReceipt>;
-  delegate( to: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  delegate(to: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  importDelegations(from: string[], to: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
+  finalizeDelegationImport(params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   // getters
@@ -29,4 +31,11 @@ export interface DelegatedStakeChangedEvent {
   delegators: string[];
   delegatorTotalStakes: BN[];
 }
+
+export interface DelegationsImportedEvent {
+  from: string[];
+  to: string[];
+}
+
+export interface DelegationImportFinalizedEvent {}
 

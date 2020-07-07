@@ -40,8 +40,8 @@ import {
   ValidatorUnregisteredEvent
 } from "../typings/validator-registration-contract";
 import {
-  DelegatedEvent,
-  DelegatedStakeChangedEvent
+    DelegatedEvent,
+    DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
 } from "../typings/delegations-contract";
 import {
   CommitteeSnapshotEvent,
@@ -238,6 +238,8 @@ declare global {
       readyForCommitteeEvent(data?: Partial<ReadyForCommitteeEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
       maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
+      delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
+      delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

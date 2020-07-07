@@ -407,4 +407,23 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary("assigns rewards (1 month, initial balance > 0)", [p]);
     });
 
+    it("imports 50 delegations, unregistered validators", async () => {
+        const d = await Driver.new();
+
+        const delegations = _.range(50).map(() => [d.newParticipant(), d.newParticipant()]);
+        await Promise.all(delegations.map(d => d[0].stake(100)));
+
+        d.resetGasRecording();
+        let r = await d.delegations.importDelegations(
+            delegations.map(d => d[0].address),
+            delegations.map(d => d[1].address)
+        , {from: d.migrationOwner.address});
+        expect(r).to.have.a.delegationsImportedEvent({
+            from: delegations.map(d => d[0].address),
+            to: delegations.map(d => d[1].address)
+        });
+
+        d.logGasUsageSummary("import 50 delegations, unregistered validators", [d.migrationOwner]);
+    });
+
 });
