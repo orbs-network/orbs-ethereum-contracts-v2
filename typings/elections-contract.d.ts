@@ -85,11 +85,3 @@ export interface VoteOutPercentageThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }
-
-export interface ReadyToSyncEvent {
-  validator: string;
-}
-
-export interface ReadyForCommitteeEvent {
-  validator: string;
-}

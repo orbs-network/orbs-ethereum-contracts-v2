@@ -63,16 +63,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
 	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
-		if (_isBanned(addr)) {
-			return;
-		}
-		addMemberToCommittees(addr, settings);
 	}
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		removeMemberFromCommittees(addr);
+		emit ValidatorStatusUpdated(addr, false, false);
+		getCommitteeContract().removeMember(addr);
 	}
 
 	/// @dev Called by: validator registration contract
@@ -87,20 +84,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	function readyForCommittee() external {
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
-		requireNotVotedOut(guardianAddr);
+		require(!_isBanned(guardianAddr), "caller is voted-out");
 
-		emit ReadyForCommittee(guardianAddr);
 		emit ValidatorStatusUpdated(guardianAddr, true, true);
-		getCommitteeContract().memberReadyToSync(guardianAddr, true);
+		getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getComplianceContract().isValidatorCompliant(guardianAddr));
 	}
 
 	function readyToSync() external {
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
-		requireNotVotedOut(guardianAddr);
+		require(!_isBanned(guardianAddr), "caller is voted-out");
 
-		emit ReadyToSync(guardianAddr);
 		emit ValidatorStatusUpdated(guardianAddr, true, false);
-		getCommitteeContract().memberReadyToSync(guardianAddr, false);
+		getCommitteeContract().removeMember(guardianAddr);
 	}
 
 	function clearCommitteeUnreadyVotes(address[] memory committee, address votee) private {
@@ -160,7 +155,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
 			emit ValidatorVotedUnready(subjectAddr);
 			emit ValidatorStatusUpdated(subjectAddr, false, false);
-			getCommitteeContract().memberNotReadyToSync(subjectAddr);
+            getCommitteeContract().removeMember(subjectAddr);
 		}
 	}
 
@@ -260,12 +255,11 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
                 bannedValidators[addr] = now;
 				emit ValidatorVotedOut(addr);
 
-				removeMemberFromCommittees(addr);
+				emit ValidatorStatusUpdated(addr, false, false);
+				getCommitteeContract().removeMember(addr);
 			} else {
                 bannedValidators[addr] = 0;
 				emit ValidatorVotedIn(addr);
-
-				addMemberToCommittees(addr, _settings);
 			}
         }
     }
