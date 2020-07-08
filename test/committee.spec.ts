@@ -1113,18 +1113,6 @@ describe('committee', async () => {
 
         await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
         await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
-    });
-
-    it("validates weight is within range - less than 2^128", async () => {
-        const d = await Driver.new();
-
-        const {v} = await d.newValidator(fromTokenUnits(10), true, false, true);
-
-        const elections = d.newParticipant().address;
-        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
-
-        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)), {from: elections}));
-        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(128)).sub(bn(1)), {from: elections});
 
         const v2 = await d.newParticipant();
 
