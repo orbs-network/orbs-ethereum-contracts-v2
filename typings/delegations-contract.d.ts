@@ -7,7 +7,7 @@ export interface DelegationsContract extends OwnedContract {
   stakeChange(stakeOwner: string, amount: number, sign: boolean, updatedStake: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   stakeChangeBatch(stakeOwners: string[], amounts: number[], signs: boolean[], updatedStakes: number[], params?: TransactionConfig) : Promise<TransactionReceipt>;
   delegate(to: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  importDelegations(from: string[], to: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
+  importDelegations(from: string[], to: string[], notify: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
   finalizeDelegationImport(params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
@@ -35,6 +35,7 @@ export interface DelegatedStakeChangedEvent {
 export interface DelegationsImportedEvent {
   from: string[];
   to: string[];
+  notified: boolean;
 }
 
 export interface DelegationImportFinalizedEvent {}

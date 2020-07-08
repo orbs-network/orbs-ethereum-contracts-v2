@@ -115,16 +115,16 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	bool public delegationImportFinalized;
 
-	function importDelegations(address[] calldata from, address[] calldata to) external onlyWhenActive onlyMigrationOwner {
+	function importDelegations(address[] calldata from, address[] calldata to, bool notifyElections) external onlyWhenActive onlyMigrationOwner {
 		require(!delegationImportFinalized, "delegation import was finalized");
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
-			_stakeChange(from[i], 0, true, getStakingContract().getStakeBalanceOf(from[i]), false);
-			delegateFrom(from[i], to[i], false);
+			_stakeChange(from[i], 0, true, getStakingContract().getStakeBalanceOf(from[i]), notifyElections);
+			delegateFrom(from[i], to[i], notifyElections);
 		}
 
-		emit DelegationsImported(from, to);
+		emit DelegationsImported(from, to, notifyElections);
 	}
 
 	function finalizeDelegationImport() external onlyWhenActive onlyMigrationOwner {
