@@ -326,7 +326,7 @@ describe('committee', async () => {
         const committee: Participant[] = await Promise.all(_.range(maxCommitteeSize.toNumber()).map(async (i) => (await d.newValidator(fromTokenUnits(100 + i), false, false, true)).v));
 
         await expectRejected(d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.migrationOwner.address}));
-        r = await d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.functionalOwner.address});
+        let r = await d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.maxTimeBetweenRewardAssignmentsChangedEvent({
             newValue: maxTimeBetweenRewardAssignments.add(bn(1)).toString(),
             oldValue: maxTimeBetweenRewardAssignments.toString()

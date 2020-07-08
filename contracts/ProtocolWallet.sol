@@ -15,7 +15,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     uint annualRate;
 
     modifier onlyClient() {
-        require(msg.sender == client, "caller is not the committee contract");
+        require(msg.sender == client, "caller is not the wallet client");
 
         _;
     }
@@ -23,7 +23,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client) public {
         token = _token;
         client = _client;
-        lastApprovedAt = now;
+        lastApprovedAt = now; // TODO init here, or in first call to setMaxAnnualRate?
     }
 
     /// @dev Returns the address of the underlying staked token.
@@ -55,14 +55,14 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         require(amount <= maxAmount, "ProtocolWallet:approve - requested amount is larger than allowed by rate");
 
         lastApprovedAt = now;
-        require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
+        require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed"); // TODO May skip the transfer on amount == 0.
     }
 
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.
-    function setMaxAnnualRate(uint256 annual_rate) external onlyMigrationOwner {
-        annualRate = annual_rate;
-        emit MaxAnnualRateSet(annual_rate);
+    function setMaxAnnualRate(uint256 _annualRate) external onlyMigrationOwner {
+        annualRate = _annualRate;
+        emit MaxAnnualRateSet(_annualRate);
     }
 
     /// @dev transfer the entire pool's balance to a new wallet.
@@ -72,8 +72,8 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// @dev sets the address of the new contract
-    function setClient(address newClient) external onlyFunctionalOwner {
-        client = newClient;
-        emit ClientSet(newClient);
+    function setClient(address _client) external onlyFunctionalOwner {
+        client = _client;
+        emit ClientSet(_client);
     }
 }
