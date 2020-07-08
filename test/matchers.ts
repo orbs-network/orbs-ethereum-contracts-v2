@@ -62,7 +62,6 @@ import {
     FundsAddedToPoolEvent,
     MaxAnnualRateSetEvent
 } from "../typings/protocol-wallet-contract";
-import {compiledContracts, eventDefinitions} from "../compiled-contracts";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
