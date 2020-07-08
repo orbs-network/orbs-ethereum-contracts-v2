@@ -50,7 +50,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies on a validator compliance change
 	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated, uint256 deltaTotalDelegated, bool signDeltaTotalDelegated) external /* onlyDelegationContract */;
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external /* onlyDelegationContract */;
 
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
