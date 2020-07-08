@@ -872,7 +872,6 @@ describe('elections-high-level-flows', async () => {
                 against: [bannedValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.standbysSnapshotEvent();
             expect(r).to.not.have.a.bannedEvent();
             expect(r).to.not.have.a.unbannedEvent();
         }

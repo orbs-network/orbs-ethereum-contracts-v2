@@ -86,7 +86,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		requireNotBanned(guardianAddr);
 
 		emit ValidatorStatusUpdated(guardianAddr, true, true);
-		getCommitteeContract().memberReadyToSync(guardianAddr, true);
+        getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getComplianceContract().isValidatorCompliant(guardianAddr));
 	}
 
 	function notifyReadyToSync() external {
@@ -94,7 +94,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		requireNotBanned(guardianAddr);
 
 		emit ValidatorStatusUpdated(guardianAddr, true, false);
-		getCommitteeContract().memberReadyToSync(guardianAddr, false);
+        getCommitteeContract().removeMember(guardianAddr);
 	}
 
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenActive external {
