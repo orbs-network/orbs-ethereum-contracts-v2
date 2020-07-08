@@ -13,14 +13,16 @@ import {
 } from "../typings/subscriptions-contract";
 import {
   StakeChangeEvent,
-  VoteOutEvent,
-  VotedOutOfCommitteeEvent,
-  BanningVoteEvent,
-  BannedEvent,
-  UnbannedEvent,
+  VoteUnreadyCastedEvent,
+  ValidatorVotedUnreadyEvent,
+  VoteOutCastedEvent,
+  ValidatorVotedOutEvent,
+  ValidatorVotedInEvent,
   VoteOutTimeoutSecondsChangedEvent,
   MaxDelegationRatioChangedEvent,
-  BanningLockTimeoutSecondsChangedEvent, VoteOutPercentageThresholdChangedEvent, BanningPercentageThresholdChangedEvent
+  VoteOutLockTimeoutSecondsChangedEvent,
+  VoteUnreadyPercentageThresholdChangedEvent,
+  VoteOutPercentageThresholdChangedEvent
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
@@ -53,13 +55,13 @@ import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
 import {transpose} from "./helpers";
+import {compiledContracts, eventDefinitions} from "../compiled-contracts";
 import {
     ClientSetEvent,
     EmergencyWithdrawalEvent,
     FundsAddedToPoolEvent,
     MaxAnnualRateSetEvent
 } from "../typings/protocol-wallet-contract";
-import {compiledContracts, eventDefinitions} from "../compiled-contracts";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -189,12 +191,12 @@ declare global {
       vcConfigRecordChangedEvent(data?: Partial<VcConfigRecordChangedEvent>): void;
       vcCreatedEvent(data?: Partial<VcCreatedEvent>): void;
       vcOwnerChangedEvent(data?: Partial<VcOwnerChangedEvent>): void;
-      voteOutEvent(data?: Partial<VoteOutEvent>): void;
-      votedOutOfCommitteeEvent(data?: Partial<VotedOutOfCommitteeEvent>): void;
       contractAddressUpdatedEvent(data?: Partial<ContractAddressUpdatedEvent>): void;
-      banningVoteEvent(data?: Partial<BanningVoteEvent>): void;
-      bannedEvent(data?: Partial<BannedEvent>): void;
-      unbannedEvent(data?: Partial<UnbannedEvent>): void;
+      voteUnreadyCastedEvent(data?: Partial<VoteUnreadyCastedEvent>): void;
+      validatorVotedUnreadyEvent(data?: Partial<ValidatorVotedUnreadyEvent>): void;
+      validatorVotedOutEvent(data?: Partial<ValidatorVotedOutEvent>): void;
+      validatorVotedInEvent(data?: Partial<ValidatorVotedInEvent>): void;
+      voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
       stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
@@ -203,11 +205,11 @@ declare global {
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
-      voteOutTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
+      voteUnreadyTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
       maxDelegationRatioChangedEvent(data?: Partial<MaxDelegationRatioChangedEvent>);
-      banningLockTimeoutSecondsChangedEvent(data?: Partial<BanningLockTimeoutSecondsChangedEvent>);
-      voteOutPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
-      banningPercentageThresholdChangedEvent(data?: Partial<BanningPercentageThresholdChangedEvent>);
+      voteOutLockTimeoutSecondsChangedEvent(data?: Partial<VoteOutLockTimeoutSecondsChangedEvent>);
+      voteOutPercentageThresholdChangedEvent(data?: Partial<VoteUnreadyPercentageThresholdChangedEvent>);
+      voteUnreadyPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);

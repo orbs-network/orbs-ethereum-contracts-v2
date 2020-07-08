@@ -17,7 +17,6 @@ import {TransactionReceipt} from "web3-core";
 
 describe('delegations-contract', async () => {
 
-
     it('should only accept stake notifications from the staking contract', async () => {
         const d = await Driver.new();
 
@@ -207,4 +206,52 @@ describe('delegations-contract', async () => {
             delegatorTotalStakes: [bn(0)]
         });
     });
+
+    it("tracks total delegated stakes", async () => {
+        const d = await Driver.new();
+        async function expectTotalGovernanceStakeToBe(n) {
+            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(n));
+        }
+
+        const stakeOfA = 11;
+        const stakeOfB = 13;
+        const stakeOfC = 17;
+        const stakeOfABC = stakeOfA+stakeOfB+stakeOfC;
+
+        const a = d.newParticipant("delegating around"); // starts as self delegating
+        const b = d.newParticipant("delegating to self - debating the amount");
+        const c = d.newParticipant("delegating to a");
+        await c.delegate(a);
+
+        await a.stake(stakeOfA);
+        await b.stake(stakeOfB);
+        await c.stake(stakeOfC);
+
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        await b.unstake(1);
+        await expectTotalGovernanceStakeToBe(stakeOfABC - 1);
+
+        await b.restake();
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        await a.delegate(b); // delegate from self to a self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB); // fails
+
+        await a.delegate(c); // delegate from self to a non-self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfB);
+
+        await a.delegate(a); // delegate to self back from a non-self delegating
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+        await a.delegate(c);
+        await a.delegate(b); // delegate to another self delegating from a non-self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfA + stakeOfB);
+
+        await a.delegate(a); // delegate to self back from a self delegating other
+        await expectTotalGovernanceStakeToBe(stakeOfABC);
+
+    });
+
+
 });

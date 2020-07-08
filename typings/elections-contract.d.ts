@@ -6,23 +6,21 @@ import {OwnedContract} from "./base-contract";
 export interface ElectionsContract extends OwnedContract {
   registerValidator( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
-  notifyReadyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
-  notifyReadyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
-  voteOut(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
+  readyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
+  voteUnready(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setBanningVotes(address: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
-  refreshBanningVote(voter: string, against: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  getBanningVotes(address: string): Promise<string[]>;
+  voteOut(address: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
+  getVoteOutVotes(address: string): Promise<string[]>;
   getAccumulatedStakesForBanning(address: string): Promise<BN>;
-  getTotalGovernanceStake(): Promise<BN>;
 
-  setVoteOutTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMaxDelegationRatio(maxDelegationRatio: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setBanningLockTimeoutSeconds(banningLockTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteOutLockTimeoutSeconds(voteOutLockTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteOutPercentageThreshold(voteOutPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setBanningPercentageThreshold(banningPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   getSettings(params?: TransactionConfig): Promise<[
     number|BN /* voteOutTimeoutSeconds */,
@@ -34,43 +32,32 @@ export interface ElectionsContract extends OwnedContract {
 
 }
 
-export interface TopologyChangedEvent {
-  orbsAddrs: string[];
-  ips: string[];
-}
-
-export interface ValidatorRegisteredEvent_deprecated {
-  addr: string;
-  ip: string;
-}
-
 export interface StakeChangeEvent {
   addr: string;
-  ownStake: number | BN;
-  uncappedStake: number | BN;
-  governanceStake: number | BN;
-  committeeStake: number | BN;
+  selfStake: number | BN;
+  delegated_stake: number | BN;
+  effective_stake: number | BN;
 }
 
-export interface VoteOutEvent {
+export interface VoteUnreadyCastedEvent {
   voter: string;
-  against: string;
+  subject: string;
 }
 
-export interface VotedOutOfCommitteeEvent {
-  addr: string;
-}
-
-export interface BanningVoteEvent {
-  voter: string;
-  against: string[];
-}
-
-export interface BannedEvent {
+export interface ValidatorVotedUnreadyEvent {
   validator: string;
 }
 
-export interface UnbannedEvent {
+export interface VoteOutCastedEvent {
+  voter: string;
+  subjects: string[];
+}
+
+export interface ValidatorVotedOutEvent {
+  validator: string;
+}
+
+export interface ValidatorVotedInEvent {
   validator: string;
 }
 
@@ -84,18 +71,17 @@ export interface  MaxDelegationRatioChangedEvent {
   oldValue: string|BN,
 }
 
-export interface  BanningLockTimeoutSecondsChangedEvent {
+export interface  VoteOutLockTimeoutSecondsChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }
 
-export interface  VoteOutPercentageThresholdChangedEvent {
+export interface  VoteUnreadyPercentageThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }
 
-export interface  BanningPercentageThresholdChangedEvent {
+export interface VoteOutPercentageThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }
-

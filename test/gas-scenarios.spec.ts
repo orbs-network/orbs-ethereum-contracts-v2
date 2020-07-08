@@ -53,7 +53,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     }
     tlog("Committee created");
 
-    await Promise.all(_.shuffle(committee).map(v => v.notifyReadyForCommittee()));
+    await Promise.all(_.shuffle(committee).map(v => v.readyForCommittee()));
 
     const monthlyRate = fromTokenUnits(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
@@ -171,7 +171,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
         d.resetGasRecording();
-        let r = await v.notifyReadyToSync();
+        await v.readyToSync();
         d.logGasUsageSummary("Validator sends ready-to-sync for first time", [v]);
     });
 
@@ -180,10 +180,10 @@ describe('gas usage scenarios', async () => {
 
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
 
-        await v.notifyReadyToSync();
+        await v.readyToSync();
 
         d.resetGasRecording();
-        await v.notifyReadyToSync();
+        await v.readyToSync();
         d.logGasUsageSummary("Validator sends ready-to-sync for second time", [v]);
     });
 
@@ -193,7 +193,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         d.resetGasRecording();
-        let r = await v.notifyReadyForCommittee();
+        let r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
@@ -206,11 +206,11 @@ describe('gas usage scenarios', async () => {
 
         const {v} = await d.newValidator(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
-        let r = await v.notifyReadyToSync();
+        let r = await v.readyToSync();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         d.resetGasRecording();
-        r = await v.notifyReadyForCommittee();
+        r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
@@ -234,11 +234,11 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommittee();
 
         d.resetGasRecording();
-        let r = await d.elections.voteOut(committee[1].address, {from: committee[0].orbsAddress});
+        let r = await d.elections.voteUnready(committee[1].address, {from: committee[0].orbsAddress});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.have.a.voteOutEvent({
+        expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
-            against: committee[1].address
+            subject: committee[1].address
         });
         d.logGasUsageSummary("Auto-voteout is cast, threshold not reached", [committee[0]]);
     });
@@ -248,19 +248,19 @@ describe('gas usage scenarios', async () => {
 
         const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteOutThreshold / 100));
         await Promise.all(
-            voters.map(v => d.elections.voteOut(committee[0].address, {from: v.orbsAddress}))
+            voters.map(v => d.elections.voteUnready(committee[0].address, {from: v.orbsAddress}))
         );
 
         d.resetGasRecording();
 
         const thresholdVoter = committee[voters.length];
-        let r = await d.elections.voteOut(committee[0].address, {from: thresholdVoter.orbsAddress});
-        expect(r).to.have.a.voteOutEvent({
+        let r = await d.elections.voteUnready(committee[0].address, {from: thresholdVoter.orbsAddress});
+        expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: thresholdVoter.address,
-            against: committee[0].address
+            subject: committee[0].address
         });
-        expect(r).to.have.a.votedOutOfCommitteeEvent({
-            addr: committee[0].address
+        expect(r).to.have.a.validatorVotedUnreadyEvent({
+            validator: committee[0].address
         });
 
         expect(r).to.have.a.committeeSnapshotEvent({
@@ -274,11 +274,11 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommittee();
 
         d.resetGasRecording();
-        let r = await d.elections.setBanningVotes([committee[1].address], {from: committee[0].address});
+        let r = await d.elections.voteOut([committee[1].address], {from: committee[0].address});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.have.a.banningVoteEvent({
+        expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
-            against: [committee[1].address]
+            subjects: [committee[1].address]
         });
         d.logGasUsageSummary("Manual-voteout is cast, threshold not reached", [committee[0]]);
     });
@@ -288,18 +288,18 @@ describe('gas usage scenarios', async () => {
 
         const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteOutThreshold / 100));
         await Promise.all(
-            voters.map(v => d.elections.setBanningVotes([committee[0].address], {from: v.address}))
+            voters.map(v => d.elections.voteOut([committee[0].address], {from: v.address}))
         );
 
         d.resetGasRecording();
 
         const thresholdVoter = committee[voters.length];
-        let r = await d.elections.setBanningVotes([committee[0].address], {from: thresholdVoter.address});
-        expect(r).to.have.a.banningVoteEvent({
+        let r = await d.elections.voteOut([committee[0].address], {from: thresholdVoter.address});
+        expect(r).to.have.a.voteOutCastedEvent({
             voter: thresholdVoter.address,
-            against: [committee[0].address]
+            subjects: [committee[0].address]
         });
-        expect(r).to.have.a.bannedEvent({
+        expect(r).to.have.a.validatorVotedOutEvent({
             validator: committee[0].address
         });
         expect(r).to.have.a.committeeSnapshotEvent({

@@ -341,12 +341,12 @@ export class Participant {
         return await this.driver.validatorsRegistration.registerValidator(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
     }
 
-    async notifyReadyForCommittee() {
-        return await this.driver.elections.notifyReadyForCommittee({from: this.orbsAddress});
+    async readyForCommittee() {
+        return await this.driver.elections.readyForCommittee({from: this.orbsAddress});
     }
 
-    async notifyReadyToSync() {
-        return await this.driver.elections.notifyReadyToSync({from: this.orbsAddress});
+    async readyToSync() {
+        return await this.driver.elections.readyToSync({from: this.orbsAddress});
     }
 
     async becomeCompliant() {
@@ -364,10 +364,10 @@ export class Participant {
         }
         let r = await this.stake(stake);
         if (signalReadyToSync) {
-            r = await this.notifyReadyToSync();
+            r = await this.readyToSync();
         }
         if (signalReadyForCommittee) {
-            r = await this.notifyReadyForCommittee();
+            r = await this.readyForCommittee();
         }
         return r;
     }

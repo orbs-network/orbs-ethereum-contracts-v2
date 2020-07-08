@@ -39,8 +39,8 @@ describe('committee', async () => {
         r = await v.stake(stake);
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
-        r = await v.notifyReadyToSync();
-        r = await v.notifyReadyForCommittee();
+        r = await v.readyToSync();
+        r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(stake)]
@@ -59,7 +59,7 @@ describe('committee', async () => {
         r = await v.stake(stake);
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
-        r = await v.notifyReadyForCommittee();
+        r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(stake)]
@@ -78,7 +78,7 @@ describe('committee', async () => {
 
             await v.registerAsValidator();
             await v.stake(stake);
-            let r = await v.notifyReadyForCommittee();
+            let r = await v.readyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
                 weights: committee.map(s => bn(stake))
@@ -88,7 +88,7 @@ describe('committee', async () => {
         const v = await d.newParticipant();
         await v.registerAsValidator();
         await v.stake(stake - 1);
-        let r = await v.notifyReadyForCommittee();
+        let r = await v.readyForCommittee();
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
@@ -100,7 +100,7 @@ describe('committee', async () => {
 
         await v.registerAsValidator();
         await v.stake(stake);
-        let r = await v.notifyReadyForCommittee();
+        let r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(stake)]
@@ -119,13 +119,13 @@ describe('committee', async () => {
 
         await v.registerAsValidator();
         await v.stake(stake);
-        let r = await v.notifyReadyForCommittee();
+        let r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(stake)]
         });
 
-        r = await v.notifyReadyToSync();
+        r = await v.readyToSync();
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
     });
 
@@ -139,7 +139,7 @@ describe('committee', async () => {
         const {v: v2, r: r2} = await d.newValidator(stake - 1, false, false, true); // a ready member
         expect(r2).to.not.have.a.committeeSnapshotEvent();
 
-        let r = await v2.notifyReadyToSync(); // should now become not ready-for-committee
+        let r = await v2.readyToSync(); // should now become not ready-for-committee
         r = await v2.stake(2); // now has more stake than committee member, but not ready so should not enter committee
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
@@ -156,7 +156,7 @@ describe('committee', async () => {
 
             await v.registerAsValidator();
             await v.stake(stake + i);
-            let r = await v.notifyReadyForCommittee();
+            let r = await v.readyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
                 weights: committee.map((s, i) => bn(stake + i))
@@ -170,7 +170,7 @@ describe('committee', async () => {
         r = await v.stake(stake - 1);
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
-        r = await v.notifyReadyForCommittee();
+        r = await v.readyForCommittee();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.stake(stake*10);
@@ -192,7 +192,7 @@ describe('committee', async () => {
 
             await v.registerAsValidator();
             await v.stake(stake);
-            let r = await v.notifyReadyForCommittee();
+            let r = await v.readyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
                 weights: committee.map(s => bn(stake))
@@ -202,7 +202,7 @@ describe('committee', async () => {
         const v = await d.newParticipant();
         await v.registerAsValidator();
         await v.stake(stake);
-        await v.notifyReadyToSync();
+        await v.readyToSync();
         let r = await v.stake(stake);
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
@@ -224,7 +224,7 @@ describe('committee', async () => {
             if (i % 2 == 0) {
                 await v.becomeCompliant();
             }
-            let r = await v.notifyReadyForCommittee();
+            let r = await v.readyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(s => s.address),
             });
@@ -500,7 +500,7 @@ describe('committee', async () => {
         });
 
         // committee => evicted
-        r = await v.notifyReadyToSync();
+        r = await v.readyToSync();
         expect(r).to.have.a.validatorCommitteeChangeEvent({
             addr: v.address,
             weight: stake,
