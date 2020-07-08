@@ -54,6 +54,8 @@ import {
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
+import {transpose} from "./helpers";
+import {compiledContracts, eventDefinitions} from "../compiled-contracts";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -206,7 +208,7 @@ declare global {
       unlockedEvent(data?: Partial<UnlockedEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>);
-      maxTimeBetweenRewardAssignmentsChangedEvents(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
+      maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);

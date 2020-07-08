@@ -83,18 +83,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	function readyForCommittee() external {
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
-		requireNotVotedOut(guardianAddr);
+		require(!_isBanned(guardianAddr), "caller is voted-out");
 
 		emit ValidatorStatusUpdated(guardianAddr, true, true);
-		getCommitteeContract().memberReadyToSync(guardianAddr, true);
+		getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getComplianceContract().isValidatorCompliant(guardianAddr));
 	}
 
 	function readyToSync() external {
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
-		requireNotVotedOut(guardianAddr);
+		require(!_isBanned(guardianAddr), "caller is voted-out");
 
 		emit ValidatorStatusUpdated(guardianAddr, true, false);
-		getCommitteeContract().memberReadyToSync(guardianAddr, false);
+		getCommitteeContract().removeMember(guardianAddr);
 	}
 
 	function clearCommitteeUnreadyVotes(address[] memory committee, address votee) private {
@@ -154,7 +154,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
 			emit ValidatorVotedUnready(subjectAddr);
 			emit ValidatorStatusUpdated(subjectAddr, false, false);
-            getCommitteeContract().removeMember(addr);
+            getCommitteeContract().removeMember(subjectAddr);
 		}
 	}
 
@@ -251,8 +251,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			} else {
                 bannedValidators[addr] = 0;
 				emit ValidatorVotedIn(addr);
-
-				addMemberToCommittees(addr, _settings);
 			}
         }
     }
@@ -309,14 +307,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		uint256 stakes = d.getDelegatedStakes(addr);
 		bool isSelfDelegating = d.getDelegation(addr) == addr;
 		return calcGovernanceEffectiveStake(isSelfDelegating, stakes);
-	}
-
-	function removeMemberFromCommittees(address addr) private {
-		getCommitteeContract().removeMember(addr);
-	}
-
-	function addMemberToCommittees(address addr, Settings memory _settings) private {
-		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getComplianceContract().isValidatorCompliant(addr));
 	}
 
 	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {

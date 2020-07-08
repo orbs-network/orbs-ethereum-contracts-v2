@@ -318,8 +318,8 @@ describe('elections-high-level-flows', async () => {
 
         const v = d.newParticipant();
         await v.stake(V1_STAKE);
-        await expectRejected(v.notifyReadyToSync());
-        await expectRejected(v.notifyReadyForCommittee());
+        await expectRejected(v.readyToSync());
+        await expectRejected(v.readyForCommittee());
     });
 
     it('staking before or after delegating has the same effect', async () => {
@@ -841,7 +841,7 @@ describe('elections-high-level-flows', async () => {
             validator: votedOutValidator.address
         });
 
-        r = await votedOutValidator.notifyReadyForCommittee();
+        r = await votedOutValidator.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [votedOutValidator.address]
         });
@@ -871,7 +871,6 @@ describe('elections-high-level-flows', async () => {
                 subjects: [votedOutValidator.address]
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.standbysSnapshotEvent();
             expect(r).to.not.have.a.validatorVotedOutEvent();
             expect(r).to.not.have.a.validatorVotedInEvent();
         }

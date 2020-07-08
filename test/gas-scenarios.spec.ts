@@ -236,7 +236,7 @@ describe('gas usage scenarios', async () => {
         d.resetGasRecording();
         let r = await d.elections.voteUnready(committee[1].address, {from: committee[0].orbsAddress});
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.have.a.voteOutEvent({
+        expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
         });
