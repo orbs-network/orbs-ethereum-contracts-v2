@@ -27,24 +27,20 @@ export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
 export type DriverOptions = {
     maxCommitteeSize: number;
-    maxStandbys: number;
     maxDelegationRatio: number;
     maxTimeBetweenRewardAssignments: number;
     voteOutThreshold: number;
     voteOutTimeout: number;
-    readyToSyncTimeout: number;
     banningThreshold: number;
     web3Provider : () => Web3;
     contractRegistryAddress?: string;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
-    maxStandbys : 2,
     maxDelegationRatio : 10,
     maxTimeBetweenRewardAssignments: 0,
     voteOutThreshold : 80,
     voteOutTimeout : 24 * 60 * 60,
-    readyToSyncTimeout: 7*24*60*60,
     banningThreshold : 80,
     web3Provider: defaultWeb3Provider,
 };
@@ -94,9 +90,9 @@ export class Driver {
 
     private static async withFreshContracts(web3, accounts, session, options: Partial<DriverOptions> = {}) {
         const {
-            maxCommitteeSize, maxStandbys,
+            maxCommitteeSize,
             maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold,
-            readyToSyncTimeout, maxTimeBetweenRewardAssignments
+            maxTimeBetweenRewardAssignments
         } = Object.assign({}, defaultDriverOptions, options);
         const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
         const externalToken = await web3.deploy('TestingERC20', [], null, session);
@@ -108,7 +104,7 @@ export class Driver {
         const subscriptions = await web3.deploy('Subscriptions', [erc20.address], null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
-        const committee = await web3.deploy('Committee', [maxCommitteeSize, maxStandbys, readyToSyncTimeout, maxTimeBetweenRewardAssignments], null, session);
+        const committee = await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
         const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
         const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);

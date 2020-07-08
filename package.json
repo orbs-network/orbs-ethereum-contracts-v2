@@ -37,6 +37,7 @@
     "chai": "^4.2.0",
     "chai-bn": "^0.2.0",
     "node-fetch": "^2.6.0",
+    "solidity-bytes-utils": "0.0.8",
     "truffle-hdwallet-provider": "1.0.3",
     "ts-retry-promise": "^0.2.0",
     "web3": "1.2.6",

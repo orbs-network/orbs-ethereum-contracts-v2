@@ -5,6 +5,8 @@ import {
 } from "./event-parsing";
 import * as _ from "lodash";
 import chai from "chai";
+const expect = chai.expect;
+
 import {
   SubscriptionChangedEvent,
   PaymentEvent, VcConfigRecordChangedEvent, VcOwnerChangedEvent, VcCreatedEvent
@@ -43,21 +45,19 @@ import {
 import {
   CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
-  MaxStandbysChangedEvent,
   MaxTimeBetweenRewardAssignmentsChangedEvent,
-  ReadyToSyncTimeoutChangedEvent,
-  StandbysSnapshotEvent, ValidatorCommitteeChangeEvent,
+  ValidatorCommitteeChangeEvent,
   ValidatorStatusUpdatedEvent
 } from "../typings/committee-contract";
 import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
 import {Contract} from "../eth";
 import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
-import {compiledContracts, eventDefinitions} from "../compiled-contracts";
+import {transpose} from "./helpers";
 import {
-  ClientSetEvent,
-  EmergencyWithdrawalEvent,
-  FundsAddedToPoolEvent,
-  MaxAnnualRateSetEvent
+    ClientSetEvent,
+    EmergencyWithdrawalEvent,
+    FundsAddedToPoolEvent,
+    MaxAnnualRateSetEvent
 } from "../typings/protocol-wallet-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
@@ -79,23 +79,6 @@ function comparePrimitive(a: any, b: any): boolean {
     }
     return _.isEqual(a, b);
   }
-}
-
-function transpose(obj, key, fields?) {
-  if (Object.keys(obj || {}).length == 0) {
-    return {}
-  }
-  const transposed: {[key: string]: any} = [];
-  const n = _.values(obj)[0].length;
-  fields = fields || Object.keys(obj);
-  for (let i = 0; i < n; i++) {
-    const item = {};
-    for (let k of fields) {
-      item[k] = obj[k][i];
-    }
-    transposed[item[key]] = item;
-  }
-  return transposed;
 }
 
 function objectMatches(obj, against): boolean {
@@ -192,7 +175,6 @@ declare global {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
       committeeSnapshotEvent(data?: Partial<CommitteeSnapshotEvent>): void;
-      standbysSnapshotEvent(data?: Partial<StandbysSnapshotEvent>): void;
       validatorCommitteeChangeEvent(data?: Partial<ValidatorCommitteeChangeEvent>): void;
       validatorRegisteredEvent(data?: Partial<ValidatorRegisteredEvent>): void;
       validatorMetadataChangedEvent(data?: Partial<ValidatorMetadataChangedEvent>): void;
@@ -229,10 +211,8 @@ declare global {
       unlockedEvent(data?: Partial<UnlockedEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>);
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>);
-      readyToSyncTimeoutChangedEvent(data?: Partial<ReadyToSyncTimeoutChangedEvent>);
       maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
-      maxStandbysChangedEvent(data?: Partial<MaxStandbysChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);

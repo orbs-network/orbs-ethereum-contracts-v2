@@ -4,6 +4,7 @@ import * as _ from "lodash";
 import { Web3Driver } from "../eth";
 import {Driver} from "./driver";
 import {TransactionReceipt} from "web3-core";
+import chai from "chai";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
     for (let i = 0; i < n; i++) {
@@ -73,5 +74,22 @@ export function toTokenUnits(n: (number|BN)): BN {
 
 export function bnSum(ns: BN[]): BN {
     return ns.reduce((x, y) => x.add(y), bn(0));
+}
+
+export function transpose(obj, key, fields?) {
+    if (Object.keys(obj || {}).length == 0) {
+        return {}
+    }
+    const transposed: {[key: string]: any} = {};
+    const n = _.values(obj)[0].length;
+    fields = fields || Object.keys(obj);
+    for (let i = 0; i < n; i++) {
+        const item = {};
+        for (let k of fields) {
+            item[k] = obj[k][i];
+        }
+        transposed[item[key]] = item;
+    }
+    return transposed;
 }
 
