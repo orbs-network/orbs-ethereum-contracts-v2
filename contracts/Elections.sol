@@ -88,7 +88,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
 		requireNotVotedOut(guardianAddr);
 
-		emit ReadyForCommittee(guardianAddr);
 		emit ValidatorStatusUpdated(guardianAddr, true, true);
 		getCommitteeContract().memberReadyToSync(guardianAddr, true);
 	}
@@ -97,7 +96,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
 		requireNotVotedOut(guardianAddr);
 
-		emit ReadyToSync(guardianAddr);
 		emit ValidatorStatusUpdated(guardianAddr, true, false);
 		getCommitteeContract().memberReadyToSync(guardianAddr, false);
 	}

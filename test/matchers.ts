@@ -20,8 +20,7 @@ import {
   MaxDelegationRatioChangedEvent,
   VoteOutLockTimeoutSecondsChangedEvent,
   VoteUnreadyPercentageThresholdChangedEvent,
-  VoteOutPercentageThresholdChangedEvent,
-  ReadyToSyncEvent, ReadyForCommitteeEvent
+  VoteOutPercentageThresholdChangedEvent
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
@@ -234,8 +233,6 @@ declare global {
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
       validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
-      readyToSyncEvent(data?: Partial<ReadyToSyncEvent>);
-      readyForCommitteeEvent(data?: Partial<ReadyForCommitteeEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
       maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
 

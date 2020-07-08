@@ -12,8 +12,6 @@ interface IElections /* is IStakeChangeNotifier */ {
     // Function calls
     event VoteUnreadyCasted(address voter, address subject);
     event VoteOutCasted(address voter, address[] subjects);
-    event ReadyForSync(address validator);
-    event ReadyForCommittee(address validator);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
 	// Validator readiness

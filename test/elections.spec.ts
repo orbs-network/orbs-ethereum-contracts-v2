@@ -20,7 +20,7 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 
 const baseStake = 100;
 
-describe('elections-high-level-flows', async () => {
+describe.only('elections-high-level-flows', async () => {
 
     it('emits events on readyForCommittee and readyToSync', async () => {
         const d = await Driver.new();
@@ -28,7 +28,6 @@ describe('elections-high-level-flows', async () => {
         const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
 
         let r = await v.readyToSync();
-        expect(r).to.have.a.readyToSyncEvent();
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
@@ -36,7 +35,6 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await v.readyForCommittee();
-        expect(r).to.have.a.readyForCommitteeEvent();
         expect(r).to.have.a.validatorStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
