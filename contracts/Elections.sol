@@ -45,12 +45,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	modifier onlyNotBanned() {
-		require(!_isBanned(msg.sender), "caller is a banned validator");
-
-		_;
-	}
-
 	constructor(uint32 _maxDelegationRatio, uint8 _voteOutPercentageThreshold, uint32 _voteOutTimeoutSeconds, uint8 _banningPercentageThreshold) public {
 		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
 		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
@@ -83,16 +77,24 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberComplianceChange(addr, isCompliant);
 	}
 
-	function notifyReadyForCommittee() external onlyNotBanned { // TODO onlyNotBanned doesn't check etehreum address
-		address sender = getMainAddrFromOrbsAddr(msg.sender); // This validates the validator is registered
-		emit ValidatorStatusUpdated(sender, true, true);
-		getCommitteeContract().addMember(sender, getCommitteeEffectiveStake(sender, settings), getComplianceContract().isValidatorCompliant(sender));
+	function requireNotBanned(address addr) private view {
+		require(!_isBanned(addr), "caller is a banned validator");
 	}
 
-	function notifyReadyToSync() external onlyNotBanned {
-		address sender = getMainAddrFromOrbsAddr(msg.sender); // This validates the validator is registered
-		emit ValidatorStatusUpdated(sender, true, false);
-		getCommitteeContract().removeMember(sender);
+	function notifyReadyForCommittee() external {
+		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		requireNotBanned(guardianAddr);
+
+		emit ValidatorStatusUpdated(guardianAddr, true, true);
+        getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getComplianceContract().isValidatorCompliant(guardianAddr));
+	}
+
+	function notifyReadyToSync() external {
+		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		requireNotBanned(guardianAddr);
+
+		emit ValidatorStatusUpdated(guardianAddr, true, false);
+        getCommitteeContract().removeMember(guardianAddr);
 	}
 
 	function notifyDelegationChange(address delegator, uint256 delegatorSelfStake, address newDelegate, address prevDelegate, uint256 prevDelegateNewTotalStake, uint256 newDelegateNewTotalStake, uint256 prevDelegatePrevTotalStake, bool prevSelfDelegatingPrevDelegate, uint256 newDelegatePrevTotalStake, bool prevSelfDelegatingNewDelegate) onlyDelegationsContract onlyWhenActive external {

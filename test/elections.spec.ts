@@ -41,6 +41,49 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
+    it('allows sending readyForCommittee and readyToSync form both guardian and orbs address', async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
+
+        let r = await d.elections.notifyReadyToSync({from: v.orbsAddress});
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: false
+        });
+
+        r = await d.elections.notifyReadyToSync({from: v.address});
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: false
+        });
+
+        r = await d.elections.notifyReadyForCommittee({from: v.orbsAddress});
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+
+        r = await d.elections.notifyReadyForCommittee({from: v.address});
+        expect(r).to.have.a.validatorStatusUpdatedEvent({
+            addr: v.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+    });
+
+    it('rejects readyForCommittee and readyToSync from an unregistered validator', async () => {
+        const d = await Driver.new();
+
+        const v = d.newParticipant();
+
+        await expectRejected(d.elections.notifyReadyToSync({from: v.address}));
+        await expectRejected(d.elections.notifyReadyForCommittee({from: v.address}));
+    });
+
     it('handle delegation requests', async () => {
         const d = await Driver.new();
 
@@ -811,6 +854,53 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: []
         });
+    });
+
+    it("rejects readyToSync and readyForCommittee for a banned validator", async () => {
+        const d = await Driver.new();
+
+        let r;
+        let {thresholdCrossingIndex, delegatees, delegators, bannedValidator} = await banningScenario_setupDelegatorsAndValidators(d);
+
+        // -------------- CAST VOTES UNDER THE THRESHOLD ---------------
+
+        for (let i = 0; i < thresholdCrossingIndex; i++) {
+            const p = delegatees[i];
+            r = await d.elections.setBanningVotes([bannedValidator.address], {from: p.address});
+            expect(r).to.have.a.banningVoteEvent({
+                voter: p.address,
+                against: [bannedValidator.address]
+            });
+            expect(r).to.not.have.a.committeeSnapshotEvent();
+            expect(r).to.not.have.a.bannedEvent();
+            expect(r).to.not.have.a.unbannedEvent();
+        }
+
+        // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
+
+        r = await d.elections.setBanningVotes([bannedValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        expect(r).to.have.a.banningVoteEvent({
+            voter: delegatees[thresholdCrossingIndex].address,
+            against: [bannedValidator.address]
+        });
+        expect(r).to.have.a.bannedEvent({
+            validator: bannedValidator.address
+        });
+        expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
+            addrs: []
+        });
+
+        await expectRejected(d.elections.notifyReadyToSync({from: bannedValidator.address}));
+        await expectRejected(d.elections.notifyReadyToSync({from: bannedValidator.orbsAddress}));
+        await expectRejected(d.elections.notifyReadyForCommittee({from: bannedValidator.address}));
+        await expectRejected(d.elections.notifyReadyForCommittee({from: bannedValidator.orbsAddress}));
+
+        await d.elections.setBanningVotes([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+
+        await d.elections.notifyReadyToSync({from: bannedValidator.address});
+        await d.elections.notifyReadyToSync({from: bannedValidator.orbsAddress});
+        await d.elections.notifyReadyForCommittee({from: bannedValidator.address});
+        await d.elections.notifyReadyForCommittee({from: bannedValidator.orbsAddress});
     });
 
     it("sets and gets settings, only functional owner allowed to set", async () => {
