@@ -11,6 +11,7 @@ import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./Lockable.sol";
+import "./spec_interfaces/IProtocolWallet.sol";
 
 contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
@@ -57,6 +58,14 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
     function getSubscriptionsContract() public view returns (ISubscriptions) {
         return ISubscriptions(contractRegistry.get("subscriptions"));
+    }
+
+    function getStakingRewardsWallet() public view returns (IProtocolWallet) {
+        return IProtocolWallet(contractRegistry.get("stakingRewardsWallet"));
+    }
+
+    function getBootstrapRewardsWallet() public view returns (IProtocolWallet) {
+        return IProtocolWallet(contractRegistry.get("bootstrapRewardsWallet"));
     }
 
 }

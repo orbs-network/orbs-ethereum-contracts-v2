@@ -30,6 +30,19 @@ describe('staking-rewards-level-flows', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    let r = await d.rewards.topUpStakingRewardsPool(fromTokenUnits(1), {from: g.address});
+    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
+      added: fromTokenUnits(1),
+      total: fromTokenUnits(1)
+    });
+
+    r = await d.rewards.topUpStakingRewardsPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
+    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
+      added: poolAmount.sub(fromTokenUnits(1)),
+      total: poolAmount
+    });
+
     // create committee
 
     const initStakeLesser = fromTokenUnits(17000);
@@ -42,7 +55,7 @@ describe('staking-rewards-level-flows', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    let r = await v2.notifyReadyForCommittee();
+    r = await v2.notifyReadyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
@@ -85,20 +98,6 @@ describe('staking-rewards-level-flows', async () => {
     for (const v of validators) {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
-
-    // Pool can be topped up after assignment
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    r = await d.rewards.topUpStakingRewardsPool(fromTokenUnits(1), {from: g.address});
-    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
-      added: fromTokenUnits(1),
-      total: fromTokenUnits(1)
-    });
-
-    r = await d.rewards.topUpStakingRewardsPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
-    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
-      added: poolAmount.sub(fromTokenUnits(1)),
-      total: poolAmount
-    });
 
     for (const v of validators) {
       const delegator = d.newParticipant();
@@ -640,7 +639,7 @@ describe('staking-rewards-level-flows', async () => {
   it('enforces delegators portion in the distribution is less than configured threshold', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
+    const {v} = await d.newValidator(fromTokenUnits(100000000), false, false, true);
 
     const delegator = d.newParticipant();
 
