@@ -8,7 +8,6 @@ contract ContractRegistry is IContractRegistry, WithClaimableMigrationOwnership,
 	mapping (string => address) contracts;
 
 	function set(string calldata contractName, address addr) external onlyFunctionalOwner {
-		require(addr != address(0), "address must not be zero");
 		contracts[contractName] = addr;
 		emit ContractAddressUpdated(contractName, addr);
 	}

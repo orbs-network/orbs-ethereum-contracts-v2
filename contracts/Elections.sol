@@ -62,16 +62,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was registered
 	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
-		if (_isBanned(addr)) {
-			return;
-		}
-		addMemberToCommittees(addr, settings);
 	}
 
 	/// @dev Called by: validator registration contract
 	/// Notifies a new validator was unregistered
 	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		removeMemberFromCommittees(addr);
+		emit ValidatorStatusUpdated(addr, false, false);
+		getCommitteeContract().removeMember(addr);
 	}
 
 	/// @dev Called by: validator registration contract
@@ -157,7 +154,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
 			emit ValidatorVotedUnready(subjectAddr);
 			emit ValidatorStatusUpdated(subjectAddr, false, false);
-			getCommitteeContract().memberNotReadyToSync(subjectAddr);
+            getCommitteeContract().removeMember(addr);
 		}
 	}
 
@@ -249,7 +246,8 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
                 bannedValidators[addr] = now;
 				emit ValidatorVotedOut(addr);
 
-				removeMemberFromCommittees(addr);
+				emit ValidatorStatusUpdated(addr, false, false);
+				getCommitteeContract().removeMember(addr);
 			} else {
                 bannedValidators[addr] = 0;
 				emit ValidatorVotedIn(addr);

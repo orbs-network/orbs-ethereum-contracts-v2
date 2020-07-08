@@ -14,6 +14,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
+
 describe('elections-compliance', async () => {
 
     it('votes out a compliant committee member when compliant threshold is reached', async () => {
@@ -42,7 +43,6 @@ describe('elections-compliance', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.filter(v => v != complianceCommittee[0]).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
     });
 
     it('votes out a compliance committee member from both committees when threshold is reached in general committee but not in compliance committee', async () => {
@@ -68,10 +68,9 @@ describe('elections-compliance', async () => {
         expect(r).to.have.a.validatorVotedUnreadyEvent({
             validator: complianceCommittee[0].address
         });
-        expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
+        expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.slice(1).map(v => v.address)
         });
-        expect(r).to.have.a.standbysSnapshotEvent({addrs: []});
     });
 
     it('compliance committee cannot vote out a general committee member', async () => {
@@ -94,7 +93,6 @@ describe('elections-compliance', async () => {
             let r = await d.elections.voteUnready(generalCommittee[1].address, {from: v.orbsAddress});
             expect(r).to.not.have.a.validatorVotedUnreadyEvent();
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.standbysSnapshotEvent();
         }
     });
 
