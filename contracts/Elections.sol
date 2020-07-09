@@ -18,6 +18,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	using SafeMath for uint256;
 
 	mapping (address => mapping (address => uint256)) votedUnreadyVotes; // by => to => timestamp
+	mapping (address => uint256) votersStake;
 	mapping (address => address[]) voteOutVotes; // by => to[]]
 	mapping (address => uint256) accumulatedStakesForVoteOut; // addr => total stake
 	mapping (address => uint256) bannedValidators; // addr => timestamp
@@ -179,15 +180,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return accumulatedStakesForVoteOut[addrs];
 	}
 
-	function _applyStakesToVoteOutBy(address voter, uint256 previousStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
+	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
 		address[] memory votes = voteOutVotes[voter];
-		uint256 currentStake = getGovernanceEffectiveStake(voter);
+		if (votes.length == 0) return;
+
+		uint256 prevVoterStake = votersStake[voter];
+		votersStake[voter] = currentVoterStake;
 
 		for (uint i = 0; i < votes.length; i++) {
 			address validator = votes[i];
 			accumulatedStakesForVoteOut[validator] = accumulatedStakesForVoteOut[validator].
-				sub(previousStake).
-				add(currentStake);
+				sub(prevVoterStake).
+				add(currentVoterStake);
 			_applyVoteOutVotesFor(validator, _totalGovernanceStake, _settings);
 		}
 	}
@@ -196,7 +200,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		Settings memory _settings = settings;
 
 		address[] memory prevAddrs = voteOutVotes[voter];
+		if (prevAddrs.length == 0) {
+			votersStake[msg.sender] = getDelegationsContract().getDelegatedStakes(msg.sender);
+		}
+
 		voteOutVotes[voter] = validators;
+		uint256 voterStake = votersStake[msg.sender];
 		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
 
 		for (uint i = 0; i < prevAddrs.length; i++) {
@@ -209,7 +218,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 				}
 			}
 			if (isRemoved) {
-				accumulatedStakesForVoteOut[addr] = accumulatedStakesForVoteOut[addr].sub(getGovernanceEffectiveStake(msg.sender));
+				accumulatedStakesForVoteOut[addr] = accumulatedStakesForVoteOut[addr].sub(voterStake);
 				_applyVoteOutVotesFor(addr, _totalGovernanceStake, _settings);
 			}
 		}
@@ -224,7 +233,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 				}
 			}
 			if (isAdded) {
-				accumulatedStakesForVoteOut[addr] = accumulatedStakesForVoteOut[addr].add(getGovernanceEffectiveStake(msg.sender));
+				accumulatedStakesForVoteOut[addr] = accumulatedStakesForVoteOut[addr].add(voterStake);
 			}
 			_applyVoteOutVotesFor(addr, _totalGovernanceStake, _settings); // recheck also if not new
 		}
@@ -259,12 +268,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return bannedValidators[addr] != 0;
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated, uint256 deltaTotalDelegated, bool signDeltaTotalDelegated) external onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
 		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
 
 		Settings memory _settings = settings;
 		_applyDelegatedStake(addr, totalDelegated, _settings);
-		_applyStakesToVoteOutBy(addr, signDeltaTotalDelegated ? totalDelegated.sub(deltaTotalDelegated) : totalDelegated.add(deltaTotalDelegated), _totalGovernanceStake, _settings);
+		_applyStakesToVoteOutBy(addr, totalDelegated, _totalGovernanceStake, _settings);
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
@@ -289,7 +298,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			return 0;
 		}
 
-		uint256 uncappedStake = getUncappedStakes(v);
+		uint256 uncappedStake = getDelegationsContract().getDelegatedStakes(v);
 		uint256 maxRatio = _settings.maxDelegationRatio;
 		if (uncappedStake.div(ownStake) < maxRatio) {
 			return uncappedStake;
@@ -297,16 +306,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return ownStake.mul(maxRatio); // never overflows
 	}
 
-	function getUncappedStakes(address addr) internal view returns (uint256) {
-		return getDelegationsContract().getDelegatedStakes(addr);
+	function removeMemberFromCommittees(address addr) private {
+		getCommitteeContract().removeMember(addr);
 	}
 
-	// TODO remove use of this function where possible - use pure function with bool and stake instead
-	function getGovernanceEffectiveStake(address addr) internal view returns (uint256) {
-		IDelegations d = getDelegationsContract();
-		uint256 stakes = d.getDelegatedStakes(addr);
-		bool isSelfDelegating = d.getDelegation(addr) == addr;
-		return calcGovernanceEffectiveStake(isSelfDelegating, stakes);
+	function addMemberToCommittees(address addr, Settings memory _settings) private {
+		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getComplianceContract().isValidatorCompliant(addr));
 	}
 
 	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {
