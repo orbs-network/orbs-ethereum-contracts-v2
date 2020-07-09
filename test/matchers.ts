@@ -41,8 +41,8 @@ import {
   ValidatorUnregisteredEvent
 } from "../typings/validator-registration-contract";
 import {
-  DelegatedEvent,
-  DelegatedStakeChangedEvent
+    DelegatedEvent,
+    DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
 } from "../typings/delegations-contract";
 import {
   CommitteeSnapshotEvent,
@@ -226,6 +226,8 @@ declare global {
       clientSetEvent(data?: Partial<ClientSetEvent>);
       maxAnnualRateSetEvent(data?: Partial<MaxAnnualRateSetEvent>);
       emergencyWithdrawalEvent(data?: Partial<EmergencyWithdrawalEvent>);
+      delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
+      delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

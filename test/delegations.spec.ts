@@ -253,5 +253,199 @@ describe('delegations-contract', async () => {
 
     });
 
+    it('uses absolute stake on first notification of stake change (batched and non-batched)', async () => {
+       const d = await Driver.new();
+
+       const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
+       await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
+
+       await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
+       await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
+
+       const v1 = d.newParticipant();
+       await v1.stake(100);
+
+       const v2 = d.newParticipant();
+       await v2.stake(100);
+
+        await d.staking.setStakeChangeNotifier(d.delegations.address);
+        await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
+
+       // Non-batched
+
+       // First time - using the total value
+       let r = await v1.stake(100);
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v1.address,
+           selfDelegatedStake: bn(200)
+       });
+
+       // Second time - using the delta
+       r = await v1.stake(100);
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v1.address,
+           selfDelegatedStake: bn(300)
+       });
+
+       // Batched
+
+       // First time - using the total value
+       await v2.assignAndApproveOrbs(100, d.staking.address);
+       r = await d.staking.distributeRewards(100, [v2.address], [100], {from: v2.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v2.address,
+           selfDelegatedStake: bn(200)
+       });
+
+       // Second time - using the delta
+       await v2.assignAndApproveOrbs(100, d.staking.address);
+       r = await d.staking.distributeRewards(100, [v2.address], [100], {from: v2.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v2.address,
+           selfDelegatedStake: bn(300)
+       });
+
+    });
+
+    it('imports a delegation for a delegator with an existing stake (no election notification)', async () => {
+       const d = await Driver.new();
+
+       const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
+       await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
+
+       await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
+       await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
+
+       const d1 = d.newParticipant();
+       await d1.stake(100);
+
+       const d2 = d.newParticipant();
+       await d2.stake(200);
+
+       await d.staking.setStakeChangeNotifier(d.delegations.address);
+       await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
+
+        const {v: v1} = await d.newValidator(100, false, false, true);
+        const {v: v2} = await d.newValidator(100, false, false, true);
+
+       let r = await d.delegations.importDelegations([d1.address, d2.address], [v1.address, v2.address], false, {from: d.migrationOwner.address});
+       expect(r).to.have.a.delegationsImportedEvent({
+           from: [d1.address, d2.address],
+           to: [v1.address, v2.address]
+       });
+       expect(r).to.have.a.delegatedEvent({from: d1.address, to: v1.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v1.address,
+           delegatedStake: bn(200),
+           delegators: [d1.address],
+           delegatorTotalStakes: [bn(100)]
+       });
+       expect(r).to.have.a.delegatedEvent({from: d2.address, to: v2.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v2.address,
+           delegatedStake: bn(300),
+           delegators: [d2.address],
+           delegatorTotalStakes: [bn(200)]
+       });
+       expect(r).to.not.have.a.committeeSnapshotEvent();
+
+       // import a delegation when already delegated
+
+       r = await d.delegations.importDelegations([d1.address, d2.address], [v2.address, v1.address], false, {from: d.migrationOwner.address});
+       expect(r).to.have.a.delegationsImportedEvent({
+            from: [d1.address, d2.address],
+            to: [v2.address, v1.address]
+        });
+       expect(r).to.have.a.delegatedEvent({from: d2.address, to: v1.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v1.address,
+           delegatedStake: bn(300),
+       });
+       expect(r).to.have.a.delegatedEvent({from: d1.address, to: v2.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v2.address,
+           delegatedStake: bn(200),
+       });
+       expect(r).to.not.have.a.committeeSnapshotEvent();
+
+    });
+
+    it('imports a delegation for a delegator with an existing stake (with election notification)', async () => {
+       const d = await Driver.new();
+
+       const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
+       await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
+
+       await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
+       await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
+
+       const d1 = d.newParticipant();
+       await d1.stake(100);
+
+       const d2 = d.newParticipant();
+       await d2.stake(200);
+
+       await d.staking.setStakeChangeNotifier(d.delegations.address);
+       await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
+
+       const {v: v1} = await d.newValidator(100, false, false, true);
+       const {v: v2} = await d.newValidator(100, false, false, true);
+
+       let r = await d.delegations.importDelegations([d1.address, d2.address], [v1.address, v2.address], true, {from: d.migrationOwner.address});
+       expect(r).to.have.a.delegationsImportedEvent({
+           from: [d1.address, d2.address],
+           to: [v1.address, v2.address]
+       });
+       expect(r).to.have.a.delegatedEvent({from: d1.address, to: v1.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v1.address,
+           delegatedStake: bn(200),
+           delegators: [d1.address],
+           delegatorTotalStakes: [bn(100)]
+       });
+       expect(r).to.have.a.delegatedEvent({from: d2.address, to: v2.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v2.address,
+           delegatedStake: bn(300),
+           delegators: [d2.address],
+           delegatorTotalStakes: [bn(200)]
+       });
+       expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address, v2.address]});
+
+       // import a delegation when already delegated
+
+       r = await d.delegations.importDelegations([d1.address, d2.address], [v2.address, v1.address], true, {from: d.migrationOwner.address});
+       expect(r).to.have.a.delegationsImportedEvent({
+            from: [d1.address, d2.address],
+            to: [v2.address, v1.address]
+        });
+       expect(r).to.have.a.delegatedEvent({from: d2.address, to: v1.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v1.address,
+           delegatedStake: bn(300),
+       });
+       expect(r).to.have.a.delegatedEvent({from: d1.address, to: v2.address});
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: v2.address,
+           delegatedStake: bn(200),
+       });
+       expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address, v2.address]});
+    });
+
+    it('ensures only the migration owner can import a delegation and finalize imports', async () => {
+       const d = await Driver.new();
+
+       const d1 = d.newParticipant();
+       const v1 = d.newParticipant();
+
+       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.functionalOwner.address}));
+       await d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address});
+
+       await expectRejected(d.delegations.finalizeDelegationImport({from: d.functionalOwner.address}));
+       let r = await d.delegations.finalizeDelegationImport({from: d.migrationOwner.address});
+       expect(r).to.have.a.delegationImportFinalizedEvent({});
+
+       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address}));
+    });
 
 });
