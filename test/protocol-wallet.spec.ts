@@ -180,5 +180,26 @@ describe('protocol-contract', async () => {
     expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.eq(amount);
   });
 
+  it('skips ERC20 withdrawal when amount is zero', async () => {
+    const d = await Driver.new();
+
+    const client = d.newParticipant();
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(1000, {from: d.migrationOwner.address});
+
+    await client.assignAndApproveOrbs(1000, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(1000, {from: client.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    let r = await d.stakingRewardsWallet.withdraw(0, {from: client.address});
+    expect(r).to.not.have.a.transferEvent();
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    r = await d.stakingRewardsWallet.withdraw(1, {from: client.address});
+    expect(r).to.have.a.transferEvent();
+  });
+
 });
 

@@ -55,7 +55,9 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         require(amount <= maxAmount, "ProtocolWallet:approve - requested amount is larger than allowed by rate");
 
         lastApprovedAt = now;
-        require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed"); // TODO May skip the transfer on amount == 0.
+        if (amount > 0) {
+            require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
+        }
     }
 
     /* Governance */
