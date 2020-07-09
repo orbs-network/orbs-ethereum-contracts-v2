@@ -56,6 +56,12 @@ import {Contract} from "../eth";
 import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
 import {transpose} from "./helpers";
 import {compiledContracts, eventDefinitions} from "../compiled-contracts";
+import {
+    ClientSetEvent,
+    EmergencyWithdrawalEvent,
+    FundsAddedToPoolEvent,
+    MaxAnnualRateSetEvent
+} from "../typings/protocol-wallet-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -216,6 +222,10 @@ declare global {
       validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
       maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
+      fundsAddedToPoolEvent(data?: Partial<FundsAddedToPoolEvent>);
+      clientSetEvent(data?: Partial<ClientSetEvent>);
+      maxAnnualRateSetEvent(data?: Partial<MaxAnnualRateSetEvent>);
+      emergencyWithdrawalEvent(data?: Partial<EmergencyWithdrawalEvent>);
       delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
 

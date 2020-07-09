@@ -10,6 +10,7 @@ import { CommitteeContract } from "./committee-contract";
 import { ComplianceContract } from "./compliance-contract";
 import { DelegationsContract } from "./delegations-contract";
 import {RewardsContract} from "./rewards-contract";
+import {ProtocolWalletContract} from "./protocol-wallet-contract";
 
 /**
  * Dictionary type
@@ -28,4 +29,5 @@ export type Contracts = {
     ValidatorsRegistration: ValidatorsRegistrationContract;
     Committee: CommitteeContract;
     Delegations: DelegationsContract;
+    ProtocolWallet: ProtocolWalletContract;
 }

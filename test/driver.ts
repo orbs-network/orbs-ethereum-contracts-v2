@@ -19,6 +19,7 @@ import {TransactionReceipt} from "web3-core";
 import {GasRecorder} from "../gas-recorder";
 import {stakedEvents} from "./event-parsing";
 import {OwnedContract} from "../typings/base-contract";
+import {bn} from "./helpers";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;
 export const DEPLOYMENT_SUBSET_MAIN = "main";
@@ -44,7 +45,7 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     web3Provider: defaultWeb3Provider,
 };
 
-export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'rewards';
+export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet';
 
 export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
@@ -67,7 +68,9 @@ export class Driver {
         public compliance: Contracts["Compliance"],
         public validatorsRegistration: Contracts['ValidatorsRegistration'],
         public committee: Contracts['Committee'],
-        public contractRegistry: Contracts["ContractRegistry"],
+        public stakingRewardsWallet: Contracts['ProtocolWallet'],
+        public bootstrapRewardsWallet: Contracts['ProtocolWallet'],
+        public contractRegistry: Contracts["ContractRegistry"]
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
@@ -102,6 +105,8 @@ export class Driver {
         const protocol = await web3.deploy('Protocol', [], null, session);
         const compliance = await web3.deploy('Compliance', [], null, session);
         const committee = await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
+        const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
+        const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
         const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
@@ -113,6 +118,8 @@ export class Driver {
         await contractRegistry.set("compliance", compliance.address);
         await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
         await contractRegistry.set("committee", committee.address);
+        await contractRegistry.set("stakingRewardsWallet", stakingRewardsWallet.address);
+        await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
         await contractRegistry.set("_bootstrapToken", externalToken.address);
         await contractRegistry.set("_erc20", erc20.address);
 
@@ -136,12 +143,17 @@ export class Driver {
             compliance,
             validatorsRegistration,
             committee,
-            contractRegistry
+            contractRegistry,
+            stakingRewardsWallet,
+            bootstrapRewardsWallet
         ].map(async (c: OwnedContract) => {
             await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})
         }));
+
         await rewards.setMaxDelegatorsStakingRewardsPercentMille(100000, {from: accounts[1]}); // TODO remove when setting in constructor
+        await stakingRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
+        await bootstrapRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
 
         return new Driver(web3, session,
             accounts,
@@ -156,6 +168,8 @@ export class Driver {
             compliance,
             validatorsRegistration,
             committee,
+            stakingRewardsWallet,
+            bootstrapRewardsWallet,
             contractRegistry
         );
     }
@@ -174,6 +188,8 @@ export class Driver {
         const compliance = await web3.getExisting('Compliance', await contractRegistry.get('compliance'), session);
         const committee = await web3.getExisting('Committee', await contractRegistry.get('committee'), session);
         const validatorsRegistration = await web3.getExisting('ValidatorsRegistration', await contractRegistry.get('validatorsRegistration'), session);
+        const stakingRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
+        const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
 
         return new Driver(web3, session,
             accounts,
@@ -188,6 +204,8 @@ export class Driver {
             compliance,
             validatorsRegistration,
             committee,
+            stakingRewardsWallet,
+            bootstrapRewardsWallet,
             contractRegistry
         );
     }

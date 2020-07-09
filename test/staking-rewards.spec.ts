@@ -3,7 +3,7 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver, expectRejected} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -16,12 +16,16 @@ async function sleep(ms): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe('staking-rewards-level-flows', async () => {
+describe('staking-rewards', async () => {
+
+  before(async () => {
+    const d = await Driver.new();
+    await evmMine(d.web3, 200); // tests assume block 200 is in the past
+  });
 
   it('should distribute staking rewards to validators in general committee', async () => {
-    const d = await Driver.new();
-
     /* top up staking rewards pool */
+    const d = await Driver.new();
     const g = d.functionalOwner;
 
     const annualRate = bn(12000);
@@ -29,6 +33,19 @@ describe('staking-rewards-level-flows', async () => {
     const annualCap = poolAmount;
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    let r = await d.rewards.topUpStakingRewardsPool(fromTokenUnits(1), {from: g.address});
+    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
+      added: fromTokenUnits(1),
+      total: fromTokenUnits(1)
+    });
+
+    r = await d.rewards.topUpStakingRewardsPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
+    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
+      added: poolAmount.sub(fromTokenUnits(1)),
+      total: poolAmount
+    });
 
     // create committee
 
@@ -42,7 +59,7 @@ describe('staking-rewards-level-flows', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsValidator();
-    let r = await v2.readyForCommittee();
+    r = await v2.readyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const validators = [{
@@ -85,20 +102,6 @@ describe('staking-rewards-level-flows', async () => {
     for (const v of validators) {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
-
-    // Pool can be topped up after assignment
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    r = await d.rewards.topUpStakingRewardsPool(fromTokenUnits(1), {from: g.address});
-    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
-      added: fromTokenUnits(1),
-      total: fromTokenUnits(1)
-    });
-
-    r = await d.rewards.topUpStakingRewardsPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
-    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
-      added: poolAmount.sub(fromTokenUnits(1)),
-      total: poolAmount
-    });
 
     for (const v of validators) {
       const delegator = d.newParticipant();
@@ -581,7 +584,7 @@ describe('staking-rewards-level-flows', async () => {
     });
   });
 
-  it('first address in distribute must be the main address of the sender', async () => {
+  it('any address in distribute can be the main address of the sender', async () => {
     const d = await Driver.new();
 
     const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
@@ -603,7 +606,7 @@ describe('staking-rewards-level-flows', async () => {
 
     await d.rewards.assignRewards();
 
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await d.rewards.distributeOrbsTokenStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -612,27 +615,27 @@ describe('staking-rewards-level-flows', async () => {
         [delegator.address],
         [fromTokenUnits(5)],
         {from: v.address}
-    ));
-
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
-        fromTokenUnits(5),
-        0,
-        100,
-        1,
-        0,
-        [v.orbsAddress],
-        [fromTokenUnits(5)],
-        {from: v.address}
-    ));
+    );
 
     await d.rewards.distributeOrbsTokenStakingRewards(
-        fromTokenUnits(5),
+        fromTokenUnits(2),
         0,
         100,
         1,
+        1,
+        [delegator.address, v.address],
+        [fromTokenUnits(1), fromTokenUnits(1)],
+        {from: v.address}
+    );
+
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(2),
         0,
-        [v.address],
-        [fromTokenUnits(5)],
+        100,
+        1,
+        2 ,
+        [v.address, delegator.address],
+        [fromTokenUnits(1), fromTokenUnits(1)],
         {from: v.address}
     );
   });
@@ -640,7 +643,7 @@ describe('staking-rewards-level-flows', async () => {
   it('enforces delegators portion in the distribution is less than configured threshold', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(fromTokenUnits(1000000000), false, false, true);
+    const {v} = await d.newValidator(fromTokenUnits(100000000), false, false, true);
 
     const delegator = d.newParticipant();
 
@@ -673,6 +676,17 @@ describe('staking-rewards-level-flows', async () => {
         {from: v.address}
     ));
 
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(2),
+        0,
+        100,
+        1,
+        0,
+        [delegator.address],
+        [fromTokenUnits(2)],
+        {from: v.address}
+    ));
+
     await d.rewards.distributeOrbsTokenStakingRewards(
         fromTokenUnits(100000),
         0,
@@ -683,6 +697,54 @@ describe('staking-rewards-level-flows', async () => {
         [fromTokenUnits(33334), fromTokenUnits(66666)],
         {from: v.address}
     );
+
+    // +1 for rounding errors should allow these
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(99999),
+        0,
+        100,
+        1,
+        1,
+        [v.address, delegator.address],
+        [fromTokenUnits(33333), fromTokenUnits(66666)],
+        {from: v.address}
+    );
+
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(1),
+        0,
+        100,
+        1,
+        2,
+        [delegator.address],
+        [fromTokenUnits(1)],
+        {from: v.address}
+    );
+
+    // validator reward can be split to multiple entries
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        3,
+        [v.address, delegator.address, v.address],
+        [fromTokenUnits(1), fromTokenUnits(2), fromTokenUnits(2)],
+        {from: v.address}
+    );
+
+    // Distribute only to validator
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(1),
+        0,
+        100,
+        1,
+        4,
+        [v.address],
+        [fromTokenUnits(1)],
+        {from: v.address}
+    );
+
   });
 
 });
