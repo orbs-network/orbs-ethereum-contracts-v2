@@ -235,7 +235,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address addr, uint256, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
 		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
 
 		Settings memory _settings = settings;
