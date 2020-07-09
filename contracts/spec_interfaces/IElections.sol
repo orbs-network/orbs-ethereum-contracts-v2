@@ -5,17 +5,17 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface IElections /* is IStakeChangeNotifier */ {
     // Election state change events
-    event ValidatorVotedUnready(address validator);
-    event ValidatorVotedOut(address validator);
-	event ValidatorVotedIn(address validator);
+    event GuardianVotedUnready(address guardian);
+    event GuardianVotedOut(address guardian);
+	event GuardianVotedIn(address guardian);
 
     // Function calls
     event VoteUnreadyCasted(address voter, address subject);
     event VoteOutCasted(address voter, address[] subjects);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
-	// Validator readiness
-	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
+	// Guardian readiness
+	event GuardianStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
 
 	// Governance
 	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
@@ -29,16 +29,16 @@ interface IElections /* is IStakeChangeNotifier */ {
      * External methods
      */
 
-    /// @dev Called by a validator as part of the automatic vote unready flow
+    /// @dev Called by a guardian as part of the automatic vote unready flow
 	function voteUnready(address subject_addr) external;
 
-    /// @dev Called by a validator as part of the vote-out flow
+    /// @dev Called by a guardian as part of the vote-out flow
 	function voteOut(address[] calldata subject_addrs) external;
 
-	/// @dev Called by a validator when ready to join the committee, typically after syncing is complete or after being voted unready
+	/// @dev Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted unready
 	function readyForSync() external;
 
-	/// @dev Called by a validator when ready to join the committee, typically after syncing is complete or after being voted unready
+	/// @dev Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted unready
 	function readyForCommittee() external;
 
 	/*
@@ -47,20 +47,20 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	/// @dev Called by: delegation contract
 	/// Notifies a delegated stake change event
-	/// total_delegated_stake = 0 if addr delegates to another validator
+	/// total_delegated_stake = 0 if addr delegates to another guardian
 	function delegatedStakeChange(address addr, uint256 selfStake, uint256 total_delegated, uint256 delta_total_delegated, bool sign_total_delegated) external /* onlyDelegationContract */;
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a new validator was registered
-	function validatorRegistered(address addr) external /* onlyValidatorsRegistrationContract */;
+	/// @dev Called by: guardian registration contract
+	/// Notifies a new guardian was registered
+	function guardianRegistered(address addr) external /* onlyGuardiansRegistrationContract */;
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a new validator was unregistered
-	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
+	/// @dev Called by: guardian registration contract
+	/// Notifies a new guardian was unregistered
+	function guardianUnregistered(address addr) external /* onlyGuardiansRegistrationContract */;
 
-	/// @dev Called by: validator registration contract
-	/// Notifies on a validator compliance change
-	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
+	/// @dev Called by: guardian registration contract
+	/// Notifies on a guardian certification change
+	function guardianCertificationChanged(address addr, bool isCertified) external /* onlyCertificationContract */;
 
 	/*
 	 * Governance

@@ -74,7 +74,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
-  it('registers and pays for a compliance VC', async () => {
+  it('registers and pays for a certification VC', async () => {
     const d = await Driver.new();
 
     const monthlyRate = new BN(1000);

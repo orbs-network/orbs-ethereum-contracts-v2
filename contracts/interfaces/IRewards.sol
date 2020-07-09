@@ -7,7 +7,7 @@ import "../spec_interfaces/IContractRegistry.sol";
 interface IRewards {
 
     function assignRewards() external;
-    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata compliance) external /* onlyCommitteeContract */;
+    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata certification) external /* onlyCommitteeContract */;
 
     // staking
 
@@ -37,10 +37,10 @@ interface IRewards {
 
     // fees
 
-    event FeesAssigned(uint256 generalValidatorAmount, uint256 certifiedValidatorAmount);
-    event FeesWithdrawn(address validator, uint256 amount);
-    event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total, bool isCompliant);
-    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCompliant);
+    event FeesAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
+    event FeesWithdrawn(address guardian, uint256 amount);
+    event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total, bool isCertified);
+    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCertified);
 
     /*
      *   External methods
@@ -53,8 +53,8 @@ interface IRewards {
     function withdrawFeeFunds() external;
 
     /// @dev Called by: subscriptions contract
-    /// Top-ups the compliance fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
+    /// Top-ups the certification fee pool with the given amount at the given rate (typically called by the subscriptions contract)
+    function fillCertificationFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
 
     /// @dev Called by: subscriptions contract
     /// Top-ups the general fee pool with the given amount at the given rate (typically called by the subscriptions contract)
@@ -64,9 +64,9 @@ interface IRewards {
 
     // bootstrap
 
-    event BootstrapRewardsAssigned(uint256 generalValidatorAmount, uint256 certifiedValidatorAmount);
+    event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
     event BootstrapAddedToPool(uint256 added, uint256 total);
-    event BootstrapRewardsWithdrawn(address validator, uint256 amount);
+    event BootstrapRewardsWithdrawn(address guardian, uint256 amount);
 
     /*
      *   External methods
@@ -92,8 +92,8 @@ interface IRewards {
     /// @dev Assigns rewards and sets a new monthly rate for the geenral commitee bootstrap.
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
 
-    /// @dev Assigns rewards and sets a new monthly rate for the compliance commitee bootstrap.
-    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
+    /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
+    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
 
 
     /*

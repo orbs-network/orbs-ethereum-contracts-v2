@@ -4,13 +4,13 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface ElectionsContract extends OwnedContract {
-  registerValidator( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  registerGuardian( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
   readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
   readyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
   voteUnready(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setValidatorOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setValidatorIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setGuardianOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setGuardianIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   voteOut(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getVoteOutVote(address: string): Promise<string>;
@@ -42,8 +42,8 @@ export interface VoteUnreadyCastedEvent {
   subject: string;
 }
 
-export interface ValidatorVotedUnreadyEvent {
-  validator: string;
+export interface GuardianVotedUnreadyEvent {
+  guardian: string;
 }
 
 export interface VoteOutCastedEvent {
@@ -51,8 +51,8 @@ export interface VoteOutCastedEvent {
   subject: string;
 }
 
-export interface ValidatorVotedOutEvent {
-  validator: string;
+export interface GuardianVotedOutEvent {
+  guardian: string;
 }
 
 export interface  VoteOutTimeoutSecondsChangedEvent {

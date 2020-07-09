@@ -13,8 +13,8 @@ import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import { Contracts } from "../typings/contracts";
 import {Web3Driver, defaultWeb3Provider, Web3Session} from "../eth";
 import Web3 from "web3";
-import {ValidatorsRegistrationContract} from "../typings/validator-registration-contract";
-import {ComplianceContract} from "../typings/compliance-contract";
+import {GuardiansRegistrationContract} from "../typings/guardian-registration-contract";
+import {CertificationContract} from "../typings/certification-contract";
 import {TransactionReceipt} from "web3-core";
 import {GasRecorder} from "../gas-recorder";
 import {stakedEvents} from "./event-parsing";
@@ -45,7 +45,7 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     web3Provider: defaultWeb3Provider,
 };
 
-export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'validatorsRegistration' | 'compliance' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet';
+export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet';
 
 export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
@@ -65,8 +65,8 @@ export class Driver {
         public subscriptions: Contracts["Subscriptions"],
         public rewards: Contracts["Rewards"],
         public protocol: Contracts["Protocol"],
-        public compliance: Contracts["Compliance"],
-        public validatorsRegistration: Contracts['ValidatorsRegistration'],
+        public certification: Contracts["Certification"],
+        public guardiansRegistration: Contracts['GuardiansRegistration'],
         public committee: Contracts['Committee'],
         public stakingRewardsWallet: Contracts['ProtocolWallet'],
         public bootstrapRewardsWallet: Contracts['ProtocolWallet'],
@@ -103,11 +103,11 @@ export class Driver {
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy('Subscriptions', [erc20.address], null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
-        const compliance = await web3.deploy('Compliance', [], null, session);
+        const certification = await web3.deploy('Certification', [], null, session);
         const committee = await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
         const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
         const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
-        const validatorsRegistration = await web3.deploy('ValidatorsRegistration', [], null, session);
+        const guardiansRegistration = await web3.deploy('GuardiansRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
         await contractRegistry.set("rewards", rewards.address);
@@ -115,8 +115,8 @@ export class Driver {
         await contractRegistry.set("elections", elections.address);
         await contractRegistry.set("subscriptions", subscriptions.address);
         await contractRegistry.set("protocol", protocol.address);
-        await contractRegistry.set("compliance", compliance.address);
-        await contractRegistry.set("validatorsRegistration", validatorsRegistration.address);
+        await contractRegistry.set("certification", certification.address);
+        await contractRegistry.set("guardiansRegistration", guardiansRegistration.address);
         await contractRegistry.set("committee", committee.address);
         await contractRegistry.set("stakingRewardsWallet", stakingRewardsWallet.address);
         await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
@@ -128,8 +128,8 @@ export class Driver {
         await elections.setContractRegistry(contractRegistry.address);
         await rewards.setContractRegistry(contractRegistry.address);
         await subscriptions.setContractRegistry(contractRegistry.address);
-        await compliance.setContractRegistry(contractRegistry.address);
-        await validatorsRegistration.setContractRegistry(contractRegistry.address);
+        await certification.setContractRegistry(contractRegistry.address);
+        await guardiansRegistration.setContractRegistry(contractRegistry.address);
         await committee.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
@@ -140,8 +140,8 @@ export class Driver {
             subscriptions,
             rewards,
             protocol,
-            compliance,
-            validatorsRegistration,
+            certification,
+            guardiansRegistration,
             committee,
             contractRegistry,
             stakingRewardsWallet,
@@ -165,8 +165,8 @@ export class Driver {
             subscriptions,
             rewards,
             protocol,
-            compliance,
-            validatorsRegistration,
+            certification,
+            guardiansRegistration,
             committee,
             stakingRewardsWallet,
             bootstrapRewardsWallet,
@@ -185,9 +185,9 @@ export class Driver {
         const staking = await web3.getExisting('StakingContract', await contractRegistry.get('staking'), session);
         const subscriptions = await web3.getExisting('Subscriptions', await contractRegistry.get('subscriptions'), session);
         const protocol = await web3.getExisting('Protocol', await contractRegistry.get('protocol'), session);
-        const compliance = await web3.getExisting('Compliance', await contractRegistry.get('compliance'), session);
+        const certification = await web3.getExisting('Certification', await contractRegistry.get('certification'), session);
         const committee = await web3.getExisting('Committee', await contractRegistry.get('committee'), session);
-        const validatorsRegistration = await web3.getExisting('ValidatorsRegistration', await contractRegistry.get('validatorsRegistration'), session);
+        const guardiansRegistration = await web3.getExisting('GuardiansRegistration', await contractRegistry.get('guardiansRegistration'), session);
         const stakingRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
         const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
 
@@ -201,8 +201,8 @@ export class Driver {
             subscriptions,
             rewards,
             protocol,
-            compliance,
-            validatorsRegistration,
+            certification,
+            guardiansRegistration,
             committee,
             stakingRewardsWallet,
             bootstrapRewardsWallet,
@@ -247,7 +247,7 @@ export class Driver {
     }
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
-        name = name || `Validator${this.participants.length}`;
+        name = name || `Guardian${this.participants.length}`;
         const RESERVED_ACCOUNTS = 3;
         const v = new Participant(
             name,
@@ -260,9 +260,9 @@ export class Driver {
         return v;
     }
 
-    async newValidator(stake: number|BN, compliance: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<{v: Participant, r: TransactionReceipt}> {
+    async newGuardian(stake: number|BN, certification: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<{v: Participant, r: TransactionReceipt}> {
         const v = await this.newParticipant();
-        const r = await v.becomeValidator(stake, compliance, signalReadyToSync, signalReadyForCommittee);
+        const r = await v.becomeGuardian(stake, certification, signalReadyToSync, signalReadyForCommittee);
         return {v, r}
     }
 
@@ -291,7 +291,7 @@ export class Driver {
 }
 
 export class Participant {
-    // TODO Consider implementing validator methods in a child class.
+    // TODO Consider implementing guardian methods in a child class.
     public ip: string;
     private driver: Driver;
 
@@ -337,8 +337,8 @@ export class Participant {
         return this.driver.delegations.delegate(to.address, {from: this.address});
     }
 
-    async registerAsValidator() {
-        return await this.driver.validatorsRegistration.registerValidator(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
+    async registerAsGuardian() {
+        return await this.driver.guardiansRegistration.registerGuardian(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
     }
 
     async readyForCommittee() {
@@ -349,18 +349,18 @@ export class Participant {
         return await this.driver.elections.readyToSync({from: this.orbsAddress});
     }
 
-    async becomeCompliant() {
-        return await this.driver.compliance.setValidatorCompliance(this.address, true, {from: this.driver.functionalOwner.address});
+    async becomeCertified() {
+        return await this.driver.certification.setGuardianCertification(this.address, true, {from: this.driver.functionalOwner.address});
     }
 
-    async becomeNotCompliant() {
-        return await this.driver.compliance.setValidatorCompliance(this.address, false, {from: this.driver.functionalOwner.address});
+    async becomeNotCertified() {
+        return await this.driver.certification.setGuardianCertification(this.address, false, {from: this.driver.functionalOwner.address});
     }
 
-    async becomeValidator(stake: number|BN, compliant: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
-        await this.registerAsValidator();
-        if (compliant) {
-            await this.becomeCompliant();
+    async becomeGuardian(stake: number|BN, certified: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
+        await this.registerAsGuardian();
+        if (certified) {
+            await this.becomeCertified();
         }
         let r = await this.stake(stake);
         if (signalReadyToSync) {
@@ -372,8 +372,8 @@ export class Participant {
         return r;
     }
 
-    async unregisterAsValidator() {
-        return await this.driver.validatorsRegistration.unregisterValidator({from: this.address});
+    async unregisterAsGuardian() {
+        return await this.driver.guardiansRegistration.unregisterGuardian({from: this.address});
     }
 
     gasUsed(): number {

@@ -11,7 +11,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
 
     enum CommitteeType {
         General,
-        Compliance
+        Certification
     }
 
     struct VirtualChain {
@@ -21,7 +21,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         uint256 genRefTime;
         address owner;
         string deploymentSubset;
-        bool isCompliant;
+        bool isCertified;
 
         mapping (string => string) configRecords;
     }
@@ -58,7 +58,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         authorizedSubscribers[addr] = true;
     }
 
-    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, bool isCompliant, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
+    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         require(getProtocolContract().deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
 
@@ -70,7 +70,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
             tier: tier,
             rate: rate,
             deploymentSubset: deploymentSubset,
-            isCompliant: isCompliant
+            isCertified: isCertified
         });
         virtualChains[vcid] = vc;
 
@@ -97,8 +97,8 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         IRewards rewardsContract = getRewardsContract();
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
         require(erc20.approve(address(rewardsContract), amount), "failed to approve rewards to acquire subscription fees");
-        if (vc.isCompliant) {
-            rewardsContract.fillComplianceFeeBuckets(amount, vc.rate, vc.expiresAt);
+        if (vc.isCertified) {
+            rewardsContract.fillCertificationFeeBuckets(amount, vc.rate, vc.expiresAt);
         } else {
             rewardsContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
         }

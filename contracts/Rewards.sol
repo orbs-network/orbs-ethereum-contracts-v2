@@ -17,7 +17,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
-        uint48 complianceCommitteeAnnualBootstrap;
+        uint48 certificationCommitteeAnnualBootstrap;
         uint48 annualRateInPercentMille;
         uint48 annualCap;
         uint32 maxDelegatorsStakingRewardsPercentMille;
@@ -42,7 +42,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     uint256 constant feeBucketTimePeriod = 30 days;
     mapping(uint256 => uint256) generalFeePoolBuckets;
-    mapping(uint256 => uint256) compliantFeePoolBuckets;
+    mapping(uint256 => uint256) certifiedFeePoolBuckets;
 
     IERC20 bootstrapToken;
     IERC20 erc20;
@@ -71,8 +71,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setComplianceCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
-        settings.complianceCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
+        settings.certificationCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
     function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalOwner onlyWhenActive {
@@ -101,12 +101,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
 
     function assignRewards() public onlyWhenActive {
-        (address[] memory committee, uint256[] memory weights, bool[] memory compliance) = getCommitteeContract().getCommittee();
-        _assignRewardsToCommittee(committee, weights, compliance);
+        (address[] memory committee, uint256[] memory weights, bool[] memory certification) = getCommitteeContract().getCommittee();
+        _assignRewardsToCommittee(committee, weights, certification);
     }
 
-    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata compliance) external onlyCommitteeContract onlyWhenActive {
-        _assignRewardsToCommittee(committee, committeeWeights, compliance);
+    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata certification) external onlyCommitteeContract onlyWhenActive {
+        _assignRewardsToCommittee(committee, committeeWeights, certification);
     }
 
     struct Totals {
@@ -115,11 +115,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 stakingRewardsTotalBalance;
     }
 
-    function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory compliance) private {
+    function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory certification) private {
         Settings memory _settings = settings;
 
-        (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap) = collectBootstrapRewards(_settings);
-        (uint256 generalValidatorFee, uint256 certifiedValidatorFee) = collectFees(committee, compliance);
+        (uint256 generalGuardianBootstrap, uint256 certifiedGuardianBootstrap) = collectBootstrapRewards(_settings);
+        (uint256 generalGuardianFee, uint256 certifiedGuardianFee) = collectFees(committee, certification);
         (uint256[] memory stakingRewards) = collectStakingRewards(committee, committeeWeights, _settings);
 
         PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
@@ -134,12 +134,12 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
 
-            balance.bootstrapRewards += toUint48Granularity(compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap);
-            balance.fees += toUint48Granularity(compliance[i] ? certifiedValidatorFee : generalValidatorFee);
+            balance.bootstrapRewards += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap);
+            balance.fees += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
             balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
 
-            totals.bootstrapRewardsTotalBalance += toUint48Granularity(compliance[i] ? certifiedValidatorBootstrap : generalValidatorBootstrap); // todo may overflow
-            totals.feesTotalBalance += toUint48Granularity(compliance[i] ? certifiedValidatorFee : generalValidatorFee); // todo may overflow
+            totals.bootstrapRewardsTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap); // todo may overflow
+            totals.feesTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee); // todo may overflow
             totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]); // todo may overflow
 
             balances[committee[i]] = balance;
@@ -152,14 +152,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         lastAssignedAt = now;
 
         emit StakingRewardsAssigned(committee, stakingRewards);
-        emit BootstrapRewardsAssigned(generalValidatorBootstrap, certifiedValidatorBootstrap);
-        emit FeesAssigned(generalValidatorFee, certifiedValidatorFee);
+        emit BootstrapRewardsAssigned(generalGuardianBootstrap, certifiedGuardianBootstrap);
+        emit FeesAssigned(generalGuardianFee, certifiedGuardianFee);
     }
 
-    function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalValidatorBootstrap, uint256 certifiedValidatorBootstrap){
+    function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalGuardianBootstrap, uint256 certifiedGuardianBootstrap){
         uint256 duration = now.sub(lastAssignedAt);
-        generalValidatorBootstrap = toUint256Granularity(uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
-        certifiedValidatorBootstrap = generalValidatorBootstrap + toUint256Granularity(uint48(_settings.complianceCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        generalGuardianBootstrap = toUint256Granularity(uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        certifiedGuardianBootstrap = generalGuardianBootstrap + toUint256Granularity(uint48(_settings.certificationCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
     function withdrawBootstrapFunds() external onlyWhenActive {
@@ -256,7 +256,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         VistributeOrbsTokenStakingRewardsVars memory vars;
 
-        vars.guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender);
+        vars.guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
 
         for (uint i = 0; i < to.length; i++) {
             if (to[i] != vars.guardianAddr) {
@@ -315,7 +315,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     uint constant MAX_FEE_BUCKET_ITERATIONS = 24;
 
-    function collectFees(address[] memory committee, bool[] memory compliance) private returns (uint256 generalValidatorFee, uint256 certifiedValidatorFee) {
+    function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256 generalGuardianFee, uint256 certifiedGuardianFee) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -323,7 +323,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint _lastAssignedAt = lastAssignedAt;
         uint bucketsPayed = 0;
         uint generalFeePoolAmount = 0;
-        uint complianceFeePoolAmount = 0;
+        uint certificationFeePoolAmount = 0;
         while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastAssignedAt < now) {
             uint256 bucketStart = _bucketTime(_lastAssignedAt);
             uint256 bucketEnd = bucketStart.add(feeBucketTimePeriod);
@@ -338,11 +338,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             generalFeePoolBuckets[bucketStart] = bucketTotal;
             emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, false);
 
-            bucketTotal = compliantFeePoolBuckets[bucketStart];
+            bucketTotal = certifiedFeePoolBuckets[bucketStart];
             amount = bucketTotal * bucketDuration / remainingBucketTime;
-            complianceFeePoolAmount += amount;
+            certificationFeePoolAmount += amount;
             bucketTotal = bucketTotal.sub(amount);
-            compliantFeePoolBuckets[bucketStart] = bucketTotal;
+            certifiedFeePoolBuckets[bucketStart] = bucketTotal;
             emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, true);
 
             _lastAssignedAt = payUntil;
@@ -350,31 +350,31 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             assert(_lastAssignedAt <= bucketEnd);
             if (_lastAssignedAt == bucketEnd) {
                 delete generalFeePoolBuckets[bucketStart];
-                delete compliantFeePoolBuckets[bucketStart];
+                delete certifiedFeePoolBuckets[bucketStart];
             }
 
             bucketsPayed++;
         }
 
-        generalValidatorFee = divideFees(committee, compliance, generalFeePoolAmount, false);
-        certifiedValidatorFee = generalValidatorFee + divideFees(committee, compliance, complianceFeePoolAmount, true);
+        generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
+        certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
     }
 
-    function divideFees(address[] memory committee, bool[] memory compliance, uint256 amount, bool isCompliant) private returns (uint256 validatorFee) {
+    function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private returns (uint256 guardianFee) {
         uint n = committee.length;
-        if (isCompliant)  {
+        if (isCertified)  {
             n = 0; // todo - this is calculated in other places, get as argument to save gas
             for (uint i = 0; i < committee.length; i++) {
-                if (compliance[i]) n++;
+                if (certification[i]) n++;
             }
         }
         if (n > 0) {
-            validatorFee = toUint256Granularity(toUint48Granularity(amount.div(n)));
+            guardianFee = toUint256Granularity(toUint48Granularity(amount.div(n)));
         }
 
-        uint256 remainder = amount.sub(validatorFee.mul(n));
+        uint256 remainder = amount.sub(guardianFee.mul(n));
         if (remainder > 0) {
-            fillFeeBucket(_bucketTime(now), remainder, isCompliant);
+            fillFeeBucket(_bucketTime(now), remainder, isCertified);
         }
     }
 
@@ -382,24 +382,24 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         fillFeeBuckets(amount, monthlyRate, fromTimestamp, false);
     }
 
-    function fillComplianceFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
+    function fillCertificationFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
         fillFeeBuckets(amount, monthlyRate, fromTimestamp, true);
     }
 
-    function fillFeeBucket(uint256 bucketId, uint256 amount, bool isCompliant) private {
+    function fillFeeBucket(uint256 bucketId, uint256 amount, bool isCertified) private {
         uint256 total;
-        if (isCompliant) {
-            total = compliantFeePoolBuckets[bucketId].add(amount);
-            compliantFeePoolBuckets[bucketId] = total;
+        if (isCertified) {
+            total = certifiedFeePoolBuckets[bucketId].add(amount);
+            certifiedFeePoolBuckets[bucketId] = total;
         } else {
             total = generalFeePoolBuckets[bucketId].add(amount);
             generalFeePoolBuckets[bucketId] = total;
         }
 
-        emit FeesAddedToBucket(bucketId, amount, total, isCompliant);
+        emit FeesAddedToBucket(bucketId, amount, total, isCertified);
     }
 
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCompliant) private {
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCertified) private {
         assignRewards(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
 
         uint256 bucket = _bucketTime(fromTimestamp);
@@ -407,14 +407,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         // add the partial amount to the first bucket
         uint256 bucketAmount = Math.min(amount, monthlyRate.mul(feeBucketTimePeriod - fromTimestamp % feeBucketTimePeriod).div(feeBucketTimePeriod));
-        fillFeeBucket(bucket, bucketAmount, isCompliant);
+        fillFeeBucket(bucket, bucketAmount, isCertified);
         _amount = _amount.sub(bucketAmount);
 
         // following buckets are added with the monthly rate
         while (_amount > 0) {
             bucket = bucket.add(feeBucketTimePeriod);
             bucketAmount = Math.min(monthlyRate, _amount);
-            fillFeeBucket(bucket, bucketAmount, isCompliant);
+            fillFeeBucket(bucket, bucketAmount, isCertified);
             _amount = _amount.sub(bucketAmount);
         }
 

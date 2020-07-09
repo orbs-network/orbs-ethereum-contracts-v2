@@ -14,9 +14,9 @@ import {
 import {
   StakeChangeEvent,
   VoteUnreadyCastedEvent,
-  ValidatorVotedUnreadyEvent,
+  GuardianVotedUnreadyEvent,
   VoteOutCastedEvent,
-  ValidatorVotedOutEvent,
+  GuardianVotedOutEvent,
   VoteOutTimeoutSecondsChangedEvent,
   MaxDelegationRatioChangedEvent,
   VoteUnreadyPercentageThresholdChangedEvent,
@@ -34,10 +34,10 @@ import {
 import {BootstrapAddedToPoolEvent, BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAddedToBucketEvent, FeesAssignedEvent} from "../typings/rewards-contract";
 import {
-  ValidatorDataUpdatedEvent, ValidatorMetadataChangedEvent,
-  ValidatorRegisteredEvent,
-  ValidatorUnregisteredEvent
-} from "../typings/validator-registration-contract";
+  GuardianDataUpdatedEvent, GuardianMetadataChangedEvent,
+  GuardianRegisteredEvent,
+  GuardianUnregisteredEvent
+} from "../typings/guardian-registration-contract";
 import {
     DelegatedEvent,
     DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
@@ -46,10 +46,10 @@ import {
   CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
   MaxTimeBetweenRewardAssignmentsChangedEvent,
-  ValidatorCommitteeChangeEvent,
-  ValidatorStatusUpdatedEvent
+  GuardianCommitteeChangeEvent,
+  GuardianStatusUpdatedEvent
 } from "../typings/committee-contract";
-import {ValidatorComplianceUpdateEvent} from "../typings/compliance-contract";
+import {GuardianCertificationUpdateEvent} from "../typings/certification-contract";
 import {Contract} from "../eth";
 import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from "../typings/base-contract";
 import {transpose} from "./helpers";
@@ -176,11 +176,11 @@ declare global {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
       committeeSnapshotEvent(data?: Partial<CommitteeSnapshotEvent>): void;
-      validatorCommitteeChangeEvent(data?: Partial<ValidatorCommitteeChangeEvent>): void;
-      validatorRegisteredEvent(data?: Partial<ValidatorRegisteredEvent>): void;
-      validatorMetadataChangedEvent(data?: Partial<ValidatorMetadataChangedEvent>): void;
-      validatorUnregisteredEvent(data?: Partial<ValidatorUnregisteredEvent>): void;
-      validatorDataUpdatedEvent(data?: Partial<ValidatorDataUpdatedEvent>): void;
+      guardianCommitteeChangeEvent(data?: Partial<GuardianCommitteeChangeEvent>): void;
+      guardianRegisteredEvent(data?: Partial<GuardianRegisteredEvent>): void;
+      guardianMetadataChangedEvent(data?: Partial<GuardianMetadataChangedEvent>): void;
+      guardianUnregisteredEvent(data?: Partial<GuardianUnregisteredEvent>): void;
+      guardianDataUpdatedEvent(data?: Partial<GuardianDataUpdatedEvent>): void;
       stakeChangedEvent(data?: Partial<StakeChangeEvent>): void; // Elections?
       stakedEvent(data?: Partial<StakedEvent>): void;
       unstakedEvent(data?: Partial<UnstakedEvent>): void;
@@ -191,11 +191,11 @@ declare global {
       vcOwnerChangedEvent(data?: Partial<VcOwnerChangedEvent>): void;
       contractAddressUpdatedEvent(data?: Partial<ContractAddressUpdatedEvent>): void;
       voteUnreadyCastedEvent(data?: Partial<VoteUnreadyCastedEvent>): void;
-      validatorVotedUnreadyEvent(data?: Partial<ValidatorVotedUnreadyEvent>): void;
-      validatorVotedOutEvent(data?: Partial<ValidatorVotedOutEvent>): void;
+      guardianVotedUnreadyEvent(data?: Partial<GuardianVotedUnreadyEvent>): void;
+      guardianVotedOutEvent(data?: Partial<GuardianVotedOutEvent>): void;
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
-      validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
+      guardianCertificationUpdateEvent(data?: Partial<GuardianCertificationUpdateEvent>)
       stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
@@ -215,7 +215,7 @@ declare global {
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       stakingRewardsAddedToPoolEvent(data?: Partial<StakingRewardsAddedToPoolEvent>);
-      validatorStatusUpdatedEvent(data?: Partial<ValidatorStatusUpdatedEvent>);
+      guardianStatusUpdatedEvent(data?: Partial<GuardianStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
       maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
       fundsAddedToPoolEvent(data?: Partial<FundsAddedToPoolEvent>);

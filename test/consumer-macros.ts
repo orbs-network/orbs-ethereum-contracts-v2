@@ -8,7 +8,7 @@ import {
 import {MonthlySubscriptionPlanContract} from "../typings/monthly-subscription-plan-contract";
 import {bn, fromTokenUnits} from "./helpers";
 
-export async function createVC(d : Driver, isCompliant?: boolean, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number|BN, appOwner?: Participant) {
+export async function createVC(d : Driver, isCertified?: boolean, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number|BN, appOwner?: Participant) {
     const rate: BN = monthlyRate != null ? bn(monthlyRate) : fromTokenUnits(1000);
     const firstPayment = rate.mul(bn(2));
 
@@ -20,7 +20,7 @@ export async function createVC(d : Driver, isCompliant?: boolean, subscriber?: M
         from: appOwner.address
     });
 
-    return subscriber.createVC(firstPayment, isCompliant || false, DEPLOYMENT_SUBSET_MAIN, {
+    return subscriber.createVC(firstPayment, isCertified || false, DEPLOYMENT_SUBSET_MAIN, {
         from: appOwner.address
     });
 }

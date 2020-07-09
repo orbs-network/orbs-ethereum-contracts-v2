@@ -31,8 +31,8 @@ describe('testkit', async () => {
     expect(firstDriver.subscriptions.address).to.equal(secondDriver.subscriptions.address);
     expect(firstDriver.rewards.address).to.equal(secondDriver.rewards.address);
     expect(firstDriver.protocol.address).to.equal(secondDriver.protocol.address);
-    expect(firstDriver.compliance.address).to.equal(secondDriver.compliance.address);
-    expect(firstDriver.validatorsRegistration.address).to.equal(secondDriver.validatorsRegistration.address);
+    expect(firstDriver.certification.address).to.equal(secondDriver.certification.address);
+    expect(firstDriver.guardiansRegistration.address).to.equal(secondDriver.guardiansRegistration.address);
     expect(firstDriver.committee.address).to.equal(secondDriver.committee.address);
   })
 });

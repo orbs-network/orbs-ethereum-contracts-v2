@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "./spec_interfaces/ICommitteeListener.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IElections.sol";
-import "./spec_interfaces/IValidatorsRegistration.sol";
+import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
-import "./spec_interfaces/ICompliance.sol";
+import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
@@ -21,7 +21,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	mapping (address => uint256) votersStake;
 	mapping (address => address) voteOutVotes; // by => to
 	mapping (address => uint256) accumulatedStakesForVoteOut; // addr => total stake
-	mapping (address => bool) votedOutValidators;
+	mapping (address => bool) votedOutGuardians;
 
 	uint256 totalGovernanceStake;
 
@@ -39,8 +39,8 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	modifier onlyValidatorsRegistrationContract() {
-		require(msg.sender == address(getValidatorsRegistrationContract()), "caller is not the validator registrations contract");
+	modifier onlyGuardiansRegistrationContract() {
+		require(msg.sender == address(getGuardiansRegistrationContract()), "caller is not the guardian registrations contract");
 
 		_;
 	}
@@ -58,22 +58,22 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		});
 	}
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a new validator was registered
-	function validatorRegistered(address addr) external onlyValidatorsRegistrationContract {
+	/// @dev Called by: guardian registration contract
+	/// Notifies a new guardian was registered
+	function guardianRegistered(address addr) external onlyGuardiansRegistrationContract {
 	}
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a new validator was unregistered
-	function validatorUnregistered(address addr) external onlyValidatorsRegistrationContract {
-		emit ValidatorStatusUpdated(addr, false, false);
+	/// @dev Called by: guardian registration contract
+	/// Notifies a new guardian was unregistered
+	function guardianUnregistered(address addr) external onlyGuardiansRegistrationContract {
+		emit GuardianStatusUpdated(addr, false, false);
 		getCommitteeContract().removeMember(addr);
 	}
 
-	/// @dev Called by: validator registration contract
-	/// Notifies on a validator compliance change
-	function validatorComplianceChanged(address addr, bool isCompliant) external {
-		getCommitteeContract().memberComplianceChange(addr, isCompliant);
+	/// @dev Called by: guardian registration contract
+	/// Notifies on a guardian certification change
+	function guardianCertificationChanged(address addr, bool isCertified) external {
+		getCommitteeContract().memberCertificationChange(addr, isCertified);
 	}
 
 	function requireNotVotedOut(address addr) private view {
@@ -81,18 +81,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function readyForCommittee() external {
-		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		address guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
-		emit ValidatorStatusUpdated(guardianAddr, true, true);
-		getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getComplianceContract().isValidatorCompliant(guardianAddr));
+		emit GuardianStatusUpdated(guardianAddr, true, true);
+		getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getCertificationContract().isGuardianCertified(guardianAddr));
 	}
 
 	function readyToSync() external {
-		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		address guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
-		emit ValidatorStatusUpdated(guardianAddr, true, false);
+		emit GuardianStatusUpdated(guardianAddr, true, false);
 		getCommitteeContract().removeMember(guardianAddr);
 	}
 
@@ -102,35 +102,35 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory compliance, address votee) private view returns (bool) {
+	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address votee) private view returns (bool) {
 		Settings memory _settings = settings;
 
 		uint256 totalCommitteeStake = 0;
 		uint256 totalVoteUnreadyStake = 0;
-		uint256 totalCompliantStake = 0;
-		uint256 totalCompliantVoteUnreadyStake = 0;
+		uint256 totalCertifiedStake = 0;
+		uint256 totalCertifiedVoteUnreadyStake = 0;
 
 		address member;
 		uint256 memberStake;
-		bool isVoteeCompliant;
+		bool isVoteeCertified;
 		for (uint i = 0; i < committee.length; i++) {
 			member = committee[i];
 			memberStake = weights[i];
 
-			if (member == votee && compliance[i]) {
-				isVoteeCompliant = true;
+			if (member == votee && certification[i]) {
+				isVoteeCertified = true;
 			}
 
 			totalCommitteeStake = totalCommitteeStake.add(memberStake);
-			if (compliance[i]) {
-				totalCompliantStake = totalCompliantStake.add(memberStake);
+			if (certification[i]) {
+				totalCertifiedStake = totalCertifiedStake.add(memberStake);
 			}
 
 			uint256 votedAt = votedUnreadyVotes[member][votee];
 			if (votedAt != 0 && now.sub(votedAt) < _settings.voteUnreadyTimeoutSeconds) {
 				totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
-				if (compliance[i]) {
-					totalCompliantVoteUnreadyStake = totalCompliantVoteUnreadyStake.add(memberStake);
+				if (certification[i]) {
+					totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
 				}
 			}
 
@@ -138,7 +138,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 
 		return (totalCommitteeStake > 0 && totalVoteUnreadyStake.mul(100).div(totalCommitteeStake) >= _settings.voteUnreadyPercentageThreshold)
-			|| (isVoteeCompliant && totalCompliantStake > 0 && totalCompliantVoteUnreadyStake.mul(100).div(totalCompliantStake) >= _settings.voteUnreadyPercentageThreshold);
+			|| (isVoteeCertified && totalCertifiedStake > 0 && totalCertifiedVoteUnreadyStake.mul(100).div(totalCertifiedStake) >= _settings.voteUnreadyPercentageThreshold);
 	}
 
 	function voteUnready(address subjectAddr) external onlyWhenActive {
@@ -146,13 +146,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		votedUnreadyVotes[sender][subjectAddr] = now;
 		emit VoteUnreadyCasted(sender, subjectAddr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory compliance) = getCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory certification) = getCommitteeContract().getCommittee();
 
-		bool votedUnready = isCommitteeVoteUnreadyThresholdReached(generalCommittee, generalWeights, compliance, subjectAddr);
+		bool votedUnready = isCommitteeVoteUnreadyThresholdReached(generalCommittee, generalWeights, certification, subjectAddr);
 		if (votedUnready) {
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
-			emit ValidatorVotedUnready(subjectAddr);
-			emit ValidatorStatusUpdated(subjectAddr, false, false);
+			emit GuardianVotedUnready(subjectAddr);
+			emit GuardianStatusUpdated(subjectAddr, false, false);
             getCommitteeContract().removeMember(subjectAddr);
 		}
 	}
@@ -223,16 +223,16 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
         uint256 voteOutStake = accumulatedStakesForVoteOut[addr];
         bool shouldBeVotedOut = _totalGovernanceStake > 0 && voteOutStake.mul(100).div(_totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
 		if (shouldBeVotedOut) {
-			votedOutValidators[addr] = true;
-			emit ValidatorVotedOut(addr);
+			votedOutGuardians[addr] = true;
+			emit GuardianVotedOut(addr);
 
-			emit ValidatorStatusUpdated(addr, false, false);
+			emit GuardianStatusUpdated(addr, false, false);
 			getCommitteeContract().removeMember(addr);
 		}
     }
 
 	function isVotedOut(address addr) private view returns (bool) {
-		return votedOutValidators[addr];
+		return votedOutGuardians[addr];
 	}
 
 	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
@@ -246,7 +246,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
 		address[] memory orbsAddrArr = new address[](1);
 		orbsAddrArr[0] = orbsAddr;
-		address sender = getValidatorsRegistrationContract().getEthereumAddresses(orbsAddrArr)[0];
+		address sender = getGuardiansRegistrationContract().getEthereumAddresses(orbsAddrArr)[0];
 		require(sender != address(0), "unknown orbs address");
 		return sender;
 	}
@@ -278,7 +278,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function addMemberToCommittees(address addr, Settings memory _settings) private {
-		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getComplianceContract().isValidatorCompliant(addr));
+		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getCertificationContract().isGuardianCertified(addr));
 	}
 
 	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {

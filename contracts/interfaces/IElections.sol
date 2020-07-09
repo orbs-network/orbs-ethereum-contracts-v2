@@ -6,46 +6,46 @@ import "../IStakeChangeNotifier.sol";
 /// @title Elections contract interface
 interface IElections /* is IStakeChangeNotifier */ {
 	// Election state change events
-	event ValidatorVotedUnready(address validator);
-	event ValidatorVotedOut(address validator);
+	event GuardianVotedUnready(address guardian);
+	event GuardianVotedOut(address guardian);
 
 	// Function calls
 	event VoteUnreadyCasted(address voter, address subject);
 	event VoteOutCasted(address voter, address subject);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
-	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
+	event GuardianStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
 
 	/*
 	 *   External methods
 	 */
-	/// @dev Called by a validator as part of the automatic vote-out flow
+	/// @dev Called by a guardian as part of the automatic vote-out flow
 	function voteUnready(address subjectAddr) external;
 
 	/// @dev casts a voteOut vote by the sender to the given address
 	function voteOut(address subjectAddr) external;
 
-	/// @dev Called by a validator when ready to start syncing with other nodes
+	/// @dev Called by a guardian when ready to start syncing with other nodes
 	function readyToSync() external;
 
-	/// @dev Called by a validator when ready to join the committee, typically after syncing is complete or after being voted out
+	/// @dev Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted out
 	function readyForCommittee() external;
 
 	/*
 	 *   Methods restricted to other Orbs contracts
 	 */
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a new validator was registered
-	function validatorRegistered(address addr) external /* onlyValidatorsRegistrationContract */;
+	/// @dev Called by: guardian registration contract
+	/// Notifies a new guardian was registered
+	function guardianRegistered(address addr) external /* onlyGuardiansRegistrationContract */;
 
-	/// @dev Called by: validator registration contract
-	/// Notifies a new validator was unregistered
-	function validatorUnregistered(address addr) external /* onlyValidatorsRegistrationContract */;
+	/// @dev Called by: guardian registration contract
+	/// Notifies a new guardian was unregistered
+	function guardianUnregistered(address addr) external /* onlyGuardiansRegistrationContract */;
 
-	/// @dev Called by: validator registration contract
-	/// Notifies on a validator compliance change
-	function validatorComplianceChanged(address addr, bool isCompliant) external /* onlyComplianceContract */;
+	/// @dev Called by: guardian registration contract
+	/// Notifies on a guardian certification change
+	function guardianCertificationChanged(address addr, bool isCertified) external /* onlyCertificationContract */;
 
 	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external /* onlyDelegationContract */;
 

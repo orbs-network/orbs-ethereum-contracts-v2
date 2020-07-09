@@ -66,11 +66,11 @@ describe('rewards', async () => {
         await d.externalToken.assign(d.accounts[0], poolAmount);
         await d.externalToken.approve(d.rewards.address, poolAmount);
         await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-        await d.rewards.setComplianceCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
+        await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
         await d.rewards.topUpBootstrapPool(poolAmount);
 
         const committee: Participant[] = await Promise.all(_.range(defaultDriverOptions.maxCommitteeSize).map(async () =>
-            (await d.newValidator(BASE_STAKE, true, false, true)).v
+            (await d.newGuardian(BASE_STAKE, true, false, true)).v
         ));
 
         const monthlyRate = fromTokenUnits(1000);

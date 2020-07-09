@@ -24,17 +24,17 @@ describe('elections-high-level-flows', async () => {
     it('emits events on readyForCommittee and readyToSync', async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
+        const {v} = await d.newGuardian(fromTokenUnits(10), false, false, false);
 
         let r = await v.readyToSync();
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
         r = await v.readyForCommittee();
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: true
@@ -44,38 +44,38 @@ describe('elections-high-level-flows', async () => {
     it('allows sending readyForCommittee and readyToSync form both guardian and orbs address', async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newValidator(fromTokenUnits(10), false, false, false);
+        const {v} = await d.newGuardian(fromTokenUnits(10), false, false, false);
 
         let r = await d.elections.readyToSync({from: v.orbsAddress});
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
         r = await d.elections.readyToSync({from: v.address});
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
         r = await d.elections.readyForCommittee({from: v.orbsAddress});
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: true
         });
 
         r = await d.elections.readyForCommittee({from: v.address});
-        expect(r).to.have.a.validatorStatusUpdatedEvent({
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v.address,
             readyToSync: true,
             readyForCommittee: true
         });
     });
 
-    it('rejects readyForCommittee and readyToSync from an unregistered validator', async () => {
+    it('rejects readyForCommittee and readyToSync from an unregistered guardian', async () => {
         const d = await Driver.new();
 
         const v = d.newParticipant();
@@ -106,88 +106,88 @@ describe('elections-high-level-flows', async () => {
 
         const d = await Driver.new({maxCommitteeSize: 2});
 
-        // First validator registers
-        const validatorStaked100 = d.newParticipant();
-        let r = await validatorStaked100.stake(stake100);
+        // First guardian registers
+        const guardianStaked100 = d.newParticipant();
+        let r = await guardianStaked100.stake(stake100);
         expect(r).to.have.a.stakedEvent();
 
-        await validatorStaked100.registerAsValidator();
-        r = await validatorStaked100.readyToSync();
+        await guardianStaked100.registerAsGuardian();
+        r = await guardianStaked100.readyToSync();
 
-        r = await validatorStaked100.readyForCommittee();
+        r = await guardianStaked100.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [validatorStaked100.address],
+            addrs: [guardianStaked100.address],
             weights: [stake100],
         });
 
-        const validatorStaked200 = d.newParticipant();
-        r = await validatorStaked200.stake(stake200);
-        expect(r).to.have.a.stakeChangedEvent({addr: validatorStaked200.address, effective_stake: stake200});
+        const guardianStaked200 = d.newParticipant();
+        r = await guardianStaked200.stake(stake200);
+        expect(r).to.have.a.stakeChangedEvent({addr: guardianStaked200.address, effective_stake: stake200});
 
-        await validatorStaked200.registerAsValidator();
-        await validatorStaked200.readyToSync();
-        r = await validatorStaked200.readyForCommittee();
+        await guardianStaked200.registerAsGuardian();
+        await guardianStaked200.readyToSync();
+        r = await guardianStaked200.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [validatorStaked200.address, validatorStaked100.address],
+            addrs: [guardianStaked200.address, guardianStaked100.address],
             weights: [stake200, stake100]
         });
 
-        // A third validator registers high ranked
+        // A third guardian registers high ranked
 
-        const validatorStaked300 = d.newParticipant();
-        r = await validatorStaked300.stake(stake300);
+        const guardianStaked300 = d.newParticipant();
+        r = await guardianStaked300.stake(stake300);
         expect(r).to.have.a.stakedEvent();
 
-        await validatorStaked300.registerAsValidator();
+        await guardianStaked300.registerAsGuardian();
 
-        r = await validatorStaked300.readyToSync();
-        r = await validatorStaked300.readyForCommittee();
+        r = await guardianStaked300.readyToSync();
+        r = await guardianStaked300.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [validatorStaked300.address, validatorStaked200.address],
+            addrs: [guardianStaked300.address, guardianStaked200.address],
             weights: [stake300, stake200]
         });
 
-        r = await d.delegateMoreStake(stake300, validatorStaked200);
+        r = await d.delegateMoreStake(stake300, guardianStaked200);
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [validatorStaked200.address, validatorStaked300.address],
+            addrs: [guardianStaked200.address, guardianStaked300.address],
             weights: [stake200.add(stake300), stake300]
         });
 
-        r = await d.delegateMoreStake(stake500, validatorStaked100);
+        r = await d.delegateMoreStake(stake500, guardianStaked100);
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [validatorStaked100.address, validatorStaked200.address],
+            addrs: [guardianStaked100.address, guardianStaked200.address],
             weights: [stake100.add(stake500), stake500]
         });
 
-        // A new validator registers, stakes and enters the topology
+        // A new guardian registers, stakes and enters the topology
 
-        const inTopologyValidator = d.newParticipant();
-        r = await inTopologyValidator.stake(stake100);
+        const inTopologyGuardian = d.newParticipant();
+        r = await inTopologyGuardian.stake(stake100);
         expect(r).to.have.a.stakedEvent();
-        await inTopologyValidator.registerAsValidator();
-        r = await inTopologyValidator.readyToSync();
-        r = await inTopologyValidator.readyForCommittee();
+        await inTopologyGuardian.registerAsGuardian();
+        r = await inTopologyGuardian.readyToSync();
+        r = await inTopologyGuardian.readyForCommittee();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
-        // The bottom validator in the topology delegates more stake and switches places with the second to last
-        r = await d.delegateMoreStake(201, inTopologyValidator);
+        // The bottom guardian in the topology delegates more stake and switches places with the second to last
+        r = await d.delegateMoreStake(201, inTopologyGuardian);
 
-        // A new validator registers and stakes but does not enter the topology
-        const outOfTopologyValidator = d.newParticipant();
-        r = await outOfTopologyValidator.stake(stake100);
+        // A new guardian registers and stakes but does not enter the topology
+        const outOfTopologyGuardian = d.newParticipant();
+        r = await outOfTopologyGuardian.stake(stake100);
         expect(r).to.have.a.stakedEvent();
-        await outOfTopologyValidator.registerAsValidator();
-        await outOfTopologyValidator.readyToSync();
-        r = await outOfTopologyValidator.readyForCommittee();
+        await outOfTopologyGuardian.registerAsGuardian();
+        await outOfTopologyGuardian.readyToSync();
+        r = await outOfTopologyGuardian.readyForCommittee();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
-        // A new validator stakes enough to get to the top
-        const validator = d.newParticipant();
-        await validator.registerAsValidator();
-        await validator.readyForCommittee();
-        r = await validator.stake(stake1000); // now top of committee
+        // A new guardian stakes enough to get to the top
+        const guardian = d.newParticipant();
+        await guardian.registerAsGuardian();
+        await guardian.readyForCommittee();
+        r = await guardian.stake(stake1000); // now top of committee
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [validator.address, validatorStaked100.address],
+            addrs: [guardian.address, guardianStaked100.address],
             weights: [stake1000, stake100.add(stake500)]
         });
     });
@@ -212,7 +212,7 @@ describe('elections-high-level-flows', async () => {
         const committee: Participant[] = [];
         for (const p of stakesPercentage) {
             const v = d.newParticipant();
-            await v.registerAsValidator();
+            await v.registerAsGuardian();
             await v.readyForCommittee();
             r = await v.stake(baseStake * p);
             committee.push(v);
@@ -222,39 +222,39 @@ describe('elections-high-level-flows', async () => {
         });
 
         // A committee member is voted out, rejoins, and voted-out again. This makes sure that once voted-out, the
-        // votes are discarded and must be recast to vote-out a validator again.
+        // votes are discarded and must be recast to vote-out a guardian again.
         for (let i = 0; i < 2; i++) {
             // Part of the committee votes out, threshold is not yet reached
-            const votedOutValidator = committee[committeeSize - 1];
+            const votedOutGuardian = committee[committeeSize - 1];
             for (const v of committee.slice(0, thresholdCrossingIndex)) {
-                const r = await d.elections.voteUnready(votedOutValidator.address, {from: v.orbsAddress});
+                const r = await d.elections.voteUnready(votedOutGuardian.address, {from: v.orbsAddress});
                 expect(r).to.have.a.voteUnreadyCastedEvent({
                     voter: v.address,
-                    subject: votedOutValidator.address
+                    subject: votedOutGuardian.address
                 });
-                expect(r).to.not.have.a.validatorVotedUnreadyEvent();
+                expect(r).to.not.have.a.guardianVotedUnreadyEvent();
                 expect(r).to.not.have.a.committeeSnapshotEvent();
             }
 
-            r = await d.elections.voteUnready(votedOutValidator.address, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
+            r = await d.elections.voteUnready(votedOutGuardian.address, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
             expect(r).to.have.a.voteUnreadyCastedEvent({
                 voter: committee[thresholdCrossingIndex].address,
-                subject: votedOutValidator.address
+                subject: votedOutGuardian.address
             });
-            expect(r).to.have.a.validatorVotedUnreadyEvent({
-                validator: votedOutValidator.address
+            expect(r).to.have.a.guardianVotedUnreadyEvent({
+                guardian: votedOutGuardian.address
             });
-            expect(r).to.have.a.validatorStatusUpdatedEvent({
-                addr: votedOutValidator.address,
+            expect(r).to.have.a.guardianStatusUpdatedEvent({
+                addr: votedOutGuardian.address,
                 readyToSync: false,
                 readyForCommittee: false
             });
             expect(r).to.have.a.committeeSnapshotEvent({
-                addrs: committee.filter(v => v != votedOutValidator).map(v => v.address)
+                addrs: committee.filter(v => v != votedOutGuardian).map(v => v.address)
             });
 
-            // voted-out validator re-joins by notifying ready-for-committee
-            r = await votedOutValidator.readyForCommittee();
+            // voted-out guardian re-joins by notifying ready-for-committee
+            r = await votedOutGuardian.readyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
                 addrs: committee.map(v => v.address)
             });
@@ -271,7 +271,7 @@ describe('elections-high-level-flows', async () => {
         const committee: Participant[] = [];
         for (let i = 0; i < committeeSize; i++) {
             const v = d.newParticipant();
-            await v.registerAsValidator();
+            await v.registerAsGuardian();
             await v.readyForCommittee();
             r = await v.stake(100);
             committee.push(v);
@@ -294,7 +294,7 @@ describe('elections-high-level-flows', async () => {
             voter: committee[1].address,
             subject: committee[1].address,
         });
-        expect(r).to.not.have.a.validatorVotedUnreadyEvent();
+        expect(r).to.not.have.a.guardianVotedUnreadyEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         // recast the stale vote-out, threshold should be reached
@@ -303,8 +303,8 @@ describe('elections-high-level-flows', async () => {
             voter: committee[0].address,
             subject: committee[1].address,
         });
-        expect(r).to.have.a.validatorVotedUnreadyEvent({
-            validator: committee[1].address
+        expect(r).to.have.a.guardianVotedUnreadyEvent({
+            guardian: committee[1].address
         });
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [committee[0].address]
@@ -325,22 +325,22 @@ describe('elections-high-level-flows', async () => {
     it('staking before or after delegating has the same effect', async () => {
         const d = await Driver.new();
 
-        const aValidator = d.newParticipant();
-        let r = await aValidator.stake(100);
+        const aGuardian = d.newParticipant();
+        let r = await aGuardian.stake(100);
 
         // stake before delegate
         const delegator1 = d.newParticipant();
         await delegator1.stake(100);
-        r = await delegator1.delegate(aValidator);
+        r = await delegator1.delegate(aGuardian);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: aValidator.address, effective_stake: new BN(200)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aGuardian.address, effective_stake: new BN(200)});
 
         // delegate before stake
         const delegator2 = d.newParticipant();
-        await delegator2.delegate(aValidator);
+        await delegator2.delegate(aGuardian);
         r = await delegator2.stake(100);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: aValidator.address, effective_stake: new BN(300)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aGuardian.address, effective_stake: new BN(300)});
     });
 
     it('does not count delegated stake twice', async () => {
@@ -369,7 +369,7 @@ describe('elections-high-level-flows', async () => {
         const v1 = d.newParticipant();
         const v2 = d.newParticipant();
 
-        await v1.registerAsValidator();
+        await v1.registerAsGuardian();
         await v1.readyForCommittee();
 
         await v2.delegate(v1);
@@ -435,17 +435,17 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it('ensures validator who delegated cannot join committee even when owning enough stake', async () => {
+    it('ensures guardian who delegated cannot join committee even when owning enough stake', async () => {
         const d = await Driver.new();
         const v1 = d.newParticipant();
         const v2 = d.newParticipant();
 
         await v1.delegate(v2);
         await v1.stake(baseStake);
-        await v1.registerAsValidator();
+        await v1.registerAsGuardian();
         await v1.readyForCommittee();
 
-        await v2.registerAsValidator();
+        await v2.registerAsGuardian();
         await v2.readyForCommittee();
         let r = await v2.stake(baseStake);
 
@@ -455,25 +455,25 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it('ensures a non-ready validator cannot join the committee even when owning enough stake', async () => {
+    it('ensures a non-ready guardian cannot join the committee even when owning enough stake', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
         await v.stake(baseStake);
-        await v.registerAsValidator();
+        await v.registerAsGuardian();
         let r = await v.readyToSync();
         r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address]
         });
 
-        const {r: r2} = await d.newValidator(baseStake * 2, false, true, false);
+        const {r: r2} = await d.newGuardian(baseStake * 2, false, true, false);
         expect(r2).to.not.have.a.committeeSnapshotEvent();
     });
 
     it('publishes a CommiteeChangedEvent when the commitee becomes empty', async () => {
         const d = await Driver.new();
         const v = d.newParticipant();
-        await v.registerAsValidator();
+        await v.registerAsGuardian();
         await v.stake(baseStake);
 
         let r = await v.readyForCommittee();
@@ -608,48 +608,48 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutGuardian} = await voteOutScenario_setupDelegatorsAndGuardians(d);
 
         // -------------- BANNING VOTES CAST BY DELEGATORS - NO GOV STAKE, NO EFFECT ---------------
         for (const delegator of delegators) {
-            r = await d.elections.voteOut(votedOutValidator.address,{from: delegator.address});
+            r = await d.elections.voteOut(votedOutGuardian.address,{from: delegator.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: delegator.address,
-                subject: votedOutValidator.address
+                subject: votedOutGuardian.address
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.validatorVotedOutEvent();
+            expect(r).to.not.have.a.guardianVotedOutEvent();
         }
     });
 
-    it("VoteOut: bans a validator only when accumulated votes stake reaches the threshold", async () => {
+    it("VoteOut: bans a guardian only when accumulated votes stake reaches the threshold", async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutGuardian} = await voteOutScenario_setupDelegatorsAndGuardians(d);
 
         // -------------- CAST VOTES UNDER THE THRESHOLD ---------------
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
-            r = await d.elections.voteOut(votedOutValidator.address, {from: p.address});
+            r = await d.elections.voteOut(votedOutGuardian.address, {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
-                subject: votedOutValidator.address
+                subject: votedOutGuardian.address
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.validatorVotedOutEvent();
+            expect(r).to.not.have.a.guardianVotedOutEvent();
         }
 
         // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
 
-        r = await d.elections.voteOut(votedOutValidator.address, {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        r = await d.elections.voteOut(votedOutGuardian.address, {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
         expect(r).to.have.a.voteOutCastedEvent({
             voter: delegatees[thresholdCrossingIndex].address,
-            subject: votedOutValidator.address
+            subject: votedOutGuardian.address
         });
-        expect(r).to.have.a.validatorVotedOutEvent({
-            validator: votedOutValidator.address
+        expect(r).to.have.a.guardianVotedOutEvent({
+            guardian: votedOutGuardian.address
         });
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: []
@@ -659,12 +659,12 @@ describe('elections-high-level-flows', async () => {
     it("VoteOut: vote-out is permanent - cannot be undone by cancelling a vote", async () => {
         const d = await Driver.new();
 
-        let {thresholdCrossingIndex, delegatees, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
-        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
+        let {thresholdCrossingIndex, delegatees, votedOutGuardian} = await voteOutScenario_setupDelegatorsAndGuardians(d);
+        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutGuardian);
 
-        const tipValidator = delegatees[thresholdCrossingIndex];
-        await d.elections.voteOut(ZERO_ADDR, {from: tipValidator.address});
-        await expectRejected(votedOutValidator.readyForCommittee());
+        const tipGuardian = delegatees[thresholdCrossingIndex];
+        await d.elections.voteOut(ZERO_ADDR, {from: tipGuardian.address});
+        await expectRejected(votedOutGuardian.readyForCommittee());
     });
 
     it("VoteOut: update vote weight in response to staking and delegation", async () => {
@@ -713,43 +713,43 @@ describe('elections-high-level-flows', async () => {
         expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
     });
 
-    it("rejects readyToSync and readyForCommittee for a voted-out validator", async () => {
+    it("rejects readyToSync and readyForCommittee for a voted-out guardian", async () => {
         const d = await Driver.new();
 
         let r;
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, delegators, votedOutGuardian} = await voteOutScenario_setupDelegatorsAndGuardians(d);
 
         // -------------- CAST VOTES UNDER THE THRESHOLD ---------------
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
-            r = await d.elections.voteOut(votedOutValidator.address, {from: p.address});
+            r = await d.elections.voteOut(votedOutGuardian.address, {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
-                subject: votedOutValidator.address
+                subject: votedOutGuardian.address
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
-            expect(r).to.not.have.a.validatorVotedOutEvent();
+            expect(r).to.not.have.a.guardianVotedOutEvent();
         }
 
         // -------------- ONE MORE VOTE TO REACH VOTE-OUT THRESHOLD ---------------
 
-        r = await d.elections.voteOut(votedOutValidator.address, {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        r = await d.elections.voteOut(votedOutGuardian.address, {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
         expect(r).to.have.a.voteOutCastedEvent({
             voter: delegatees[thresholdCrossingIndex].address,
-            subject: votedOutValidator.address
+            subject: votedOutGuardian.address
         });
-        expect(r).to.have.a.validatorVotedOutEvent({
-            validator: votedOutValidator.address
+        expect(r).to.have.a.guardianVotedOutEvent({
+            guardian: votedOutGuardian.address
         });
         expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
             addrs: []
         });
 
-        await expectRejected(d.elections.readyToSync({from: votedOutValidator.address}));
-        await expectRejected(d.elections.readyToSync({from: votedOutValidator.orbsAddress}));
-        await expectRejected(d.elections.readyForCommittee({from: votedOutValidator.address}));
-        await expectRejected(d.elections.readyForCommittee({from: votedOutValidator.orbsAddress}));
+        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}));
+        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}));
+        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.address}));
+        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.orbsAddress}));
     });
 
     it("sets and gets settings, only functional owner allowed to set", async () => {
@@ -800,7 +800,7 @@ describe('elections-high-level-flows', async () => {
 
 });
 
-export async function voteOutScenario_setupDelegatorsAndValidators(driver: Driver) {
+export async function voteOutScenario_setupDelegatorsAndGuardians(driver: Driver) {
     assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
     assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
 
@@ -833,30 +833,30 @@ export async function voteOutScenario_setupDelegatorsAndValidators(driver: Drive
         delegators.push(delegator);
     }
 
-    const votedOutValidator = delegatees[delegatees.length - 1];
-    await votedOutValidator.registerAsValidator();
+    const votedOutGuardian = delegatees[delegatees.length - 1];
+    await votedOutGuardian.registerAsGuardian();
 
-    await votedOutValidator.stake(baseStake);
-    let r = await votedOutValidator.readyForCommittee();
+    await votedOutGuardian.stake(baseStake);
+    let r = await votedOutGuardian.readyForCommittee();
     expect(r).to.have.a.committeeSnapshotEvent({
-        addrs: [votedOutValidator.address]
+        addrs: [votedOutGuardian.address]
     });
 
-    return {thresholdCrossingIndex, delegatees, delegators, votedOutValidator};
+    return {thresholdCrossingIndex, delegatees, delegators, votedOutGuardian};
 }
 
-export async function banningScenario_voteUntilThresholdReached(driver: Driver, thresholdCrossingIndex, delegatees, votedOutValidator) {
+export async function banningScenario_voteUntilThresholdReached(driver: Driver, thresholdCrossingIndex, delegatees, votedOutGuardian) {
     let r;
     for (let i = 0; i <= thresholdCrossingIndex; i++) {
         const p = delegatees[i];
-        r = await driver.elections.voteOut(votedOutValidator.address, {from: p.address});
+        r = await driver.elections.voteOut(votedOutGuardian.address, {from: p.address});
     }
     expect(r).to.have.a.voteOutCastedEvent({
         voter: delegatees[thresholdCrossingIndex].address,
-        subject: votedOutValidator.address
+        subject: votedOutGuardian.address
     });
-    expect(r).to.have.a.validatorVotedOutEvent({
-        validator: votedOutValidator.address
+    expect(r).to.have.a.guardianVotedOutEvent({
+        guardian: votedOutGuardian.address
     });
     expect(r).to.have.a.committeeSnapshotEvent({
         addrs: []
