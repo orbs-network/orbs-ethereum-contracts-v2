@@ -75,7 +75,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
 
 describe('gas usage scenarios', async () => {
-    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
+    it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommittee();
 
         const delegator = d.newParticipant("delegator");
@@ -97,7 +97,7 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
     });
 
-    it.only("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
+    it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
         const {d, committee} = await fullCommittee();
 
         await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
@@ -315,18 +315,20 @@ describe('gas usage scenarios', async () => {
         await evmIncreaseTime(d.web3, 30*24*60*60);
         await d.rewards.assignRewards();
 
+        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
+
         const v = committee[0];
 
         const delegator = d.newParticipant();
         await delegator.stake(100);
         await delegator.delegate(v);
 
-        const delegators: Participant[] =[v].concat(await Promise.all(_.range(batchSize - 1).map(async () => {
-            const delegator = d.newParticipant();
+        const delegators: Participant[] =await Promise.all(_.range(batchSize).map(async i => {
+            const delegator = i == 0 ? v : d.newParticipant();
             await delegator.stake(100);
-            await delegator.delegate(v);
+            await delegator.delegate(committee[i % committee.length]);
             return delegator;
-        })));
+        }));
 
         const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
