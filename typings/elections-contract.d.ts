@@ -12,20 +12,18 @@ export interface ElectionsContract extends OwnedContract {
   setValidatorOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setValidatorIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  voteOut(address: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
-  getVoteOutVotes(address: string): Promise<string[]>;
-  getAccumulatedStakesForBanning(address: string): Promise<BN>;
+  voteOut(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  getVoteOutVote(address: string): Promise<string>;
+  getAccumulatedStakesForVoteOut(address: string): Promise<BN>;
 
   setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMaxDelegationRatio(maxDelegationRatio: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setVoteOutLockTimeoutSeconds(voteOutLockTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteOutPercentageThreshold(voteOutPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   getSettings(params?: TransactionConfig): Promise<[
     number|BN /* voteOutTimeoutSeconds */,
     number|BN /* maxDelegationRatio */,
-    number|BN /* banningLockTimeoutSeconds */,
     number|BN /* voteOutPercentageThreshold */,
     number|BN /* banningPercentageThreshold */
   ]>;
@@ -50,14 +48,10 @@ export interface ValidatorVotedUnreadyEvent {
 
 export interface VoteOutCastedEvent {
   voter: string;
-  subjects: string[];
+  subject: string;
 }
 
 export interface ValidatorVotedOutEvent {
-  validator: string;
-}
-
-export interface ValidatorVotedInEvent {
   validator: string;
 }
 
@@ -67,11 +61,6 @@ export interface  VoteOutTimeoutSecondsChangedEvent {
 }
 
 export interface  MaxDelegationRatioChangedEvent {
-  newValue: string|BN,
-  oldValue: string|BN,
-}
-
-export interface  VoteOutLockTimeoutSecondsChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }

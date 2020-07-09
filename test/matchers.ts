@@ -17,10 +17,8 @@ import {
   ValidatorVotedUnreadyEvent,
   VoteOutCastedEvent,
   ValidatorVotedOutEvent,
-  ValidatorVotedInEvent,
   VoteOutTimeoutSecondsChangedEvent,
   MaxDelegationRatioChangedEvent,
-  VoteOutLockTimeoutSecondsChangedEvent,
   VoteUnreadyPercentageThresholdChangedEvent,
   VoteOutPercentageThresholdChangedEvent
 } from "../typings/elections-contract";
@@ -195,7 +193,6 @@ declare global {
       voteUnreadyCastedEvent(data?: Partial<VoteUnreadyCastedEvent>): void;
       validatorVotedUnreadyEvent(data?: Partial<ValidatorVotedUnreadyEvent>): void;
       validatorVotedOutEvent(data?: Partial<ValidatorVotedOutEvent>): void;
-      validatorVotedInEvent(data?: Partial<ValidatorVotedInEvent>): void;
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       validatorComplianceUpdateEvent(data?: Partial<ValidatorComplianceUpdateEvent>)
@@ -207,7 +204,6 @@ declare global {
       bootstrapAddedToPoolEvent(data?: Partial<BootstrapAddedToPoolEvent>)
       voteUnreadyTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
       maxDelegationRatioChangedEvent(data?: Partial<MaxDelegationRatioChangedEvent>);
-      voteOutLockTimeoutSecondsChangedEvent(data?: Partial<VoteOutLockTimeoutSecondsChangedEvent>);
       voteOutPercentageThresholdChangedEvent(data?: Partial<VoteUnreadyPercentageThresholdChangedEvent>);
       voteUnreadyPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
