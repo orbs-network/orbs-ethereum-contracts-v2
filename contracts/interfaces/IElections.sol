@@ -8,11 +8,10 @@ interface IElections /* is IStakeChangeNotifier */ {
 	// Election state change events
 	event ValidatorVotedUnready(address validator);
 	event ValidatorVotedOut(address validator);
-	event ValidatorVotedIn(address validator);
 
 	// Function calls
 	event VoteUnreadyCasted(address voter, address subject);
-	event VoteOutCasted(address voter, address[] subjects);
+	event VoteOutCasted(address voter, address subject);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
 	event ValidatorStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
@@ -24,7 +23,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function voteUnready(address subjectAddr) external;
 
 	/// @dev casts a voteOut vote by the sender to the given address
-	function voteOut(address[] calldata subjectAddrs) external;
+	function voteOut(address subjectAddr) external;
 
 	/// @dev Called by a validator when ready to start syncing with other nodes
 	function readyToSync() external;
@@ -53,7 +52,6 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
 		uint32 maxDelegationRatio,
-		uint32 voteOutLockTimeoutSeconds,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold
 	);
@@ -64,13 +62,11 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
 	function setMaxDelegationRatio(uint32 maxDelegationRatio) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setVoteOutLockTimeoutSeconds(uint32 voteOutLockTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
 	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
 	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
 
 	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
 	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
-	event VoteOutLockTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
 	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
 	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
 

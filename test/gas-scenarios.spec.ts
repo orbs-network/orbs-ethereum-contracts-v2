@@ -274,11 +274,11 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommittee();
 
         d.resetGasRecording();
-        let r = await d.elections.voteOut([committee[1].address], {from: committee[0].address});
+        let r = await d.elections.voteOut(committee[1].address, {from: committee[0].address});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
-            subjects: [committee[1].address]
+            subject: committee[1].address
         });
         d.logGasUsageSummary("Manual-voteout is cast, threshold not reached", [committee[0]]);
     });
@@ -288,16 +288,16 @@ describe('gas usage scenarios', async () => {
 
         const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteOutThreshold / 100));
         await Promise.all(
-            voters.map(v => d.elections.voteOut([committee[0].address], {from: v.address}))
+            voters.map(v => d.elections.voteOut(committee[0].address, {from: v.address}))
         );
 
         d.resetGasRecording();
 
         const thresholdVoter = committee[voters.length];
-        let r = await d.elections.voteOut([committee[0].address], {from: thresholdVoter.address});
+        let r = await d.elections.voteOut(committee[0].address, {from: thresholdVoter.address});
         expect(r).to.have.a.voteOutCastedEvent({
             voter: thresholdVoter.address,
-            subjects: [committee[0].address]
+            subject: committee[0].address
         });
         expect(r).to.have.a.validatorVotedOutEvent({
             validator: committee[0].address

@@ -6,7 +6,7 @@ import {
     BANNING_LOCK_TIMEOUT,
     Driver,
     expectRejected,
-    Participant
+    Participant, ZERO_ADDR
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
@@ -604,16 +604,6 @@ describe('elections-high-level-flows', async () => {
         })
     });
 
-    it("VoteOut: allows voting only to 3 at a time", async () => {
-        const d = await Driver.new();
-
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
-
-        // -------------- VOTE FOR 3 VALIDATORS AT MOST ---------------
-        await expectRejected(d.elections.voteOut(delegatees.slice(0, 4).map(v => v.address), {from: delegators[0].address}));
-        await d.elections.voteOut(delegatees.slice(0, 3).map(v => v.address), {from: delegators[0].address});
-    });
-
     it("VoteOut: does not count delegators voting - because they don't have effective governance stake", async () => {
         const d = await Driver.new();
 
@@ -622,10 +612,10 @@ describe('elections-high-level-flows', async () => {
 
         // -------------- BANNING VOTES CAST BY DELEGATORS - NO GOV STAKE, NO EFFECT ---------------
         for (const delegator of delegators) {
-            r = await d.elections.voteOut([votedOutValidator.address], {from: delegator.address});
+            r = await d.elections.voteOut(votedOutValidator.address,{from: delegator.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: delegator.address,
-                subjects: [votedOutValidator.address]
+                subject: votedOutValidator.address
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.validatorVotedOutEvent();
@@ -642,22 +632,21 @@ describe('elections-high-level-flows', async () => {
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
-            r = await d.elections.voteOut([votedOutValidator.address], {from: p.address});
+            r = await d.elections.voteOut(votedOutValidator.address, {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
-                subjects: [votedOutValidator.address]
+                subject: votedOutValidator.address
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.validatorVotedOutEvent();
-            expect(r).to.not.have.a.validatorVotedInEvent();
         }
 
         // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
 
-        r = await d.elections.voteOut([votedOutValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        r = await d.elections.voteOut(votedOutValidator.address, {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
         expect(r).to.have.a.voteOutCastedEvent({
             voter: delegatees[thresholdCrossingIndex].address,
-            subjects: [votedOutValidator.address]
+            subject: votedOutValidator.address
         });
         expect(r).to.have.a.validatorVotedOutEvent({
             validator: votedOutValidator.address
@@ -667,192 +656,61 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it("VoteOut: can revoke a vote and unban a validator as a result", async () => {
+    it("VoteOut: vote-out is permanent - cannot be undone by cancelling a vote", async () => {
         const d = await Driver.new();
 
-        let r;
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
+        let {thresholdCrossingIndex, delegatees, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
         await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
 
-        // -------------- BANNING VOTES REVOKED BY VALIDATOR ---------------
-
-        r = await d.elections.voteOut([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is again uncrossed
-        expect(r).to.have.a.voteOutCastedEvent({
-            voter: delegatees[thresholdCrossingIndex].address,
-            subjects: []
-        });
-        expect(r).to.have.a.validatorVotedInEvent({
-            validator: votedOutValidator.address
-        });
-        r = await votedOutValidator.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [votedOutValidator.address]
-        });
-    });
-
-    it("VoteOut: banning does not responds to changes in staking, delegating or voting after locking (one week)", async () => {
-        const d = await Driver.new();
-
-        let r;
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
-        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
-
-        // ...*.* TiMe wArP *.*.....
-        evmIncreaseTime(d.web3, BANNING_LOCK_TIMEOUT);
-
-        // -----------------------------------------------------------------------------------
-        // -------------- AFTER BANNING LOCKED - TRY TO UNBAN AND ALWAYS FAIL: ---------------
-        // -----------------------------------------------------------------------------------
-
-        // -------------- BANNING VOTES REVOKED BY VALIDATOR ---------------
-
-        r = await d.elections.voteOut([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is again uncrossed
-        expect(r).to.not.have.a.validatorVotedInEvent();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        // -------------- DELEGATOR UNSTAKES ---------------
-
-        const tempStake = await d.staking.getStakeBalanceOf(delegators[thresholdCrossingIndex].address);
-        r = await d.staking.unstake(tempStake, {from: delegators[thresholdCrossingIndex].address}); // threshold is un-crossed
-        expect(r).to.not.have.a.validatorVotedInEvent();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES ---------------
-
-        const dilutingParticipant = d.newParticipant();
-        const dilutingStake = 100 * defaultDriverOptions.banningThreshold * 200;
-        await dilutingParticipant.stake(dilutingStake);
-        expect(r).to.not.have.a.validatorVotedInEvent(); // because we need a trigger to detect the change
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        // trigger - repeat an existing vote:
-        const existingVotes = await d.elections.getVoteOutVotes(delegatees[0].address);
-        r = await d.elections.voteOut(existingVotes, {from: delegatees[0].address});
-
-        expect(r).to.not.have.a.validatorVotedInEvent();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        // -------------- ATTEMPT UNBAN BY DELEGATION - VALIDATOR --------------
         const tipValidator = delegatees[thresholdCrossingIndex];
-
-        const other = d.newParticipant();
-        r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
-        expect(r).to.not.have.a.validatorVotedInEvent();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        // -------------- ATTEMPT UNBAN BY DELEGATION - DELEGATOR --------------
-        const tipDelegator = delegators[thresholdCrossingIndex];
-
-        r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
-        expect(r).to.not.have.a.validatorVotedInEvent();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        await d.elections.voteOut(ZERO_ADDR, {from: tipValidator.address});
+        await expectRejected(votedOutValidator.readyForCommittee());
     });
 
-    it("VoteOut: banning responds to changes in staking and delegating before locking", async () => {
+    it("VoteOut: update vote weight in response to staking and delegation", async () => {
         const d = await Driver.new();
 
-        let r;
-        let {thresholdCrossingIndex, delegatees, delegators, votedOutValidator} = await voteOutScenario_setupDelegatorsAndValidators(d);
-        await banningScenario_voteUntilThresholdReached(d, thresholdCrossingIndex, delegatees, votedOutValidator);
+        await d.newParticipant().stake(bn(100000)); // So we will not reach the vote-out threshold
 
-        // -------------- DELEGATOR UNSTAKES AND RESTAKES TO REVOKE BANNING AND REINSTATE BAN ---------------
+        const voter = d.newParticipant();
+        const subject = d.newParticipant();
+        await d.elections.voteOut(subject.address, {from: voter.address});
 
-        const tempStake = await d.staking.getStakeBalanceOf(delegators[thresholdCrossingIndex].address);
-        r = await d.staking.unstake(tempStake, {from: delegators[thresholdCrossingIndex].address}); // threshold is un-crossed
-        expect(r).to.have.a.validatorVotedInEvent({
-            validator: votedOutValidator.address
-        });
-        r = await votedOutValidator.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [votedOutValidator.address]
-        });
+        const otherVoter = d.newParticipant();
+        await otherVoter.stake(100);
+        await d.elections.voteOut(subject.address, {from: otherVoter.address});
 
-        r = await d.staking.restake({from: delegators[thresholdCrossingIndex].address}); // threshold is crossed again
-        expect(r).to.have.a.validatorVotedOutEvent({
-            validator: votedOutValidator.address
-        });
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: []
-        });
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(100));
 
-        // -------------- NEW PARTICIPANT STAKES TO DILUTE BANNING VOTES, THEN UNSTAKES ---------------
+        // Increase vote weight by staking
+        await voter.stake(100);
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
 
-        const dilutingParticipant = d.newParticipant();
-        const dilutingStake = baseStake * defaultDriverOptions.banningThreshold * 200;
-        r = await dilutingParticipant.stake(dilutingStake);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.validatorVotedOutEvent();
-        expect(r).to.not.have.a.validatorVotedInEvent();
+        // Decrease vote weight by unstaking
+        await voter.unstake(30);
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(170));
 
-        // trigger - repeat an existing vote:
-        const existingVotes = await d.elections.getVoteOutVotes(delegatees[0].address);
-        r = await d.elections.voteOut(existingVotes, {from: delegatees[0].address});
-        expect(r).to.have.a.validatorVotedInEvent({
-            validator: votedOutValidator.address
-        });
+        // Increase vote weight by restaking
+        await voter.restake();
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
 
-        r = await votedOutValidator.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [votedOutValidator.address]
-        });
+        // Decrease vote weight by delegating
+        await voter.delegate(d.newParticipant());
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(100));
 
-        r = await d.staking.unstake(dilutingStake, {from: dilutingParticipant.address}); // threshold is again crossed
-        expect(r).to.not.have.a.committeeSnapshotEvent(); // because we need a trigger to detect the change
-        expect(r).to.not.have.a.validatorVotedOutEvent();
-        expect(r).to.not.have.a.validatorVotedInEvent();
+        // Increase vote weight by self delegation
+        await voter.delegate(voter);
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
 
-        // trigger - repeat an existing vote:
-        r = await d.elections.voteOut(existingVotes, {from: delegatees[0].address});
+        // Increase vote weight by a delegator stake
+        const delegator = d.newParticipant();
+        await delegator.stake(40);
+        await delegator.delegate(voter);
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(240));
 
-        expect(r).to.have.a.validatorVotedOutEvent({
-            validator: votedOutValidator.address
-        });
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: []
-        });
-
-        // -------------- UNBAN THEN BAN BY DELEGATION - VALIDATOR --------------
-        const tipValidator = delegatees[thresholdCrossingIndex];
-
-        const other = d.newParticipant();
-        r = await d.delegations.delegate(other.address, {from: tipValidator.address}); // delegates to someone else
-        expect(r).to.have.a.validatorVotedInEvent({
-            validator: votedOutValidator.address
-        });
-
-        r = await votedOutValidator.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [votedOutValidator.address]
-        });
-
-        r = await d.delegations.delegate(tipValidator.address, {from: tipValidator.address}); // self delegation
-        expect(r).to.have.a.validatorVotedOutEvent({
-            validator: votedOutValidator.address
-        });
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: []
-        });
-
-        // -------------- UNBAN THEN BAN BY DELEGATION - DELEGATOR --------------
-        const tipDelegator = delegators[thresholdCrossingIndex];
-
-        r = await d.delegations.delegate(other.address, {from: tipDelegator.address}); // delegates to someone else
-        expect(r).to.have.a.validatorVotedInEvent({
-            validator: votedOutValidator.address
-        });
-
-        r = await votedOutValidator.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [votedOutValidator.address]
-        });
-
-        r = await d.delegations.delegate(tipValidator.address, {from: tipDelegator.address}); // self delegation
-        expect(r).to.have.a.validatorVotedOutEvent({
-            validator: votedOutValidator.address
-        });
-        expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: []
-        });
+        // Decrease vote weight by loosing a delegation
+        await delegator.delegate(delegator);
+        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
     });
 
     it("rejects readyToSync and readyForCommittee for a voted-out validator", async () => {
@@ -865,22 +723,21 @@ describe('elections-high-level-flows', async () => {
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
-            r = await d.elections.voteOut([votedOutValidator.address], {from: p.address});
+            r = await d.elections.voteOut(votedOutValidator.address, {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
-                subjects: [votedOutValidator.address]
+                subject: votedOutValidator.address
             });
             expect(r).to.not.have.a.committeeSnapshotEvent();
             expect(r).to.not.have.a.validatorVotedOutEvent();
-            expect(r).to.not.have.a.validatorVotedInEvent();
         }
 
         // -------------- ONE MORE VOTE TO REACH VOTE-OUT THRESHOLD ---------------
 
-        r = await d.elections.voteOut([votedOutValidator.address], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
+        r = await d.elections.voteOut(votedOutValidator.address, {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
         expect(r).to.have.a.voteOutCastedEvent({
             voter: delegatees[thresholdCrossingIndex].address,
-            subjects: [votedOutValidator.address]
+            subject: votedOutValidator.address
         });
         expect(r).to.have.a.validatorVotedOutEvent({
             validator: votedOutValidator.address
@@ -893,13 +750,6 @@ describe('elections-high-level-flows', async () => {
         await expectRejected(d.elections.readyToSync({from: votedOutValidator.orbsAddress}));
         await expectRejected(d.elections.readyForCommittee({from: votedOutValidator.address}));
         await expectRejected(d.elections.readyForCommittee({from: votedOutValidator.orbsAddress}));
-
-        await d.elections.voteOut([], {from: delegatees[thresholdCrossingIndex].address}); // threshold is crossed
-
-        await d.elections.readyToSync({from: votedOutValidator.address});
-        await d.elections.readyToSync({from: votedOutValidator.orbsAddress});
-        await d.elections.readyForCommittee({from: votedOutValidator.address});
-        await d.elections.readyForCommittee({from: votedOutValidator.orbsAddress});
     });
 
     it("sets and gets settings, only functional owner allowed to set", async () => {
@@ -908,9 +758,8 @@ describe('elections-high-level-flows', async () => {
         const current = await d.elections.getSettings();
         const voteOutTimeoutSeconds  = bn(current[0]);
         const maxDelegationRatio  = bn(current[1]);
-        const banningLockTimeoutSeconds  = bn(current[2]);
-        const voteOutPercentageThreshold  = bn(current[3]);
-        const banningPercentageThreshold  = bn(current[4]);
+        const voteOutPercentageThreshold  = bn(current[2]);
+        const banningPercentageThreshold  = bn(current[3]);
 
         await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
         let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
@@ -924,13 +773,6 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.maxDelegationRatioChangedEvent({
             newValue: maxDelegationRatio.add(bn(1)).toString(),
             oldValue: maxDelegationRatio.toString()
-        });
-
-        await expectRejected(d.elections.setVoteOutLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
-        r = await d.elections.setVoteOutLockTimeoutSeconds(banningLockTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
-        expect(r).to.have.a.voteOutLockTimeoutSecondsChangedEvent({
-            newValue: banningLockTimeoutSeconds.add(bn(1)).toString(),
-            oldValue: banningLockTimeoutSeconds.toString()
         });
 
         await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
@@ -948,10 +790,9 @@ describe('elections-high-level-flows', async () => {
         });
 
         const afterUpdate = await d.elections.getSettings();
-        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3], afterUpdate[4]]).to.deep.eq([
+        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3]]).to.deep.eq([
             voteOutTimeoutSeconds.add(bn(1)).toString(),
             maxDelegationRatio.add(bn(1)).toString(),
-            banningLockTimeoutSeconds.add(bn(1)).toString(),
             voteOutPercentageThreshold.add(bn(1)).toString(),
             banningPercentageThreshold.add(bn(1)).toString()
         ]);
@@ -1008,11 +849,11 @@ export async function banningScenario_voteUntilThresholdReached(driver: Driver, 
     let r;
     for (let i = 0; i <= thresholdCrossingIndex; i++) {
         const p = delegatees[i];
-        r = await driver.elections.voteOut([votedOutValidator.address], {from: p.address});
+        r = await driver.elections.voteOut(votedOutValidator.address, {from: p.address});
     }
     expect(r).to.have.a.voteOutCastedEvent({
         voter: delegatees[thresholdCrossingIndex].address,
-        subjects: [votedOutValidator.address]
+        subject: votedOutValidator.address
     });
     expect(r).to.have.a.validatorVotedOutEvent({
         validator: votedOutValidator.address

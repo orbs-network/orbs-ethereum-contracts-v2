@@ -19,16 +19,15 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	mapping (address => mapping (address => uint256)) votedUnreadyVotes; // by => to => timestamp
 	mapping (address => uint256) votersStake;
-	mapping (address => address[]) voteOutVotes; // by => to[]]
+	mapping (address => address) voteOutVotes; // by => to
 	mapping (address => uint256) accumulatedStakesForVoteOut; // addr => total stake
-	mapping (address => uint256) bannedValidators; // addr => timestamp
+	mapping (address => bool) votedOutValidators;
 
 	uint256 totalGovernanceStake;
 
 	struct Settings {
 		uint32 voteUnreadyTimeoutSeconds;
 		uint32 maxDelegationRatio;
-		uint32 voteOutLockTimeoutSeconds;
 		uint8 voteUnreadyPercentageThreshold;
 		uint8 voteOutPercentageThreshold;
 	}
@@ -55,8 +54,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			maxDelegationRatio: _maxDelegationRatio,
 			voteUnreadyPercentageThreshold: _voteUnreadyPercentageThreshold,
 			voteUnreadyTimeoutSeconds: _voteUnreadyTimeoutSeconds,
-			voteOutPercentageThreshold: _voteOutPercentageThreshold,
-			voteOutLockTimeoutSeconds: 1 weeks
+			voteOutPercentageThreshold: _voteOutPercentageThreshold
 		});
 	}
 
@@ -79,12 +77,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function requireNotVotedOut(address addr) private view {
-		require(!_isBanned(addr), "caller is voted-out");
+		require(!isVotedOut(addr), "caller is voted-out");
 	}
 
 	function readyForCommittee() external {
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
-		require(!_isBanned(guardianAddr), "caller is voted-out");
+		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit ValidatorStatusUpdated(guardianAddr, true, true);
 		getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getComplianceContract().isValidatorCompliant(guardianAddr));
@@ -92,7 +90,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	function readyToSync() external {
 		address guardianAddr = getValidatorsRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
-		require(!_isBanned(guardianAddr), "caller is voted-out");
+		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit ValidatorStatusUpdated(guardianAddr, true, false);
 		getCommitteeContract().removeMember(guardianAddr);
@@ -159,113 +157,77 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function voteOut(address[] calldata subjectAddrs) external onlyWhenActive {
-		require(subjectAddrs.length <= 3, "up to 3 concurrent votes are supported");
-		for (uint i = 0; i < subjectAddrs.length; i++) {
-			require(subjectAddrs[i] != address(0), "all votes must non zero addresses");
+	function voteOut(address subjectAddr) external onlyWhenActive {
+		Settings memory _settings = settings;
+
+		address prevSubject = voteOutVotes[msg.sender];
+		voteOutVotes[msg.sender] = subjectAddr;
+
+		if (prevSubject == address(0)) {
+			votersStake[msg.sender] = getDelegationsContract().getDelegatedStakes(msg.sender);
 		}
-        _voteOut(msg.sender, subjectAddrs);
-		emit VoteOutCasted(msg.sender, subjectAddrs);
+
+		uint256 voterStake = votersStake[msg.sender];
+		uint totalStake = getDelegationsContract().getTotalDelegatedStake();
+
+		if (prevSubject != address(0) && prevSubject != subjectAddr) {
+			accumulatedStakesForVoteOut[prevSubject] = accumulatedStakesForVoteOut[prevSubject].sub(voterStake);
+			_applyVoteOutVotesFor(prevSubject, totalStake, _settings);
+		}
+
+		if (subjectAddr != address(0)) {
+			if (prevSubject != subjectAddr) {
+				accumulatedStakesForVoteOut[subjectAddr] = accumulatedStakesForVoteOut[subjectAddr].add(voterStake);
+			}
+			_applyVoteOutVotesFor(subjectAddr, totalStake, _settings); // recheck also if not new
+		}
+		emit VoteOutCasted(msg.sender, subjectAddr);
 	}
 
 	function calcGovernanceEffectiveStake(bool selfDelegating, uint256 totalDelegatedStake) private pure returns (uint256) {
 		return selfDelegating ? totalDelegatedStake : 0;
 	}
 
-	function getVoteOutVotes(address addrs) external view returns (address[] memory) {
-		return voteOutVotes[addrs];
+	function getVoteOutVote(address addr) external view returns (address) {
+		return voteOutVotes[addr];
 	}
 
-	function getAccumulatedStakesForVoteOut(address addrs) external view returns (uint256) {
-		return accumulatedStakesForVoteOut[addrs];
+	function getAccumulatedStakesForVoteOut(address addr) external view returns (uint256) {
+		return accumulatedStakesForVoteOut[addr];
 	}
 
 	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
-		address[] memory votes = voteOutVotes[voter];
-		if (votes.length == 0) return;
+		address subjectAddr = voteOutVotes[voter];
+		if (subjectAddr == address(0)) return;
 
 		uint256 prevVoterStake = votersStake[voter];
 		votersStake[voter] = currentVoterStake;
 
-		for (uint i = 0; i < votes.length; i++) {
-			address validator = votes[i];
-			accumulatedStakesForVoteOut[validator] = accumulatedStakesForVoteOut[validator].
-				sub(prevVoterStake).
-				add(currentVoterStake);
-			_applyVoteOutVotesFor(validator, _totalGovernanceStake, _settings);
-		}
+		accumulatedStakesForVoteOut[subjectAddr] = accumulatedStakesForVoteOut[subjectAddr].
+		sub(prevVoterStake).
+		add(currentVoterStake);
+
+		_applyVoteOutVotesFor(subjectAddr, _totalGovernanceStake, _settings);
 	}
 
-    function _voteOut(address voter, address[] memory validators) private {
-		Settings memory _settings = settings;
-
-		address[] memory prevAddrs = voteOutVotes[voter];
-		if (prevAddrs.length == 0) {
-			votersStake[msg.sender] = getDelegationsContract().getDelegatedStakes(msg.sender);
-		}
-
-		voteOutVotes[voter] = validators;
-		uint256 voterStake = votersStake[msg.sender];
-		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
-
-		for (uint i = 0; i < prevAddrs.length; i++) {
-			address addr = prevAddrs[i];
-			bool isRemoved = true;
-			for (uint j = 0; j < validators.length; j++) {
-				if (addr == validators[j]) {
-					isRemoved = false;
-					break;
-				}
-			}
-			if (isRemoved) {
-				accumulatedStakesForVoteOut[addr] = accumulatedStakesForVoteOut[addr].sub(voterStake);
-				_applyVoteOutVotesFor(addr, _totalGovernanceStake, _settings);
-			}
-		}
-
-		for (uint i = 0; i < validators.length; i++) {
-			address addr = validators[i];
-			bool isAdded = true;
-			for (uint j = 0; j < prevAddrs.length; j++) {
-				if (prevAddrs[j] == addr) {
-					isAdded = false;
-					break;
-				}
-			}
-			if (isAdded) {
-				accumulatedStakesForVoteOut[addr] = accumulatedStakesForVoteOut[addr].add(voterStake);
-			}
-			_applyVoteOutVotesFor(addr, _totalGovernanceStake, _settings); // recheck also if not new
-		}
-    }
-
     function _applyVoteOutVotesFor(address addr, uint256 _totalGovernanceStake, Settings memory _settings) private {
-        uint256 voteOutTimestamp = bannedValidators[addr];
-        bool isBanned = voteOutTimestamp != 0;
-
-        if (isBanned && now.sub(voteOutTimestamp) >= _settings.voteOutLockTimeoutSeconds) { // no unvoteOut after 7 days
+        if (isVotedOut(addr)) {
             return;
         }
 
         uint256 voteOutStake = accumulatedStakesForVoteOut[addr];
-        bool shouldBan = _totalGovernanceStake > 0 && voteOutStake.mul(100).div(_totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
+        bool shouldBeVotedOut = _totalGovernanceStake > 0 && voteOutStake.mul(100).div(_totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
+		if (shouldBeVotedOut) {
+			votedOutValidators[addr] = true;
+			emit ValidatorVotedOut(addr);
 
-        if (isBanned != shouldBan) {
-			if (shouldBan) {
-                bannedValidators[addr] = now;
-				emit ValidatorVotedOut(addr);
-
-				emit ValidatorStatusUpdated(addr, false, false);
-				getCommitteeContract().removeMember(addr);
-			} else {
-                bannedValidators[addr] = 0;
-				emit ValidatorVotedIn(addr);
-			}
-        }
+			emit ValidatorStatusUpdated(addr, false, false);
+			getCommitteeContract().removeMember(addr);
+		}
     }
 
-	function _isBanned(address addr) private view returns (bool) {
-		return bannedValidators[addr] != 0;
+	function isVotedOut(address addr) private view returns (bool) {
+		return votedOutValidators[addr];
 	}
 
 	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
@@ -325,11 +287,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		settings.maxDelegationRatio = maxDelegationRatio;
 	}
 
-	function setVoteOutLockTimeoutSeconds(uint32 voteOutLockTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {
-		emit VoteOutLockTimeoutSecondsChanged(voteOutLockTimeoutSeconds, settings.voteOutLockTimeoutSeconds);
-		settings.voteOutLockTimeoutSeconds = voteOutLockTimeoutSeconds;
-	}
-
 	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
 		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
 		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
@@ -345,14 +302,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
 		uint32 maxDelegationRatio,
-		uint32 voteOutLockTimeoutSeconds,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold
 	) {
 		Settings memory _settings = settings;
 		voteUnreadyTimeoutSeconds = _settings.voteUnreadyTimeoutSeconds;
 		maxDelegationRatio = _settings.maxDelegationRatio;
-		voteOutLockTimeoutSeconds = _settings.voteOutLockTimeoutSeconds;
 		voteUnreadyPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
 		voteOutPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
 	}
