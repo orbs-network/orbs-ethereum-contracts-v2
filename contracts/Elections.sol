@@ -157,31 +157,36 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function voteOut(address subjectAddr) external onlyWhenActive {
+	function voteOut(address subject) external onlyWhenActive {
 		Settings memory _settings = settings;
 
 		address prevSubject = voteOutVotes[msg.sender];
-		voteOutVotes[msg.sender] = subjectAddr;
+		voteOutVotes[msg.sender] = subject;
+
+		uint256 voterStake = getDelegationsContract().getDelegatedStakes(msg.sender);
 
 		if (prevSubject == address(0)) {
-			votersStake[msg.sender] = getDelegationsContract().getDelegatedStakes(msg.sender);
+			votersStake[msg.sender] = voterStake;
 		}
 
-		uint256 voterStake = votersStake[msg.sender];
+		if (subject == address(0)) {
+			delete votersStake[msg.sender];
+		}
+
 		uint totalStake = getDelegationsContract().getTotalDelegatedStake();
 
-		if (prevSubject != address(0) && prevSubject != subjectAddr) {
+		if (prevSubject != address(0) && prevSubject != subject) {
 			accumulatedStakesForVoteOut[prevSubject] = accumulatedStakesForVoteOut[prevSubject].sub(voterStake);
 			_applyVoteOutVotesFor(prevSubject, totalStake, _settings);
 		}
 
-		if (subjectAddr != address(0)) {
-			if (prevSubject != subjectAddr) {
-				accumulatedStakesForVoteOut[subjectAddr] = accumulatedStakesForVoteOut[subjectAddr].add(voterStake);
+		if (subject != address(0)) {
+			if (prevSubject != subject) {
+				accumulatedStakesForVoteOut[subject] = accumulatedStakesForVoteOut[subject].add(voterStake);
 			}
-			_applyVoteOutVotesFor(subjectAddr, totalStake, _settings); // recheck also if not new
+			_applyVoteOutVotesFor(subject, totalStake, _settings); // recheck also if not new
 		}
-		emit VoteOutCasted(msg.sender, subjectAddr);
+		emit VoteOutCasted(msg.sender, subject);
 	}
 
 	function calcGovernanceEffectiveStake(bool selfDelegating, uint256 totalDelegatedStake) private pure returns (uint256) {
