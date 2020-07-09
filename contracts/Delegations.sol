@@ -233,11 +233,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
 			delegateSelfStake = getStakingContract().getStakeBalanceOf(sequenceDelegate);
 
-			if (!_isSelfDelegating(sequenceDelegate)) {
-				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake);
-			} else {
+			if (_isSelfDelegating(sequenceDelegate)) {
 				totalDelegatedStake = totalDelegatedStake.sub(prevUncappedStake).add(currentUncappedStake);
-				getElectionsContract().delegatedStakeChange(sequenceDelegate, delegateSelfStake, currentUncappedStake);
 			}
 		}
 	}

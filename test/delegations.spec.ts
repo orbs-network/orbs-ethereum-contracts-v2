@@ -474,4 +474,22 @@ describe('delegations-contract', async () => {
             delegatedStake: bn(100)
         });
     });
+    it('does not notify elections on a batched stake change', async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newValidator(100, false, false, true);
+
+        const distributer = d.newParticipant();
+        await distributer.assignAndApproveOrbs(bn(200), d.staking.address);
+
+        let r = await d.staking.distributeRewards(200, [v.address], [200], {from: distributer.address});
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+
+        // Next notification should include the updated stake
+        r = await v.stake(300); // total delegated stake of v is now 100 + 200 + 300 = 600
+        expect(r).to.have.a.committeeSnapshotEvent({
+            addrs: [v.address],
+            weights: [bn(600)]
+        })
+    });
 });
