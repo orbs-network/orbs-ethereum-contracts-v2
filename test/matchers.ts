@@ -224,6 +224,7 @@ declare global {
       emergencyWithdrawalEvent(data?: Partial<EmergencyWithdrawalEvent>);
       delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
+      transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>)
 
       withinContract(contract: Contract): Assertion;
     }
