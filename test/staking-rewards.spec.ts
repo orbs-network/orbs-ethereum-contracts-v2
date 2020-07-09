@@ -139,10 +139,6 @@ describe('staking-rewards', async () => {
         amount: bn(1),
         totalStakedAmount: bn(v.stake).add(bn(1))
       });
-      expect(r).to.have.a.committeeSnapshotEvent({
-        addrs: validators.map(v => v.v.address),
-        weights: validators.map((_v, _i) => (_i <= i) ? new BN(_v.stake).add(totalOrbsRewardsArr[_i]) : new BN(_v.stake))
-      });
     }
   });
 
@@ -252,10 +248,6 @@ describe('staking-rewards', async () => {
         stakeOwner: v.v.address,
         amount: bn(1),
         totalStakedAmount: bn(v.stake).add(bn(1))
-      });
-      expect(r).to.have.a.committeeSnapshotEvent({
-        addrs: validators.map(v => v.v.address),
-        weights: validators.map((_v, _i) => (_i <= i) ? new BN(_v.stake).add(totalOrbsRewardsArr[_i]) : new BN(_v.stake))
       });
     }
   });

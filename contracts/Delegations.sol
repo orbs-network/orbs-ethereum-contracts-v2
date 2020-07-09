@@ -68,7 +68,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(from);
 
-		uncappedStakes[prevDelegate] = prevDelegateStatusBefore.uncappedStakes.sub(delegatorStake);
+		if (stakeOwnersData[from].isSelfStakeInitialized) {
+			uncappedStakes[prevDelegate] = prevDelegateStatusBefore.uncappedStakes.sub(delegatorStake);
+		} else {
+			stakeOwnersData[from].isSelfStakeInitialized = true;
+		}
 		uncappedStakes[to] = newDelegateStatusBefore.uncappedStakes.add(delegatorStake);
 
 		DelegateStatus memory prevDelegateStatusAfter = getDelegateStatus(prevDelegate);
@@ -115,8 +119,13 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	bool public delegationImportFinalized;
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool notifyElections) external onlyWhenActive onlyMigrationOwner {
+	modifier onlyDuringDelegationImport {
 		require(!delegationImportFinalized, "delegation import was finalized");
+
+		_;
+	}
+
+	function importDelegations(address[] calldata from, address[] calldata to, bool notifyElections) external onlyMigrationOwner onlyDuringDelegationImport {
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
@@ -127,7 +136,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit DelegationsImported(from, to, notifyElections);
 	}
 
-	function finalizeDelegationImport() external onlyWhenActive onlyMigrationOwner {
+	function finalizeDelegationImport() external onlyMigrationOwner onlyDuringDelegationImport {
 		delegationImportFinalized = true;
 		emit DelegationImportFinalized();
 	}

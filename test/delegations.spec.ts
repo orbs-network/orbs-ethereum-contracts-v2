@@ -448,6 +448,32 @@ describe('delegations-contract', async () => {
        await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address}));
     });
 
+    it('properly handles a delegation when self stake of delegator is not yet initialized', async () => {
+        const d = await Driver.new();
+
+        const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
+        await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
+
+        await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
+        await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
+
+        const d1 = d.newParticipant();
+        await d1.stake(100);
+
+        await d.staking.setStakeChangeNotifier(d.delegations.address);
+        await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
+
+        const v = d.newParticipant();
+        let r = await d1.delegate(v);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: d1.address,
+            delegatedStake: bn(0)
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v.address,
+            delegatedStake: bn(100)
+        });
+    });
     it('does not notify elections on a batched stake change', async () => {
         const d = await Driver.new();
 
