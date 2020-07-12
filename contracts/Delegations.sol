@@ -141,6 +141,10 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit DelegationImportFinalized();
 	}
 
+	function refreshStakeNotification(address addr) external onlyWhenActive {
+		_stakeChange(addr, 0, true, getStakingContract().getStakeBalanceOf(addr), true);
+	}
+
 	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract onlyWhenActive {
 		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake, true);
 	}
@@ -267,7 +271,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			);
 		}
 
-		emitDelegatedStakeChanged(stakeOwnerData.delegation, _stakeOwner, _updatedStake);
+		if (_amount > 0) {
+			emitDelegatedStakeChanged(stakeOwnerData.delegation, _stakeOwner, _updatedStake);
+		}
 	}
 
 	function getDelegatedStakes(address addr) external view returns (uint256) {

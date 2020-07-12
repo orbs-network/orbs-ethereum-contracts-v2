@@ -15,7 +15,9 @@ interface IDelegations /* is IStakeChangeNotifier */ {
      */
 
 	/// @dev Stake delegation
-	function delegate(address to) external;
+	function delegate(address to) external /* onlyWhenActive */;
+
+	function refreshStakeNotification(address addr) external /* onlyWhenActive */;
 
 	/*
 	 * Governance
@@ -24,8 +26,8 @@ interface IDelegations /* is IStakeChangeNotifier */ {
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool notifyElections) external /* onlyMigrationOwner */;
-	function finalizeDelegationImport() external /* onlyMigrationOwner */;
+	function importDelegations(address[] calldata from, address[] calldata to, bool notifyElections) external /* onlyMigrationOwner onlyDuringDelegationImport */;
+	function finalizeDelegationImport() external /* onlyMigrationOwner onlyDuringDelegationImport */;
 
 	event DelegationsImported(address[] from, address[] to, bool notifiedElections);
 	event DelegationImportFinalized();

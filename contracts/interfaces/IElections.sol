@@ -16,11 +16,18 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	event GuardianStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
 
+	// Governance
+	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
+	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
+	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+
 	/*
-	 *   External methods
+	 * External methods
 	 */
+
 	/// @dev Called by a guardian as part of the automatic vote-out flow
-	function voteUnready(address subjectAddr) external;
+	function voteUnready(address subject_addr) external;
 
 	/// @dev casts a voteOut vote by the sender to the given address
 	function voteOut(address subjectAddr) external;
@@ -32,8 +39,13 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function readyForCommittee() external;
 
 	/*
-	 *   Methods restricted to other Orbs contracts
+	 * Methods restricted to other Orbs contracts
 	 */
+
+	/// @dev Called by: delegation contract
+	/// Notifies a delegated stake change event
+	/// total_delegated_stake = 0 if addr delegates to another guardian
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external /* onlyDelegationContract */;
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was registered
@@ -47,28 +59,22 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external /* onlyCertificationContract */;
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external /* onlyDelegationContract */;
+	/*
+     * Governance
+	 */
 
+	/// @dev Updates the address of the contract registry
+	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+
+	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxDelegationRatio(uint32 maxDelegationRatio) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
 		uint32 maxDelegationRatio,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold
 	);
-
-	/*
-     * Governance
-	 */
-
-	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setMaxDelegationRatio(uint32 maxDelegationRatio) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
-
-	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
-	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
-	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
-	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
-
 }
 
