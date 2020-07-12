@@ -506,10 +506,11 @@ describe('delegations-contract', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         // Next notification should include the updated stake
-        r = await d.delegations.commitStakeChange(v.address);
+        r = await d.delegations.refreshDelegate(v.address);
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(300)]
-        })
+        });
+        expect(r).to.not.have.a.delegatedStakeChangedEvent();
     });
 });
