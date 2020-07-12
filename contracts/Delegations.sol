@@ -129,7 +129,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
-			_stakeChange(from[i], 0, true, getStakingContract().getStakeBalanceOf(from[i]), notifyElections, true);
+			_stakeChange(from[i], 0, true, getStakingContract().getStakeBalanceOf(from[i]), notifyElections);
 			delegateFrom(from[i], to[i], notifyElections);
 		}
 
@@ -142,11 +142,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	function refreshDelegate(address addr) external onlyWhenActive {
-		_stakeChange(addr, 0, true, getStakingContract().getStakeBalanceOf(addr), true, false);
+		_stakeChange(addr, 0, true, getStakingContract().getStakeBalanceOf(addr), true);
 	}
 
 	function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract onlyWhenActive {
-		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake, true, true);
+		_stakeChange(_stakeOwner, _amount, _sign, _updatedStake, true);
 	}
 
 	function emitDelegatedStakeChanged(address _delegate, address delegator, uint256 delegatorStake) private {
@@ -243,7 +243,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		}
 	}
 
-	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake, bool notifyElections, bool emitEvent) private {
+	function _stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake, bool notifyElections) private {
 		StakeOwnerData memory stakeOwnerData = getStakeOwnerData(_stakeOwner);
 
 		uint256 prevUncappedStake = uncappedStakes[stakeOwnerData.delegation];
@@ -271,7 +271,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			);
 		}
 
-		if (emitEvent) {
+		if (_amount > 0) {
 			emitDelegatedStakeChanged(stakeOwnerData.delegation, _stakeOwner, _updatedStake);
 		}
 	}

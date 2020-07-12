@@ -15,7 +15,7 @@ const assert = chai.assert;
 import {bn} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 
-describe('delegations-contract', async () => {
+describe.only('delegations-contract', async () => {
 
     it('should only accept stake notifications from the staking contract', async () => {
         const d = await Driver.new();
