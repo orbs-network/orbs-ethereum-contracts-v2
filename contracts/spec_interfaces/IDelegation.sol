@@ -17,7 +17,7 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/// @dev Stake delegation
 	function delegate(address to) external /* onlyWhenActive */;
 
-	function refreshDelegate(address addr) external /* onlyWhenActive */;
+	function refreshStakeNotification(address addr) external /* onlyWhenActive */;
 
 	/*
 	 * Governance

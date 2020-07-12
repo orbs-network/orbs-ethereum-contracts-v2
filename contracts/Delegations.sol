@@ -141,7 +141,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit DelegationImportFinalized();
 	}
 
-	function refreshDelegate(address addr) external onlyWhenActive {
+	function refreshStakeNotification(address addr) external onlyWhenActive {
 		_stakeChange(addr, 0, true, getStakingContract().getStakeBalanceOf(addr), true);
 	}
 

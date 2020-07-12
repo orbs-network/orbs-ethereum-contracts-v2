@@ -494,7 +494,7 @@ describe('delegations-contract', async () => {
         });
     });
 
-    it('does not notify elections on a batched stake change until commit', async () => {
+    it('does not notify elections on a batched stake change until refreshStakeNotification is called', async () => {
         const d = await Driver.new();
 
         const {v} = await d.newGuardian(100, false, false, true);
@@ -506,7 +506,7 @@ describe('delegations-contract', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         // Next notification should include the updated stake
-        r = await d.delegations.refreshDelegate(v.address);
+        r = await d.delegations.refreshStakeNotification(v.address);
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(300)]
