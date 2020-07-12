@@ -11,8 +11,8 @@ import {
 
 const elections = compiledContracts["Elections"];
 const committee = compiledContracts["Committee"];
-const validatorsRegistration = compiledContracts["ValidatorsRegistration"];
-const compliance = compiledContracts["Compliance"];
+const guardiansRegistration = compiledContracts["GuardiansRegistration"];
+const certification = compiledContracts["Certification"];
 const staking = compiledContracts["StakingContract"];
 const subscriptions = compiledContracts["Subscriptions"];
 const rewards = compiledContracts["Rewards"];
@@ -33,10 +33,10 @@ export function parseLogs(txResult, contract, eventSignature, contractAddress?: 
 }
 
 export const committeeSnapshotEvents = (txResult, contractAddress: string) => parseLogs(txResult, committee, "CommitteeSnapshot(address[],uint256[],bool[])", contractAddress);
-export const validatorRegisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorRegistered(address)", contractAddress);
-export const validatorUnregisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorUnregistered(address)", contractAddress);
-export const validatorDataUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorDataUpdated(address,bytes4,address,string,string,string)", contractAddress);
-export const validatorMetadataChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, validatorsRegistration, "ValidatorMetadataChanged(address,string,string,string)", contractAddress);
+export const guardianRegisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, guardiansRegistration, "GuardianRegistered(address)", contractAddress);
+export const guardianUnregisteredEvents = (txResult, contractAddress?: string) => parseLogs(txResult, guardiansRegistration, "GuardianUnregistered(address)", contractAddress);
+export const guardianDataUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, guardiansRegistration, "GuardianDataUpdated(address,bytes4,address,string,string,string)", contractAddress);
+export const guardianMetadataChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, guardiansRegistration, "GuardianMetadataChanged(address,string,string,string)", contractAddress);
 export const stakedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, staking, "Staked(address,uint256,uint256)", contractAddress);
 export const unstakedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, staking, "Unstaked(address,uint256,uint256)", contractAddress);
 export const delegatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "Delegated(address,address)", contractAddress);
@@ -58,19 +58,19 @@ export const vcOwnerChangedEvents = (txResult, contractAddress?: string) => pars
 export const vcCreatedEvents = (txResult, contractAddress?: string): VcCreatedEvent[] => parseLogs(txResult, subscriptions, "VcCreated(uint256,address)", contractAddress);
 export const contractAddressUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, contractRegistry, "ContractAddressUpdated(string,address)", contractAddress);
 export const protocolChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "ProtocolVersionChanged(string,uint256,uint256,uint256)", contractAddress);
-export const validatorComplianceUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, compliance, "ValidatorComplianceUpdate(address,bool)", contractAddress);
+export const guardianCertificationUpdateEvents = (txResult, contractAddress?: string) => parseLogs(txResult, certification, "GuardianCertificationUpdate(address,bool)", contractAddress);
 export const lockedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "Locked()", contractAddress);
 export const unlockedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, protocol, "Unlocked()", contractAddress);
 export const readyToSyncTimeoutChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "ReadyToSyncTimeoutChanged(uint32,uint32)");
 export const maxTimeBetweenRewardAssignmentsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxTimeBetweenRewardAssignmentsChanged(uint32,uint32)");
 export const maxCommitteeSizeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "MaxCommitteeSizeChanged(uint8,uint8)");
-export const validatorStatusUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorStatusUpdated(address,bool,bool)");
+export const guardianStatusUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GuardianStatusUpdated(address,bool,bool)");
 export const maxDelegatorsStakingRewardsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "MaxDelegatorsStakingRewardsChanged(uint32)");
 export const contractRegistryAddressUpdatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ContractRegistryAddressUpdated(address)");
-export const validatorCommitteeChangeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "ValidatorCommitteeChange(address,uint256,bool,bool,bool)");
-export const validatorVotedUnreadyEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorVotedUnready(address)");
-export const validatorVotedOutEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorVotedOut(address)");
-export const validatorVotedInEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ValidatorVotedIn(address)");
+export const guardianCommitteeChangeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, committee, "GuardianCommitteeChange(address,uint256,bool,bool,bool)");
+export const guardianVotedUnreadyEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GuardianVotedUnready(address)");
+export const guardianVotedOutEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GuardianVotedOut(address)");
+export const guardianVotedInEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GuardianVotedIn(address)");
 export const voteUnreadyCastedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteUnreadyCasted(address,address)");
 export const voteOutCastedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutCasted(address,address[])");
 export const readyForCommiteeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ReadyForCommitee(address)");

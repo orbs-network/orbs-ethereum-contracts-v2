@@ -4,8 +4,8 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface BootstrapRewardsAssignedEvent {
-    generalValidatorAmount: string|BN,
-    certifiedValidatorAmount: string|BN
+    generalGuardianAmount: string|BN,
+    certifiedGuardianAmount: string|BN
 }
 
 export interface BootstrapAddedToPoolEvent {
@@ -17,19 +17,19 @@ export interface FeesAddedToBucketEvent {
     bucketId: string|BN,
     added: string|BN,
     total: string|BN,
-    isCompliant: boolean
+    isCertified: boolean
 }
 
 export interface FeesWithdrawnFromBucketEvent {
     bucketId: string|BN,
     withdrawen: string|BN,
     total: string|BN,
-    isCompliant: boolean
+    isCertified: boolean
 }
 
 export interface FeesAssignedEvent {
-    generalValidatorAmount: string|BN,
-    certifiedValidatorAmount: string|BN
+    generalGuardianAmount: string|BN,
+    certifiedGuardianAmount: string|BN
 }
 
 export interface StakingRewardAssignedEvent {
@@ -53,12 +53,12 @@ export interface StakingRewardsAddedToPoolEvent {
 }
 
 export interface FeesWithdrawnEvent {
-    validator: string,
+    guardian: string,
     amount: string|BN
 }
 
 export interface BootstrapRewardsWithdrawnEvent {
-    validator: string,
+    guardian: string,
     amount: string|BN
 }
 
@@ -80,7 +80,7 @@ export interface RewardsContract extends OwnedContract {
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-    setComplianceCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setCertificationCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     topUpBootstrapPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     withdrawBootstrapFunds(params?: TransactionConfig): Promise<TransactionReceipt>;

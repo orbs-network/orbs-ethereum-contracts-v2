@@ -325,8 +325,8 @@ describe('delegations-contract', async () => {
        await d.staking.setStakeChangeNotifier(d.delegations.address);
        await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
 
-        const {v: v1} = await d.newValidator(100, false, false, true);
-        const {v: v2} = await d.newValidator(100, false, false, true);
+        const {v: v1} = await d.newGuardian(100, false, false, true);
+        const {v: v2} = await d.newGuardian(100, false, false, true);
 
        let r = await d.delegations.importDelegations([d1.address, d2.address], [v1.address, v2.address], false, {from: d.migrationOwner.address});
        expect(r).to.have.a.delegationsImportedEvent({
@@ -388,8 +388,8 @@ describe('delegations-contract', async () => {
        await d.staking.setStakeChangeNotifier(d.delegations.address);
        await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
 
-       const {v: v1} = await d.newValidator(100, false, false, true);
-       const {v: v2} = await d.newValidator(100, false, false, true);
+       const {v: v1} = await d.newGuardian(100, false, false, true);
+       const {v: v2} = await d.newGuardian(100, false, false, true);
 
        let r = await d.delegations.importDelegations([d1.address, d2.address], [v1.address, v2.address], true, {from: d.migrationOwner.address});
        expect(r).to.have.a.delegationsImportedEvent({
@@ -477,7 +477,7 @@ describe('delegations-contract', async () => {
     it('does not notify elections on a batched stake change', async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newValidator(100, false, false, true);
+        const {v} = await d.newGuardian(100, false, false, true);
 
         const distributer = d.newParticipant();
         await distributer.assignAndApproveOrbs(bn(200), d.staking.address);

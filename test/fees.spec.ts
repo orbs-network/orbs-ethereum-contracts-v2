@@ -27,7 +27,7 @@ async function sleep(ms): Promise<void> {
 
 describe('fees-contract', async () => {
 
-  it('should distribute fees to validators in general and compliance committees', async () => {
+  it('should distribute fees to guardians in general and certification committees', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
 
     // create committee
@@ -35,28 +35,28 @@ describe('fees-contract', async () => {
     const initStakeLesser = fromTokenUnits(17000);
     const initStakeLarger = fromTokenUnits(21000);
 
-    const {v: v1} = await d.newValidator(initStakeLarger.add(fromTokenUnits(1)), true, false, true);
-    const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
-    const {v: v3} = await d.newValidator(initStakeLesser.add(fromTokenUnits(1)), true, false, true);
-    const {v: v4} = await d.newValidator(initStakeLesser, false, false, true);
+    const {v: v1} = await d.newGuardian(initStakeLarger.add(fromTokenUnits(1)), true, false, true);
+    const {v: v2} = await d.newGuardian(initStakeLarger, false, false, true);
+    const {v: v3} = await d.newGuardian(initStakeLesser.add(fromTokenUnits(1)), true, false, true);
+    const {v: v4} = await d.newGuardian(initStakeLesser, false, false, true);
 
     const committee = [v1, v2, v3, v4];
-    const compliantMembers = [v1, v3];
+    const certifiedMembers = [v1, v3];
 
     // create a VCs
 
-    const createVc = async (vcRate: number|BN, isCompliant: boolean, payment: number|BN): Promise<{vcid: number|BN, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
+    const createVc = async (vcRate: number|BN, isCertified: boolean, payment: number|BN): Promise<{vcid: number|BN, appOwner: Participant, feeBuckets: FeesAddedToBucketEvent[], startTime: number}> => {
       const subs = await d.newSubscriber('tier', vcRate);
 
       const appOwner = d.newParticipant();
       await d.erc20.assign(appOwner.address, payment);
       await d.erc20.approve(subs.address, payment, {from: appOwner.address});
 
-      let r = await subs.createVC(payment, isCompliant, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+      let r = await subs.createVC(payment, isCertified, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
       const vcid = vcCreatedEvents(r)[0].vcid;
       let startTime = await txTimestamp(d.web3, r);
 
-      const feeBuckets = feesAddedToBucketEvents(r).filter(e => e.isCompliant == isCompliant);
+      const feeBuckets = feesAddedToBucketEvents(r).filter(e => e.isCertified == isCertified);
 
       // all the payed rewards were added to a bucket
       const totalAdded = feeBuckets.reduce((t, l) => t.add(new BN(l.added)), new BN(0));
@@ -84,9 +84,9 @@ describe('fees-contract', async () => {
     };
 
     const {feeBuckets: generalFeeBuckets, startTime: generalStartTime} = await createVc(fromTokenUnits(3000000000), false, fromTokenUnits(12 * 3000000000));
-    const {feeBuckets: complianceFeeBuckets, startTime: complianceStartTime} = await createVc(fromTokenUnits(6000000000), true, fromTokenUnits(12 * 3000000000));
+    const {feeBuckets: certificationFeeBuckets, startTime: certificationStartTime} = await createVc(fromTokenUnits(6000000000), true, fromTokenUnits(12 * 3000000000));
 
-    const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[], compliant: boolean) => {
+    const calcFeeRewardsAndUpdateBuckets = (feeBuckets: FeesAddedToBucketEvent[], startTime: number, endTime: number, committee: Participant[], certified: boolean) => {
       let rewards = bn(0);
       for (const bucket of feeBuckets) {
         const bucketStartTime = Math.max(parseInt(bucket.bucketId as string), startTime);
@@ -101,13 +101,13 @@ describe('fees-contract', async () => {
           rewards = rewards.add(amount);
         }
       }
-      const n = bn(compliant ? compliantMembers.length : committee.length);
+      const n = bn(certified ? certifiedMembers.length : committee.length);
       return fromTokenUnits(toTokenUnits(rewards.div(n)))
     };
 
-    if (complianceStartTime > generalStartTime) {
+    if (certificationStartTime > generalStartTime) {
       // the creation of the second VC triggered reward calculation for the general committee, need to fix the buckets
-      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, complianceStartTime, committee, false);
+      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, certificationStartTime, committee, false);
     }
 
     // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
@@ -126,21 +126,21 @@ describe('fees-contract', async () => {
 
     // Calculate expected rewards from VC fees
 
-    let generalValidatorRewards = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, complianceStartTime, endTime, committee, false);
-    let complianceValidatorRewards = generalValidatorRewards.add(calcFeeRewardsAndUpdateBuckets(complianceFeeBuckets, complianceStartTime, endTime, committee, true));
+    let generalGuardianRewards = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, certificationStartTime, endTime, committee, false);
+    let certificationGuardianRewards = generalGuardianRewards.add(calcFeeRewardsAndUpdateBuckets(certificationFeeBuckets, certificationStartTime, endTime, committee, true));
 
     // TODO allow an inaccuracy of up to 1 milli-orbs as this is probably do to remainder issues. TODO - fix the calculation to properly account for that
     const feesAssignedEvent: FeesAssignedEvent = feesAssignedEvents(assignFeesTxRes)[0];
-    if (generalValidatorRewards.add(fromTokenUnits(1)).eq(bn(feesAssignedEvent.generalValidatorAmount))) {
-      generalValidatorRewards = generalValidatorRewards.add(fromTokenUnits(1))
+    if (generalGuardianRewards.add(fromTokenUnits(1)).eq(bn(feesAssignedEvent.generalGuardianAmount))) {
+      generalGuardianRewards = generalGuardianRewards.add(fromTokenUnits(1))
     }
-    if (complianceValidatorRewards.add(fromTokenUnits(1)).eq(bn(feesAssignedEvent.certifiedValidatorAmount))) {
-      complianceValidatorRewards = complianceValidatorRewards.add(fromTokenUnits(1))
+    if (certificationGuardianRewards.add(fromTokenUnits(1)).eq(bn(feesAssignedEvent.certifiedGuardianAmount))) {
+      certificationGuardianRewards = certificationGuardianRewards.add(fromTokenUnits(1))
     }
 
     expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
-      generalValidatorAmount: generalValidatorRewards.toString(),
-      certifiedValidatorAmount: complianceValidatorRewards.toString()
+      generalGuardianAmount: generalGuardianRewards.toString(),
+      certifiedGuardianAmount: certificationGuardianRewards.toString()
     });
 
     const orbsBalances:BN[] = [];
@@ -151,7 +151,7 @@ describe('fees-contract', async () => {
 
     for (const v of committee) {
       const i = committee.indexOf(v);
-      const totalExpectedRewards = compliantMembers.includes(v) ? complianceValidatorRewards : generalValidatorRewards;
+      const totalExpectedRewards = certifiedMembers.includes(v) ? certificationGuardianRewards : generalGuardianRewards;
       const expectedBalance = totalExpectedRewards.add(initialOrbsBalances[i]);
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
@@ -159,7 +159,7 @@ describe('fees-contract', async () => {
       const r = await d.rewards.withdrawFeeFunds({from: v.address});
       const actualBalance = await d.erc20.balanceOf(v.address);
       expect(r).to.have.a.feesWithdrawnEvent({
-        validator: v.address,
+        guardian: v.address,
         amount: bn(actualBalance)
       });
       expect(bn(actualBalance)).to.bignumber.equal(expectedBalance);

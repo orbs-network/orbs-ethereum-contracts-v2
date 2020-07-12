@@ -4,8 +4,8 @@ import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
 interface ICommittee {
-	event ValidatorCommitteeChange(address addr, uint256 weight, bool compliance, bool inCommittee);
-	event CommitteeSnapshot(address[] addrs, uint256[] weights, bool[] compliance);
+	event GuardianCommitteeChange(address addr, uint256 weight, bool certification, bool inCommittee);
+	event CommitteeSnapshot(address[] addrs, uint256[] weights, bool[] certification);
 
 	// No external functions
 
@@ -19,20 +19,20 @@ interface ICommittee {
 	function memberWeightChange(address addr, uint256 weight) external returns (bool committeeChanged) /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
-	/// Notifies a validator compliance change
-	function memberComplianceChange(address addr, bool isCompliant) external returns (bool committeeChanged) /* onlyElectionsContract */;
+	/// Notifies a guardian certification change
+	function memberCertificationChange(address addr, bool isCertified) external returns (bool committeeChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready
 	function removeMember(address addr) external returns (bool committeeChanged) /* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
-	/// Notifies a new member applicable for committee (due to registration, unbanning, compliance change)
-	function addMember(address addr, uint256 weight, bool isCompliant) external returns (bool committeeChanged) /* onlyElectionsContract */;
+	/// Notifies a new member applicable for committee (due to registration, unbanning, certification change)
+	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool committeeChanged) /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance);
+	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification);
 
 	/*
 	 * Governance
@@ -53,7 +53,7 @@ interface ICommittee {
 
     /// @dev returns the current committee
     /// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips);
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory certification, bytes4[] memory ips);
 
 	/// @dev returns the current settings of the committee contract
 	function getSettings() external view returns (uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize);

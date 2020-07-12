@@ -4,8 +4,8 @@ import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./interfaces/IElections.sol";
-import "./spec_interfaces/IValidatorsRegistration.sol";
-import "./spec_interfaces/ICompliance.sol";
+import "./spec_interfaces/IGuardiansRegistration.sol";
+import "./spec_interfaces/ICertification.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IRewards.sol";
@@ -44,12 +44,12 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
         return IDelegations(contractRegistry.get("delegations"));
     }
 
-    function getValidatorsRegistrationContract() public view returns (IValidatorsRegistration) {
-        return IValidatorsRegistration(contractRegistry.get("validatorsRegistration"));
+    function getGuardiansRegistrationContract() public view returns (IGuardiansRegistration) {
+        return IGuardiansRegistration(contractRegistry.get("guardiansRegistration"));
     }
 
-    function getComplianceContract() public view returns (ICompliance) {
-        return ICompliance(contractRegistry.get("compliance"));
+    function getCertificationContract() public view returns (ICertification) {
+        return ICertification(contractRegistry.get("certification"));
     }
 
     function getStakingContract() public view returns (IStakingContract) {

@@ -4,7 +4,7 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface MonthlySubscriptionPlanContract extends OwnedContract {
-  createVC(payment: number | BN, isCompliant: boolean, deploymentSubset: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  createVC(payment: number | BN, isCertified: boolean, deploymentSubset: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   extendSubscription(vcid: string, payment: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 }

@@ -26,7 +26,7 @@ async function sleep(ms): Promise<void> {
 
 describe('bootstrap-rewards-level-flows', async () => {
 
-  it('should distribute bootstrap rewards to validators in committee', async () => {
+  it('should distribute bootstrap rewards to guardians in committee', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
 
     /* top up bootstrap reward  pool */
@@ -34,11 +34,11 @@ describe('bootstrap-rewards-level-flows', async () => {
     const g = d.functionalOwner;
 
     const annualAmountGeneral = fromTokenUnits(10000000);
-    const annualAmountCompliance = fromTokenUnits(20000000);
-    const poolAmount = annualAmountGeneral.add(annualAmountCompliance).mul(bn(6*12));
+    const annualAmountCertification = fromTokenUnits(20000000);
+    const poolAmount = annualAmountGeneral.add(annualAmountCertification).mul(bn(6*12));
 
     await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
-    await d.rewards.setComplianceCommitteeAnnualBootstrap(annualAmountCompliance, {from: g.address});
+    await d.rewards.setCertificationCommitteeAnnualBootstrap(annualAmountCertification, {from: g.address});
 
     await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
     let r = await d.rewards.topUpBootstrapPool(fromTokenUnits(1), {from: g.address});
@@ -58,10 +58,10 @@ describe('bootstrap-rewards-level-flows', async () => {
     const initStakeLesser = fromTokenUnits(17000);
     const initStakeLarger = fromTokenUnits(21000);
 
-    const {v: v1} = await d.newValidator(initStakeLarger, true, false, true);
-    const {v: v2} = await d.newValidator(initStakeLarger, false, false, true);
-    const {v: v3} = await d.newValidator(initStakeLesser, true, false, true);
-    const {v: v4, r: firstAssignTxRes} = await d.newValidator(initStakeLesser, false, false, true);
+    const {v: v1} = await d.newGuardian(initStakeLarger, true, false, true);
+    const {v: v2} = await d.newGuardian(initStakeLarger, false, false, true);
+    const {v: v3} = await d.newGuardian(initStakeLesser, true, false, true);
+    const {v: v4, r: firstAssignTxRes} = await d.newGuardian(initStakeLesser, false, false, true);
     const startTime = await txTimestamp(d.web3, firstAssignTxRes);
     const generalCommittee: Participant[] = [v1, v2, v3, v4];
 
@@ -80,11 +80,11 @@ describe('bootstrap-rewards-level-flows', async () => {
     const calcRewards = (annualRate) => fromTokenUnits(toTokenUnits(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
 
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
-    const expectedComplianceCommitteeRewards = expectedGeneralCommitteeRewards.add(calcRewards(annualAmountCompliance));
+    const expectedCertificationCommitteeRewards = expectedGeneralCommitteeRewards.add(calcRewards(annualAmountCertification));
 
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
-      generalValidatorAmount: expectedGeneralCommitteeRewards.toString(),
-      certifiedValidatorAmount: expectedComplianceCommitteeRewards.toString()
+      generalGuardianAmount: expectedGeneralCommitteeRewards.toString(),
+      certifiedGuardianAmount: expectedCertificationCommitteeRewards.toString()
     });
 
     const tokenBalances:BN[] = [];
@@ -95,14 +95,14 @@ describe('bootstrap-rewards-level-flows', async () => {
     for (const v of generalCommittee) {
       const i = generalCommittee.indexOf(v);
 
-      const expectedRewards = (i % 2 == 0) ? expectedComplianceCommitteeRewards : expectedGeneralCommitteeRewards;
+      const expectedRewards = (i % 2 == 0) ? expectedCertificationCommitteeRewards : expectedGeneralCommitteeRewards;
       expect(tokenBalances[i].sub(initialBalance[i])).to.be.bignumber.equal(expectedRewards.toString());
 
       // claim the funds
       const r = await d.rewards.withdrawBootstrapFunds({from: v.address});
       const tokenBalance = await d.externalToken.balanceOf(v.address);
       expect(r).to.have.a.bootstrapRewardsWithdrawnEvent({
-            validator: v.address,
+            guardian: v.address,
             amount: bn(tokenBalance)
       });
 

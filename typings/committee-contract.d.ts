@@ -5,7 +5,7 @@ import {OwnedContract} from "./base-contract";
 export interface CommitteeSnapshotEvent {
     addrs: string[];
     weights: (number | BN)[];
-    compliance: boolean[];
+    certification: boolean[];
 }
 
 export interface MaxCommitteeSizeChangedEvent {
@@ -13,16 +13,16 @@ export interface MaxCommitteeSizeChangedEvent {
     oldValue: string|BN;
 }
 
-export interface ValidatorStatusUpdatedEvent {
+export interface GuardianStatusUpdatedEvent {
     addr: string;
     readyToSync: boolean;
     readyForCommittee: boolean;
 }
 
-export interface ValidatorCommitteeChangeEvent {
+export interface GuardianCommitteeChangeEvent {
     addr: string;
     weight: string|BN;
-    compliance: boolean;
+    certification: boolean;
     inCommittee: boolean;
 }
 
@@ -36,8 +36,8 @@ export interface CommitteeContract extends OwnedContract {
     memberWeightChange(addr: string, weight: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberReadyForCommittee(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberNotReadyForCommittee(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-    memberComplianceChange(addr: string, compliance: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
-    addMember(addr: string, weight: number|BN, compliance: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
+    memberCertificationChange(addr: string, certification: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
+    addMember(addr: string, weight: number|BN, certification: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
     removeMember(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;
     getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>]>;

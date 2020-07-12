@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/math/Math.sol";
 
 import "./spec_interfaces/ICommitteeListener.sol";
 import "./interfaces/IElections.sol";
-import "./spec_interfaces/IValidatorsRegistration.sol";
+import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
-import "./spec_interfaces/ICompliance.sol";
+import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./WithClaimableFunctionalOwnership.sol";
@@ -47,7 +47,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uint256 delegatedStake;
 	}
 
-	function getDelegateStatus(address addr) private returns (DelegateStatus memory status) {
+	function getDelegateStatus(address addr) private view returns (DelegateStatus memory status) {
 		status.addr = addr;
 		status.uncappedStakes = uncappedStakes[addr];
 		status.isSelfDelegating = _isSelfDelegating(addr);

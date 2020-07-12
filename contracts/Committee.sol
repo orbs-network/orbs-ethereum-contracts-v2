@@ -1,7 +1,7 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/ICommittee.sol";
-import "./spec_interfaces/IValidatorsRegistration.sol";
+import "./spec_interfaces/IGuardiansRegistration.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
@@ -23,7 +23,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		uint96 weight;
 		uint8 pos;
 		bool isMember;
-		bool isCompliant;
+		bool isCertified;
 
 		bool inCommittee;
 	}
@@ -104,7 +104,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 			rankMember(addr, data, sortBytes, info) :
 			removeMemberFromCommittee(data, sortBytes, info);
 
-		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, data.inCommittee);
+		emit GuardianCommitteeChange(addr, data.weight, data.isCertified, data.inCommittee);
 
 		saveMemberData(addr, data);
 
@@ -163,7 +163,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 		(newInfo, newSortBytes) = removeMemberFromCommittee(data, sortBytes, info);
 
-		emit ValidatorCommitteeChange(addr, data.weight, data.isCompliant, false);
+		emit GuardianCommitteeChange(addr, data.weight, data.isCertified, false);
 
 		membersData[addr] = data;
 	}
@@ -208,10 +208,10 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
              return;
         }
 
-		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCompliance) = _getCommittee();
-        rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCompliance);
+		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCertification) = _getCommittee();
+        rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCertification);
 
-		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCompliance);
+		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
 	}
 
 	constructor(uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) public {
@@ -246,17 +246,17 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return updateOnMemberChange(addr, data);
 	}
 
-	function memberComplianceChange(address addr, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberCertificationChange(address addr, bool isCertified) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberData memory data = membersData[addr];
 		if (!data.isMember) {
 			return false;
 		}
 
-		data.isCompliant = isCompliant;
+		data.isCertified = isCertified;
 		return updateOnMemberChange(addr, data);
 	}
 
-	function addMember(address addr, uint256 weight, bool isCompliant) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function addMember(address addr, uint256 weight, bool isCertified) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint96(weight)) == weight, "weight is out of range");
 
 		if (membersData[addr].isMember) {
@@ -266,7 +266,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 		return updateOnMemberChange(addr, MemberData({
 			isMember: true,
 			weight: uint96(weight),
-			isCompliant: isCompliant,
+			isCertified: isCertified,
 			inCommittee: false,
 			pos: uint8(-1)
 		}));
@@ -287,20 +287,20 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
+	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
 		return _getCommittee();
 	}
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights, bool[] memory compliance) {
+	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint bitmap = uint(_committeeInfo.committeeBitmap);
 		uint committeeSize = _committeeInfo.committeeSize;
 
 		addrs = new address[](committeeSize);
 		weights = new uint[](committeeSize);
-		compliance = new bool[](committeeSize);
+		certification = new bool[](committeeSize);
 		uint aInd = 0;
 		uint pInd = 0;
 		MemberData memory md;
@@ -310,7 +310,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 				addrs[aInd] = committee[pInd].addr;
 				md = membersData[addrs[aInd]];
 				weights[aInd] = md.weight;
-				compliance[aInd] = md.isCompliant;
+				certification[aInd] = md.isCertified;
 				aInd++;
 			}
 			bitmap >>= 1;
@@ -354,9 +354,9 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 
 	/// @dev returns the current committee
 	/// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory compliance, bytes4[] memory ips) {
-		(addrs, weights, compliance) = _getCommittee();
-		return (addrs, weights, _loadOrbsAddresses(addrs), compliance, _loadIps(addrs));
+	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory certification, bytes4[] memory ips) {
+		(addrs, weights, certification) = _getCommittee();
+		return (addrs, weights, _loadOrbsAddresses(addrs), certification, _loadIps(addrs));
 	}
 
 	function getSettings() external view returns (uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize) {
@@ -370,19 +370,19 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	 */
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
-		return getValidatorsRegistrationContract().getValidatorsOrbsAddress(addrs);
+		return getGuardiansRegistrationContract().getGuardiansOrbsAddress(addrs);
 	}
 
 	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
-		return getValidatorsRegistrationContract().getValidatorIps(addrs);
+		return getGuardiansRegistrationContract().getGuardianIps(addrs);
 	}
 
-	function _loadCompliance(address[] memory addrs) private view returns (bool[] memory) {
-		bool[] memory compliance = new bool[](addrs.length);
+	function _loadCertification(address[] memory addrs) private view returns (bool[] memory) {
+		bool[] memory certification = new bool[](addrs.length);
 		for (uint i = 0; i < addrs.length; i++) {
-			compliance[i] = membersData[addrs[i]].isCompliant;
+			certification[i] = membersData[addrs[i]].isCertified;
 		}
-		return compliance;
+		return certification;
 	}
 
 }

@@ -23,7 +23,7 @@ describe('staking-rewards', async () => {
     await evmMine(d.web3, 200); // tests assume block 200 is in the past
   });
 
-  it('should distribute staking rewards to validators in general committee', async () => {
+  it('should distribute staking rewards to guardians in general committee', async () => {
     /* top up staking rewards pool */
     const d = await Driver.new();
     const g = d.functionalOwner;
@@ -52,17 +52,17 @@ describe('staking-rewards', async () => {
     const initStakeLesser = fromTokenUnits(17000);
     const v1 = d.newParticipant();
     await v1.stake(initStakeLesser);
-    await v1.registerAsValidator();
+    await v1.registerAsGuardian();
     await v1.readyForCommittee();
 
     const initStakeLarger = fromTokenUnits(21000);
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
-    await v2.registerAsValidator();
+    await v2.registerAsGuardian();
     r = await v2.readyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
-    const validators = [{
+    const guardians = [{
       v: v2,
       stake: initStakeLarger
     }, {
@@ -70,7 +70,7 @@ describe('staking-rewards', async () => {
       stake: initStakeLesser
     }];
 
-    const nValidators = validators.length;
+    const nGuardians = guardians.length;
 
     expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
@@ -82,9 +82,9 @@ describe('staking-rewards', async () => {
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
-      const totalCommitteeStake = bnSum(validators.map(v => v.stake));
+      const totalCommitteeStake = bnSum(guardians.map(v => v.stake));
       const actualAnnualRate = BN.min(annualRate, annualCap.mul(bn(100000)).div(totalCommitteeStake));
-      const rewardsArr = validators
+      const rewardsArr = guardians
           .map(v => actualAnnualRate.mul(v.stake).div(bn(100000)))
           .map(r => toTokenUnits(r))
           .map(r => r.mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
@@ -94,20 +94,20 @@ describe('staking-rewards', async () => {
     const totalOrbsRewardsArr = calcRewards();
 
     expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
-      assignees: validators.map(v => v.v.address),
+      assignees: guardians.map(v => v.v.address),
       amounts: totalOrbsRewardsArr
     });
 
     const orbsBalances:BN[] = [];
-    for (const v of validators) {
+    for (const v of guardians) {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
 
-    for (const v of validators) {
+    for (const v of guardians) {
       const delegator = d.newParticipant();
       await delegator.delegate(v.v);
 
-      const i = validators.indexOf(v);
+      const i = guardians.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(totalOrbsRewardsArr[i]);
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
@@ -161,17 +161,17 @@ describe('staking-rewards', async () => {
     const initStakeLesser = fromTokenUnits(17000);
     const v1 = d.newParticipant();
     await v1.stake(initStakeLesser);
-    await v1.registerAsValidator();
+    await v1.registerAsGuardian();
     await v1.readyForCommittee();
 
     const initStakeLarger = fromTokenUnits(21000);
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
-    await v2.registerAsValidator();
+    await v2.registerAsGuardian();
     let r = await v2.readyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
-    const validators = [{
+    const guardians = [{
       v: v1,
       stake: initStakeLesser
     }, {
@@ -179,7 +179,7 @@ describe('staking-rewards', async () => {
       stake: initStakeLarger
     }];
 
-    const nValidators = validators.length;
+    const nGuardians = guardians.length;
 
     expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
@@ -191,9 +191,9 @@ describe('staking-rewards', async () => {
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
-      const totalCommitteeStake = bnSum(validators.map(v => v.stake));
+      const totalCommitteeStake = bnSum(guardians.map(v => v.stake));
       const actualAnnualRate = BN.min(annualRate, annualCap.mul(bn(100000)).div(totalCommitteeStake));
-      const rewardsArr = validators
+      const rewardsArr = guardians
           .map(v => actualAnnualRate
               .mul(v.stake)
               .mul(bn(elapsedTime))
@@ -205,20 +205,20 @@ describe('staking-rewards', async () => {
     const totalOrbsRewardsArr = calcRewards();
 
     const orbsBalances:BN[] = [];
-    for (const v of validators) {
+    for (const v of guardians) {
       orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
     }
 
     expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
-      assignees: validators.map(v => v.v.address),
+      assignees: guardians.map(v => v.v.address),
       amounts: totalOrbsRewardsArr.map(x => x.toString())
     });
 
-    for (const v of validators) {
+    for (const v of guardians) {
       const delegator = d.newParticipant();
       await delegator.delegate(v.v);
 
-      const i = validators.indexOf(v);
+      const i = guardians.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
 
       r = await d.rewards.distributeOrbsTokenStakingRewards(
@@ -255,8 +255,8 @@ describe('staking-rewards', async () => {
   it('should enforce totalAmount, fromBlock, toBlock, split, txIndex to be consecutive', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
-    const {v: v2} = await d.newValidator(fromTokenUnits(1000), false, false, true);
+    const {v} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
+    const {v: v2} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
 
     /* top up staking rewards pool */
     const g = d.functionalOwner;
@@ -516,7 +516,7 @@ describe('staking-rewards', async () => {
   it('allows distributing rewards from both orbs address and ethereum address accounts', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
+    const {v} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
 
     const delegator = d.newParticipant();
 
@@ -579,7 +579,7 @@ describe('staking-rewards', async () => {
   it('any address in distribute can be the main address of the sender', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(fromTokenUnits(1000), false, false, true);
+    const {v} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
 
     const delegator = d.newParticipant();
 
@@ -635,7 +635,7 @@ describe('staking-rewards', async () => {
   it('enforces delegators portion in the distribution is less than configured threshold', async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newValidator(fromTokenUnits(100000000), false, false, true);
+    const {v} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
 
     const delegator = d.newParticipant();
 
@@ -713,7 +713,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     );
 
-    // validator reward can be split to multiple entries
+    // guardian reward can be split to multiple entries
     await d.rewards.distributeOrbsTokenStakingRewards(
         fromTokenUnits(5),
         0,
@@ -725,7 +725,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     );
 
-    // Distribute only to validator
+    // Distribute only to guardian
     await d.rewards.distributeOrbsTokenStakingRewards(
         fromTokenUnits(1),
         0,
