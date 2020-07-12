@@ -474,7 +474,8 @@ describe('delegations-contract', async () => {
             delegatedStake: bn(100)
         });
     });
-    it('does not notify elections on a batched stake change', async () => {
+
+    it('does not notify elections on a batched stake change until stake change', async () => {
         const d = await Driver.new();
 
         const {v} = await d.newGuardian(100, false, false, true);
@@ -490,6 +491,25 @@ describe('delegations-contract', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(600)]
+        });
+    });
+
+    it('does not notify elections on a batched stake change until commit', async () => {
+        const d = await Driver.new();
+
+        const {v} = await d.newGuardian(100, false, false, true);
+
+        const distributer = d.newParticipant();
+        await distributer.assignAndApproveOrbs(bn(200), d.staking.address);
+
+        let r = await d.staking.distributeRewards(200, [v.address], [200], {from: distributer.address});
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+
+        // Next notification should include the updated stake
+        r = await d.delegations.commitStakeChange(v.address);
+        expect(r).to.have.a.committeeSnapshotEvent({
+            addrs: [v.address],
+            weights: [bn(300)]
         })
     });
 });
