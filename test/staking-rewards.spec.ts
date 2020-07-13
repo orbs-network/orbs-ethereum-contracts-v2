@@ -4,6 +4,7 @@ import BN from "bn.js";
 import {Driver, expectRejected} from "./driver";
 import chai from "chai";
 import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
+import {committeeSnapshotEvents} from "./event-parsing";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -118,8 +119,7 @@ describe('staking-rewards', async () => {
           0,
           [v.v.address, delegator.address],
           [bn(1), totalOrbsRewardsArr[i].sub(bn(1))],
-          false,
-          {from: v.v.address}
+            {from: v.v.address}
         );
       expect(r).to.have.a.stakingRewardsDistributedEvent({
         distributer: v.v.address,
@@ -230,8 +230,7 @@ describe('staking-rewards', async () => {
           0,
           [v.v.address, delegator.address],
           [bn(1), totalOrbsRewardsArr[i].sub(bn(1))],
-          false,
-          {from: v.v.address});
+            {from: v.v.address});
       expect(r).to.have.a.stakingRewardsDistributedEvent({
         distributer: v.v.address,
         fromBlock: bn(0),
@@ -284,7 +283,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address})
     );
 
@@ -297,7 +295,6 @@ describe('staking-rewards', async () => {
         1,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address})
     );
 
@@ -310,7 +307,6 @@ describe('staking-rewards', async () => {
         1,
         [],
         [],
-        false,
         {from: v.address})
     );
 
@@ -322,7 +318,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
       );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -344,7 +339,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
       )
     );
@@ -356,7 +350,6 @@ describe('staking-rewards', async () => {
         2,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
       )
     );
@@ -369,7 +362,6 @@ describe('staking-rewards', async () => {
         1,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -390,7 +382,6 @@ describe('staking-rewards', async () => {
         2,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -412,7 +403,6 @@ describe('staking-rewards', async () => {
         3,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
         )
     );
@@ -426,7 +416,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
         )
     );
@@ -439,7 +428,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
         )
     );
@@ -453,7 +441,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
         )
     );
@@ -467,7 +454,6 @@ describe('staking-rewards', async () => {
         1,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
         )
     );
@@ -481,7 +467,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -503,7 +488,6 @@ describe('staking-rewards', async () => {
         0,
         [v2.address],
         [fromTokenUnits(5)],
-        false,
         {from: v2.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -525,7 +509,6 @@ describe('staking-rewards', async () => {
         0,
         [v2.address],
         [fromTokenUnits(5)],
-        false,
         {from: v2.address}
     ));
 
@@ -561,7 +544,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address, delegator.address],
         [fromTokenUnits(1), fromTokenUnits(5)],
-        false,
         {from: v.address}
       );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -582,7 +564,6 @@ describe('staking-rewards', async () => {
         1,
         [v.address, delegator.address],
         [fromTokenUnits(1), fromTokenUnits(5)],
-        false,
         {from: v.orbsAddress}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
@@ -626,7 +607,6 @@ describe('staking-rewards', async () => {
         0,
         [delegator.address],
         [fromTokenUnits(5)],
-        false,
         {from: v.address}
     );
 
@@ -638,7 +618,6 @@ describe('staking-rewards', async () => {
         1,
         [delegator.address, v.address],
         [fromTokenUnits(1), fromTokenUnits(1)],
-        false,
         {from: v.address}
     );
 
@@ -650,7 +629,6 @@ describe('staking-rewards', async () => {
         2 ,
         [v.address, delegator.address],
         [fromTokenUnits(1), fromTokenUnits(1)],
-        false,
         {from: v.address}
     );
   });
@@ -688,7 +666,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address, delegator.address],
         [fromTokenUnits(33333), fromTokenUnits(66667)],
-        false,
         {from: v.address}
     ));
 
@@ -700,7 +677,6 @@ describe('staking-rewards', async () => {
         0,
         [delegator.address],
         [fromTokenUnits(2)],
-        false,
         {from: v.address}
     ));
 
@@ -712,7 +688,6 @@ describe('staking-rewards', async () => {
         0,
         [v.address, delegator.address],
         [fromTokenUnits(33334), fromTokenUnits(66666)],
-        false,
         {from: v.address}
     );
 
@@ -725,7 +700,6 @@ describe('staking-rewards', async () => {
         1,
         [v.address, delegator.address],
         [fromTokenUnits(33333), fromTokenUnits(66666)],
-        false,
         {from: v.address}
     );
 
@@ -737,7 +711,6 @@ describe('staking-rewards', async () => {
         2,
         [delegator.address],
         [fromTokenUnits(1)],
-        false,
         {from: v.address}
     );
 
@@ -750,7 +723,6 @@ describe('staking-rewards', async () => {
         3,
         [v.address, delegator.address, v.address],
         [fromTokenUnits(1), fromTokenUnits(2), fromTokenUnits(2)],
-        false,
         {from: v.address}
     );
 
@@ -763,15 +735,15 @@ describe('staking-rewards', async () => {
         4,
         [v.address],
         [fromTokenUnits(1)],
-        false,
         {from: v.address}
     );
   });
 
-  it('commits the stake change only when commitStakeChange == true', async () => {
+  it("only commits the stake change of the senbder's guardian address", async () => {
     const d = await Driver.new();
 
-    const {v} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+    const {v: v1} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+    const {v: v2} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
 
     /* top up staking rewards pool */
     const g = d.functionalOwner;
@@ -789,32 +761,21 @@ describe('staking-rewards', async () => {
     await d.rewards.assignRewards();
 
     let r = await d.rewards.distributeOrbsTokenStakingRewards(
-        fromTokenUnits(1),
+        fromTokenUnits(2),
         0,
         100,
         1,
         0,
-        [v.address],
-        [fromTokenUnits(1)],
-        false,
-        {from: v.address}
+        [v1.address, v2.address],
+        [fromTokenUnits(1), fromTokenUnits(1)],
+        {from: v1.address}
     );
-    expect(r).to.have.a.stakingRewardsDistributedEvent({stakeChangeCommitted: false});
-    expect(r).to.not.have.a.committeeSnapshotEvent();
+    expect(r).to.have.a.committeeSnapshotEvent({
+      addrs: [v1.address, v2.address],
+      weights: [fromTokenUnits(100000001), fromTokenUnits(100000000)]
+    });
+    expect(committeeSnapshotEvents(r).length).to.eq(1);
 
-    r = await d.rewards.distributeOrbsTokenStakingRewards(
-        fromTokenUnits(1),
-        0,
-        100,
-        1,
-        1,
-        [v.address],
-        [fromTokenUnits(1)],
-        true,
-        {from: v.address}
-    );
-    expect(r).to.have.a.stakingRewardsDistributedEvent({stakeChangeCommitted: true});
-    expect(r).to.have.a.committeeSnapshotEvent({addrs: [v.address]});
   });
 
 });

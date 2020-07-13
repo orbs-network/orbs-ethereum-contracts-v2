@@ -340,8 +340,7 @@ describe('gas usage scenarios', async () => {
             1,
             0,
             delegators.map(delegator => delegator.address),
-            delegators.map(() => balance.div(bn(batchSize))),
-            false
+            delegators.map(() => balance.div(bn(batchSize)))
             , {from: v.address});
 
         d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same guardian (batch size - ${batchSize})`, [committee[0]]);
