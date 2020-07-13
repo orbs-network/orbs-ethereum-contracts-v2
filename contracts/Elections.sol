@@ -253,26 +253,27 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return sender;
 	}
 
-	function _applyDelegatedStake(address addr, uint256 newUncappedStake, Settings memory _settings) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
-		uint effectiveStake = getCommitteeEffectiveStake(addr, _settings);
-		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, effectiveStake);
+	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
+		uint effectiveStake = getCommitteeEffectiveStake(addr, selfStake, delegatedStake, _settings);
+		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), delegatedStake, effectiveStake);
 
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) { // TODO reduce number of calls to other contracts
-		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
-		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v;
-		if (!isSelfDelegating || ownStake == 0) {
+	function getCommitteeEffectiveStake(address v, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) { // TODO reduce number of calls to other contracts
+		if (selfStake == 0) {
 			return 0;
 		}
 
-		uint256 uncappedStake = getDelegationsContract().getDelegatedStakes(v);
 		uint256 maxRatio = _settings.maxDelegationRatio;
-		if (uncappedStake.div(ownStake) < maxRatio) {
-			return uncappedStake;
+		if (delegatedStake.div(selfStake) < maxRatio) {
+			return delegatedStake;
 		}
-		return ownStake.mul(maxRatio); // never overflows
+		return selfStake.mul(maxRatio); // never overflows
+	}
+
+	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) { // TODO reduce number of calls to other contracts
+		return getCommitteeEffectiveStake(v, getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
