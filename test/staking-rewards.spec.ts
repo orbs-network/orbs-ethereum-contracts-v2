@@ -655,6 +655,119 @@ describe('staking-rewards', async () => {
     );
   });
 
+  it('enforces delegators portion in the distribution is less than configured threshold', async () => {
+    const d = await Driver.new();
+
+    const {v} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+
+    const delegator = d.newParticipant();
+
+    /* top up staking rewards pool */
+    const g = d.functionalOwner;
+
+    const annualRate = 12000;
+    const poolAmount = fromTokenUnits(20000000);
+    const annualCap = fromTokenUnits(20000000);
+
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    await d.rewards.assignRewards();
+
+    let r = await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalOwner.address});
+    expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({maxDelegatorsStakingRewardsPercentMille: bn(66666)});
+
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(100000),
+        0,
+        100,
+        1,
+        0,
+        [v.address, delegator.address],
+        [fromTokenUnits(33333), fromTokenUnits(66667)],
+        false,
+        {from: v.address}
+    ));
+
+    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(2),
+        0,
+        100,
+        1,
+        0,
+        [delegator.address],
+        [fromTokenUnits(2)],
+        false,
+        {from: v.address}
+    ));
+
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(100000),
+        0,
+        100,
+        1,
+        0,
+        [v.address, delegator.address],
+        [fromTokenUnits(33334), fromTokenUnits(66666)],
+        false,
+        {from: v.address}
+    );
+
+    // +1 for rounding errors should allow these
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(99999),
+        0,
+        100,
+        1,
+        1,
+        [v.address, delegator.address],
+        [fromTokenUnits(33333), fromTokenUnits(66666)],
+        false,
+        {from: v.address}
+    );
+
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(1),
+        0,
+        100,
+        1,
+        2,
+        [delegator.address],
+        [fromTokenUnits(1)],
+        false,
+        {from: v.address}
+    );
+
+    // guardian reward can be split to multiple entries
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        3,
+        [v.address, delegator.address, v.address],
+        [fromTokenUnits(1), fromTokenUnits(2), fromTokenUnits(2)],
+        false,
+        {from: v.address}
+    );
+
+    // Distribute only to guardian
+    await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(1),
+        0,
+        100,
+        1,
+        4,
+        [v.address],
+        [fromTokenUnits(1)],
+        false,
+        {from: v.address}
+    );
+  });
+
   it('commits the stake change only when commitStakeChange == true', async () => {
     const d = await Driver.new();
 
