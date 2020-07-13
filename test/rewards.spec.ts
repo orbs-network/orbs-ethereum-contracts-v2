@@ -92,7 +92,7 @@ describe('rewards', async () => {
         expectedTotals = await sumBalances(d, committee);
         expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
 
-        await d.rewards.distributeOrbsTokenStakingRewards(fromTokenUnits(1), 0, 1, 5, 0, [committee[0].address], [fromTokenUnits(1)], {from: committee[0].address});
+        await d.rewards.distributeOrbsTokenStakingRewards(fromTokenUnits(1), 0, 1, 5, 0, [committee[0].address], [fromTokenUnits(1)], false, {from: committee[0].address});
         expectedTotals = await sumBalances(d, committee);
         expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
 

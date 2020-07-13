@@ -247,8 +247,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         bool firstTxBySender;
         address guardianAddr;
         uint256 delegatorsAmount;
+        IStakingContract stakingContract;
     }
-    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
+    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts, bool commitStakeChange) external onlyWhenActive {
         require(to.length > 0, "list must containt at least one recipient");
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
@@ -299,12 +300,16 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         poolsAndTotalBalances = _poolsAndTotalBalances;
 
-        IStakingContract stakingContract = getStakingContract();
+        vars.stakingContract = getStakingContract();
 
-        approve(erc20, address(stakingContract), totalAmount_uint48);
-        stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
+        approve(erc20, address(vars.stakingContract), totalAmount_uint48);
+        vars.stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
-        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
+        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts, commitStakeChange);
+
+        if (commitStakeChange) {
+            getDelegationsContract().refreshStakeNotification(vars.guardianAddr);
+        }
     }
 
     // fees

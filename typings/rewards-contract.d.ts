@@ -44,7 +44,8 @@ export interface StakingRewardsDistributedEvent {
     split: string|BN,
     txIndex: string|BN,
     to: string[],
-    amounts: (string|BN)[]
+    amounts: (string|BN)[],
+    stakeChangeCommitted: boolean
 }
 
 export interface StakingRewardsAddedToPoolEvent {
@@ -71,7 +72,7 @@ export interface RewardsContract extends OwnedContract {
     getTotalBalances(params?: TransactionConfig): Promise<[string /* fees */, string /* staking */, string /* bootstrap */]>;
 
     // staking rewards
-    distributeOrbsTokenStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
+    distributeOrbsTokenStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], commitStakeChange: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     topUpStakingRewardsPool(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;

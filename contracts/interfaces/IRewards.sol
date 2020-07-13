@@ -11,7 +11,7 @@ interface IRewards {
 
     // staking
 
-    event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
+    event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts, bool stakeChangeCommitted);
     event StakingRewardsAssigned(address[] assignees, uint256[] amounts); // todo balance?
     event StakingRewardsAddedToPool(uint256 added, uint256 total);
     event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
@@ -22,7 +22,7 @@ interface IRewards {
     /// @dev Distributes msg.sender's orbs token rewards to a list of addresses, by transferring directly into the staking contract.
     /// @dev `to[0]` must be the sender's main address
     /// @dev Total delegators reward (`to[1:n]`) must be less then maxDelegatorsStakingRewardsPercentMille of total amount
-    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external;
+    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts, bool commitStakeChange) external;
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUpStakingRewardsPool(uint256 amount) external;
