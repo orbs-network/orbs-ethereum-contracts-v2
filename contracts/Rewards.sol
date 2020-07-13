@@ -247,7 +247,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         bool firstTxBySender;
         address guardianAddr;
         uint256 delegatorsAmount;
-        IStakingContract stakingContract;
     }
     function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
         require(to.length > 0, "list must containt at least one recipient");
@@ -300,14 +299,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         poolsAndTotalBalances = _poolsAndTotalBalances;
 
-        vars.stakingContract = getStakingContract();
+        IStakingContract stakingContract = getStakingContract();
 
-        approve(erc20, address(vars.stakingContract), totalAmount_uint48);
-        vars.stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
-
-        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
+        approve(erc20, address(stakingContract), totalAmount_uint48);
+        stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
         getDelegationsContract().refreshStakeNotification(vars.guardianAddr);
+
+        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
 
     // fees
