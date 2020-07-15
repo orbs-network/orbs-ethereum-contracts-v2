@@ -161,7 +161,7 @@ export class Contract {
                 ret = await this.web3Contract.methods[method](...args)[action]({
                     from: accounts[0],
                     gasPrice: 1000000000,
-                    gas: 1000000,
+                    gas: 10000000,
                     ...opts
                 });
             } catch(e) {
