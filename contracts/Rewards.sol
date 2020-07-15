@@ -188,7 +188,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
         uint48 amount48 = toUint48Granularity(amount);
-        uint48 total48 = uint48(poolsAndTotalBalances.stakingPool.add(amount48));
+        uint48 total48 = poolsAndTotalBalances.stakingPool + amount48;
         poolsAndTotalBalances.stakingPool = total48;
 
         IERC20 _erc20 = erc20;
