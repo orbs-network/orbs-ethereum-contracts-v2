@@ -92,11 +92,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		}
 	}
 
-	function getGuardianOrbsAddress(address addr) external view returns (address orbsAddr) {
-		require(isRegistered(addr), "getGuardianOrbsAddress: Guardian is not registered");
-		return guardians[addr].orbsAddr;
-	}
-
 	function getGuardianIp(address addr) external view returns (bytes4 ip) {
 		require(isRegistered(addr), "getGuardianIp: Guardian is not registered");
 		return guardians[addr].ip;
@@ -109,7 +104,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		}
 	}
 
-	function isRegistered(address addr) public view returns (bool) { // todo: should this be public?
+	function isRegistered(address addr) public view returns (bool) {
 		return guardians[addr].registrationTime != 0;
 	}
 

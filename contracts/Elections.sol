@@ -100,7 +100,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address votee) private view returns (bool) {
+	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address votee) private returns (bool) {
 		Settings memory _settings = settings;
 
 		uint256 totalCommitteeStake = 0;
@@ -125,14 +125,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			}
 
 			uint256 votedAt = votedUnreadyVotes[member][votee];
-			if (votedAt != 0 && now.sub(votedAt) < _settings.voteUnreadyTimeoutSeconds) {
-				totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
-				if (certification[i]) {
-					totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
+			if (votedAt != 0) {
+				if (now.sub(votedAt) < _settings.voteUnreadyTimeoutSeconds) {
+					// Vote is valid
+					totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
+					if (certification[i]) {
+						totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
+					}
+				} else {
+					// Vote is stale, delete from state
+					votedUnreadyVotes[member][votee] = 0;
 				}
 			}
-
-			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
 		return (totalCommitteeStake > 0 && totalVoteUnreadyStake.mul(100).div(totalCommitteeStake) >= _settings.voteUnreadyPercentageThreshold)
@@ -254,13 +258,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private {
-		uint effectiveStake = getCommitteeEffectiveStake(addr, selfStake, delegatedStake, _settings);
+		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
 
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(address v, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
+	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
 		if (selfStake == 0) {
 			return 0;
 		}
@@ -273,7 +277,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
-		return getCommitteeEffectiveStake(v, getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
+		return getCommitteeEffectiveStake(getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
