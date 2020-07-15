@@ -5,14 +5,17 @@
   "main": "./release/test/test-kit.js",
   "repository": "https://github.com/orbs-network/orbs-ethereum-contracts-v2",
   "scripts": {
-    "test": "npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000",
+    "test": "npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
+    "test-ropsten": "export ETHEREUM_URL=https://ropsten.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
+    "test-kovan": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-gas-scenarios": "npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/gas-scenarios.spec.ts --timeout 600000",
     "coverage": "export ETHEREUM_URL=http://localhost:8555 && truffle run coverage",
     "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings",
     "migrate": "truffle migrate --reset",
     "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log",
     "start-ganache-log": "npm run start-ganache & tail -f _out/ganache.log",
-    "stop-ganache": "ps -x    | grep \"ganache-cli -p 7545 -i 5777\" | grep -v grep | cut -f 1 -d \" \" | xargs echo | xargs kill"
+    "stop-ganache": "ps -x    | grep \"ganache-cli -p 7545 -i 5777\" | grep -v grep | cut -f 1 -d \" \" | xargs echo | xargs kill",
+    "top-up-funds": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && npm run prepublish && node --require ./tsinit.js ./top-up-test-accounts.ts"
   },
   "author": "",
   "license": "ISC",

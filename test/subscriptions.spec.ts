@@ -4,7 +4,7 @@ import BN from "bn.js";
 import {Driver, expectRejected, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
-import {bn, txTimestamp} from "./helpers";
+import {bn} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
@@ -275,7 +275,7 @@ describe('subscriptions-high-level-flows', async () => {
     await owner.assignAndApproveOrbs(amount, subs.address);
     let r = await subs.createVC(amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent({
-      genRefTime: bn(await txTimestamp(d.web3, r) + newDelay)
+      genRefTime: bn(await d.web3.txTimestamp(r) + newDelay)
     });
   })
 

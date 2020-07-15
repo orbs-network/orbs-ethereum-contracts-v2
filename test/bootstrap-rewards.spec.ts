@@ -14,10 +14,6 @@ chai.use(require('./matchers'));
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
-async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
-  return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
-}
-
 const expect = chai.expect;
 
 async function sleep(ms): Promise<void> {
@@ -62,7 +58,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     const {v: v2} = await d.newGuardian(initStakeLarger, false, false, true);
     const {v: v3} = await d.newGuardian(initStakeLesser, true, false, true);
     const {v: v4, r: firstAssignTxRes} = await d.newGuardian(initStakeLesser, false, false, true);
-    const startTime = await txTimestamp(d.web3, firstAssignTxRes);
+    const startTime = await d.web3.txTimestamp(firstAssignTxRes);
     const generalCommittee: Participant[] = [v1, v2, v3, v4];
 
     const initialBalance:BN[] = [];
@@ -74,7 +70,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardsTxRes = await d.rewards.assignRewards();
-    const endTime = await txTimestamp(d.web3, assignRewardsTxRes);
+    const endTime = await d.web3.txTimestamp(assignRewardsTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = (annualRate) => fromTokenUnits(toTokenUnits(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
