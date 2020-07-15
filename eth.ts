@@ -17,7 +17,9 @@ export class Web3Session {
 
 export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     ETHEREUM_MNEMONIC,
-    ETHEREUM_URL,
+    new Web3.providers.HttpProvider(ETHEREUM_URL, {
+        keepAlive: true,
+    }),
     0,
     400,
     false
