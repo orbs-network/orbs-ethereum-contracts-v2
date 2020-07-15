@@ -4,6 +4,7 @@ import BN from "bn.js";
 import {Driver, expectRejected} from "./driver";
 import chai from "chai";
 import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits} from "./helpers";
+import {committeeSnapshotEvents} from "./event-parsing";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -118,7 +119,7 @@ describe('staking-rewards', async () => {
           0,
           [v.v.address, delegator.address],
           [bn(1), totalOrbsRewardsArr[i].sub(bn(1))],
-          {from: v.v.address}
+            {from: v.v.address}
         );
       expect(r).to.have.a.stakingRewardsDistributedEvent({
         distributer: v.v.address,
@@ -229,7 +230,7 @@ describe('staking-rewards', async () => {
           0,
           [v.v.address, delegator.address],
           [bn(1), totalOrbsRewardsArr[i].sub(bn(1))],
-          {from: v.v.address});
+            {from: v.v.address});
       expect(r).to.have.a.stakingRewardsDistributedEvent({
         distributer: v.v.address,
         fromBlock: bn(0),
@@ -736,6 +737,44 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(1)],
         {from: v.address}
     );
+  });
+
+  it("only commits the stake change of the senbder's guardian address", async () => {
+    const d = await Driver.new();
+
+    const {v: v1} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+    const {v: v2} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+
+    /* top up staking rewards pool */
+    const g = d.functionalOwner;
+
+    const annualRate = 12000;
+    const poolAmount = fromTokenUnits(20000000);
+    const annualCap = fromTokenUnits(20000000);
+
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    await d.rewards.assignRewards();
+
+    let r = await d.rewards.distributeOrbsTokenStakingRewards(
+        fromTokenUnits(2),
+        0,
+        100,
+        1,
+        0,
+        [v1.address, v2.address],
+        [fromTokenUnits(1), fromTokenUnits(1)],
+        {from: v1.address}
+    );
+    expect(r).to.have.a.committeeSnapshotEvent({
+      addrs: [v1.address, v2.address],
+      weights: [fromTokenUnits(100000001), fromTokenUnits(100000000)]
+    });
+    expect(committeeSnapshotEvents(r).length).to.eq(1);
 
   });
 

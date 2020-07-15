@@ -23,8 +23,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	mapping (address => uint256) accumulatedStakesForVoteOut; // addr => total stake
 	mapping (address => bool) votedOutGuardians;
 
-	uint256 totalGovernanceStake;
-
 	struct Settings {
 		uint32 voteUnreadyTimeoutSeconds;
 		uint32 maxDelegationRatio;
@@ -176,15 +174,19 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		uint totalStake = getDelegationsContract().getTotalDelegatedStake();
 
 		if (prevSubject != address(0) && prevSubject != subject) {
-			accumulatedStakesForVoteOut[prevSubject] = accumulatedStakesForVoteOut[prevSubject].sub(voterStake);
-			_applyVoteOutVotesFor(prevSubject, totalStake, _settings);
+			uint256 accumulated = accumulatedStakesForVoteOut[prevSubject].sub(voterStake);
+			accumulatedStakesForVoteOut[prevSubject] = accumulated;
+			_applyVoteOutVotesFor(prevSubject, accumulated, totalStake, _settings);
 		}
 
 		if (subject != address(0)) {
+			uint256 accumulated = accumulatedStakesForVoteOut[subject];
 			if (prevSubject != subject) {
-				accumulatedStakesForVoteOut[subject] = accumulatedStakesForVoteOut[subject].add(voterStake);
+				accumulated = accumulated.add(voterStake);
+				accumulatedStakesForVoteOut[subject] = accumulated;
 			}
-			_applyVoteOutVotesFor(subject, totalStake, _settings); // recheck also if not new
+
+			_applyVoteOutVotesFor(subject, accumulated, totalStake, _settings); // recheck also if not new
 		}
 		emit VoteOutCasted(msg.sender, subject);
 	}
@@ -201,27 +203,27 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return accumulatedStakesForVoteOut[addr];
 	}
 
-	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 _totalGovernanceStake, Settings memory _settings) private { // TODO pass currentStake in. use pure version of getGovernanceEffectiveStake where applicable
+	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 totalGovernanceStake, Settings memory _settings) private {
 		address subjectAddr = voteOutVotes[voter];
 		if (subjectAddr == address(0)) return;
 
 		uint256 prevVoterStake = votersStake[voter];
 		votersStake[voter] = currentVoterStake;
 
-		accumulatedStakesForVoteOut[subjectAddr] = accumulatedStakesForVoteOut[subjectAddr].
-		sub(prevVoterStake).
-		add(currentVoterStake);
+		uint256 accumulated = accumulatedStakesForVoteOut[subjectAddr].
+			sub(prevVoterStake).
+			add(currentVoterStake);
+		accumulatedStakesForVoteOut[subjectAddr] = accumulated;
 
-		_applyVoteOutVotesFor(subjectAddr, _totalGovernanceStake, _settings);
+		_applyVoteOutVotesFor(subjectAddr, accumulated, totalGovernanceStake, _settings);
 	}
 
-    function _applyVoteOutVotesFor(address addr, uint256 _totalGovernanceStake, Settings memory _settings) private {
+    function _applyVoteOutVotesFor(address addr, uint256 voteOutStake, uint256 totalGovernanceStake, Settings memory _settings) private {
         if (isVotedOut(addr)) {
             return;
         }
 
-        uint256 voteOutStake = accumulatedStakesForVoteOut[addr];
-        bool shouldBeVotedOut = _totalGovernanceStake > 0 && voteOutStake.mul(100).div(_totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
+        bool shouldBeVotedOut = totalGovernanceStake > 0 && voteOutStake.mul(100).div(totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
 		if (shouldBeVotedOut) {
 			votedOutGuardians[addr] = true;
 			emit GuardianVotedOut(addr);
@@ -235,12 +237,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
-		uint256 _totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
+		uint256 totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
 
 		Settings memory _settings = settings;
-		_applyDelegatedStake(addr, totalDelegated, _settings);
-		_applyStakesToVoteOutBy(addr, totalDelegated, _totalGovernanceStake, _settings);
+		_applyDelegatedStake(addr, selfStake, totalDelegated, _settings);
+		_applyStakesToVoteOutBy(addr, totalDelegated, totalGovernanceStake, _settings);
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
@@ -251,26 +253,27 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return sender;
 	}
 
-	function _applyDelegatedStake(address addr, uint256 newUncappedStake, Settings memory _settings) private { // TODO governance and committee "effective" stakes, as well as stakingBalance can be passed in
-		uint effectiveStake = getCommitteeEffectiveStake(addr, _settings);
-		emit StakeChanged(addr, getStakingContract().getStakeBalanceOf(addr), newUncappedStake, effectiveStake);
+	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private {
+		uint effectiveStake = getCommitteeEffectiveStake(addr, selfStake, delegatedStake, _settings);
+		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
 
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) { // TODO reduce number of calls to other contracts
-		uint256 ownStake =  getStakingContract().getStakeBalanceOf(v);
-		bool isSelfDelegating = getDelegationsContract().getDelegation(v) == v;
-		if (!isSelfDelegating || ownStake == 0) {
+	function getCommitteeEffectiveStake(address v, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
+		if (selfStake == 0) {
 			return 0;
 		}
 
-		uint256 uncappedStake = getDelegationsContract().getDelegatedStakes(v);
 		uint256 maxRatio = _settings.maxDelegationRatio;
-		if (uncappedStake.div(ownStake) < maxRatio) {
-			return uncappedStake;
+		if (delegatedStake.div(selfStake) < maxRatio) {
+			return delegatedStake;
 		}
-		return ownStake.mul(maxRatio); // never overflows
+		return selfStake.mul(maxRatio); // never overflows
+	}
+
+	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
+		return getCommitteeEffectiveStake(v, getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
