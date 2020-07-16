@@ -15,16 +15,13 @@ export class Web3Session {
      gasRecorder: GasRecorder = new GasRecorder();
 }
 
-export const defaultWeb3Provider = () => {
-    const web3 = new Web3(new HDWalletProvider(
-        ETHEREUM_MNEMONIC,
-        ETHEREUM_URL,
-        0,
-        400,
-        false
+export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
+    ETHEREUM_MNEMONIC,
+    ETHEREUM_URL,
+    0,
+    400,
+    false
     ));
-    return web3;
-};
 
 type ContractEntry = {
     web3Contract : Web3Contract | null;
