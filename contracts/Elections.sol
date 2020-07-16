@@ -237,12 +237,10 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
-		uint256 totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
-
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
-		_applyDelegatedStake(addr, selfStake, totalDelegated, _settings);
-		_applyStakesToVoteOutBy(addr, totalDelegated, totalGovernanceStake, _settings);
+		_applyDelegatedStake(addr, selfStake, delegatedStake, _settings);
+		_applyStakesToVoteOutBy(addr, delegatedStake, totalDelegatedStake, _settings);
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
