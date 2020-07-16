@@ -207,15 +207,15 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
     function _applyVoteOutVotesFor(address subjectAddr, uint256 voteOutStakeAdded, uint256 voteOutStakeRemoved, uint256 totalGovernanceStake, Settings memory _settings) private {
-        if (isVotedOut(subjectAddr)) {
-            return;
-        }
+		if (isVotedOut(subjectAddr)) {
+			return;
+		}
 
 		uint256 accumulated = accumulatedStakesForVoteOut[subjectAddr].
 			sub(voteOutStakeRemoved).
 			add(voteOutStakeAdded);
 
-        bool shouldBeVotedOut = totalGovernanceStake > 0 && accumulated.mul(100).div(totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
+		bool shouldBeVotedOut = totalGovernanceStake > 0 && accumulated.mul(100).div(totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
 		if (shouldBeVotedOut) {
 			votedOutGuardians[subjectAddr] = true;
 			emit GuardianVotedOut(subjectAddr);
