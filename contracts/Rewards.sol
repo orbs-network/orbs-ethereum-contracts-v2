@@ -13,7 +13,7 @@ import "./WithClaimableFunctionalOwnership.sol";
 
 contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
-    using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
+    using SafeMath for uint48;
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
@@ -83,7 +83,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function topUpBootstrapPool(uint256 amount) external onlyWhenActive {
         uint48 _amount48 = toUint48Granularity(amount);
-        uint48 bootstrapPool = uint48(poolsAndTotalBalances.bootstrapPool.add(_amount48)); // todo may overflow
+        uint48 bootstrapPool = poolsAndTotalBalances.bootstrapPool + _amount48;
         poolsAndTotalBalances.bootstrapPool = bootstrapPool;
 
         IERC20 _bootstrapToken = bootstrapToken;
@@ -138,9 +138,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             balance.fees += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
             balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
 
-            totals.bootstrapRewardsTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap); // todo may overflow
-            totals.feesTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee); // todo may overflow
-            totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]); // todo may overflow
+            totals.bootstrapRewardsTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap);
+            totals.feesTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
+            totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]);
 
             balances[committee[i]] = balance;
         }
@@ -188,7 +188,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
         uint48 amount48 = toUint48Granularity(amount);
-        uint48 total48 = uint48(poolsAndTotalBalances.stakingPool.add(amount48));
+        uint48 total48 = poolsAndTotalBalances.stakingPool + amount48;
         poolsAndTotalBalances.stakingPool = total48;
 
         IERC20 _erc20 = erc20;
@@ -222,7 +222,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastAssignedAt);
 
-            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
+            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight));
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
                 curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days));
@@ -365,7 +365,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private returns (uint256 guardianFee) {
         uint n = committee.length;
         if (isCertified)  {
-            n = 0; // todo - this is calculated in other places, get as argument to save gas
+            n = 0;
             for (uint i = 0; i < committee.length; i++) {
                 if (certification[i]) n++;
             }
