@@ -13,7 +13,7 @@ interface IFeesWallet {
 
     /// @dev collect fees from the buckets since the last call and transfers the amount back.
     /// Called by: only Rewards contract.
-    function collectFees() external returns (uint256 collectedFees); /* onlyRewardsContract */
+    function collectFees() external returns (uint256 collectedFees) /* onlyRewardsContract */;
 
     /*
      *   External methods
@@ -32,19 +32,19 @@ interface IFeesWallet {
      */
 
     /// @dev Updates the address of the contract registry.
-    function setContractRegistry(IContractRegistry _contractRegistry) external; /* onlyMigrationOwner */;
+    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
     /// @dev migrates the fees of bucket starting at startTimestamp.
     /// bucketStartTime must be a bucket's start time.
     /// Calls acceptBucketMigration in the destination contract.
-    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external; /* onlyMigrationOwner */
+    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external /* onlyMigrationOwner */;
 
     /*
      * Emergency
      */
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external; /* OnlyMigrationOwner */
+    function emergencyWithdraw() external /* OnlyMigrationOwner */;
 
 //   constructor(IERC20 token);    
 

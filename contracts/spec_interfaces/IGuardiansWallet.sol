@@ -51,10 +51,10 @@ interface IGuardiansWallet {
     
     /// @dev the maximum percent that may be distributed to delegators, provided in milli-percent.
     /// For example: 66667 indicates that up to 2/3 of the rewards may be distributed to the dlegators and a 1/3 is distributed to the Guardian. 
-    function setMaxDelegatorsStakingRewards(uint32 maxDelegatorsStakingRewardsPercentMille) external; /* OnlyFunctionalOwner */
+    function setMaxDelegatorsStakingRewards(uint32 maxDelegatorsStakingRewardsPercentMille) external /* OnlyFunctionalOwner */;
 
     /// @dev an emergency withdrawal, enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external; /* OnlyMigrationOwner */
+    function emergencyWithdraw() external /* OnlyMigrationOwner */;
 
 //   constructor(IERC20 stakingToken, IERC20 feesToken, IERC20 bootStrapToken, IStakingContract stakingContract);      
 
