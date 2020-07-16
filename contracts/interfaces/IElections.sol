@@ -18,7 +18,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	// Governance
 	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
-	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
+	event MinSelfStakePercentMilleChanged(uint32 newValue, uint32 oldValue);
 	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
 	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
 
@@ -67,12 +67,12 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
 
 	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setMaxDelegationRatio(uint32 maxDelegationRatio) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalOwner onlyWhenActive */;
 	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
 	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
-		uint32 maxDelegationRatio,
+		uint32 minSelfStakePercentMille,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold
 	);
