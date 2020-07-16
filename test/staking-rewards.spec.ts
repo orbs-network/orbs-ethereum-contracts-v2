@@ -754,7 +754,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
     await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+    await d.rewards.topUpStakingRewardsPool(poolAmount.mul(bn(2)), {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
