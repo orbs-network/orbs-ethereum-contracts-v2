@@ -749,12 +749,12 @@ describe('staking-rewards', async () => {
     const g = d.functionalOwner;
 
     const annualRate = 12000;
-    const poolAmount = fromTokenUnits(20000000);
     const annualCap = fromTokenUnits(20000000);
+    const poolAmount = annualCap.mul(bn(2));
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
     await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount.mul(bn(2)), {from: g.address});
+    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
