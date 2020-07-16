@@ -78,7 +78,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		DelegateStatus memory prevDelegateStatusAfter = getDelegateStatus(prevDelegate);
 		DelegateStatus memory newDelegateStatusAfter = getDelegateStatus(to);
 
-		totalDelegatedStake = totalDelegatedStake.sub(
+		uint256 _totalDelegatedStake = totalDelegatedStake.sub(
 			prevDelegateStatusBefore.delegatedStake
 		).add(
 			prevDelegateStatusAfter.delegatedStake
@@ -88,6 +88,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			newDelegateStatusAfter.delegatedStake
 		);
 
+		totalDelegatedStake = _totalDelegatedStake;
+
 		if (notifyElections) {
 			IElections elections = getElectionsContract();
 			IStakingContract staking = getStakingContract();
@@ -95,13 +97,15 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 			elections.delegatedStakeChange(
 				prevDelegate,
 				staking.getStakeBalanceOf(prevDelegate),
-				prevDelegateStatusAfter.delegatedStake
+				prevDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake
 			);
 
 			elections.delegatedStakeChange(
 				to,
 				staking.getStakeBalanceOf(to),
-				newDelegateStatusAfter.delegatedStake
+				newDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake
 			);
 		}
 
@@ -259,15 +263,18 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uncappedStakes[stakeOwnerData.delegation] = newUncappedStake;
 
 		bool isSelfDelegating = _isSelfDelegating(stakeOwnerData.delegation);
+		uint256 _totalDelegatedStake = totalDelegatedStake;
 		if (isSelfDelegating) {
-			totalDelegatedStake = _sign ? totalDelegatedStake.add(_amount) : totalDelegatedStake.sub(_amount);
+			_totalDelegatedStake = _sign ? _totalDelegatedStake.add(_amount) : _totalDelegatedStake.sub(_amount);
+			totalDelegatedStake = _totalDelegatedStake;
 		}
 
 		if (notifyElections) {
 			getElectionsContract().delegatedStakeChange(
 				stakeOwnerData.delegation,
 				getStakingContract().getStakeBalanceOf(stakeOwnerData.delegation),
-				isSelfDelegating ? newUncappedStake : 0
+				isSelfDelegating ? newUncappedStake : 0,
+				_totalDelegatedStake
 			);
 		}
 
