@@ -199,7 +199,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 totalGovernanceStake, Settings memory _settings) private {
 		address subjectAddr = voteOutVotes[voter];
 		if (subjectAddr == address(0)) return;
-		if (isVotedOut(subjectAddr)) return;
 
 		uint256 prevVoterStake = votersStake[voter];
 		votersStake[voter] = currentVoterStake;
