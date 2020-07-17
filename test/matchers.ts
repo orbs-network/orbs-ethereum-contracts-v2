@@ -18,6 +18,7 @@ import {
   VoteOutCastedEvent,
   GuardianVotedOutEvent,
   VoteOutTimeoutSecondsChangedEvent,
+  MinSelfStakePercentMilleChangedEvent,
   VoteUnreadyPercentageThresholdChangedEvent,
   VoteOutPercentageThresholdChangedEvent, MaxDelegationRatioChangedEvent
 } from "../typings/elections-contract";
@@ -199,7 +200,7 @@ declare global {
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       voteUnreadyTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
-      maxDelegationRatioChangedEvent(data?: Partial<MaxDelegationRatioChangedEvent>);
+      minSelfStakePercentMilleChangedEvent(data?: Partial<MinSelfStakePercentMilleChangedEvent>);
       voteOutPercentageThresholdChangedEvent(data?: Partial<VoteUnreadyPercentageThresholdChangedEvent>);
       voteUnreadyPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);

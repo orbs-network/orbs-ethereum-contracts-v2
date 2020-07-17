@@ -14,7 +14,7 @@ import "./spec_interfaces/IGuardiansWallet.sol";
 
 contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
-    using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
+    using SafeMath for uint48;
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
@@ -191,7 +191,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private returns (uint256 guardianFee) {
         uint n = committee.length;
         if (isCertified)  {
-            n = 0; // todo - this is calculated in other places, get as argument to save gas
+            n = 0;
             for (uint i = 0; i < committee.length; i++) {
                 if (certification[i]) n++;
             }

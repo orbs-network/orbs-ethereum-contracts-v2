@@ -68,7 +68,7 @@ export const voteOutCastedEvents = (txResult, contractAddress?: string) => parse
 export const readyForCommiteeEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "ReadyForCommitee(address)");
 export const stakeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "StakeChanged(address,uint256,uint256,uint256)");
 export const voteOutTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutTimeoutSecondsChanged(uint32,uint32)");
-export const maxDelegationRatioChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "MaxDelegationRatioChanged(uint32,uint32)");
+export const minSelfStakePercentMilleChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "MinSelfStakePercentMilleChanged(uint32,uint32)");
 export const banningLockTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningLockTimeoutSecondsChanged(uint32,uint32)");
 export const voteOutPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutPercentageThresholdChanged(uint8,uint8)");
 export const banningPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningPercentageThresholdChanged(uint8,uint8)");

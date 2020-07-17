@@ -25,7 +25,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	struct Settings {
 		uint32 voteUnreadyTimeoutSeconds;
-		uint32 maxDelegationRatio;
+		uint32 minSelfStakePercentMille;
 		uint8 voteUnreadyPercentageThreshold;
 		uint8 voteOutPercentageThreshold;
 	}
@@ -43,16 +43,16 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		_;
 	}
 
-	constructor(uint32 _maxDelegationRatio, uint8 _voteUnreadyPercentageThreshold, uint32 _voteUnreadyTimeoutSeconds, uint8 _voteOutPercentageThreshold) public {
-		require(_maxDelegationRatio >= 1, "max delegation ration must be at least 1");
-		require(_voteUnreadyPercentageThreshold >= 0 && _voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must be between 0 and 100");
-		require(_voteOutPercentageThreshold >= 0 && _voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
+	constructor(uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) public {
+		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be at most 100000");
+		require(voteUnreadyPercentageThreshold >= 0 && voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must be between 0 and 100");
+		require(voteOutPercentageThreshold >= 0 && voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
 
 		settings = Settings({
-			maxDelegationRatio: _maxDelegationRatio,
-			voteUnreadyPercentageThreshold: _voteUnreadyPercentageThreshold,
-			voteUnreadyTimeoutSeconds: _voteUnreadyTimeoutSeconds,
-			voteOutPercentageThreshold: _voteOutPercentageThreshold
+			minSelfStakePercentMille: minSelfStakePercentMille,
+			voteUnreadyPercentageThreshold: voteUnreadyPercentageThreshold,
+			voteUnreadyTimeoutSeconds: voteUnreadyTimeoutSeconds,
+			voteOutPercentageThreshold: voteOutPercentageThreshold
 		});
 	}
 
@@ -100,7 +100,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		}
 	}
 
-	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address votee) private view returns (bool) {
+	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address votee) private returns (bool) {
 		Settings memory _settings = settings;
 
 		uint256 totalCommitteeStake = 0;
@@ -125,14 +125,18 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 			}
 
 			uint256 votedAt = votedUnreadyVotes[member][votee];
-			if (votedAt != 0 && now.sub(votedAt) < _settings.voteUnreadyTimeoutSeconds) {
-				totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
-				if (certification[i]) {
-					totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
+			if (votedAt != 0) {
+				if (now.sub(votedAt) < _settings.voteUnreadyTimeoutSeconds) {
+					// Vote is valid
+					totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
+					if (certification[i]) {
+						totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
+					}
+				} else {
+					// Vote is stale, delete from state
+					votedUnreadyVotes[member][votee] = 0;
 				}
 			}
-
-			// TODO - consider clearing up stale votes from the state (gas efficiency)
 		}
 
 		return (totalCommitteeStake > 0 && totalVoteUnreadyStake.mul(100).div(totalCommitteeStake) >= _settings.voteUnreadyPercentageThreshold)
@@ -237,12 +241,10 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 totalDelegated) external onlyDelegationsContract onlyWhenActive {
-		uint256 totalGovernanceStake = getDelegationsContract().getTotalDelegatedStake();
-
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
-		_applyDelegatedStake(addr, selfStake, totalDelegated, _settings);
-		_applyStakesToVoteOutBy(addr, totalDelegated, totalGovernanceStake, _settings);
+		_applyDelegatedStake(addr, selfStake, delegatedStake, _settings);
+		_applyStakesToVoteOutBy(addr, delegatedStake, totalDelegatedStake, _settings);
 	}
 
 	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
@@ -254,26 +256,26 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private {
-		uint effectiveStake = getCommitteeEffectiveStake(addr, selfStake, delegatedStake, _settings);
+		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
 
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(address v, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
+	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
 		if (selfStake == 0) {
 			return 0;
 		}
 
-		uint256 maxRatio = _settings.maxDelegationRatio;
-		if (delegatedStake.div(selfStake) < maxRatio) {
+		if (selfStake.mul(100000) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
 			return delegatedStake;
 		}
-		return selfStake.mul(maxRatio); // never overflows
+
+		return selfStake.mul(100000).div(_settings.minSelfStakePercentMille); // never overflows or divides by zero
 	}
 
 	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
-		return getCommitteeEffectiveStake(v, getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
+		return getCommitteeEffectiveStake(getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
@@ -289,10 +291,10 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		settings.voteUnreadyTimeoutSeconds = voteUnreadyTimeoutSeconds;
 	}
 
-	function setMaxDelegationRatio(uint32 maxDelegationRatio) external onlyFunctionalOwner /* todo onlyWhenActive */ {
-		require(maxDelegationRatio >= 1, "max delegation ration must be at least 1");
-		emit MaxDelegationRatioChanged(maxDelegationRatio, settings.maxDelegationRatio);
-		settings.maxDelegationRatio = maxDelegationRatio;
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be 100000 at most");
+		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
+		settings.minSelfStakePercentMille = minSelfStakePercentMille;
 	}
 
 	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
@@ -309,13 +311,13 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
-		uint32 maxDelegationRatio,
+		uint32 minSelfStakePercentMille,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold
 	) {
 		Settings memory _settings = settings;
 		voteUnreadyTimeoutSeconds = _settings.voteUnreadyTimeoutSeconds;
-		maxDelegationRatio = _settings.maxDelegationRatio;
+		minSelfStakePercentMille = _settings.minSelfStakePercentMille;
 		voteUnreadyPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
 		voteOutPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
 	}

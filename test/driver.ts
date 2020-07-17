@@ -27,7 +27,7 @@ export const DEPLOYMENT_SUBSET_CANARY = "canary";
 
 export type DriverOptions = {
     maxCommitteeSize: number;
-    maxDelegationRatio: number;
+    minSelfStakePercentMille: number;
     maxTimeBetweenRewardAssignments: number;
     voteOutThreshold: number;
     voteOutTimeout: number;
@@ -37,7 +37,7 @@ export type DriverOptions = {
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
-    maxDelegationRatio : 10,
+    minSelfStakePercentMille : 0,
     maxTimeBetweenRewardAssignments: 0,
     voteOutThreshold : 80,
     voteOutTimeout : 24 * 60 * 60,
@@ -92,7 +92,7 @@ export class Driver {
     private static async withFreshContracts(web3, accounts, session, options: Partial<DriverOptions> = {}) {
         const {
             maxCommitteeSize,
-            maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold,
+            minSelfStakePercentMille, voteOutThreshold, voteOutTimeout, banningThreshold,
             maxTimeBetweenRewardAssignments
         } = Object.assign({}, defaultDriverOptions, options);
         const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
@@ -100,7 +100,7 @@ export class Driver {
         const erc20 = await web3.deploy('TestingERC20', [], null, session);
         const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
         const delegations = await web3.deploy("Delegations", [], null, session);
-        const elections = await web3.deploy("Elections", [maxDelegationRatio, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
+        const elections = await web3.deploy("Elections", [minSelfStakePercentMille, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
         const staking = await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
         const subscriptions = await web3.deploy('Subscriptions', [erc20.address], null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);

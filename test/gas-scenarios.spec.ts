@@ -28,7 +28,7 @@ const tlog = (s) => console.log(Math.floor(Date.now()/1000 - t0/1000), s);
 
 async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Promise<{d: Driver, committee: Participant[]}> {
     tlog("Creating driver..");
-    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, maxDelegationRatio: 255});
+    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, minSelfStakePercentMille: 0});
     tlog("Driver created");
 
     const g = d.newParticipant();
