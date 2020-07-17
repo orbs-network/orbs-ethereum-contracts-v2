@@ -11,6 +11,7 @@ import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 import "./spec_interfaces/IGuardiansWallet.sol";
+import "./spec_interfaces/IFeesWallet.sol";
 
 contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
@@ -23,10 +24,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         uint48 annualCap;
     }
     Settings settings;
-
-    uint256 constant feeBucketTimePeriod = 30 days;
-    mapping(uint256 => uint256) generalFeePoolBuckets;
-    mapping(uint256 => uint256) certifiedFeePoolBuckets;
 
     IERC20 bootstrapToken;
     IERC20 erc20;
@@ -114,7 +111,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return lastAssignedAt;
     }
 
-    function collectStakingRewards(address[] memory committee, uint256[] memory weights, Settings memory _settings) private view returns (uint256[] memory assignedRewards, uint256 total) {
+    function collectStakingRewards(address[] memory committee, uint256[] memory weights, Settings memory _settings) private view returns (uint256[] memory assignedRewards, uint256 totalStakingRewards) {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
         assignedRewards = new uint256[](committee.length);
@@ -130,53 +127,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
             for (uint i = 0; i < committee.length; i++) {
                 assignedRewards[i] = weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days);
-                total += assignedRewards[i];
+                totalStakingRewards += assignedRewards[i];
             }
         }
     }
 
-    uint constant MAX_FEE_BUCKET_ITERATIONS = 24;
-
     function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256[] memory fees, uint256 totalFees) {
-        // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
-        // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-
-        // Fee pool
-        uint _lastAssignedAt = lastAssignedAt;
-        uint bucketsPayed = 0;
-        uint generalFeePoolAmount = 0;
-        uint certificationFeePoolAmount = 0;
-        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastAssignedAt < now) {
-            uint256 bucketStart = _bucketTime(_lastAssignedAt);
-            uint256 bucketEnd = bucketStart.add(feeBucketTimePeriod);
-            uint256 payUntil = Math.min(bucketEnd, now);
-            uint256 bucketDuration = payUntil.sub(_lastAssignedAt);
-            uint256 remainingBucketTime = bucketEnd.sub(_lastAssignedAt);
-
-            uint256 bucketTotal = generalFeePoolBuckets[bucketStart];
-            uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
-            generalFeePoolAmount += amount;
-            bucketTotal = bucketTotal.sub(amount);
-            generalFeePoolBuckets[bucketStart] = bucketTotal;
-            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, false);
-
-            bucketTotal = certifiedFeePoolBuckets[bucketStart];
-            amount = bucketTotal * bucketDuration / remainingBucketTime;
-            certificationFeePoolAmount += amount;
-            bucketTotal = bucketTotal.sub(amount);
-            certifiedFeePoolBuckets[bucketStart] = bucketTotal;
-            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, true);
-
-            _lastAssignedAt = payUntil;
-
-            assert(_lastAssignedAt <= bucketEnd);
-            if (_lastAssignedAt == bucketEnd) {
-                delete generalFeePoolBuckets[bucketStart];
-                delete certifiedFeePoolBuckets[bucketStart];
-            }
-
-            bucketsPayed++;
-        }
+        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees();
+        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees();
 
         uint256 generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
         uint256 certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
@@ -202,57 +160,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
         uint256 remainder = amount.sub(guardianFee.mul(n));
         if (remainder > 0) {
-            fillFeeBucket(_bucketTime(now), remainder, isCertified);
+            // TODO probably an overkill...
+            IFeesWallet wallet = isCertified ? getCertifiedFeesWallet() : getGeneralFeesWallet();
+            erc20.approve(address(wallet), remainder);
+            wallet.fillFeeBuckets(now, remainder, remainder);
         }
-    }
-
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp, false);
-    }
-
-    function fillCertificationFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp, true);
-    }
-
-    function fillFeeBucket(uint256 bucketId, uint256 amount, bool isCertified) private {
-        uint256 total;
-        if (isCertified) {
-            total = certifiedFeePoolBuckets[bucketId].add(amount);
-            certifiedFeePoolBuckets[bucketId] = total;
-        } else {
-            total = generalFeePoolBuckets[bucketId].add(amount);
-            generalFeePoolBuckets[bucketId] = total;
-        }
-
-        emit FeesAddedToBucket(bucketId, amount, total, isCertified);
-    }
-
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCertified) private {
-        assignRewards(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
-
-        uint256 bucket = _bucketTime(fromTimestamp);
-        uint256 _amount = amount;
-
-        // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(feeBucketTimePeriod - fromTimestamp % feeBucketTimePeriod).div(feeBucketTimePeriod));
-        fillFeeBucket(bucket, bucketAmount, isCertified);
-        _amount = _amount.sub(bucketAmount);
-
-        // following buckets are added with the monthly rate
-        while (_amount > 0) {
-            bucket = bucket.add(feeBucketTimePeriod);
-            bucketAmount = Math.min(monthlyRate, _amount);
-            fillFeeBucket(bucket, bucketAmount, isCertified);
-            _amount = _amount.sub(bucketAmount);
-        }
-
-        assert(_amount == 0);
-
-        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriptions to rewards");
-    }
-
-    function _bucketTime(uint256 time) private pure returns (uint256) {
-        return time - time % feeBucketTimePeriod;
     }
 
 }

@@ -62,7 +62,7 @@ describe('fees-contract', async () => {
       const vcid = vcCreatedEvents(r)[0].vcid;
       let startTime = await txTimestamp(d.web3, r);
 
-      const feeBuckets = feesAddedToBucketEvents(r).filter(e => e.isCertified == isCertified);
+      const feeBuckets = feesAddedToBucketEvents(r, isCertified ? d.certifiedFeesWallet.address : d.generalFeesWallet.address);
 
       // all the payed rewards were added to a bucket
       const totalAdded = feeBuckets.reduce((t, l) => t.add(new BN(l.added)), new BN(0));
@@ -79,7 +79,7 @@ describe('fees-contract', async () => {
         expect(l.added).to.be.bignumber.equal(new BN(vcRate));
       });
 
-      expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
+      // expect(await d.rewards.getLastRewardAssignmentTime()).to.be.bignumber.equal(new BN(startTime));
 
       return {
         vcid,
@@ -111,11 +111,11 @@ describe('fees-contract', async () => {
       return fromTokenUnits(toTokenUnits(rewards.div(n)))
     };
 
-    if (certificationStartTime > generalStartTime) {
-      // the creation of the second VC triggered reward calculation for the general committee, need to fix the buckets
-      calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, certificationStartTime, committee, false);
-    }
-
+    // if (certificationStartTime > generalStartTime) {
+    //   // the creation of the second VC triggered reward calculation for the general committee, need to fix the buckets
+    //   calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, certificationStartTime, committee, false);
+    // }
+    //
     // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
     // and subtract it afterwards
 
@@ -132,7 +132,7 @@ describe('fees-contract', async () => {
 
     // Calculate expected rewards from VC fees
 
-    let generalGuardianRewards = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, certificationStartTime, endTime, committee, false);
+    let generalGuardianRewards = calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, endTime, committee, false);
     let certificationGuardianRewards = generalGuardianRewards.add(calcFeeRewardsAndUpdateBuckets(certificationFeeBuckets, certificationStartTime, endTime, committee, true));
 
     // TODO allow an inaccuracy of up to 1 milli-orbs as this is probably do to remainder issues. TODO - fix the calculation to properly account for that
@@ -146,7 +146,7 @@ describe('fees-contract', async () => {
 
     expect(assignFeesTxRes).to.have.a.rewardsAssignedEvent({
       assignees: committee.map(v => v.address),
-      fees: [certificationGuardianRewards, generalGuardianRewards, certificationGuardianRewards, generalGuardianRewards]
+      fees: [certificationGuardianRewards, generalGuardianRewards, certificationGuardianRewards, generalGuardianRewards].map(x => x.toString())
     });
 
     const orbsBalances:BN[] = [];

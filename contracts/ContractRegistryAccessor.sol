@@ -8,6 +8,7 @@ import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./spec_interfaces/ICertification.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
+import "./spec_interfaces/IFeesWallet.sol";
 import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./Lockable.sol";
@@ -71,6 +72,14 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
     function getGuardiansWallet() public view returns (IGuardiansWallet) {
         return IGuardiansWallet(contractRegistry.get("guardiansWallet"));
+    }
+
+    function getGeneralFeesWallet() public view returns (IFeesWallet) {
+        return IFeesWallet(contractRegistry.get("generalFeesWallet"));
+    }
+
+    function getCertifiedFeesWallet() public view returns (IFeesWallet) {
+        return IFeesWallet(contractRegistry.get("certifiedFeesWallet"));
     }
 
 }

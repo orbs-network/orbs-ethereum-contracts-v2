@@ -187,9 +187,9 @@ contract GuardiansWallet is IGuardiansWallet, ContractRegistryAccessor, WithClai
 
     function emergencyWithdraw() external onlyMigrationOwner {
         emit EmergencyWithdrawal(msg.sender);
-        require(feesToken.transfer(msg.sender, feesToken.balanceOf(address(this))), "ProtocolWallet::emergencyWithdraw - transfer failed (fee token)");
-        require(stakingToken.transfer(msg.sender, stakingToken.balanceOf(address(this))), "ProtocolWallet::emergencyWithdraw - transfer failed (staking token)");
-        require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "ProtocolWallet::emergencyWithdraw - transfer failed (bootstrap token)");
+        require(feesToken.transfer(msg.sender, feesToken.balanceOf(address(this))), "GuardianWallet::emergencyWithdraw - transfer failed (fee token)");
+        require(stakingToken.transfer(msg.sender, stakingToken.balanceOf(address(this))), "GuardianWallet::emergencyWithdraw - transfer failed (staking token)");
+        require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "GuardianWallet::emergencyWithdraw - transfer failed (bootstrap token)");
     }
 
 }

@@ -9,10 +9,6 @@ interface IRewards {
     function assignRewards() external;
     function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata certification) external /* onlyCommitteeContract */;
 
-    // staking
-
-    event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
-
     /*
     *   Reward-governor methods
     */
@@ -20,23 +16,9 @@ interface IRewards {
     /// @dev Assigns rewards and sets a new monthly rate for the pro-rata pool.
     function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyFunctionalOwner */;
 
-
-    // fees
-
-    event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total, bool isCertified);
-    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCertified);
-
     /*
      *   External methods
      */
-
-    /// @dev Called by: subscriptions contract
-    /// Top-ups the certification fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillCertificationFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
-
-    /// @dev Called by: subscriptions contract
-    /// Top-ups the general fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
 
     // bootstrap
 

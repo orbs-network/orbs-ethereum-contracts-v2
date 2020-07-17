@@ -5,6 +5,7 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
+import "./spec_interfaces/IFeesWallet.sol";
 
 contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
@@ -94,14 +95,12 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     function _extendSubscription(uint256 vcid, uint256 amount, address payer) private {
         VirtualChain storage vc = virtualChains[vcid];
 
-        IRewards rewardsContract = getRewardsContract();
+        IFeesWallet feesWallet = vc.isCertified ? getCertifiedFeesWallet() : getGeneralFeesWallet();
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
-        require(erc20.approve(address(rewardsContract), amount), "failed to approve rewards to acquire subscription fees");
-        if (vc.isCertified) {
-            rewardsContract.fillCertificationFeeBuckets(amount, vc.rate, vc.expiresAt);
-        } else {
-            rewardsContract.fillGeneralFeeBuckets(amount, vc.rate, vc.expiresAt);
-        }
+        require(erc20.approve(address(feesWallet), amount), "failed to approve rewards to acquire subscription fees");
+
+        feesWallet.fillFeeBuckets(amount, vc.rate, vc.expiresAt);
+
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
         emit SubscriptionChanged(vcid, vc.genRefTime, vc.expiresAt, vc.tier, vc.deploymentSubset);
