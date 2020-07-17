@@ -25,7 +25,7 @@ describe('testkit', async () => {
     expect(firstDriver.contractRegistry.address).to.equal(secondDriver.contractRegistry.address);
     expect(firstDriver.elections.address).to.equal(secondDriver.elections.address);
     expect(firstDriver.erc20.address).to.equal(secondDriver.erc20.address);
-    expect(firstDriver.externalToken.address).to.equal(secondDriver.externalToken.address);
+    expect(firstDriver.bootstrapToken.address).to.equal(secondDriver.bootstrapToken.address);
     expect(firstDriver.staking.address).to.equal(secondDriver.staking.address);
     expect(firstDriver.delegations.address).to.equal(secondDriver.delegations.address);
     expect(firstDriver.subscriptions.address).to.equal(secondDriver.subscriptions.address);

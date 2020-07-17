@@ -35,18 +35,8 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    let r = await d.rewards.topUpStakingRewardsPool(fromTokenUnits(1), {from: g.address});
-    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
-      added: fromTokenUnits(1),
-      total: fromTokenUnits(1)
-    });
-
-    r = await d.rewards.topUpStakingRewardsPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
-    expect(r).to.have.a.stakingRewardsAddedToPoolEvent({
-      added: poolAmount.sub(fromTokenUnits(1)),
-      total: poolAmount
-    });
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     // create committee
 
@@ -60,7 +50,7 @@ describe('staking-rewards', async () => {
     const v2 = d.newParticipant();
     await v2.stake(initStakeLarger);
     await v2.registerAsGuardian();
-    r = await v2.readyForCommittee();
+    let r = await v2.readyForCommittee();
     const startTime = await txTimestamp(d.web3, r);
 
     const guardians = [{
@@ -94,14 +84,14 @@ describe('staking-rewards', async () => {
 
     const totalOrbsRewardsArr = calcRewards();
 
-    expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
+    expect(assignRewardTxRes).to.have.a.rewardsAssignedEvent({
       assignees: guardians.map(v => v.v.address),
-      amounts: totalOrbsRewardsArr
+      stakingRewards: totalOrbsRewardsArr
     });
 
     const orbsBalances:BN[] = [];
     for (const v of guardians) {
-      orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
+      orbsBalances.push(new BN(await d.guardiansWallet.getStakingRewardBalance(v.v.address)));
     }
 
     for (const v of guardians) {
@@ -111,7 +101,7 @@ describe('staking-rewards', async () => {
       const i = guardians.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(totalOrbsRewardsArr[i]);
 
-      r = await d.rewards.distributeOrbsTokenStakingRewards(
+      let r = await d.guardiansWallet.distributeStakingRewards(
           totalOrbsRewardsArr[i],
           0,
           100,
@@ -154,8 +144,9 @@ describe('staking-rewards', async () => {
     const annualCap = fromTokenUnits(100);
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     // create committee
 
@@ -207,12 +198,12 @@ describe('staking-rewards', async () => {
 
     const orbsBalances:BN[] = [];
     for (const v of guardians) {
-      orbsBalances.push(new BN(await d.rewards.getStakingRewardBalance(v.v.address)));
+      orbsBalances.push(new BN(await d.guardiansWallet.getStakingRewardBalance(v.v.address)));
     }
 
-    expect(assignRewardTxRes).to.have.a.stakingRewardsAssignedEvent({
+    expect(assignRewardTxRes).to.have.a.rewardsAssignedEvent({
       assignees: guardians.map(v => v.v.address),
-      amounts: totalOrbsRewardsArr.map(x => x.toString())
+      stakingRewards: totalOrbsRewardsArr.map(x => x.toString())
     });
 
     for (const v of guardians) {
@@ -222,7 +213,7 @@ describe('staking-rewards', async () => {
       const i = guardians.indexOf(v);
       expect(orbsBalances[i]).to.be.bignumber.equal(new BN(totalOrbsRewardsArr[i]));
 
-      r = await d.rewards.distributeOrbsTokenStakingRewards(
+      r = await d.guardiansWallet.distributeStakingRewards(
           totalOrbsRewardsArr[i],
           0,
           100,
@@ -267,15 +258,16 @@ describe('staking-rewards', async () => {
     const annualCap = fromTokenUnits(20000000);
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
     await d.rewards.assignRewards();
 
     // first fromBlock must be 0
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         1,
         100,
@@ -287,7 +279,7 @@ describe('staking-rewards', async () => {
     );
 
     // first txIndex must be 0 (initial distribution)
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -299,7 +291,7 @@ describe('staking-rewards', async () => {
     );
 
     // should fail if total does not match actual total
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -310,7 +302,7 @@ describe('staking-rewards', async () => {
         {from: v.address})
     );
 
-    let r = await d.rewards.distributeOrbsTokenStakingRewards(
+    let r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -331,7 +323,7 @@ describe('staking-rewards', async () => {
     });
 
     // next txIndex must increment the previous one
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -342,7 +334,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
       )
     );
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -354,7 +346,7 @@ describe('staking-rewards', async () => {
       )
     );
 
-    r = await d.rewards.distributeOrbsTokenStakingRewards(
+    r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -374,7 +366,7 @@ describe('staking-rewards', async () => {
       amounts: [bn(fromTokenUnits(5))]
     });
 
-    r = await d.rewards.distributeOrbsTokenStakingRewards(
+    r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -395,7 +387,7 @@ describe('staking-rewards', async () => {
     });
 
     // next split must equal previous
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -408,7 +400,7 @@ describe('staking-rewards', async () => {
     );
 
     // next fromBlock must be previous toBlock + 1
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         99,
         200,
@@ -420,7 +412,7 @@ describe('staking-rewards', async () => {
         )
     );
 
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         100,
         200,
@@ -433,7 +425,7 @@ describe('staking-rewards', async () => {
     );
 
     // next toBlock must be at least new fromBlock
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         101,
         100,
@@ -446,7 +438,7 @@ describe('staking-rewards', async () => {
     );
 
     // on new distribution, txIndex must be 0
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         101,
         200,
@@ -459,7 +451,7 @@ describe('staking-rewards', async () => {
     );
 
     // split can be changed on new distribution
-    r = await d.rewards.distributeOrbsTokenStakingRewards(
+    r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         101,
         200,
@@ -480,7 +472,7 @@ describe('staking-rewards', async () => {
     });
 
     // state is per address, different distributor must start from fromBlock==0
-    r = await d.rewards.distributeOrbsTokenStakingRewards(
+    r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -501,7 +493,7 @@ describe('staking-rewards', async () => {
     });
 
     // toBlock must be in the past
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         101,
         (r.blockNumber + 10000),
@@ -529,14 +521,15 @@ describe('staking-rewards', async () => {
     const annualCap = fromTokenUnits(20000000);
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
     await d.rewards.assignRewards();
 
-    let r = await d.rewards.distributeOrbsTokenStakingRewards(
+    let r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(6),
         0,
         100,
@@ -556,7 +549,7 @@ describe('staking-rewards', async () => {
       amounts: [fromTokenUnits(1), fromTokenUnits(5)]
     });
 
-    r = await d.rewards.distributeOrbsTokenStakingRewards(
+    r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(6),
         0,
         100,
@@ -592,14 +585,15 @@ describe('staking-rewards', async () => {
     const annualCap = fromTokenUnits(20000000);
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
     await d.rewards.assignRewards();
 
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -610,7 +604,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     );
 
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(2),
         0,
         100,
@@ -621,7 +615,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     );
 
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(2),
         0,
         100,
@@ -648,17 +642,18 @@ describe('staking-rewards', async () => {
     const annualCap = fromTokenUnits(20000000);
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
     await d.rewards.assignRewards();
 
-    let r = await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalOwner.address});
+    let r = await d.guardiansWallet.setMaxDelegatorsStakingRewards(66666, {from: d.functionalOwner.address});
     expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({maxDelegatorsStakingRewardsPercentMille: bn(66666)});
 
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(100000),
         0,
         100,
@@ -669,7 +664,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     ));
 
-    await expectRejected(d.rewards.distributeOrbsTokenStakingRewards(
+    await expectRejected(d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(2),
         0,
         100,
@@ -680,7 +675,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     ));
 
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(100000),
         0,
         100,
@@ -692,7 +687,7 @@ describe('staking-rewards', async () => {
     );
 
     // +1 for rounding errors should allow these
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(99999),
         0,
         100,
@@ -703,7 +698,7 @@ describe('staking-rewards', async () => {
         {from: v.address}
     );
 
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(1),
         0,
         100,
@@ -715,7 +710,7 @@ describe('staking-rewards', async () => {
     );
 
     // guardian reward can be split to multiple entries
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(5),
         0,
         100,
@@ -727,7 +722,7 @@ describe('staking-rewards', async () => {
     );
 
     // Distribute only to guardian
-    await d.rewards.distributeOrbsTokenStakingRewards(
+    await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(1),
         0,
         100,
@@ -753,14 +748,15 @@ describe('staking-rewards', async () => {
     const poolAmount = annualCap.mul(bn(2));
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
-    await g.assignAndApproveOrbs(poolAmount, d.rewards.address);
-    await d.rewards.topUpStakingRewardsPool(poolAmount, {from: g.address});
+
+    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
     await d.rewards.assignRewards();
 
-    let r = await d.rewards.distributeOrbsTokenStakingRewards(
+    let r = await d.guardiansWallet.distributeStakingRewards(
         fromTokenUnits(2),
         0,
         100,
