@@ -20,7 +20,7 @@ import {
   VoteOutTimeoutSecondsChangedEvent,
   MinSelfStakePercentMilleChangedEvent,
   VoteUnreadyPercentageThresholdChangedEvent,
-  VoteOutPercentageThresholdChangedEvent, MaxDelegationRatioChangedEvent
+  VoteOutPercentageThresholdChangedEvent,
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
