@@ -12,7 +12,7 @@ interface IRewards {
     // staking
 
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
-    event StakingRewardsAssigned(address[] assignees, uint256[] amounts); // todo balance?
+    event StakingRewardsAssigned(address[] assignees, uint256[] amounts);
     event StakingRewardsAddedToPool(uint256 added, uint256 total);
     event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
 

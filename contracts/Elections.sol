@@ -144,7 +144,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function voteUnready(address subjectAddr) external onlyWhenActive {
-		address sender = getMainAddrFromOrbsAddr(msg.sender);
+		address sender = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
 		votedUnreadyVotes[sender][subjectAddr] = now;
 		emit VoteUnreadyCasted(sender, subjectAddr);
 
@@ -247,14 +247,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		Settings memory _settings = settings;
 		_applyDelegatedStake(addr, selfStake, totalDelegated, _settings);
 		_applyStakesToVoteOutBy(addr, totalDelegated, totalGovernanceStake, _settings);
-	}
-
-	function getMainAddrFromOrbsAddr(address orbsAddr) private view returns (address) {
-		address[] memory orbsAddrArr = new address[](1);
-		orbsAddrArr[0] = orbsAddr;
-		address sender = getGuardiansRegistrationContract().getEthereumAddresses(orbsAddrArr)[0];
-		require(sender != address(0), "unknown orbs address");
-		return sender;
 	}
 
 	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private {
