@@ -178,19 +178,12 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		uint totalStake = getDelegationsContract().getTotalDelegatedStake();
 
 		if (prevSubject != address(0) && prevSubject != subject) {
-			uint256 accumulated = accumulatedStakesForVoteOut[prevSubject].sub(voterStake);
-			accumulatedStakesForVoteOut[prevSubject] = accumulated;
-			_applyVoteOutVotesFor(prevSubject, accumulated, totalStake, _settings);
+			_applyVoteOutVotesFor(prevSubject, 0, voterStake, totalStake, _settings);
 		}
 
 		if (subject != address(0)) {
-			uint256 accumulated = accumulatedStakesForVoteOut[subject];
-			if (prevSubject != subject) {
-				accumulated = accumulated.add(voterStake);
-				accumulatedStakesForVoteOut[subject] = accumulated;
-			}
-
-			_applyVoteOutVotesFor(subject, accumulated, totalStake, _settings); // recheck also if not new
+			uint voteStakeAdded = prevSubject != subject ? voterStake : 0;
+			_applyVoteOutVotesFor(subject, voteStakeAdded, 0, totalStake, _settings); // recheck also if not new
 		}
 		emit VoteOutCasted(msg.sender, subject);
 	}
@@ -214,28 +207,31 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		uint256 prevVoterStake = votersStake[voter];
 		votersStake[voter] = currentVoterStake;
 
-		uint256 accumulated = accumulatedStakesForVoteOut[subjectAddr].
-			sub(prevVoterStake).
-			add(currentVoterStake);
-		accumulatedStakesForVoteOut[subjectAddr] = accumulated;
-
-		_applyVoteOutVotesFor(subjectAddr, accumulated, totalGovernanceStake, _settings);
+		_applyVoteOutVotesFor(subjectAddr, currentVoterStake, prevVoterStake, totalGovernanceStake, _settings);
 	}
 
-    function _applyVoteOutVotesFor(address addr, uint256 voteOutStake, uint256 totalGovernanceStake, Settings memory _settings) private {
-        if (isVotedOut(addr)) {
-            return;
-        }
-
-        bool shouldBeVotedOut = totalGovernanceStake > 0 && voteOutStake.mul(100).div(totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
-		if (shouldBeVotedOut) {
-			votedOutGuardians[addr] = true;
-			emit GuardianVotedOut(addr);
-
-			emit GuardianStatusUpdated(addr, false, false);
-			getCommitteeContract().removeMember(addr);
+    function _applyVoteOutVotesFor(address subjectAddr, uint256 voteOutStakeAdded, uint256 voteOutStakeRemoved, uint256 totalGovernanceStake, Settings memory _settings) private {
+		if (isVotedOut(subjectAddr)) {
+			return;
 		}
-    }
+
+		uint256 accumulated = accumulatedStakesForVoteOut[subjectAddr].
+			sub(voteOutStakeRemoved).
+			add(voteOutStakeAdded);
+
+		bool shouldBeVotedOut = totalGovernanceStake > 0 && accumulated.mul(100).div(totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
+		if (shouldBeVotedOut) {
+			votedOutGuardians[subjectAddr] = true;
+			emit GuardianVotedOut(subjectAddr);
+
+			emit GuardianStatusUpdated(subjectAddr, false, false);
+			getCommitteeContract().removeMember(subjectAddr);
+
+			accumulated = 0;
+		}
+
+		accumulatedStakesForVoteOut[subjectAddr] = accumulated;
+	}
 
 	function isVotedOut(address addr) private view returns (bool) {
 		return votedOutGuardians[addr];
