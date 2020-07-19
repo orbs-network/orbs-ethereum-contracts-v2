@@ -45,22 +45,39 @@ export class Web3Driver{
 
     async deploy<N extends keyof Contracts>(contractName: N, args: any[], options?: any, session?: Web3Session) {
         session = session || this.defaultSession;
-        try {
-            const abi = compiledContracts[contractName].abi;
-            const accounts = await this.web3.eth.getAccounts();
-            let web3Contract = await new this.web3.eth.Contract(abi).deploy({
-                data: compiledContracts[contractName].bytecode,
-                arguments: args || []
-            }).send({
-                from: accounts[0],
-                ...(options || {})
-            });
+
+        const abi = compiledContracts[contractName].abi;
+        const accounts = await this.web3.eth.getAccounts();
+        let web3Contract;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+                web3Contract = await new this.web3.eth.Contract(abi).deploy({
+                    data: compiledContracts[contractName].bytecode,
+                    arguments: args || []
+                }).send({
+                    from: accounts[0],
+                    gasPrice: 1000000000,
+                    ...(options || {})
+                });
+            } catch (e) {
+                if (/Invalid JSON RPC response/.exec(e.toString())) {
+                    this.log(`Failed deploying "${contractName}", retrying`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+
+                console.log("Failed deploying " + contractName + ": " + e.toString());
+                this.refresh();
+                throw e;
+            }
+
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
+            this.log("Deployed " + contractName);
+
             return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
-        } catch (e) {
-            this.refresh();
-            throw e;
         }
+
+        throw new Error(`Failed deploying contract ${contractName} after 5 attempts`);
     }
 
     getExisting<N extends keyof Contracts>(contractName: N, contractAddress: string, session?: Web3Session) {
@@ -72,7 +89,15 @@ export class Web3Driver{
     }
 
     async txTimestamp(r: TransactionReceipt): Promise<number> {
-        return (await this.eth.getBlock(r.blockNumber)).timestamp as number;
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const block = await this.eth.getBlock(r.blockNumber);
+            if (block != null ) {
+                return block.timestamp as number;
+            }
+            console.log(`web3.eth.getBlock returned null for block ${r.blockNumber}, retrying..`);
+        }
+
+        throw new Error("web3.eth.getBlock failed after 5 attempts");
     }
 
     getContract(address: string){
@@ -89,6 +114,12 @@ export class Web3Driver{
         this.web3 = this.web3Provider();
         for (const entry of this.contracts.values()){
             entry.web3Contract = null;
+        }
+    }
+
+    log(s: string) {
+        if (process.env.WEB3_DRIVER_VERBOSE) {
+            console.log(s);
         }
     }
 
@@ -112,6 +143,8 @@ export class Contract {
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
+        this.web3.log(`calling method: ${method}`);
+
         const accounts = await this.web3.eth.getAccounts();
         let opts = {};
         if (args.length > 0 && JSON.stringify(args[args.length - 1])[0] == '{') {
@@ -119,19 +152,31 @@ export class Contract {
         }
         args = args.map(x => BN.isBN(x) ? x.toString() : Array.isArray(x) ? x.map(_x => BN.isBN(_x) ? _x.toString() : _x) : x);
         const action = methodAbi.stateMutability == "view" ? "call" : "send";
-        try {
-            const ret = await this.web3Contract.methods[method](...args)[action]({
-                from: accounts[0],
-                gas: 0x7fffffff,
-                ...opts
-            });
+        for (let attempt = 0; attempt < 5; attempt++) {
+            let ret;
+            try {
+                ret = await this.web3Contract.methods[method](...args)[action]({
+                    from: accounts[0],
+                    gasPrice: 1000000000,
+                    gas: 10000000,
+                    ...opts
+                });
+            } catch(e) {
+                this.web3.log(`error calling ${method}: ${e.toString()}`);
+                if (/Invalid JSON RPC response/.exec(e.toString())) {
+                    this.web3.log(`Calling contract method "${method}" failed, retrying`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+                this.web3.refresh();
+                throw e;
+            }
             if (action == "send") {
                 this.session.gasRecorder.record(ret);
             }
             return ret;
-        } catch(e) {
-            this.web3.refresh();
-            throw e;
         }
+
+        throw new Error(`Calling contract method "${method}" failed after 5 attempts`);
     }
 }
