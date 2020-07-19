@@ -17,13 +17,13 @@ export interface ElectionsContract extends OwnedContract {
   getAccumulatedStakesForVoteOut(address: string): Promise<BN>;
 
   setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setMaxDelegationRatio(maxDelegationRatio: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setMinSelfStakePercentMille(minSelfStakePercentMille: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteOutPercentageThreshold(voteOutPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   getSettings(params?: TransactionConfig): Promise<[
     number|BN /* voteOutTimeoutSeconds */,
-    number|BN /* maxDelegationRatio */,
+    number|BN /* minSelfStakePercentMille */,
     number|BN /* voteOutPercentageThreshold */,
     number|BN /* banningPercentageThreshold */
   ]>;
@@ -60,7 +60,7 @@ export interface  VoteOutTimeoutSecondsChangedEvent {
   oldValue: string|BN,
 }
 
-export interface  MaxDelegationRatioChangedEvent {
+export interface  MinSelfStakePercentMilleChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }

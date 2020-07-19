@@ -19,7 +19,7 @@ contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctio
 	}
 	CommitteeMember[] public committee;
 
-	struct MemberData { // TODO can be reduced to 1 state entry
+	struct MemberData {
 		uint96 weight;
 		uint8 pos;
 		bool isMember;

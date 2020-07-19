@@ -19,7 +19,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	// Governance
 	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
-	event MaxDelegationRatioChanged(uint32 newValue, uint32 oldValue);
+	event MinSelfStakePercentMilleChanged(uint32 newValue, uint32 oldValue);
 	event VoteOutLockTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
 	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
 	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);

@@ -513,4 +513,18 @@ describe('delegations-contract', async () => {
         });
         expect(r).to.not.have.a.delegatedStakeChangedEvent();
     });
+
+    it('does not fail a delegation to the same guardian', async () => {
+       const d = await Driver.new();
+
+       const p = d.newParticipant();
+       const v = d.newParticipant();
+
+       await p.delegate(p);
+       await p.delegate(p);
+       await p.delegate(v);
+       await p.delegate(v);
+       await p.delegate(p);
+       await p.delegate(p);
+    });
 });

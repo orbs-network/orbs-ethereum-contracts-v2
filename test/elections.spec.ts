@@ -363,8 +363,8 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-    it('enforces effective stake limit of x-times the own stake', async () => {
-        const d = await Driver.new({maxCommitteeSize: 2, maxDelegationRatio: 10});
+    it('enforces effective stake limit defined by minSelfStakePercentMille', async () => {
+        const d = await Driver.new({maxCommitteeSize: 2, minSelfStakePercentMille: 10000});
 
         const v1 = d.newParticipant();
         const v2 = d.newParticipant();
@@ -757,7 +757,7 @@ describe('elections-high-level-flows', async () => {
 
         const current = await d.elections.getSettings();
         const voteOutTimeoutSeconds  = bn(current[0]);
-        const maxDelegationRatio  = bn(current[1]);
+        const minSelfStakePercentMille  = bn(current[1]);
         const voteOutPercentageThreshold  = bn(current[2]);
         const banningPercentageThreshold  = bn(current[3]);
 
@@ -768,11 +768,11 @@ describe('elections-high-level-flows', async () => {
             oldValue: voteOutTimeoutSeconds.toString()
         });
 
-        await expectRejected(d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.migrationOwner.address}));
-        r = await d.elections.setMaxDelegationRatio(maxDelegationRatio.add(bn(1)), {from: d.functionalOwner.address});
-        expect(r).to.have.a.maxDelegationRatioChangedEvent({
-            newValue: maxDelegationRatio.add(bn(1)).toString(),
-            oldValue: maxDelegationRatio.toString()
+        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationOwner.address}));
+        r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalOwner.address});
+        expect(r).to.have.a.minSelfStakePercentMilleChangedEvent({
+            newValue: minSelfStakePercentMille.add(bn(1)).toString(),
+            oldValue: minSelfStakePercentMille.toString()
         });
 
         await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
@@ -792,7 +792,7 @@ describe('elections-high-level-flows', async () => {
         const afterUpdate = await d.elections.getSettings();
         expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3]]).to.deep.eq([
             voteOutTimeoutSeconds.add(bn(1)).toString(),
-            maxDelegationRatio.add(bn(1)).toString(),
+            minSelfStakePercentMille.add(bn(1)).toString(),
             voteOutPercentageThreshold.add(bn(1)).toString(),
             banningPercentageThreshold.add(bn(1)).toString()
         ]);
