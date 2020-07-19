@@ -83,6 +83,8 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor, WithClaimableFunct
     /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract).
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
         uint256 bucket = _bucketTime(fromTimestamp);
+        require(bucket >= _bucketTime(now), "FeeWallet::cannot fill bucket from the past");
+
         uint256 _amount = amount;
 
         // add the partial amount to the first bucket

@@ -13,7 +13,7 @@ import {
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
-import {FeesAddedToBucketEvent} from "../typings/rewards-contract";
+import {FeesAddedToBucketEvent} from "../typings/fees-wallet-contract";
 import {RewardsAssignedEvent} from "../typings/guardians-wallet-contract";
 
 chai.use(require('chai-bn')(BN));

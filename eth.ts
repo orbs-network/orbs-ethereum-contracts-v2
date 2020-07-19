@@ -112,7 +112,6 @@ export class Contract {
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
-        console.log('callContractMethod ' + method);
         const accounts = await this.web3.eth.getAccounts();
         let opts = {};
         if (args.length > 0 && JSON.stringify(args[args.length - 1])[0] == '{') {

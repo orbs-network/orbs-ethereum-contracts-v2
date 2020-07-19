@@ -5,7 +5,7 @@ import {compiledContracts} from "../compiled-contracts";
 import {
     FeesAddedToBucketEvent,
     FeesWithdrawnFromBucketEvent
-} from "../typings/rewards-contract";
+} from "../typings/fees-wallet-contract";
 
 const elections = compiledContracts["Elections"];
 const committee = compiledContracts["Committee"];

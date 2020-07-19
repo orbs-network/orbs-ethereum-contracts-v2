@@ -59,9 +59,9 @@ import {
   StakingRewardsDistributedEvent
 } from "../typings/guardians-wallet-contract";
 import {
-  FeesAddedToBucketEvent,
+  FeesAddedToBucketEvent, FeesWithdrawnFromBucketEvent,
 
-} from "../typings/rewards-contract";
+} from "../typings/fees-wallet-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -208,6 +208,7 @@ declare global {
       maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
+      feesWithdrawnFromBucketEvent(data?: Partial<FeesWithdrawnFromBucketEvent>);
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       guardianStatusUpdatedEvent(data?: Partial<GuardianStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
