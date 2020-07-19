@@ -33,7 +33,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
     const g = d.newParticipant();
     const poolAmount = fromTokenUnits(1000000);
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
     tlog("Staking pools topped up");
@@ -74,7 +74,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
 
 describe('gas usage scenarios', async () => {
-    it("New delegator stake increase, lowest committee member gets to top", async () => {
+    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommittee();
 
         const delegator = d.newParticipant("delegator");
@@ -96,7 +96,7 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
     });
 
-    it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
+    it.only("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
         const {d, committee} = await fullCommittee();
 
         await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
@@ -115,7 +115,7 @@ describe('gas usage scenarios', async () => {
         // const ge = gasReportEvents(r);
         // ge.forEach(e => console.log(JSON.stringify(e)));
 
-        d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
+        d.logGasUsageSummary("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", [delegator]);
     });
 
     it("Delegation change, top of committee and bottom committee switch places", async () => {
