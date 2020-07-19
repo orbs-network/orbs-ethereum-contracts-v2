@@ -126,7 +126,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
             uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
             for (uint i = 0; i < committee.length; i++) {
-                assignedRewards[i] = weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days);
+                assignedRewards[i] = toUint256Granularity(toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days)));
                 totalStakingRewards += assignedRewards[i];
             }
         }

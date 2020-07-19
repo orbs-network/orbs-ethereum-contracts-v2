@@ -35,8 +35,8 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
-    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount,{from: g.address});
 
     // create committee
 
@@ -86,7 +86,7 @@ describe('staking-rewards', async () => {
 
     expect(assignRewardTxRes).to.have.a.rewardsAssignedEvent({
       assignees: guardians.map(v => v.v.address),
-      stakingRewards: totalOrbsRewardsArr
+      stakingRewards: totalOrbsRewardsArr.map(x => x.toString())
     });
 
     const orbsBalances:BN[] = [];
@@ -145,7 +145,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address}); // todo monthly to annual
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     // create committee
@@ -259,7 +259,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
@@ -522,7 +522,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
@@ -586,7 +586,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
@@ -643,7 +643,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
@@ -749,7 +749,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.stakingRewardsWallet.address);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);

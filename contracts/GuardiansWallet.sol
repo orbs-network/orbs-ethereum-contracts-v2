@@ -36,42 +36,30 @@ contract GuardiansWallet is IGuardiansWallet, ContractRegistryAccessor, WithClai
         bootstrapToken = _bootstrapToken;
     }
 
-    struct AssignRewardsToGuardiansVars {
+    function assignRewardsToGuardians(address[] calldata guardians, uint256[] calldata stakingRewards, uint256[] calldata fees, uint256[] calldata bootstrapRewards) external {
         uint totalBootstrapRewards;
         uint totalFees;
         uint totalStakingRewards;
-    }
-
-    function assignRewardsToGuardians(address[] calldata guardians, uint256[] calldata stakingRewards, uint256[] calldata fees, uint256[] calldata bootstrapRewards) external {
-        AssignRewardsToGuardiansVars memory vars;
         Balance memory balance;
 
-        uint48 amount48;
-        uint amount;
         for (uint i = 0; i < guardians.length; i++) {
             balance = balances[guardians[i]];
 
-            amount48 = toUint48Granularity(bootstrapRewards[i]);
-            amount = toUint256Granularity(amount48);
-            balance.bootstrapRewards += amount48;
-            vars.totalBootstrapRewards = vars.totalBootstrapRewards.add(amount);
+            balance.bootstrapRewards += toUint48Granularity(bootstrapRewards[i]);
+            totalBootstrapRewards = totalBootstrapRewards.add(bootstrapRewards[i]);
 
-            amount48 = toUint48Granularity(fees[i]);
-            amount = toUint256Granularity(amount48);
-            balance.fees += amount48;
-            vars.totalFees = vars.totalFees.add(amount);
+            balance.fees += toUint48Granularity(fees[i]);
+            totalFees = totalFees.add(fees[i]);
 
-            amount48 = toUint48Granularity(stakingRewards[i]);
-            amount = toUint256Granularity(amount48);
-            balance.stakingRewards += amount48;
-            vars.totalStakingRewards = vars.totalStakingRewards.add(amount);
+            balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
+            totalStakingRewards = totalStakingRewards.add(stakingRewards[i]);
 
             balances[guardians[i]] = balance;
         }
 
-        feesToken.transferFrom(msg.sender, address(this), vars.totalFees);
-        bootstrapToken.transferFrom(msg.sender, address(this), vars.totalBootstrapRewards);
-        stakingToken.transferFrom(msg.sender,  address(this), vars.totalStakingRewards);
+        feesToken.transferFrom(msg.sender, address(this), totalFees);
+        bootstrapToken.transferFrom(msg.sender, address(this), totalBootstrapRewards);
+        stakingToken.transferFrom(msg.sender,  address(this), totalStakingRewards);
 
         emit RewardsAssigned(guardians, stakingRewards, fees, bootstrapRewards);
     }
