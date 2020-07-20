@@ -13,7 +13,7 @@ interface IFeesWallet {
 
     /// @dev collect fees from the buckets since the last call and approves the amount back to the given address.
     /// Called by: only Rewards contract.
-    function collectFees(address approveTo) external returns (uint256 collectedFees) /* onlyRewardsContract */;
+    function collectFees() external returns (uint256 collectedFees) /* onlyRewardsContract */;
 
     /*
      *   External methods

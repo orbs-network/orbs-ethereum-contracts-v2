@@ -71,7 +71,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         IGuardiansWallet guardiansWallet = getGuardiansWallet();
 
         (uint256[] memory bootstrapRewards, uint256 totalBootstrapRewards) = collectBootstrapRewards(_settings, committee, certification);
-        (uint256[] memory fees, uint256 totalGeneralFees, uint256 totalCertifiedFees) = collectFees(committee, certification);
+        (uint256[] memory fees, uint256 totalFees) = collectFees(committee, certification);
         (uint256[] memory stakingRewards, uint256 totalStakingRewards) = collectStakingRewards(committee, committeeWeights, _settings);
 
         lastAssignedAt = now;
@@ -81,9 +81,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         stakingRewardsWallet.approve(address(guardiansWallet), totalStakingRewards);
         bootstrapRewardsWallet.approve(address(guardiansWallet), totalBootstrapRewards);
 
-        erc20.transferFrom(address(getGeneralFeesWallet()), address(this), totalGeneralFees);
-        erc20.transferFrom(address(getCertifiedFeesWallet()), address(this), totalCertifiedFees);
-        erc20.approve(address(guardiansWallet), totalGeneralFees.add(totalCertifiedFees));
+        erc20.approve(address(guardiansWallet), totalFees);
 
         guardiansWallet.assignRewardsToGuardians(committee, stakingRewards, address(stakingRewardsWallet), fees, address(this), bootstrapRewards, address(bootstrapRewardsWallet));
     }
@@ -135,23 +133,17 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
     }
 
-    function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256[] memory fees, uint256 totalGeneralFees, uint256 totalCertifiedFees) {
-        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees(address(this));
-        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees(address(this));
+    function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256[] memory fees, uint256 totalFees) {
+        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees();
+        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees();
 
         uint256 generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
-        uint256 certifiedGuardianFee = divideFees(committee, certification, certificationFeePoolAmount, true);
+        uint256 certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
 
         fees = new uint256[](committee.length);
-        uint fee;
         for (uint i = 0; i < committee.length; i++) {
-            fee = generalGuardianFee;
-            totalGeneralFees = totalGeneralFees.add(generalGuardianFee);
-            if (certification[i]) {
-                fee = fee.add(certifiedGuardianFee);
-                totalCertifiedFees = totalCertifiedFees.add(certifiedGuardianFee);
-            }
-            fees[i] = fee;
+            fees[i] = certification[i] ? certifiedGuardianFee : generalGuardianFee;
+            totalFees = totalFees.add(fees[i]);
         }
     }
 

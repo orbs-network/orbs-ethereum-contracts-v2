@@ -39,7 +39,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor, WithClaimableFunct
 
     /// @dev collect fees from the buckets since the last call and transfers the amount back.
     /// Called by: only Rewards contract.
-    function collectFees(address approveTo) external onlyRewardsContract returns (uint256 collectedFees)  {
+    function collectFees() external onlyRewardsContract returns (uint256 collectedFees)  {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -72,7 +72,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor, WithClaimableFunct
 
         lastCollectedAt = _lastCollectedAt;
 
-        require(token.approve(approveTo, collectedFees), "FeesWallet::failed to approve collected fees"); // TODO in that case, transfer the remaining balance?
+        require(token.transfer(msg.sender, collectedFees), "FeesWallet::failed to transfer collected fees to rewards"); // TODO in that case, transfer the remaining balance?
     }
 
     /*
