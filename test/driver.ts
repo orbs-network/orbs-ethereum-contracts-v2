@@ -45,7 +45,7 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     web3Provider: defaultWeb3Provider,
 };
 
-export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet';
+export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet';
 
 export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
@@ -59,7 +59,7 @@ export class Driver {
         public accounts: string[],
         public elections: Contracts["Elections"],
         public erc20: Contracts["TestingERC20"],
-        public externalToken: Contracts["TestingERC20"],
+        public bootstrapToken: Contracts["TestingERC20"],
         public staking: Contracts["StakingContract"],
         public delegations: Contracts["Delegations"],
         public subscriptions: Contracts["Subscriptions"],
@@ -70,6 +70,9 @@ export class Driver {
         public committee: Contracts['Committee'],
         public stakingRewardsWallet: Contracts['ProtocolWallet'],
         public bootstrapRewardsWallet: Contracts['ProtocolWallet'],
+        public guardiansWallet: Contracts['GuardiansWallet'],
+        public generalFeesWallet: Contracts['FeesWallet'],
+        public certifiedFeesWallet: Contracts['FeesWallet'],
         public contractRegistry: Contracts["ContractRegistry"]
     ) {}
 
@@ -108,6 +111,9 @@ export class Driver {
         const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
         const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
         const guardiansRegistration = await web3.deploy('GuardiansRegistration', [], null, session);
+        const guardiansWallet = await web3.deploy('GuardiansWallet', [erc20.address, erc20.address, externalToken.address, 100000], null, session);
+        const generalFeesWallet = await web3.deploy('FeesWallet', [erc20.address], null, session);
+        const certifiedFeesWallet = await web3.deploy('FeesWallet', [erc20.address], null, session);
 
         await contractRegistry.set("staking", staking.address);
         await contractRegistry.set("rewards", rewards.address);
@@ -120,6 +126,9 @@ export class Driver {
         await contractRegistry.set("committee", committee.address);
         await contractRegistry.set("stakingRewardsWallet", stakingRewardsWallet.address);
         await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
+        await contractRegistry.set("guardiansWallet", guardiansWallet.address);
+        await contractRegistry.set("generalFeesWallet", generalFeesWallet.address);
+        await contractRegistry.set("certifiedFeesWallet", certifiedFeesWallet.address);
         await contractRegistry.set("_bootstrapToken", externalToken.address);
         await contractRegistry.set("_erc20", erc20.address);
 
@@ -131,6 +140,9 @@ export class Driver {
         await certification.setContractRegistry(contractRegistry.address);
         await guardiansRegistration.setContractRegistry(contractRegistry.address);
         await committee.setContractRegistry(contractRegistry.address);
+        await guardiansWallet.setContractRegistry(contractRegistry.address);
+        await generalFeesWallet.setContractRegistry(contractRegistry.address);
+        await certifiedFeesWallet.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
 
@@ -145,13 +157,15 @@ export class Driver {
             committee,
             contractRegistry,
             stakingRewardsWallet,
-            bootstrapRewardsWallet
+            bootstrapRewardsWallet,
+            guardiansWallet,
+            generalFeesWallet,
+            certifiedFeesWallet
         ].map(async (c: OwnedContract) => {
             await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})
         }));
 
-        await rewards.setMaxDelegatorsStakingRewardsPercentMille(100000, {from: accounts[1]}); // TODO remove when setting in constructor
         await stakingRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
         await bootstrapRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
 
@@ -170,6 +184,9 @@ export class Driver {
             committee,
             stakingRewardsWallet,
             bootstrapRewardsWallet,
+            guardiansWallet,
+            generalFeesWallet,
+            certifiedFeesWallet,
             contractRegistry
         );
     }
@@ -189,7 +206,10 @@ export class Driver {
         const committee = await web3.getExisting('Committee', await contractRegistry.get('committee'), session);
         const guardiansRegistration = await web3.getExisting('GuardiansRegistration', await contractRegistry.get('guardiansRegistration'), session);
         const stakingRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
-        const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('stakingRewardsWallet'), session);
+        const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('bootstrapRewardsWallet'), session);
+        const generalFeesWallet = await web3.getExisting('FeesWallet', await contractRegistry.get('generalFeesWallet'), session);
+        const certifiedFeesWallet = await web3.getExisting('FeesWallet', await contractRegistry.get('certifiedFeesWallet'), session);
+        const guardiansWallet = await web3.getExisting('GuardiansWallet', await contractRegistry.get('guardiansWallet'), session);
 
         return new Driver(web3, session,
             accounts,
@@ -206,6 +226,9 @@ export class Driver {
             committee,
             stakingRewardsWallet,
             bootstrapRewardsWallet,
+            guardiansWallet,
+            generalFeesWallet,
+            certifiedFeesWallet,
             contractRegistry
         );
     }
@@ -322,7 +345,7 @@ export class Participant {
     }
 
     async assignAndApproveExternalToken(amount: number|BN, to: string) {
-        return this.assignAndApprove(amount, to, this.driver.externalToken);
+        return this.assignAndApprove(amount, to, this.driver.bootstrapToken);
     }
 
     async unstake(amount: number|BN) {

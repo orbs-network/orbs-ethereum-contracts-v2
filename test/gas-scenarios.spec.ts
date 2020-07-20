@@ -31,18 +31,17 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, minSelfStakePercentMille: 0});
     tlog("Driver created");
 
+    const g = d.newParticipant();
     const poolAmount = fromTokenUnits(1000000);
-    await d.erc20.assign(d.accounts[0], poolAmount);
-    await d.erc20.approve(d.rewards.address, poolAmount);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
-    await d.rewards.topUpStakingRewardsPool(poolAmount);
     tlog("Staking pools topped up");
 
-    await d.externalToken.assign(d.accounts[0], poolAmount);
-    await d.externalToken.approve(d.rewards.address, poolAmount);
+    await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
+    await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
     await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-    await d.rewards.topUpBootstrapPool(poolAmount);
     tlog("Bootstrap pools topped up");
 
     let committee: Participant[] = [];
@@ -111,12 +110,12 @@ describe('gas usage scenarios', async () => {
             addr: committee[committee.length - 1].address
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
+        expect(r).to.not.have.a.rewardsAssignedEvent();
 
         // const ge = gasReportEvents(r);
         // ge.forEach(e => console.log(JSON.stringify(e)));
 
-        d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
+        d.logGasUsageSummary("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", [delegator]);
     });
 
     it("Delegation change, top of committee and bottom committee switch places", async () => {
@@ -330,10 +329,10 @@ describe('gas usage scenarios', async () => {
             return delegator;
         }));
 
-        const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
+        const balance = bn(await d.guardiansWallet.getStakingRewardBalance(v.address));
 
         d.resetGasRecording();
-        await d.rewards.distributeOrbsTokenStakingRewards(
+        await d.guardiansWallet.distributeStakingRewards(
             balance.div(bn(batchSize)).mul(bn(batchSize)),
             0,
             100,
