@@ -11,9 +11,9 @@ interface IFeesWallet {
     event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total);
     event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
 
-    /// @dev collect fees from the buckets since the last call and transfers the amount back.
+    /// @dev collect fees from the buckets since the last call and approves the amount back to the given address.
     /// Called by: only Rewards contract.
-    function collectFees() external returns (uint256 collectedFees) /* onlyRewardsContract */;
+    function collectFees(address approveTo) external returns (uint256 collectedFees) /* onlyRewardsContract */;
 
     /*
      *   External methods

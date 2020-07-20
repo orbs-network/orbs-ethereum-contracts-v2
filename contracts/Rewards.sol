@@ -68,21 +68,24 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
 
     function _assignRewardsToCommittee(address[] memory committee, uint256[] memory committeeWeights, bool[] memory certification) private {
         Settings memory _settings = settings;
+        IGuardiansWallet guardiansWallet = getGuardiansWallet();
 
         (uint256[] memory bootstrapRewards, uint256 totalBootstrapRewards) = collectBootstrapRewards(_settings, committee, certification);
-        (uint256[] memory fees, uint256 totalFees) = collectFees(committee, certification);
+        (uint256[] memory fees, uint256 totalGeneralFees, uint256 totalCertifiedFees) = collectFees(committee, certification);
         (uint256[] memory stakingRewards, uint256 totalStakingRewards) = collectStakingRewards(committee, committeeWeights, _settings);
 
         lastAssignedAt = now;
 
-        getStakingRewardsWallet().withdraw(totalStakingRewards);
-        getBootstrapRewardsWallet().withdraw(totalBootstrapRewards);
+        IProtocolWallet stakingRewardsWallet = getStakingRewardsWallet();
+        IProtocolWallet bootstrapRewardsWallet = getBootstrapRewardsWallet();
+        stakingRewardsWallet.approve(address(guardiansWallet), totalStakingRewards);
+        bootstrapRewardsWallet.approve(address(guardiansWallet), totalBootstrapRewards);
 
-        IGuardiansWallet guardianWallet = getGuardiansWallet();
-        erc20.approve(address(guardianWallet), totalStakingRewards.add(totalFees));
-        bootstrapToken.approve(address(guardianWallet), totalBootstrapRewards);
+        erc20.transferFrom(address(getGeneralFeesWallet()), address(this), totalGeneralFees);
+        erc20.transferFrom(address(getCertifiedFeesWallet()), address(this), totalCertifiedFees);
+        erc20.approve(address(guardiansWallet), totalGeneralFees.add(totalCertifiedFees));
 
-        guardianWallet.assignRewardsToGuardians(committee, stakingRewards, fees, bootstrapRewards);
+        guardiansWallet.assignRewardsToGuardians(committee, stakingRewards, address(stakingRewardsWallet), fees, address(this), bootstrapRewards, address(bootstrapRewardsWallet));
     }
 
     function collectBootstrapRewards(Settings memory _settings, address[] memory committee, bool[] memory certification) private view returns (uint256[] memory bootstrapRewards, uint256 totalBootstrapRewards){
@@ -132,17 +135,23 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
     }
 
-    function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256[] memory fees, uint256 totalFees) {
-        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees();
-        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees();
+    function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256[] memory fees, uint256 totalGeneralFees, uint256 totalCertifiedFees) {
+        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees(address(this));
+        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees(address(this));
 
         uint256 generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
-        uint256 certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
+        uint256 certifiedGuardianFee = divideFees(committee, certification, certificationFeePoolAmount, true);
 
         fees = new uint256[](committee.length);
+        uint fee;
         for (uint i = 0; i < committee.length; i++) {
-            fees[i] = certification[i] ? certifiedGuardianFee : generalGuardianFee;
-            totalFees = totalFees.add(fees[i]);
+            fee = generalGuardianFee;
+            totalGeneralFees = totalGeneralFees.add(generalGuardianFee);
+            if (certification[i]) {
+                fee = fee.add(certifiedGuardianFee);
+                totalCertifiedFees = totalCertifiedFees.add(certifiedGuardianFee);
+            }
+            fees[i] = fee;
         }
     }
 
@@ -156,14 +165,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
         if (n > 0) {
             guardianFee = toUint256Granularity(toUint48Granularity(amount.div(n)));
-        }
-
-        uint256 remainder = amount.sub(guardianFee.mul(n));
-        if (remainder > 0) {
-            // TODO probably an overkill...
-            IFeesWallet wallet = isCertified ? getCertifiedFeesWallet() : getGeneralFeesWallet();
-            erc20.approve(address(wallet), remainder);
-            wallet.fillFeeBuckets(now, remainder, remainder);
         }
     }
 

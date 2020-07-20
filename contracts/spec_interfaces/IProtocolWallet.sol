@@ -27,7 +27,7 @@ interface IProtocolWallet {
     /// Flow:
     /// PoolWallet.approveTransfer(amount);
     /// ERC20.transferFrom(PoolWallet, client, amount)
-    function withdraw(uint256 amount) external; /* onlyClient */
+    function approve(address spender, uint256 amount) external; /* onlyClient */
 
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.

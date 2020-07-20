@@ -35,7 +35,14 @@ export interface RewardsAssignedEvent {
 }
 
 export interface GuardiansWalletContract extends OwnedContract {
-    assignRewardsToGuardians(guardians: string[], stakingRewards: (number|BN)[], fees: (number|BN)[], bootstrapRewards: (number|BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
+    assignRewardsToGuardians(guardians: string[],
+                             stakingRewards: (number|BN)[],
+                             stakingRewardsWallet: string,
+                             fees: (number|BN)[],
+                             feesWallet: string,
+                             bootstrapRewards: (number|BN)[],
+                             bootstrapRewardsWallet: string,
+                             params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // staking rewards
     distributeStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;

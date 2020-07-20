@@ -74,7 +74,26 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
 
 describe('gas usage scenarios', async () => {
-    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
+    it.only("Reward assignment (existing balances)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const delegator = d.newParticipant("delegator");
+        await delegator.delegate(committee[committee.length - 1]);
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+        await d.rewards.assignRewards({from: delegator.address});
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+        d.resetGasRecording();
+        let r = await d.rewards.assignRewards({from: delegator.address});
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("Reward assignment", [delegator]);
+    });
+
+    it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommittee();
 
         const delegator = d.newParticipant("delegator");

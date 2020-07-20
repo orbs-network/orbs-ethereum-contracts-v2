@@ -25,7 +25,7 @@ export interface ProtocolWalletContract extends OwnedContract {
   getToken(params?: TransactionConfig): Promise<string>;
   getBalance(params?: TransactionConfig): Promise<string>;
   topUp(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  withdraw(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  approve(spender: string, amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMaxAnnualRate(annualRate: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
   setClient(client: string, params?: TransactionConfig): Promise<TransactionReceipt>;

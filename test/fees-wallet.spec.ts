@@ -127,7 +127,9 @@ describe('fees-wallet-contract', async () => {
     const collector = d.newParticipant();
     await d.contractRegistry.set("rewards", collector.address, {from: d.functionalOwner.address});
 
-    const startTime = await d.web3.txTimestamp(await d.generalFeesWallet.collectFees({from: collector.address}));
+    const spender = d.newParticipant();
+
+    const startTime = await d.web3.txTimestamp(await d.generalFeesWallet.collectFees(spender.address, {from: collector.address}));
 
     const now = await d.web3.txTimestamp(rNow);
     const rate = bn(10000000);
@@ -135,29 +137,28 @@ describe('fees-wallet-contract', async () => {
 
     await evmIncreaseTime(d.web3, 60);
 
-    let r1 = await d.generalFeesWallet.collectFees({from: collector.address});
+    let r1 = await d.generalFeesWallet.collectFees(spender.address,{from: collector.address});
     let duration = await d.web3.txTimestamp(r1) - startTime;
     const expected1 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
-    expect(bn(await d.erc20.balanceOf(collector.address))).to.bignumber.eq(expected1);
+    expect(bn(await d.erc20.allowence(d.generalFeesWallet.address, spender.address))).to.bignumber.eq(expected1);
 
     await evmIncreaseTime(d.web3, 60*60);
 
-    let r2 = await d.generalFeesWallet.collectFees({from: collector.address});
+    let r2 = await d.generalFeesWallet.collectFees(spender.address,{from: collector.address});
     duration = await d.web3.txTimestamp(r2) - await d.web3.txTimestamp(r1);
     const expected2 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
-    expect(bn(await d.erc20.balanceOf(collector.address))).to.bignumber.eq(expected1.add(expected2));
+    expect(bn(await d.erc20.allowence(d.generalFeesWallet.address, spender.address))).to.bignumber.eq(expected2);
 
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS);
 
-    let r3 = await d.generalFeesWallet.collectFees({from: collector.address});
+    let r3 = await d.generalFeesWallet.collectFees(spender.address,{from: collector.address});
     duration = await d.web3.txTimestamp(r3) - await d.web3.txTimestamp(r2);
-    const expected3 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
-    let totalExpected = expected1.add(expected2).add(expected3);
-    const currentBalance: BN = bn(await d.erc20.balanceOf(collector.address));
-    if (totalExpected.sub(currentBalance).abs().lt(bn(10))) {
-      totalExpected = currentBalance; // Allow a rounding error;
+    let expected3 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
+    const currentAllowence: BN = bn(await d.erc20.allowence(d.generalFeesWallet.address, spender.address));
+    if (expected3.sub(currentAllowence).abs().lt(bn(10))) {
+      expected3 = currentAllowence; // Allow a rounding error;
     }
-    expect(currentBalance).to.bignumber.eq(totalExpected);
+    expect(currentAllowence).to.bignumber.eq(expected3);
   });
 
   it('only rewards contract can collect fees', async () => {
@@ -166,12 +167,14 @@ describe('fees-wallet-contract', async () => {
     const {v: assigner, r: rNow} = await d.newGuardian(1, false, false, true);
     await assigner.assignAndApproveOrbs(30, d.generalFeesWallet.address);
 
+    const spender = d.newParticipant();
+
     const now = await d.web3.txTimestamp(rNow);
     await d.generalFeesWallet.fillFeeBuckets(30, 10, now, {from: assigner.address});
-    await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}));
+    await expectRejected(d.generalFeesWallet.collectFees(spender.address, {from: assigner.address}));
 
     await d.contractRegistry.set("rewards", assigner.address, {from: d.functionalOwner.address});
-    await d.generalFeesWallet.collectFees({from: assigner.address});
+    await d.generalFeesWallet.collectFees(spender.address,{from: assigner.address});
   });
 
   it('performs emergency withdrawal only by the migration manager', async () => {

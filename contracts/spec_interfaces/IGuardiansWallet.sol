@@ -8,7 +8,15 @@ interface IGuardiansWallet {
 
     /// @dev Assigns rewards to the Guardians balances.
     /// Assumes approve of the funds transfer prior to the call
-    function assignRewardsToGuardians(address[] calldata guardians, uint256[] calldata stakingRewards, uint256[] calldata fees, uint256[] calldata bootstrapRewards) external;
+    function assignRewardsToGuardians(
+        address[] calldata guardians,
+        uint256[] calldata stakingRewards,
+        address stakingRewardsWallet,
+        uint256[] calldata fees,
+        address feesWallet,
+        uint256[] calldata bootstrapRewards,
+        address bootstrapRewardsWallet
+    ) external;
 
     // Staking
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);

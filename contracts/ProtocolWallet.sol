@@ -49,14 +49,14 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     /// Flow:
     /// PoolWallet.approveTransfer(amount);
     /// ERC20.transferFrom(PoolWallet, client, amount)
-    function withdraw(uint256 amount) external onlyClient {
+    function approve(address spender, uint256 amount) external onlyClient {
         uint duration = now - lastApprovedAt;
         uint maxAmount = duration.mul(annualRate).div(365 * 24 * 60 * 60);
         require(amount <= maxAmount, "ProtocolWallet:approve - requested amount is larger than allowed by rate");
 
         lastApprovedAt = now;
         if (amount > 0) {
-            require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
+            require(token.approve(spender, amount), "ProtocolWallet::approve - approval failed");
         }
     }
 

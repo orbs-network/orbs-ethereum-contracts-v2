@@ -36,30 +36,34 @@ contract GuardiansWallet is IGuardiansWallet, ContractRegistryAccessor, WithClai
         bootstrapToken = _bootstrapToken;
     }
 
-    function assignRewardsToGuardians(address[] calldata guardians, uint256[] calldata stakingRewards, uint256[] calldata fees, uint256[] calldata bootstrapRewards) external {
+    struct AssignRewardsToGuardians {
         uint totalBootstrapRewards;
         uint totalFees;
         uint totalStakingRewards;
-        Balance memory balance;
+        Balance balance;
+    }
+
+    function assignRewardsToGuardians(address[] calldata guardians, uint256[] calldata stakingRewards, address stakingRewardsWallet, uint256[] calldata fees, address feesWallet, uint256[] calldata bootstrapRewards, address bootstrapRewardsWallet) external {
+        AssignRewardsToGuardians memory vars;
 
         for (uint i = 0; i < guardians.length; i++) {
-            balance = balances[guardians[i]];
+            vars.balance = balances[guardians[i]];
 
-            balance.bootstrapRewards += toUint48Granularity(bootstrapRewards[i]);
-            totalBootstrapRewards = totalBootstrapRewards.add(bootstrapRewards[i]);
+            vars.balance.bootstrapRewards += toUint48Granularity(bootstrapRewards[i]);
+            vars.totalBootstrapRewards = vars.totalBootstrapRewards.add(bootstrapRewards[i]);
 
-            balance.fees += toUint48Granularity(fees[i]);
-            totalFees = totalFees.add(fees[i]);
+            vars.balance.fees += toUint48Granularity(fees[i]);
+            vars.totalFees = vars.totalFees.add(fees[i]);
 
-            balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
-            totalStakingRewards = totalStakingRewards.add(stakingRewards[i]);
+            vars.balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
+            vars.totalStakingRewards = vars.totalStakingRewards.add(stakingRewards[i]);
 
-            balances[guardians[i]] = balance;
+            balances[guardians[i]] = vars.balance;
         }
 
-        feesToken.transferFrom(msg.sender, address(this), totalFees);
-        bootstrapToken.transferFrom(msg.sender, address(this), totalBootstrapRewards);
-        stakingToken.transferFrom(msg.sender,  address(this), totalStakingRewards);
+        feesToken.transferFrom(feesWallet, address(this), vars.totalFees);
+        bootstrapToken.transferFrom(bootstrapRewardsWallet, address(this), vars.totalBootstrapRewards);
+        stakingToken.transferFrom(stakingRewardsWallet,  address(this), vars.totalStakingRewards);
 
         emit RewardsAssigned(guardians, stakingRewards, fees, bootstrapRewards);
     }

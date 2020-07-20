@@ -221,6 +221,7 @@ declare global {
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
       rewardsAssignedEvent(data?: Partial<RewardsAssignedEvent>);
       transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>)
+      approvalEvent(data?: Partial<{owner: string, spender: string, value: string|BN}>)
 
       withinContract(contract: Contract): Assertion;
     }

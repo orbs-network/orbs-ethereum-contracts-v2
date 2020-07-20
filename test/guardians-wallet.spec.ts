@@ -46,8 +46,11 @@ describe('guardians-wallet-contract', async () => {
     let r = await d.guardiansWallet.assignRewardsToGuardians(
         guardians.map(v => v.address),
         stakingRewards,
+        assigner.address,
         fees,
-        bootstrapRewards
+        assigner.address,
+        bootstrapRewards,
+        assigner.address
     , {from: assigner.address});
     expect(r).to.have.a.rewardsAssignedEvent({
       assignees: guardians.map(v => v.address),
@@ -83,8 +86,11 @@ describe('guardians-wallet-contract', async () => {
     let r = await d.guardiansWallet.assignRewardsToGuardians(
         guardians.map(v => v.address),
         stakingRewards,
+        assigner.address,
         fees,
-        bootstrapRewards
+        assigner.address,
+        bootstrapRewards,
+        assigner.address
     , {from: assigner.address});
 
     await d.guardiansWallet.withdrawFees({from: guardians[0].address});
@@ -143,9 +149,13 @@ describe('guardians-wallet-contract', async () => {
     let r = await d.guardiansWallet.assignRewardsToGuardians(
         guardians.map(v => v.address),
         stakingRewards,
+        assigner.address,
         fees,
-        bootstrapRewards
-        , {from: assigner.address});
+        assigner.address,
+        bootstrapRewards,
+        assigner.address,
+        {from: assigner.address}
+    );
 
     await expectRejected(d.guardiansWallet.emergencyWithdraw({from: d.functionalOwner.address}));
     r = await d.guardiansWallet.emergencyWithdraw({from: d.migrationOwner.address});
