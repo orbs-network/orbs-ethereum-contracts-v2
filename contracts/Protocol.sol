@@ -32,7 +32,7 @@ contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctiona
         deploymentSubsets[deploymentSubset].fromTimestamp = now;
         deploymentSubsets[deploymentSubset].exists = true;
 
-        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now); // TODO different event?
+        emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now);
     }
 
     function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyFunctionalOwner onlyWhenActive {
