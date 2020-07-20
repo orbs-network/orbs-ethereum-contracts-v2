@@ -219,12 +219,7 @@ describe('fees-wallet-contract', async () => {
         total: bucket.total,
       });
     }
-
-    await expectRejected(d.generalFeesWallet.emergencyWithdraw({from: d.functionalOwner.address}));
-    r = await d.generalFeesWallet.emergencyWithdraw({from: d.migrationOwner.address});
-    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
-
-    expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.eq(amount);
+    expect(await d.erc20.balanceOf(newFeesWallet.address)).to.bignumber.eq(bn(amount));
   });
 
 });

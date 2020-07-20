@@ -115,6 +115,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor, WithClaimableFunct
     function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external {
         require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
         fillFeeBucket(bucketStartTime, amount);
+        require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet on bucket migration");
     }
 
     /*
@@ -133,7 +134,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor, WithClaimableFunct
         buckets[bucketStartTime] = 0;
         emit FeesWithdrawnFromBucket(bucketStartTime, bucketAmount, 0);
 
-        token.approve(address(destination), buckets[bucketStartTime]);
+        token.approve(address(destination), bucketAmount);
         destination.acceptBucketMigration(bucketStartTime, bucketAmount);
     }
 
