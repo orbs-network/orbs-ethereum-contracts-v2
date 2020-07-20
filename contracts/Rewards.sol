@@ -157,14 +157,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (n > 0) {
             guardianFee = toUint256Granularity(toUint48Granularity(amount.div(n)));
         }
-
-        uint256 remainder = amount.sub(guardianFee.mul(n));
-        if (remainder > 0) {
-            // TODO probably an overkill...
-            IFeesWallet wallet = isCertified ? getCertifiedFeesWallet() : getGeneralFeesWallet();
-            erc20.approve(address(wallet), remainder);
-            wallet.fillFeeBuckets(now, remainder, remainder);
-        }
     }
 
 }

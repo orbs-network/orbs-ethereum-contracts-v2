@@ -74,7 +74,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
 
 describe('gas usage scenarios', async () => {
-    it.only("New delegator stake increase, lowest committee member gets to top", async () => {
+    it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommittee();
 
         const delegator = d.newParticipant("delegator");
@@ -96,7 +96,7 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
     });
 
-    it.only("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
+    it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
         const {d, committee} = await fullCommittee();
 
         await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
