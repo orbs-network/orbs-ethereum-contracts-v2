@@ -34,5 +34,25 @@ describe('testkit', async () => {
     expect(firstDriver.certification.address).to.equal(secondDriver.certification.address);
     expect(firstDriver.guardiansRegistration.address).to.equal(secondDriver.guardiansRegistration.address);
     expect(firstDriver.committee.address).to.equal(secondDriver.committee.address);
-  })
+  });
+
+  it('should instantiate a new driver object using existing tokens and staking contracts', async () => {
+    const dd = await Driver.new();
+
+    const stakingContractAddress = dd.newParticipant().address;
+    const orbsTokenAddress =  dd.newParticipant().address;
+    const bootstrapTokenAddress =  dd.newParticipant().address;
+
+    const d = await Driver.new({
+      stakingContractAddress,
+      orbsTokenAddress,
+      bootstrapTokenAddress
+    });
+
+    expect(d.staking.address).to.equal(stakingContractAddress);
+    expect(d.erc20.address).to.equal(orbsTokenAddress);
+    expect(d.externalToken.address).to.equal(bootstrapTokenAddress);
+  });
+
+
 });

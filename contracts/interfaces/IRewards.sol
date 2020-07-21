@@ -95,6 +95,9 @@ interface IRewards {
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
     function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
 
+    event EmergencyWithdrawal(address addr);
+
+    function emergencyWithdraw() external /* onlyMigrationManager */;
 
     /*
      * General governance

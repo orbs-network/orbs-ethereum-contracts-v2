@@ -86,6 +86,8 @@ export interface RewardsContract extends OwnedContract {
     withdrawBootstrapFunds(params?: TransactionConfig): Promise<TransactionReceipt>;
     getBootstrapBalance(address: string): Promise<string>;
 
+    emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
+
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // fees

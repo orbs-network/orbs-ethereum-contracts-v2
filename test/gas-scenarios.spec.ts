@@ -10,7 +10,7 @@ import {
 import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
-import {gasReportEvents} from "./event-parsing";
+import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
 
@@ -313,7 +313,8 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommittee(true);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.rewards.assignRewards();
+        let r = await d.rewards.assignRewards();
+        console.log(feesAssignedEvents(r));
 
         await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
 
