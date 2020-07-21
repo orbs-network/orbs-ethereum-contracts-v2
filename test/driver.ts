@@ -49,7 +49,7 @@ export type DriverOptions = {
 
     web3Provider : () => Web3;
 
-    contractRegistryAddress?: string;
+    contractRegistryForExistingContractsAddress?: string;
     orbsTokenAddress?: string;
     bootstrapTokenAddress?: string;
     stakingContractAddress?: string;
@@ -157,15 +157,15 @@ export class Driver {
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
-        const { web3Provider, contractRegistryAddress } = Object.assign({}, defaultDriverOptions, options);
+        const { web3Provider, contractRegistryForExistingContractsAddress } = Object.assign({}, defaultDriverOptions, options);
 
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
         const session = new Web3Session();
         const accounts = await web3.eth.getAccounts();
 
-        if (contractRegistryAddress) {
-            return await this.withExistingContracts(web3, contractRegistryAddress, session, accounts);
+        if (contractRegistryForExistingContractsAddress) {
+            return await this.withExistingContracts(web3, contractRegistryForExistingContractsAddress, session, accounts);
         } else {
             return await this.withFreshContracts(web3, accounts, session, options);
         }
@@ -246,8 +246,8 @@ export class Driver {
             :
             await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
         
-        const stakingRewardsWallet = options.stakingContractAddress ?
-            await web3.getExisting('ProtocolWallet', options.stakingContractAddress, session)
+        const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
+            await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
             await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
         
