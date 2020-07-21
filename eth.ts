@@ -82,9 +82,6 @@ export class Web3Driver{
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
             this.log("Deployed " + contractName + " at " + web3Contract.options.address);
 
-            const tx = await this.web3.eth.getTransactionReceipt(txHash);
-            session.gasRecorder.record(tx);
-
             return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
         }
 
