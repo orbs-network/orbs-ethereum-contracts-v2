@@ -12,6 +12,7 @@ export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
 const GAS_PRICE = parseInt(process.env.GAS_PRICE  || '1000000000'); // 1 Gwei
+const GAS_PRICE_DEPLOY = parseInt(process.env.GAS_PRICE_DEPLOY  || `${GAS_PRICE}`); // 1 Gwei
 
 export class Web3Session {
      gasRecorder: GasRecorder = new GasRecorder();
@@ -59,7 +60,7 @@ export class Web3Driver{
                     arguments: args || []
                 }).send({
                     from: accounts[0],
-                    gasPrice: GAS_PRICE,
+                    gasPrice: GAS_PRICE_DEPLOY,
                     ...(options || {})
                 }, (err, _txHash) => {
                     if (!err) {
