@@ -1,6 +1,18 @@
 import {betaDriverOptions, Driver} from "./test/driver";
 import {Contracts} from "./typings/contracts";
 
+async function printGetters(contractName, contract) {
+    for (let k of Object.keys(contract)) {
+        if (k.startsWith("get") && typeof contract[k] === "function") {
+            try {
+                const res = await contract[k]();
+                console.log(contractName, k, "=>>", JSON.stringify(res));
+            } catch (e) {
+            }
+        }
+    }
+}
+
 async function main() {
     const d = await Driver.new(betaDriverOptions);
     // const d = await Driver.new();
@@ -26,6 +38,23 @@ async function main() {
     console.log("bootstrapRewardsWallet", d.bootstrapRewardsWallet.address);
     console.log("contractRegistry", d.contractRegistry.address);
     console.log("monthlySubscriptionPlan", d.subscribers[0].address);
+
+    console.log("\n\n**************************** contract getters: ****************************\n\n");
+    await printGetters("elections", d.elections);
+    await printGetters("erc20", d.erc20);
+    await printGetters("externalToken", d.externalToken);
+    await printGetters("staking", d.staking);
+    await printGetters("delegations", d.delegations);
+    await printGetters("subscriptions", d.subscriptions);
+    await printGetters("rewards", d.rewards);
+    await printGetters("protocol", d.protocol);
+    await printGetters("certification", d.certification);
+    await printGetters("guardiansRegistration", d.guardiansRegistration);
+    await printGetters("committee", d.committee);
+    await printGetters("stakingRewardsWallet", d.stakingRewardsWallet);
+    await printGetters("bootstrapRewardsWallet", d.bootstrapRewardsWallet);
+    await printGetters("contractRegistry", d.contractRegistry);
+    await printGetters("monthlySubscriptionPlan", d.subscribers[0]);
 }
 
 main()

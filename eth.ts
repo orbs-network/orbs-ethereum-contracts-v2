@@ -11,7 +11,7 @@ export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
-const GAS_PRICE = process.env.GAS_PRICE || 1000000000;
+const GAS_PRICE = parseInt(process.env.GAS_PRICE  || '1000000000'); // 1 Gwei
 
 export class Web3Session {
      gasRecorder: GasRecorder = new GasRecorder();
@@ -79,7 +79,7 @@ export class Web3Driver{
             }
 
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
-            this.log("Deployed " + contractName);
+            this.log("Deployed " + contractName + " at " + web3Contract.options.address);
 
             const tx = await this.web3.eth.getTransactionReceipt(txHash);
             session.gasRecorder.record(tx);
