@@ -120,11 +120,6 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     bootstrapTokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
     stakingContractAddress: "0x01D59Af68E2dcb44e04C50e05F62E7043F2656C3",
 
-    // PreDeployedContracts
-    contractRegistryAddress: "0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83",
-    delegationsAddress: "0xBb5B5E9333e155cad6fe299B18dED3F4107EF294",
-    rewardsAddress: "0x16De66Ca1135a997f17679c0CdF09d49223F5B20",
-
     web3Provider: defaultWeb3Provider,
 };
 
@@ -235,7 +230,7 @@ export class Driver {
             await web3.getExisting('Protocol', options.protocolAddress, session)
             :
             await web3.deploy('Protocol', [], null, session);
-        
+
         const certification = options.certificationAddress ?
             await web3.getExisting('Certification', options.certificationAddress, session)
             :
@@ -245,17 +240,17 @@ export class Driver {
             await web3.getExisting('Committee', options.committeeAddress, session)
             :
             await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
-        
+
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
             await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
-        
+
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
             await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
-            
+
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
             :

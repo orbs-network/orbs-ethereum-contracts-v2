@@ -14,7 +14,15 @@ async function printGetters(contractName, contract) {
 }
 
 async function main() {
-    const d = await Driver.new(betaDriverOptions);
+    // const d = await Driver.new(betaDriverOptions);
+    const d = await Driver.new({
+        ...betaDriverOptions,
+
+        // PreDeployedContracts
+        contractRegistryAddress: "0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83",
+        delegationsAddress: "0xBb5B5E9333e155cad6fe299B18dED3F4107EF294",
+        rewardsAddress: "0x16De66Ca1135a997f17679c0CdF09d49223F5B20",
+    });
     // const d = await Driver.new();
     // const accounts = [d.accounts[0], d.accounts[1], d.accounts[2]];
     // for (const acc of accounts) {
