@@ -21,7 +21,7 @@ describe('elections-certification', async () => {
         const voteOutThreshold = 80;
         const maxCommitteeSize = 10;
 
-        const d = await Driver.new({maxCommitteeSize, voteOutThreshold});
+        const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold: voteOutThreshold});
 
         const generalCommittee: Participant[] = [];
         const certificationCommittee: Participant[] = [];
@@ -49,7 +49,7 @@ describe('elections-certification', async () => {
         const voteOutThreshold = 80;
         const maxCommitteeSize = 10;
 
-        const d = await Driver.new({maxCommitteeSize, voteOutThreshold});
+        const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold: voteOutThreshold});
 
         const generalCommittee: Participant[] = [];
         const certificationCommittee: Participant[] = [];
@@ -77,7 +77,7 @@ describe('elections-certification', async () => {
         const voteOutThreshold = 80;
         const maxCommitteeSize = 10;
 
-        const d = await Driver.new({maxCommitteeSize, voteOutThreshold});
+        const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold: voteOutThreshold});
 
         const generalCommittee: Participant[] = [];
         const certificationCommittee: Participant[] = [];

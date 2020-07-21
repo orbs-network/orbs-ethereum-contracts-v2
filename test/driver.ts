@@ -29,9 +29,24 @@ export type DriverOptions = {
     maxCommitteeSize: number;
     minSelfStakePercentMille: number;
     maxTimeBetweenRewardAssignments: number;
+    voteUnreadyThreshold: number;
+    voteUnreadyTimeout: number;
     voteOutThreshold: number;
-    voteOutTimeout: number;
-    banningThreshold: number;
+
+    generalCommitteeAnnualBootstrap: number;
+    certificationCommitteeAnnualBootstrap: number;
+    stakingRewardsAnnualRateInPercentMille: number;
+    stakingRewardsAnnualCap: number;
+    maxDelegatorsStakingRewardsPercentMille: number;
+
+    stakingRewardsWalletRate: number;
+    bootstrapRewardsWalletRate: number;
+
+    subscriptionTier: string;
+    subscriptionRate: number;
+
+    genesisRefTimeDelay?: number;
+
     web3Provider : () => Web3;
 
     contractRegistryAddress?: string;
@@ -44,9 +59,55 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
     minSelfStakePercentMille : 0,
     maxTimeBetweenRewardAssignments: 0,
+    voteUnreadyThreshold : 80,
+    voteUnreadyTimeout : 24 * 60 * 60,
     voteOutThreshold : 80,
-    voteOutTimeout : 24 * 60 * 60,
-    banningThreshold : 80,
+
+    generalCommitteeAnnualBootstrap: 0,
+    certificationCommitteeAnnualBootstrap: 0,
+    stakingRewardsAnnualRateInPercentMille: 0,
+    stakingRewardsAnnualCap: 0,
+    maxDelegatorsStakingRewardsPercentMille: 100000,
+
+    stakingRewardsWalletRate: bn(2).pow(bn(94)).sub(bn(1)),
+    bootstrapRewardsWalletRate: bn(2).pow(bn(94)).sub(bn(1)),
+
+    subscriptionTier: "test1",
+    subscriptionRate: bn(100),
+
+    web3Provider: defaultWeb3Provider,
+};
+
+export const betaDriverOptions: Readonly<DriverOptions> = {
+    // Committee
+    maxCommitteeSize: 22,
+    maxTimeBetweenRewardAssignments: 2*24*60*60,
+
+    // Elections
+    minSelfStakePercentMille : 8000,
+    voteUnreadyThreshold : 70,
+    voteUnreadyTimeout : 7 * 24 * 60 * 60,
+    voteOutThreshold : 70,
+
+    // Rewards
+    generalCommitteeAnnualBootstrap: bn(12).mul(bn(10).pow(bn(18))),
+    certificationCommitteeAnnualBootstrap: bn(6).mul(bn(10).pow(bn(18))),
+    stakingRewardsAnnualRateInPercentMille: 12000,
+    stakingRewardsAnnualCap: bn(12000).mul(bn(10).pow(bn(18))),
+    maxDelegatorsStakingRewardsPercentMille: 66667,
+
+    // Protocol wallets
+    stakingRewardsWalletRate: bn(12000 * 1.1).mul(bn(10).pow(bn(18))), // staking rewards for entire committee + 10%
+    bootstrapRewardsWalletRate: bn((12 + 6) * 22).mul(bn(10).pow(bn(18))).mul(bn(11)).div(bn(10)), // bootstrap rewards for both certified and general, for entire committee + 10%
+
+    // Subscription plan
+    subscriptionTier: "beta1",
+    subscriptionRate: bn(100).mul(bn(10).pow(bn(18))),
+
+    orbsTokenAddress: "0xff56Cc6b1E6dEd347aA0B7676C85AB0B3D08B0FA",
+    bootstrapTokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
+    stakingContractAddress: "0x01D59Af68E2dcb44e04C50e05F62E7043F2656C3",
+
     web3Provider: defaultWeb3Provider,
 };
 
@@ -96,8 +157,21 @@ export class Driver {
     private static async withFreshContracts(web3, accounts, session, options: Partial<DriverOptions> = {}) {
         const {
             maxCommitteeSize,
-            minSelfStakePercentMille, voteOutThreshold, voteOutTimeout, banningThreshold,
-            maxTimeBetweenRewardAssignments
+            minSelfStakePercentMille, voteOutThreshold, voteUnreadyTimeout, voteUnreadyThreshold,
+            maxTimeBetweenRewardAssignments,
+            generalCommitteeAnnualBootstrap,
+            certificationCommitteeAnnualBootstrap,
+            stakingRewardsAnnualRateInPercentMille,
+            stakingRewardsAnnualCap,
+            maxDelegatorsStakingRewardsPercentMille,
+
+            stakingRewardsWalletRate,
+            bootstrapRewardsWalletRate,
+
+            subscriptionTier,
+            subscriptionRate,
+
+            genesisRefTimeDelay
         } = Object.assign({}, defaultDriverOptions, options);
         const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
 
@@ -119,7 +193,7 @@ export class Driver {
             await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
 
         const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
-        const elections = await web3.deploy("Elections", [minSelfStakePercentMille, voteOutThreshold, voteOutTimeout, banningThreshold], null, session);
+        const elections = await web3.deploy("Elections", [minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
         const subscriptions = await web3.deploy('Subscriptions', [erc20.address], null, session);
         const protocol = await web3.deploy('Protocol', [], null, session);
         const certification = await web3.deploy('Certification', [], null, session);
@@ -170,11 +244,21 @@ export class Driver {
             await c.claimFunctionalOwnership({from: accounts[1]})
         }));
 
-        await rewards.setMaxDelegatorsStakingRewardsPercentMille(100000, {from: accounts[1]}); // TODO remove when setting in constructor
-        await stakingRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
-        await bootstrapRewardsWallet.setMaxAnnualRate(bn(2).pow(bn(94)).sub(bn(1)));
+        // TODO remove when setting in constructor
+        await rewards.setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille, {from: accounts[1]});
+        await rewards.setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap, {from: accounts[1]});
+        await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: accounts[1]});
+        await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: accounts[1]});
+        await rewards.setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille, {from: accounts[1]});
 
-        return new Driver(web3, session,
+        await stakingRewardsWallet.setMaxAnnualRate(stakingRewardsWalletRate);
+        await bootstrapRewardsWallet.setMaxAnnualRate(bootstrapRewardsWalletRate);
+
+        if (genesisRefTimeDelay != null) {
+            await subscriptions.setGenesisRefTimeDelay(genesisRefTimeDelay);
+        }
+
+        const d = new Driver(web3, session,
             accounts,
             elections,
             erc20,
@@ -191,6 +275,11 @@ export class Driver {
             bootstrapRewardsWallet,
             contractRegistry
         );
+
+        await d.newSubscriber(subscriptionTier, subscriptionRate);
+        d.newParticipant("functionalOwner");
+
+        return d;
     }
 
     private static async withExistingContracts(web3, preExistingContractRegistryAddress, session, accounts) {
@@ -256,12 +345,15 @@ export class Driver {
         return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[1], this.accounts[1], this);
     }
 
+    subscribers: any[] = [];
+
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
         const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.erc20.address, tier, monthlyRate], null, this.session);
         await subscriber.setContractRegistry(this.contractRegistry.address);
         await subscriber.transferFunctionalOwnership(this.functionalOwner.address);
         await subscriber.claimFunctionalOwnership({from: this.functionalOwner.address});
         await this.subscriptions.addSubscriber(subscriber.address, {from: this.functionalOwner.address});
+        this.subscribers.push(subscriber);
         return subscriber;
     }
 
@@ -299,6 +391,8 @@ export class Driver {
         logTitle(`GAS USAGE SUMMARY - SCENARIO "${scenarioName}":`);
 
         if (!participants) console.log(`Root Account (${this.accounts[0]}): ${this.session.gasRecorder.gasUsedBy(this.accounts[0])}`);
+        if (!participants) console.log(`Accounts[1] (${this.accounts[1]}): ${this.session.gasRecorder.gasUsedBy(this.accounts[1])}`);
+        if (!participants) console.log(`Accounts[2] (${this.accounts[2]}): ${this.session.gasRecorder.gasUsedBy(this.accounts[2])}`);
         for (const p of (participants || this.participants)) {
             console.log(`${p.name} (${p.address};${p.orbsAddress}): ${p.gasUsed()}`);
         }

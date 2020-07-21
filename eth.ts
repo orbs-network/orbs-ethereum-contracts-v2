@@ -11,6 +11,8 @@ export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
+const GAS_PRICE = process.env.GAS_PRICE || 1000000000;
+
 export class Web3Session {
      gasRecorder: GasRecorder = new GasRecorder();
 }
@@ -21,7 +23,7 @@ export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
     0,
     400,
     false
-    ));
+));
 
 type ContractEntry = {
     web3Contract : Web3Contract | null;
@@ -29,7 +31,7 @@ type ContractEntry = {
 }
 export class Web3Driver{
     private web3 : Web3;
-    private contracts = new Map<string, ContractEntry>();
+    public contracts = new Map<string, ContractEntry>();
     private defaultSession = new Web3Session();
 
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
@@ -49,6 +51,7 @@ export class Web3Driver{
         const abi = compiledContracts[contractName].abi;
         const accounts = await this.web3.eth.getAccounts();
         let web3Contract;
+        let txHash;
         for (let attempt = 0; attempt < 5; attempt++) {
             try {
                 web3Contract = await new this.web3.eth.Contract(abi).deploy({
@@ -56,8 +59,12 @@ export class Web3Driver{
                     arguments: args || []
                 }).send({
                     from: accounts[0],
-                    gasPrice: 1000000000,
+                    gasPrice: GAS_PRICE,
                     ...(options || {})
+                }, (err, _txHash) => {
+                    if (!err) {
+                        txHash = _txHash;
+                    }
                 });
             } catch (e) {
                 if (/Invalid JSON RPC response/.exec(e.toString())) {
@@ -73,6 +80,9 @@ export class Web3Driver{
 
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
             this.log("Deployed " + contractName);
+
+            const tx = await this.web3.eth.getTransactionReceipt(txHash);
+            session.gasRecorder.record(tx);
 
             return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
         }
@@ -157,7 +167,7 @@ export class Contract {
             try {
                 ret = await this.web3Contract.methods[method](...args)[action]({
                     from: accounts[0],
-                    gasPrice: 1000000000,
+                    gasPrice: GAS_PRICE,
                     gas: 10000000,
                     ...opts
                 });
