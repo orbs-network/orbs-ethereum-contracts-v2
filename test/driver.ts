@@ -49,10 +49,22 @@ export type DriverOptions = {
 
     web3Provider : () => Web3;
 
-    contractRegistryAddress?: string;
+    contractRegistryForExistingContractsAddress?: string;
     orbsTokenAddress?: string;
     bootstrapTokenAddress?: string;
     stakingContractAddress?: string;
+
+    contractRegistryAddress?: string;
+    delegationsAddress?: string;
+    rewardsAddress?: string;
+    electionsAddress?: string;
+    subscriptionsAddress?: string;
+    protocolAddress?: string;
+    certificationAddress?: string;
+    committeeAddress?: string;
+    stakingRewardsWalletAddress?: string;
+    bootstrapRewardsWalletAddress?: string;
+    guardiansRegistrationAddress?: string;
 
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
@@ -108,6 +120,11 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     bootstrapTokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
     stakingContractAddress: "0x01D59Af68E2dcb44e04C50e05F62E7043F2656C3",
 
+    // PreDeployedContracts
+    contractRegistryAddress: "0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83",
+    delegationsAddress: "0xBb5B5E9333e155cad6fe299B18dED3F4107EF294",
+    rewardsAddress: "0x16De66Ca1135a997f17679c0CdF09d49223F5B20",
+
     web3Provider: defaultWeb3Provider,
 };
 
@@ -140,15 +157,15 @@ export class Driver {
     ) {}
 
     static async new(options: Partial<DriverOptions> = {}): Promise<Driver> {
-        const { web3Provider, contractRegistryAddress } = Object.assign({}, defaultDriverOptions, options);
+        const { web3Provider, contractRegistryForExistingContractsAddress } = Object.assign({}, defaultDriverOptions, options);
 
         const web3 = Driver.web3DriversCache.get(web3Provider) || new Web3Driver(web3Provider);
         Driver.web3DriversCache.set(web3Provider, web3);
         const session = new Web3Session();
         const accounts = await web3.eth.getAccounts();
 
-        if (contractRegistryAddress) {
-            return await this.withExistingContracts(web3, contractRegistryAddress, session, accounts);
+        if (contractRegistryForExistingContractsAddress) {
+            return await this.withExistingContracts(web3, contractRegistryForExistingContractsAddress, session, accounts);
         } else {
             return await this.withFreshContracts(web3, accounts, session, options);
         }
@@ -173,9 +190,16 @@ export class Driver {
 
             genesisRefTimeDelay
         } = Object.assign({}, defaultDriverOptions, options);
-        const contractRegistry = await web3.deploy('ContractRegistry', [accounts[0]], null, session);
 
-        const delegations = await web3.deploy("Delegations", [], null, session);
+        const contractRegistry = options.contractRegistryAddress ?
+            await web3.getExisting('ContractRegistry', options.contractRegistryAddress, session)
+            :
+            await web3.deploy('ContractRegistry', [accounts[0]], null, session);
+
+        const delegations = options.delegationsAddress ?
+            await web3.getExisting('Delegations', options.delegationsAddress, session)
+            :
+            await web3.deploy("Delegations", [], null, session);
 
         const externalToken = options.bootstrapTokenAddress ?
             await web3.getExisting('TestingERC20', options.bootstrapTokenAddress, session)
@@ -192,15 +216,50 @@ export class Driver {
             :
             await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
 
-        const rewards = await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
-        const elections = await web3.deploy("Elections", [minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
-        const subscriptions = await web3.deploy('Subscriptions', [erc20.address], null, session);
-        const protocol = await web3.deploy('Protocol', [], null, session);
-        const certification = await web3.deploy('Certification', [], null, session);
-        const committee = await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
-        const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
-        const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
-        const guardiansRegistration = await web3.deploy('GuardiansRegistration', [], null, session);
+        const rewards = options.rewardsAddress ?
+            await web3.getExisting('Rewards', options.rewardsAddress, session)
+            :
+            await web3.deploy('Rewards', [erc20.address, externalToken.address], null, session);
+
+        const elections = options.electionsAddress ?
+            await web3.getExisting('Elections', options.electionsAddress, session)
+            :
+            await web3.deploy("Elections", [minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
+
+        const subscriptions = options.subscriptionsAddress ?
+            await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
+            :
+            await web3.deploy('Subscriptions', [erc20.address], null, session);
+
+        const protocol = options.protocolAddress ?
+            await web3.getExisting('Protocol', options.protocolAddress, session)
+            :
+            await web3.deploy('Protocol', [], null, session);
+        
+        const certification = options.certificationAddress ?
+            await web3.getExisting('Certification', options.certificationAddress, session)
+            :
+            await web3.deploy('Certification', [], null, session);
+
+        const committee = options.committeeAddress ?
+            await web3.getExisting('Committee', options.committeeAddress, session)
+            :
+            await web3.deploy('Committee', [maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
+        
+        const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
+            await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
+            :
+            await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
+        
+        const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
+            await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
+            :
+            await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
+            
+        const guardiansRegistration = options.guardiansRegistrationAddress ?
+            await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
+            :
+            await web3.deploy('GuardiansRegistration', [], null, session);
 
         await contractRegistry.set("staking", staking.address);
         await contractRegistry.set("rewards", rewards.address);
