@@ -232,7 +232,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 				.sub(curStakeOwnerData.stake)
 				.add(updatedStakes[i]);
 
-				require(uint256(uint96(uint96(updatedStakes[i]))) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
+				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
 				stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
 			}
 
@@ -252,11 +252,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		uint256 prevUncappedStake = uncappedStakes[stakeOwnerData.delegation];
 
-		require(uint256(uint96(_updatedStake)) == _updatedStake, "Delegations::updatedStakes value too big (>96 bits)");
 		uint256 newUncappedStake = prevUncappedStake.sub(stakeOwnerData.stake).add(_updatedStake);
 
 		uncappedStakes[stakeOwnerData.delegation] = newUncappedStake;
 
+		require(uint256(uint96(_updatedStake)) == _updatedStake, "Delegations::updatedStakes value too big (>96 bits)");
 		stakeOwnersData[_stakeOwner].stake = uint96(_updatedStake);
 
 		bool isSelfDelegating = _isSelfDelegating(stakeOwnerData.delegation);
