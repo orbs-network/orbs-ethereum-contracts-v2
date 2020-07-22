@@ -10,6 +10,7 @@ interface IProtocolWallet {
     event ClientSet(address client);
     event MaxAnnualRateSet(uint256 maxAnnualRate);
     event EmergencyWithdrawal(address addr);
+    event OutstandingTokensReset();
 
     /// @dev Returns the address of the underlying staked token.
     /// @return IERC20 The address of the token.
@@ -24,9 +25,6 @@ interface IProtocolWallet {
 
     /// @dev Withdraw from pool to a the sender's address, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
-    /// Flow:
-    /// PoolWallet.approveTransfer(amount);
-    /// ERC20.transferFrom(PoolWallet, client, amount)
     function withdraw(uint256 amount) external; /* onlyClient */
 
     /* Governance */
