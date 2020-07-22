@@ -463,6 +463,7 @@ describe('delegations-contract', async () => {
         await d.staking.setStakeChangeNotifier(d.delegations.address);
         await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
 
+        await d.delegations.refreshStakeNotification(d1.address);
         const v = d.newParticipant();
         let r = await d1.delegate(v);
         expect(r).to.have.a.delegatedStakeChangedEvent({
@@ -472,6 +473,43 @@ describe('delegations-contract', async () => {
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v.address,
             delegatedStake: bn(100)
+        });
+    });
+
+    it('properly handles a stake change notifications when previous notifications were not given', async () => {
+        const d = await Driver.new();
+
+        const v = d.newParticipant();
+
+        const d1 = d.newParticipant();
+        await d1.stake(100);
+
+        let r = await d1.delegate(v);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: d1.address,
+            delegatedStake: bn(0)
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v.address,
+            delegatedStake: bn(100)
+        });
+
+        const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
+        await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
+
+        await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
+        await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
+
+        r = await d1.stake(200);
+        expect(r).to.not.have.withinContract(d.delegations).a.delegatedStakeChangedEvent();
+
+        await d.staking.setStakeChangeNotifier(d.delegations.address);
+        await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
+
+        r = await d1.stake(300);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v.address,
+            delegatedStake: bn(600)
         });
     });
 

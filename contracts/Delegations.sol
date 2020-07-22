@@ -16,12 +16,12 @@ import "./IStakeChangeNotifier.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
-	using SafeMath for uint128;
+	using SafeMath for uint96;
 
 	// TODO consider using structs instead of multiple mappings
 	struct StakeOwnerData {
 		address delegation;
-		bool isSelfStakeInitialized;
+		uint96 stake;
 	}
 	mapping (address => StakeOwnerData) stakeOwnersData;
 	mapping (address => uint256) uncappedStakes;
@@ -45,34 +45,35 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		uint256 uncappedStakes;
 		bool isSelfDelegating;
 		uint256 delegatedStake;
+        uint96 selfStake;
 	}
 
 	function getDelegateStatus(address addr) private view returns (DelegateStatus memory status) {
+        StakeOwnerData memory data = getStakeOwnerData(addr);
+
 		status.addr = addr;
 		status.uncappedStakes = uncappedStakes[addr];
-		status.isSelfDelegating = _isSelfDelegating(addr);
+		status.isSelfDelegating = data.delegation == addr;
+        status.selfStake = data.stake;
 		status.delegatedStake = status.isSelfDelegating ? status.uncappedStakes : 0;
 
 		return status;
 	}
 
 	function delegateFrom(address from, address to, bool notifyElections) private {
-		address prevDelegate = getDelegation(from);
+        require(to != address(0), "cannot delegate to a zero address");
 
-		require(to != address(0), "cannot delegate to a zero address");
+		StakeOwnerData memory delegatorData = getStakeOwnerData(from);
+        address prevDelegate = delegatorData.delegation;
 
 		DelegateStatus memory prevDelegateStatusBefore = getDelegateStatus(prevDelegate);
 		DelegateStatus memory newDelegateStatusBefore = getDelegateStatus(to);
 
 		stakeOwnersData[from].delegation = to;
 
-		uint256 delegatorStake = getStakingContract().getStakeBalanceOf(from);
+		uint256 delegatorStake = delegatorData.stake;
 
-		if (stakeOwnersData[from].isSelfStakeInitialized) {
-			uncappedStakes[prevDelegate] = prevDelegateStatusBefore.uncappedStakes.sub(delegatorStake);
-		} else {
-			stakeOwnersData[from].isSelfStakeInitialized = true;
-		}
+        uncappedStakes[prevDelegate] = prevDelegateStatusBefore.uncappedStakes.sub(delegatorStake);
 		uncappedStakes[to] = newDelegateStatusBefore.uncappedStakes.add(delegatorStake);
 
 		DelegateStatus memory prevDelegateStatusAfter = getDelegateStatus(prevDelegate);
@@ -90,10 +91,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		totalDelegatedStake = _totalDelegatedStake;
 
-		IStakingContract staking = getStakingContract();
-
-		uint256 prevDelegateSelfDelegatedStake = prevDelegateStatusAfter.isSelfDelegating ? staking.getStakeBalanceOf(prevDelegate) : 0;
-		uint256 newDelegateSelfDelegatedStake = newDelegateStatusAfter.isSelfDelegating ? staking.getStakeBalanceOf(to) : 0;
+		uint256 prevDelegateSelfDelegatedStake = prevDelegateStatusAfter.isSelfDelegating ? prevDelegateStatusAfter.selfStake : 0;
+		uint256 newDelegateSelfDelegatedStake = newDelegateStatusAfter.isSelfDelegating ? newDelegateStatusAfter.selfStake : 0;
 
 		if (notifyElections) {
 			IElections elections = getElectionsContract();
@@ -229,21 +228,21 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 				if (i != sequenceStartIdx) curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
 				if (sequenceDelegate != curStakeOwnerData.delegation) break;
 
-				if (!curStakeOwnerData.isSelfStakeInitialized) {
-					amounts[i] = updatedStakes[i];
-					signs[i] = true;
-					stakeOwnersData[stakeOwners[i]].isSelfStakeInitialized = true;
-				}
+                amounts[i] = updatedStakes[i] > curStakeOwnerData.stake ? updatedStakes[i].sub(curStakeOwnerData.stake) : curStakeOwnerData.stake.sub(updatedStakes[i]);
+                signs[i] = updatedStakes[i] > curStakeOwnerData.stake;
 
 				currentUncappedStake = signs[i] ?
 					currentUncappedStake.add(amounts[i]) :
 					currentUncappedStake.sub(amounts[i]);
+
+				require(uint256(uint96(uint96(updatedStakes[i]))) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
+                stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
 			}
 
 			// closing sequence
 			uncappedStakes[sequenceDelegate] = currentUncappedStake;
 			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
-			delegateSelfStake = getStakingContract().getStakeBalanceOf(sequenceDelegate);
+			delegateSelfStake = getStakeOwnerData(sequenceDelegate).stake;
 
 			if (_isSelfDelegating(sequenceDelegate)) {
 				totalDelegatedStake = totalDelegatedStake.sub(prevUncappedStake).add(currentUncappedStake);
@@ -256,11 +255,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		uint256 prevUncappedStake = uncappedStakes[stakeOwnerData.delegation];
 
-		if (!stakeOwnerData.isSelfStakeInitialized) {
-			_amount = _updatedStake;
-			_sign = true;
-			stakeOwnersData[_stakeOwner].isSelfStakeInitialized = true;
-		}
+        _amount = _updatedStake > stakeOwnerData.stake ? _updatedStake.sub(stakeOwnerData.stake) : stakeOwnerData.stake.sub(_updatedStake);
+        _sign = _updatedStake > stakeOwnerData.stake;
+
+		require(uint256(uint96(_updatedStake)) == _updatedStake, "Delegations::updatedStakes value too big (>96 bits)");
+		stakeOwnersData[_stakeOwner].stake = uint96(_updatedStake);
 
 		uint256 newUncappedStake = _sign ? prevUncappedStake.add(_amount) : prevUncappedStake.sub(_amount);
 
@@ -297,6 +296,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	function _isSelfDelegating(address addr) private view returns (bool) {
-		return  getDelegation(addr) == addr;
+		return getDelegation(addr) == addr;
 	}
 }

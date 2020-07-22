@@ -258,7 +258,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
+	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
 		if (selfStake == 0) {
 			return 0;
 		}

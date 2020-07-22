@@ -19,7 +19,7 @@ import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
 
 const baseStake = 100;
 
-describe('elections-high-level-flows', async () => {
+describe.only('elections-high-level-flows', async () => {
 
     it('emits events on readyForCommittee and readyToSync', async () => {
         const d = await Driver.new();
