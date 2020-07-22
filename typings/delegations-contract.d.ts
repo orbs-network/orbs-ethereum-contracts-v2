@@ -10,7 +10,8 @@ export interface DelegationsContract extends OwnedContract {
   importDelegations(from: string[], to: string[], notify: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
   finalizeDelegationImport(params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  refreshStakeNotification(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  refreshStake(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  notifyElections(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   // getters
   getDelegation(address: string): Promise<string>;

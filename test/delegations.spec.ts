@@ -451,29 +451,27 @@ describe('delegations-contract', async () => {
     it('properly handles a delegation when self stake of delegator is not yet initialized', async () => {
         const d = await Driver.new();
 
+        const d1 = d.newParticipant();
+        const {v} = await d.newGuardian(100, false, false, true);
+        await d1.delegate(v);
+
         const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
         await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
 
         await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
         await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
 
-        const d1 = d.newParticipant();
         await d1.stake(100);
 
         await d.staking.setStakeChangeNotifier(d.delegations.address);
         await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
 
-        await d.delegations.refreshStakeNotification(d1.address);
-        const v = d.newParticipant();
-        let r = await d1.delegate(v);
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: d1.address,
-            delegatedStake: bn(0)
-        });
+        let r = await d.delegations.refreshStake(d1.address);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v.address,
-            delegatedStake: bn(100)
+            delegatedStake: bn(200)
         });
+        expect(r).to.have.a.committeeSnapshotEvent({addrs: [v.address]});
     });
 
     it('properly handles a stake change notifications when previous notifications were not given', async () => {
@@ -544,7 +542,7 @@ describe('delegations-contract', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         // Next notification should include the updated stake
-        r = await d.delegations.refreshStakeNotification(v.address);
+        r = await d.delegations.notifyElections(v.address);
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v.address],
             weights: [bn(300)]

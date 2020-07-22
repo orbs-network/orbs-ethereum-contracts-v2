@@ -304,7 +304,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         approve(erc20, address(stakingContract), totalAmount_uint48);
         stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
-        getDelegationsContract().refreshStakeNotification(vars.guardianAddr);
+        getDelegationsContract().notifyElections(vars.guardianAddr);
 
         emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
