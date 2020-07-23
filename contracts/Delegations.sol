@@ -91,22 +91,19 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		totalDelegatedStake = _totalDelegatedStake;
 
-		uint256 prevDelegateSelfDelegatedStake = prevDelegateStatusAfter.selfDelegatedStake;
-		uint256 newDelegateSelfDelegatedStake = newDelegateStatusAfter.selfDelegatedStake;
-
 		if (notifyElections) {
 			IElections elections = getElectionsContract();
 
 			elections.delegatedStakeChange(
 				prevDelegate,
-				prevDelegateSelfDelegatedStake,
+				prevDelegateStatusAfter.selfDelegatedStake,
 				prevDelegateStatusAfter.delegatedStake,
 				_totalDelegatedStake
 			);
 
 			elections.delegatedStakeChange(
 				to,
-				newDelegateSelfDelegatedStake,
+			    newDelegateStatusAfter.selfDelegatedStake,
 				newDelegateStatusAfter.delegatedStake,
 				_totalDelegatedStake
 			);
@@ -115,8 +112,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit Delegated(from, to);
 
 		if (delegatorStake != 0 && prevDelegate != to) {
-			emitDelegatedStakeChanged(prevDelegate, from, 0, prevDelegateSelfDelegatedStake, prevDelegateStatusAfter.delegatedStake);
-			emitDelegatedStakeChanged(to, from, delegatorStake, newDelegateSelfDelegatedStake, newDelegateStatusAfter.delegatedStake);
+			emitDelegatedStakeChanged(prevDelegate, from, 0, prevDelegateStatusAfter.selfDelegatedStake, prevDelegateStatusAfter.delegatedStake);
+			emitDelegatedStakeChanged(to, from, delegatorStake, newDelegateStatusAfter.selfDelegatedStake, newDelegateStatusAfter.delegatedStake);
 		}
 	}
 
