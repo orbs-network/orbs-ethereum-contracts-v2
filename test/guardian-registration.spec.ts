@@ -210,45 +210,47 @@ describe('guardian-registration', async () => {
         , {from: v.address}));
   });
 
-  it("does not allow registration or update with missing mandatory fields (contact)", async () => {
+  it("allow registration or update with empty contact field", async () => {
     const d = await Driver.new();
 
     const v = d.newParticipant();
-
-    await expectRejected(d.guardiansRegistration.registerGuardian(
-        v.ip,
-        v.orbsAddress,
-        v.name,
-        v.website,
-        "",
-        {from: v.address}));
 
     let r = await d.guardiansRegistration.registerGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address});
+        "",
+        {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
     });
+    
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
       website: v.website,
-      contact: v.contact
+      contact: ""
     });
 
-    await expectRejected(d.guardiansRegistration.updateGuardian(
-        v.ip,
-        v.orbsAddress,
-        v.name,
-        v.website,
-        "",
-        {from: v.address}));
+    let r1 = await d.guardiansRegistration.updateGuardian(
+      v.ip,
+      v.orbsAddress,
+      v.name,
+      v.website,
+      "",
+      {from: v.address});
+
+    expect(r1).to.have.a.guardianDataUpdatedEvent({
+      addr: v.address,
+      ip: v.ip,
+      orbsAddr: v.orbsAddress,
+      name: v.name,
+      website: v.website,
+      contact: ""
+    });
   });
 
   it('does not allow registering using an IP of an existing guardian', async () => {
