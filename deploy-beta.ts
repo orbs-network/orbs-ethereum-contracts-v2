@@ -22,6 +22,14 @@ async function main() {
         contractRegistryAddress: "0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83",
         delegationsAddress: "0xBb5B5E9333e155cad6fe299B18dED3F4107EF294",
         rewardsAddress: "0x16De66Ca1135a997f17679c0CdF09d49223F5B20",
+        electionsAddress: "0xdA393f62303Ce1396D6F425cd7e85b60DaC8233e",
+        subscriptionsAddress: "0x3b2C72d0D5FC8A7346091f449487CD0A7F0954d6",
+        protocolAddress: "0xF6Cc041e1bb8C1431D419Bb88424324Af5Dd7866",
+        certificationAddress: "0x47c4AE9ceFb30AFBA85da9c2Fcd3125480770D9b",
+        committeeAddress: "0xBFB2bAC25daAabf79e5c94A8036b28c553ee75F5",
+        stakingRewardsWalletAddress: "0x7381179C5FdF9d509a9749e684fa58604E670F11",
+        bootstrapRewardsWalletAddress: "0xE4893F34d3F1cB45bfF426624A2dC938D132cd7b",
+        guardiansRegistrationAddress: "0xd095e7310616376BDeD74Afc7e0400E6d0894E6F",
     });
     // const d = await Driver.new();
     // const accounts = [d.accounts[0], d.accounts[1], d.accounts[2]];

@@ -256,30 +256,30 @@ export class Driver {
             :
             await web3.deploy('GuardiansRegistration', [], null, session);
 
-        await contractRegistry.set("staking", staking.address);
-        await contractRegistry.set("rewards", rewards.address);
-        await contractRegistry.set("delegations", delegations.address);
-        await contractRegistry.set("elections", elections.address);
-        await contractRegistry.set("subscriptions", subscriptions.address);
-        await contractRegistry.set("protocol", protocol.address);
-        await contractRegistry.set("certification", certification.address);
-        await contractRegistry.set("guardiansRegistration", guardiansRegistration.address);
-        await contractRegistry.set("committee", committee.address);
-        await contractRegistry.set("stakingRewardsWallet", stakingRewardsWallet.address);
-        await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
-        await contractRegistry.set("_bootstrapToken", externalToken.address);
-        await contractRegistry.set("_erc20", erc20.address);
+        // await contractRegistry.set("staking", staking.address);
+        // await contractRegistry.set("rewards", rewards.address);
+        // await contractRegistry.set("delegations", delegations.address);
+        // await contractRegistry.set("elections", elections.address);
+        // await contractRegistry.set("subscriptions", subscriptions.address);
+        // await contractRegistry.set("protocol", protocol.address);
+        // await contractRegistry.set("certification", certification.address);
+        // await contractRegistry.set("guardiansRegistration", guardiansRegistration.address);
+        // await contractRegistry.set("committee", committee.address);
+        // await contractRegistry.set("stakingRewardsWallet", stakingRewardsWallet.address);
+        // await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
+        // await contractRegistry.set("_bootstrapToken", externalToken.address);
+        // await contractRegistry.set("_erc20", erc20.address);
 
-        await protocol.setContractRegistry(contractRegistry.address);
-        await delegations.setContractRegistry(contractRegistry.address);
-        await elections.setContractRegistry(contractRegistry.address);
-        await rewards.setContractRegistry(contractRegistry.address);
-        await subscriptions.setContractRegistry(contractRegistry.address);
-        await certification.setContractRegistry(contractRegistry.address);
-        await guardiansRegistration.setContractRegistry(contractRegistry.address);
-        await committee.setContractRegistry(contractRegistry.address);
-
-        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
+        // await protocol.setContractRegistry(contractRegistry.address);
+        // await delegations.setContractRegistry(contractRegistry.address);
+        // await elections.setContractRegistry(contractRegistry.address);
+        // await rewards.setContractRegistry(contractRegistry.address);
+        // await subscriptions.setContractRegistry(contractRegistry.address);
+        // await certification.setContractRegistry(contractRegistry.address);
+        // await guardiansRegistration.setContractRegistry(contractRegistry.address);
+        // await committee.setContractRegistry(contractRegistry.address);
+        //
+        // await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
 
         await Promise.all([
             elections,
@@ -294,7 +294,7 @@ export class Driver {
             stakingRewardsWallet,
             bootstrapRewardsWallet
         ].map(async (c: OwnedContract) => {
-            await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
+            // await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})
         }));
 
