@@ -60,7 +60,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		return status;
 	}
 
-	function delegateFrom(address from, address to, bool notifyElections) private {
+	function delegateFrom(address from, address to, bool refreshStakeNotification) private {
 		require(to != address(0), "cannot delegate to a zero address");
 
 		StakeOwnerData memory delegatorData = getStakeOwnerData(from);
@@ -91,7 +91,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		totalDelegatedStake = _totalDelegatedStake;
 
-		if (notifyElections) {
+		if (refreshStakeNotification) {
 			IElections elections = getElectionsContract();
 
 			elections.delegatedStakeChange(
@@ -129,15 +129,15 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		_;
 	}
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool notifyElections) external onlyMigrationOwner onlyDuringDelegationImport {
+	function importDelegations(address[] calldata from, address[] calldata to, bool refreshStakeNotification) external onlyMigrationOwner onlyDuringDelegationImport {
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
-			_stakeChange(from[i], getStakingContract().getStakeBalanceOf(from[i]), notifyElections);
-			delegateFrom(from[i], to[i], notifyElections);
+			_stakeChange(from[i], getStakingContract().getStakeBalanceOf(from[i]), refreshStakeNotification);
+			delegateFrom(from[i], to[i], refreshStakeNotification);
 		}
 
-		emit DelegationsImported(from, to, notifyElections);
+		emit DelegationsImported(from, to, refreshStakeNotification);
 	}
 
 	function finalizeDelegationImport() external onlyMigrationOwner onlyDuringDelegationImport {
@@ -145,7 +145,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		emit DelegationImportFinalized();
 	}
 
-	function notifyElections(address addr) external onlyWhenActive {
+	function refreshStakeNotification(address addr) external onlyWhenActive {
 		StakeOwnerData memory stakeOwnerData = getStakeOwnerData(addr);
 		DelegateStatus memory delegateStatus = getDelegateStatus(stakeOwnerData.delegation);
 		getElectionsContract().delegatedStakeChange(
@@ -254,7 +254,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		}
 	}
 
-	function _stakeChange(address _stakeOwner, uint256 _updatedStake, bool _notifyElections) private {
+	function _stakeChange(address _stakeOwner, uint256 _updatedStake, bool _refreshStakeNotification) private {
 		StakeOwnerData memory stakeOwnerDataBefore = getStakeOwnerData(_stakeOwner);
 		DelegateStatus memory delegateStatus = getDelegateStatus(stakeOwnerDataBefore.delegation);
 
@@ -274,7 +274,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 		delegateStatus = getDelegateStatus(stakeOwnerDataBefore.delegation);
 
-		if (_notifyElections) {
+		if (_refreshStakeNotification) {
 			getElectionsContract().delegatedStakeChange(
 				stakeOwnerDataBefore.delegation,
 				delegateStatus.selfDelegatedStake,
