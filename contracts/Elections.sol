@@ -251,10 +251,6 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 	}
 
 	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
-		if (selfStake == 0) {
-			return 0;
-		}
-
 		if (selfStake.mul(100000) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
 			return delegatedStake;
 		}

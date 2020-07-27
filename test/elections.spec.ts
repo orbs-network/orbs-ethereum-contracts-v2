@@ -435,6 +435,37 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
+    it('guardian with zero self stake can have delegated stake when minSelfStakePercentMille == 0', async () => {
+        const d = await Driver.new({maxCommitteeSize: 2, minSelfStakePercentMille: 0});
+
+        const {v} = await d.newGuardian(0, false, false, true);
+        const delegator = d.newParticipant();
+        await delegator.stake(100);
+        let r = await delegator.delegate(v);
+        expect(r).to.have.a.stakeChangedEvent({
+            addr: v.address,
+            effective_stake: bn(100),
+        });
+        expect(r).to.have.a.committeeSnapshotEvent({
+            addrs: [v.address],
+            weights: [bn(100)],
+        });
+    });
+
+    it('guardian with zero self stake cannot have delegated stake when minSelfStakePercentMille > 0', async () => {
+        const d = await Driver.new({maxCommitteeSize: 2, minSelfStakePercentMille: 1});
+
+        const {v} = await d.newGuardian(0, false, false, true);
+        const delegator = d.newParticipant();
+        await delegator.stake(100);
+        let r = await delegator.delegate(v);
+        expect(r).to.have.a.stakeChangedEvent({
+            addr: v.address,
+            effective_stake: bn(0),
+        });
+        expect((await d.committee.getCommittee())[0].length).to.eq(0);
+    });
+
     it('ensures guardian who delegated cannot join committee even when owning enough stake', async () => {
         const d = await Driver.new();
         const v1 = d.newParticipant();
