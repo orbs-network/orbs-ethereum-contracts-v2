@@ -58,8 +58,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was registered
-	function guardianRegistered(address addr) external onlyGuardiansRegistrationContract {
-	}
+	function guardianRegistered(address addr) external {}
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was unregistered
@@ -250,7 +249,7 @@ contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctio
 		getCommitteeContract().memberWeightChange(addr, effectiveStake);
 	}
 
-	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private view returns (uint256) {
+	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
 		if (selfStake.mul(100000) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
 			return delegatedStake;
 		}

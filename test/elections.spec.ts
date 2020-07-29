@@ -625,7 +625,6 @@ describe('elections-high-level-flows', async () => {
             delegatorTotalStakes: [bn(rewards[2].amount), bn(rewards[3].amount), bn(rewards[4].amount)]
         });
 
-
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: c.address,
             selfDelegatedStake: bn(0),
