@@ -127,7 +127,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddrs) {
 		orbsAddrs = new address[](ethereumAddrs.length);
 		for (uint i = 0; i < ethereumAddrs.length; i++) {
-			require(isRegistered(ethereumAddrs[i]), "getOrbsAddresses: Guardian is not registered"); // todo: can be optimized, or maybe omit?
 			orbsAddrs[i] = guardians[ethereumAddrs[i]].orbsAddr;
 		}
 	}
@@ -138,7 +137,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		ethereumAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {
 			ethereumAddrs[i] = orbsAddressToEthereumAddress[orbsAddrs[i]];
-			require(ethereumAddrs[i] != address(0), "getEthereumAddresses: Guardian is not registered"); // todo: omit?
 		}
 	}
 
@@ -149,8 +147,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 	function _updateGuardian(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
 		require(bytes(name).length != 0, "name must be given");
-		require(bytes(contact).length != 0, "contact must be given");
-		// TODO which are mandatory?
 
 		delete ipToGuardian[guardians[guardianAddr].ip];
 		require(ipToGuardian[ip] == address(0), "ip is already in use");

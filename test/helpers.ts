@@ -60,10 +60,6 @@ export async function getTopBlockTimestamp(d: Driver) : Promise<number> {
     );
 }
 
-export async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
-    return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
-}
-
 export function fromTokenUnits(n: (number|BN)): BN {
     return bn(n).mul(bn("1000000000000000"));
 }

@@ -3,7 +3,7 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver, expectRejected} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits, txTimestamp} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits} from "./helpers";
 import {committeeSnapshotEvents} from "./event-parsing";
 
 chai.use(require('chai-bn')(BN));
@@ -51,7 +51,7 @@ describe('staking-rewards', async () => {
     await v2.stake(initStakeLarger);
     await v2.registerAsGuardian();
     let r = await v2.readyForCommittee();
-    const startTime = await txTimestamp(d.web3, r);
+    const startTime = await d.web3.txTimestamp(r);
 
     const guardians = [{
       v: v2,
@@ -69,7 +69,7 @@ describe('staking-rewards', async () => {
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardTxRes = await d.rewards.assignRewards();
-    const endTime = await txTimestamp(d.web3, assignRewardTxRes);
+    const endTime = await d.web3.txTimestamp(assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {
@@ -161,7 +161,7 @@ describe('staking-rewards', async () => {
     await v2.stake(initStakeLarger);
     await v2.registerAsGuardian();
     let r = await v2.readyForCommittee();
-    const startTime = await txTimestamp(d.web3, r);
+    const startTime = await d.web3.txTimestamp(r);
 
     const guardians = [{
       v: v1,
@@ -179,7 +179,7 @@ describe('staking-rewards', async () => {
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS*4);
 
     const assignRewardTxRes = await d.rewards.assignRewards();
-    const endTime = await txTimestamp(d.web3, assignRewardTxRes);
+    const endTime = await d.web3.txTimestamp(assignRewardTxRes);
     const elapsedTime = endTime - startTime;
 
     const calcRewards = () => {

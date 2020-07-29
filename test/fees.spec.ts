@@ -21,10 +21,6 @@ chai.use(require('./matchers'));
 
 const MONTH_IN_SECONDS = 30*24*60*60;
 
-async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
-  return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
-}
-
 const expect = chai.expect;
 
 async function sleep(ms): Promise<void> {
@@ -60,7 +56,7 @@ describe('fees-contract', async () => {
 
       let r = await subs.createVC(payment, isCertified, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
       const vcid = vcCreatedEvents(r)[0].vcid;
-      let startTime = await txTimestamp(d.web3, r);
+      let startTime = await d.web3.txTimestamp(r);
 
       const feeBuckets = feesAddedToBucketEvents(r, isCertified ? d.certifiedFeesWallet.address : d.generalFeesWallet.address);
 
@@ -128,7 +124,7 @@ describe('fees-contract', async () => {
     await evmIncreaseTime(d.web3, MONTH_IN_SECONDS*4);
 
     const assignFeesTxRes = await d.rewards.assignRewards();
-    const endTime = await txTimestamp(d.web3, assignFeesTxRes);
+    const endTime = await d.web3.txTimestamp(assignFeesTxRes);
 
     // Calculate expected rewards from VC fees
 
@@ -187,7 +183,7 @@ describe('fees-contract', async () => {
     await d.erc20.approve(subs.address, firstPayment, {from: appOwner.address});
 
     let r = await subs.createVC(firstPayment, false, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
-    let startTime = await txTimestamp(d.web3, r);
+    let startTime = await d.web3.txTimestamp(r);
     expect(r).to.have.a.subscriptionChangedEvent({
       expiresAt: bn(startTime + MONTH_IN_SECONDS * initialDurationInMonths)
     });
