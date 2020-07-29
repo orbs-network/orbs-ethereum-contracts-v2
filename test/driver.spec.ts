@@ -20,7 +20,7 @@ describe('testkit', async () => {
 
   it('should instantiate a new driver object using existing contracts', async () => {
     const firstDriver = await Driver.new({maxCommitteeSize: 4});
-    const secondDriver = await Driver.new({contractRegistryAddress: firstDriver.contractRegistry.address});
+    const secondDriver = await Driver.new({contractRegistryForExistingContractsAddress: firstDriver.contractRegistry.address});
 
     expect(firstDriver.contractRegistry.address).to.equal(secondDriver.contractRegistry.address);
     expect(firstDriver.elections.address).to.equal(secondDriver.elections.address);
