@@ -6,7 +6,6 @@ import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant, expectRejected} from "./dri
 import chai from "chai";
 import {
   feesAddedToBucketEvents,
-  rewardsAssignedEvents,
   subscriptionChangedEvents,
   vcCreatedEvents
 } from "./event-parsing";
@@ -14,7 +13,6 @@ import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helper
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 import {FeesAddedToBucketEvent} from "../typings/fees-wallet-contract";
-import {RewardsAssignedEvent} from "../typings/guardians-wallet-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));

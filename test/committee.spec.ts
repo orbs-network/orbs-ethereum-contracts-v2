@@ -541,11 +541,15 @@ describe('committee', async () => {
             weight: bn(1)
         });
         expect(r1).to.not.have.a.committeeSnapshotEvent();
-        expect(r1).to.not.have.a.rewardsAssignedEvent();
+        expect(r1).to.not.have.a.stakingRewardsAssignedEvent();
+        expect(r1).to.not.have.a.feesAssignedEvent();
+        expect(r1).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         let r = await c.stake(1);
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.rewardsAssignedEvent();
+        expect(r).to.not.have.a.stakingRewardsAssignedEvent();
+        expect(r).to.not.have.a.feesAssignedEvent();
+        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         await evmIncreaseTime(d.web3, maxTimeBetweenRewardAssignments);
 
@@ -558,9 +562,11 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [c.address]
         });
-        expect(r).to.have.a.rewardsAssignedEvent({
+        expect(r).to.have.a.stakingRewardsAssignedEvent({
             assignees: [c.address]
         });
+        expect(r).to.have.a.feesAssignedEvent({});
+        expect(r).to.have.a.bootstrapRewardsAssignedEvent({});
 
         r = await c.stake(1);
         expect(r).to.have.a.guardianCommitteeChangeEvent({
@@ -569,6 +575,8 @@ describe('committee', async () => {
             weight: bn(4)
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.rewardsAssignedEvent();
+        expect(r).to.not.have.a.stakingRewardsAssignedEvent();
+        expect(r).to.not.have.a.feesAssignedEvent();
+        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
     })
 });

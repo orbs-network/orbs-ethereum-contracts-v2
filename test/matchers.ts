@@ -26,6 +26,14 @@ import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
+  BootstrapRewardsWithdrawnEvent,
+  FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
+  StakingRewardAssignedEvent,
+  StakingRewardsDistributedEvent
+} from "../typings/rewards-contract";
+import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
+import {FeesAssignedEvent} from "../typings/rewards-contract";
+import {
   GuardianDataUpdatedEvent, GuardianMetadataChangedEvent,
   GuardianRegisteredEvent,
   GuardianUnregisteredEvent
@@ -52,12 +60,6 @@ import {
     FundsAddedToPoolEvent,
     MaxAnnualRateSetEvent
 } from "../typings/protocol-wallet-contract";
-import {
-  BootstrapRewardsWithdrawnEvent,
-  FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
-  RewardsAssignedEvent,
-  StakingRewardsDistributedEvent
-} from "../typings/guardians-wallet-contract";
 import {
   FeesAddedToBucketEvent, FeesWithdrawnFromBucketEvent,
 
@@ -152,7 +154,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
 
 const TransposeKeys = {
   "CommitteeSnapshot": "addrs",
-  "RewardsAssigned": "assignees",
+  "StakingRewardsAssigned": "assignees",
 };
 
 module.exports = function(chai) {
@@ -197,8 +199,11 @@ declare global {
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       guardianCertificationUpdateEvent(data?: Partial<GuardianCertificationUpdateEvent>)
+      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
       stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
+      feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
+      bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       voteUnreadyTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
       minSelfStakePercentMilleChangedEvent(data?: Partial<MinSelfStakePercentMilleChangedEvent>);
       voteOutPercentageThresholdChangedEvent(data?: Partial<VoteUnreadyPercentageThresholdChangedEvent>);
@@ -219,7 +224,6 @@ declare global {
       emergencyWithdrawalEvent(data?: Partial<EmergencyWithdrawalEvent>);
       delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
-      rewardsAssignedEvent(data?: Partial<RewardsAssignedEvent>);
       transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>)
 
       withinContract(contract: Contract): Assertion;

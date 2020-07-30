@@ -101,7 +101,7 @@ contract GuardiansWallet is IGuardiansWallet, ContractRegistryAccessor, WithClai
         return delegatorRewards.mul(100000) <= uint(maxDelegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors
     }
 
-    struct DistributeOrbsTokenStakingRewardsVars {
+    struct distributeStakingRewardsVars {
         bool firstTxBySender;
         address guardianAddr;
         uint256 delegatorsAmount;
@@ -112,7 +112,7 @@ contract GuardiansWallet is IGuardiansWallet, ContractRegistryAccessor, WithClai
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
 
-        DistributeOrbsTokenStakingRewardsVars memory vars;
+        distributeStakingRewardsVars memory vars;
 
         vars.guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
 

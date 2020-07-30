@@ -110,7 +110,7 @@ describe('gas usage scenarios', async () => {
             addr: committee[committee.length - 1].address
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.rewardsAssignedEvent();
+        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         // const ge = gasReportEvents(r);
         // ge.forEach(e => console.log(JSON.stringify(e)));
@@ -329,10 +329,10 @@ describe('gas usage scenarios', async () => {
             return delegator;
         }));
 
-        const balance = bn(await d.guardiansWallet.getStakingRewardBalance(v.address));
+        const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
         d.resetGasRecording();
-        await d.guardiansWallet.distributeStakingRewards(
+        await d.rewards.distributeStakingRewards(
             balance.div(bn(batchSize)).mul(bn(batchSize)),
             0,
             100,

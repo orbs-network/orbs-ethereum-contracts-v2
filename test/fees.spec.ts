@@ -5,16 +5,13 @@ import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
 import {
-  feesAddedToBucketEvents,
-  rewardsAssignedEvents,
+  feesAddedToBucketEvents, feesAssignedEvents,
   subscriptionChangedEvents,
   vcCreatedEvents
 } from "./event-parsing";
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
-import {TransactionReceipt} from "web3-core";
-import {Web3Driver} from "../eth";
 import {FeesAddedToBucketEvent} from "../typings/fees-wallet-contract";
-import {RewardsAssignedEvent} from "../typings/guardians-wallet-contract";
+import {FeesAssignedEvent} from "../typings/rewards-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -107,17 +104,9 @@ describe('fees-contract', async () => {
       return fromTokenUnits(toTokenUnits(rewards.div(n)))
     };
 
-    // if (certificationStartTime > generalStartTime) {
-    //   // the creation of the second VC triggered reward calculation for the general committee, need to fix the buckets
-    //   calcFeeRewardsAndUpdateBuckets(generalFeeBuckets, generalStartTime, certificationStartTime, committee, false);
-    // }
-    //
-    // creating the VC has triggered reward assignment. We wish to ignore it, so we take the initial balance
-    // and subtract it afterwards
-
     const initialOrbsBalances:BN[] = [];
     for (const v of committee) {
-      initialOrbsBalances.push(new BN(await d.guardiansWallet.getFeeBalance(v.address)));
+      initialOrbsBalances.push(new BN(await d.rewards.getFeeBalance(v.address)));
     }
 
     await sleep(3000);
@@ -132,22 +121,22 @@ describe('fees-contract', async () => {
     let certificationGuardianRewards = generalGuardianRewards.add(calcFeeRewardsAndUpdateBuckets(certificationFeeBuckets, certificationStartTime, endTime, committee, true));
 
     // TODO allow an inaccuracy of up to 1 milli-orbs as this is probably do to remainder issues. TODO - fix the calculation to properly account for that
-    const rewardsAssignedEvent: RewardsAssignedEvent = rewardsAssignedEvents(assignFeesTxRes)[0];
-    if (generalGuardianRewards.add(fromTokenUnits(1)).eq(bn(rewardsAssignedEvent.fees[0]))) {
+    const feesAssignedEvent: FeesAssignedEvent = feesAssignedEvents(assignFeesTxRes)[0];
+    if (generalGuardianRewards.add(fromTokenUnits(1)).eq(bn(feesAssignedEvent.generalGuardianAmount))) {
       generalGuardianRewards = generalGuardianRewards.add(fromTokenUnits(1))
     }
-    if (certificationGuardianRewards.add(fromTokenUnits(1)).eq(bn(rewardsAssignedEvent.fees[1]))) {
+    if (certificationGuardianRewards.add(fromTokenUnits(1)).eq(bn(feesAssignedEvent.certifiedGuardianAmount))) {
       certificationGuardianRewards = certificationGuardianRewards.add(fromTokenUnits(1))
     }
 
-    expect(assignFeesTxRes).to.have.a.rewardsAssignedEvent({
-      assignees: committee.map(v => v.address),
-      fees: [certificationGuardianRewards, generalGuardianRewards, certificationGuardianRewards, generalGuardianRewards].map(x => x.toString())
+    expect(assignFeesTxRes).to.have.a.feesAssignedEvent({
+      generalGuardianAmount: generalGuardianRewards.toString(),
+      certifiedGuardianAmount: certificationGuardianRewards.toString()
     });
 
     const orbsBalances:BN[] = [];
     for (const v of committee) {
-      orbsBalances.push(new BN(await d.guardiansWallet.getFeeBalance(v.address)));
+      orbsBalances.push(new BN(await d.rewards.getFeeBalance(v.address)));
     }
 
 
@@ -158,7 +147,7 @@ describe('fees-contract', async () => {
       expect(orbsBalances[i]).to.be.bignumber.equal(expectedBalance);
 
       // withdraw the funds
-      const r = await d.guardiansWallet.withdrawFees({from: v.address});
+      const r = await d.rewards.withdrawFees({from: v.address});
       const actualBalance = await d.erc20.balanceOf(v.address);
       expect(r).to.have.a.feesWithdrawnEvent({
         guardian: v.address,
