@@ -4,18 +4,19 @@ import BN from "bn.js";
 import * as _ from "lodash";
 import {
     defaultDriverOptions,
-    Driver,
+    Driver, expectRejected,
     Participant
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
-import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {
     bootstrapRewardsAssignedEvents,
     feesAssignedEvents,
     gasReportEvents,
     stakingRewardsAssignedEvents
 } from "./event-parsing";
+import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
 
@@ -139,4 +140,27 @@ describe('rewards', async () => {
         expect(await d.rewards.getBootstrapBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
         expect(await d.rewards.getBootstrapBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
     });
+
+    // todo - rewards contract tests
+
+    it('performs emergency withdrawal only by the migration manager', async () => {
+        const {d} = await fullCommittee();
+
+        // await d.rewards.assignRewards();
+        await evmIncreaseTime(d.web3, 12*30*24*60*60);
+        await d.rewards.assignRewards();
+
+        expect(await d.externalToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
+        expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
+
+        await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalOwner.address}));
+        let r = await d.rewards.emergencyWithdraw({from: d.migrationOwner.address});
+        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
+
+        expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
+        expect(await d.externalToken.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
+        expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
+        expect(await d.externalToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
+    });
+
 });

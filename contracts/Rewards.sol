@@ -281,4 +281,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         require(transfer(erc20, guardianAddress, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
+    function emergencyWithdraw() external onlyMigrationOwner {
+        emit EmergencyWithdrawal(msg.sender);
+        require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
+        require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
+    }
+
 }

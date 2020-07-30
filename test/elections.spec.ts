@@ -193,13 +193,13 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('VoteUnready: votes out a committee member', async () => {
-        assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
-        assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
+        assert(defaultDriverOptions.voteUnreadyThreshold < 98); // so each committee member will hold a positive stake
+        assert(Math.floor(defaultDriverOptions.voteUnreadyThreshold / 2) >= 98 - defaultDriverOptions.voteUnreadyThreshold); // so the committee list will be ordered by stake
 
         const stakesPercentage = [
-            Math.ceil(defaultDriverOptions.voteOutThreshold / 2),
-            Math.floor(defaultDriverOptions.voteOutThreshold / 2),
-            98 - defaultDriverOptions.voteOutThreshold,
+            Math.ceil(defaultDriverOptions.voteUnreadyThreshold / 2),
+            Math.floor(defaultDriverOptions.voteUnreadyThreshold / 2),
+            98 - defaultDriverOptions.voteUnreadyThreshold,
             1,
             1
         ];
@@ -262,7 +262,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('VoteUnready: discards stale votes', async () => {
-        assert(defaultDriverOptions.voteOutThreshold > 50); // so one out of two equal committee members does not cross the threshold
+        assert(defaultDriverOptions.voteUnreadyThreshold > 50); // so one out of two equal committee members does not cross the threshold
 
         const committeeSize = 2;
         const d = await Driver.new({maxCommitteeSize: committeeSize});
@@ -287,7 +287,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         // ...*.* TiMe wArP *.*.....
-        await evmIncreaseTime(d.web3, defaultDriverOptions.voteOutTimeout);
+        await evmIncreaseTime(d.web3, defaultDriverOptions.voteUnreadyTimeout);
 
         r = await d.elections.voteUnready(committee[1].address, {from: committee[1].orbsAddress}); // this should have crossed the vote-out threshold, but the previous vote had timed out
         expect(r).to.have.a.voteUnreadyCastedEvent({
@@ -801,14 +801,14 @@ describe('elections-high-level-flows', async () => {
 });
 
 export async function voteOutScenario_setupDelegatorsAndGuardians(driver: Driver) {
-    assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
-    assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
+    assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
+    assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
 
     // -------------- SETUP ---------------
     const stakesPercentage = [
-        Math.ceil(defaultDriverOptions.banningThreshold / 2),
-        Math.floor(defaultDriverOptions.banningThreshold / 2),
-        98 - defaultDriverOptions.banningThreshold,
+        Math.ceil(defaultDriverOptions.voteOutThreshold / 2),
+        Math.floor(defaultDriverOptions.voteOutThreshold / 2),
+        98 - defaultDriverOptions.voteOutThreshold,
         1,
     ];
     const thresholdCrossingIndex = 1;
