@@ -280,7 +280,7 @@ describe('subscriptions-high-level-flows', async () => {
     });
   });
 
-  it.only('gets vc data', async () => {
+  it('gets vc data', async () => {
     const d = await Driver.new();
 
     const newDelay = 4*60*60;
