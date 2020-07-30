@@ -65,6 +65,8 @@ export type DriverOptions = {
     stakingRewardsWalletAddress?: string;
     bootstrapRewardsWalletAddress?: string;
     guardiansRegistrationAddress?: string;
+    generalFeesWalletAddress?: string;
+    certifiedFeesWalletAddress?: string;
 
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
@@ -261,7 +263,7 @@ export class Driver {
         const generalFeesWallet = options.generalFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.generalFeesWalletAddress, session)
             :
-            await web3.deploy('FeesWallet', [], null, session);
+            await web3.deploy('FeesWallet', [erc20.address], null, session);
 
         const certifiedFeesWallet = options.certifiedFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.certifiedFeesWalletAddress, session)

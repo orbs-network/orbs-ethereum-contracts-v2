@@ -68,7 +68,7 @@ describe('testkit', async () => {
 
     expect(d.staking.address).to.equal(stakingContractAddress);
     expect(d.erc20.address).to.equal(orbsTokenAddress);
-    expect(d.externalToken.address).to.equal(bootstrapTokenAddress);
+    expect(d.bootstrapToken.address).to.equal(bootstrapTokenAddress);
     expect(d.contractRegistry.address).to.equal(contractRegistryAddress);
     expect(d.delegations.address).to.equal(delegationsAddress);
     expect(d.rewards.address).to.equal(rewardsAddress);

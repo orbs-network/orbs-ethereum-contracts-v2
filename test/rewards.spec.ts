@@ -12,11 +12,11 @@ import {createVC} from "./consumer-macros";
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {
     bootstrapRewardsAssignedEvents,
-    feesAssignedEvents,
     gasReportEvents,
-    stakingRewardsAssignedEvents
+    stakingRewardsAssignedEvents,
+    feesAssignedEvents
 } from "./event-parsing";
-import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
+
 
 declare const web3: Web3;
 
@@ -150,7 +150,7 @@ describe('rewards', async () => {
         await evmIncreaseTime(d.web3, 12*30*24*60*60);
         await d.rewards.assignRewards();
 
-        expect(await d.externalToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
 
         await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalOwner.address}));
@@ -158,9 +158,9 @@ describe('rewards', async () => {
         expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
 
         expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
-        expect(await d.externalToken.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
-        expect(await d.externalToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
     });
 
 });

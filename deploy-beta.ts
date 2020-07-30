@@ -33,7 +33,7 @@ async function main() {
 
     console.log("elections", d.elections.address);
     console.log("erc20", d.erc20.address);
-    console.log("externalToken", d.externalToken.address);
+    console.log("externalToken", d.bootstrapToken.address);
     console.log("staking", d.staking.address);
     console.log("delegations", d.delegations.address);
     console.log("subscriptions", d.subscriptions.address);
@@ -50,7 +50,7 @@ async function main() {
     console.log("\n\n**************************** contract getters: ****************************\n\n");
     await printGetters("elections", d.elections);
     await printGetters("erc20", d.erc20);
-    await printGetters("externalToken", d.externalToken);
+    await printGetters("externalToken", d.bootstrapToken);
     await printGetters("staking", d.staking);
     await printGetters("delegations", d.delegations);
     await printGetters("subscriptions", d.subscriptions);
