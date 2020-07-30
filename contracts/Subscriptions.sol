@@ -57,6 +57,17 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         require(addr != address(0), "must provide a valid address");
 
         authorizedSubscribers[addr] = true;
+
+        emit SubscriberAdded(addr);
+    }
+
+    function removeSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
+        require(addr != address(0), "must provide a valid address");
+        require(authorizedSubscribers[addr], "given add is not an authorized subscriber");
+
+        authorizedSubscribers[addr] = false;
+
+        emit SubscriberRemoved(addr);
     }
 
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
@@ -112,6 +123,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
 
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner onlyWhenActive {
         genesisRefTimeDelay = newGenesisRefTimeDelay;
+        emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
     }
 
     function getGenesisRefTimeDelay() external view returns (uint) {

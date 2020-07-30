@@ -9,7 +9,12 @@ const expect = chai.expect;
 
 import {
   SubscriptionChangedEvent,
-  PaymentEvent, VcConfigRecordChangedEvent, VcOwnerChangedEvent, VcCreatedEvent
+  PaymentEvent,
+  VcConfigRecordChangedEvent,
+  VcOwnerChangedEvent,
+  VcCreatedEvent,
+  SubscriberAddedEvent,
+  SubscriberRemovedEvent, GenesisRefTimeDelayChangedEvent
 } from "../typings/subscriptions-contract";
 import {
   StakeChangeEvent,
@@ -224,7 +229,10 @@ declare global {
       emergencyWithdrawalEvent(data?: Partial<EmergencyWithdrawalEvent>);
       delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
-      transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>)
+      transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>);
+      subscriberAddedEvent(data?: Partial<SubscriberAddedEvent>);
+      subscriberRemovedEvent(data?: Partial<SubscriberRemovedEvent>);
+      genesisRefTimeDelayChangedEvent(data?: Partial<GenesisRefTimeDelayChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

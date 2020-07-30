@@ -7,9 +7,11 @@ interface ISubscriptions {
     event SubscriptionChanged(uint256 vcid, string name, uint256 genRefTime, uint256 expiresAt, string tier, string deploymentSubset);
     event Payment(uint256 vcid, address by, uint256 amount, string tier, uint256 rate);
     event VcConfigRecordChanged(uint256 vcid, string key, string value);
-    event SubscriberAdded(address subscriber);
     event VcCreated(uint256 vcid, address owner); // TODO what about isCertified, deploymentSubset?
     event VcOwnerChanged(uint256 vcid, address previousOwner, address newOwner);
+    event SubscriberAdded(address subscriber);
+    event SubscriberRemoved(address subscriber);
+    event GenesisRefTimeDelayChanged(uint256 newGenesisRefTimeDelay);
 
     /*
      *   Methods restricted to other Orbs contracts

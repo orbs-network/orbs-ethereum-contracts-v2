@@ -39,8 +39,21 @@ export interface VcCreatedEvent {
     owner: string;
 }
 
+export interface SubscriberAddedEvent {
+  subscriber: string;
+}
+
+export interface SubscriberRemovedEvent {
+  subscriber: string;
+}
+
+export interface GenesisRefTimeDelayChangedEvent {
+  newGenesisRefTimeDelay: number|BN;
+};
+
 export interface SubscriptionsContract extends OwnedContract {
   addSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
+  removeSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcConfigRecord(vcid: number|BN, key: string, value: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getVcConfigRecord(vcid: number|BN, key: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;

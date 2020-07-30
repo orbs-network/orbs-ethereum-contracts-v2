@@ -136,12 +136,17 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
-  it('registers subsciber only by functional owner', async () => {
+  it('adds and removes subscriber only by functional owner', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber('tier', 1);
 
     await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to add a subscriber");
-    await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    let r = await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    expect(r).to.have.a.subscriberAddedEvent({subscriber: subscriber.address})
+
+    await expectRejected(d.subscriptions.removeSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to remove a subscriber");
+    r = await d.subscriptions.removeSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    expect(r).to.have.a.subscriberRemovedEvent({subscriber: subscriber.address})
   });
 
   it('should not add a subscriber with a zero address', async () => {
@@ -266,7 +271,8 @@ describe('subscriptions-high-level-flows', async () => {
 
     const newDelay = 4*60*60;
     await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}));
-    await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+    let r = await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+    expect(r).to.have.a.genesisRefTimeDelayChangedEvent({newGenesisRefTimeDelay: bn(newDelay)})
 
     const subs = await d.newSubscriber("tier", 1);
 
@@ -274,7 +280,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     const amount = 10;
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
+    r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent({
       genRefTime: bn(await d.web3.txTimestamp(r) + newDelay)
     });
