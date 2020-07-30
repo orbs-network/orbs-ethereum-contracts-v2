@@ -21,14 +21,14 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor, WithClaimableFunct
         monthlyRate = _monthlyRate;
     }
 
-    function createVC(uint256 amount, bool isCertified, string calldata deploymentSubset) external {
+    function createVC(string calldata name, uint256 amount, bool isCertified, string calldata deploymentSubset) external {
         require(amount > 0, "must include funds");
 
         ISubscriptions subs = getSubscriptionsContract();
 
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees");
         require(erc20.approve(address(subs), amount), "failed to transfer subscription fees");
-        subs.createVC(tier, monthlyRate, amount, msg.sender, isCertified, deploymentSubset);
+        subs.createVC(name, tier, monthlyRate, amount, msg.sender, isCertified, deploymentSubset);
     }
 
     function extendSubscription(uint256 vcid, uint256 amount) external {

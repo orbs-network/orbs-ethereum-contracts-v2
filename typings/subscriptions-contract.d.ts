@@ -7,6 +7,7 @@ import {OwnedContract} from "./base-contract";
 
 export interface SubscriptionChangedEvent {
   vcid: number | BN;
+  name: string;
   genRefTime: number | BN;
   expiresAt: number | BN;
   tier: 'defaultTier';
@@ -46,4 +47,14 @@ export interface SubscriptionsContract extends OwnedContract {
   setVcOwner(vcid: number|BN, owner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGenesisRefTimeDelay(genRefTimeDelay: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   getGenesisRefTimeDelay(params?: TransactionConfig): Promise<string>;
+  getVcData(vcid: number|string|BN, params?: TransactionConfig): Promise<[
+    string /* name */,
+    string /* tier */,
+    string /* rate */,
+    string /* expiresAt */,
+    string /* genRefTime */,
+    string /* owner */,
+    string /* deploymentSubset */,
+    boolean /* isCertified */
+  ]>;
 }

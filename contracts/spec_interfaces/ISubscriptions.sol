@@ -4,7 +4,7 @@ import "./IContractRegistry.sol";
 
 /// @title Subscriptions contract interface
 interface ISubscriptions {
-    event SubscriptionChanged(uint256 vcid, uint256 genRefTime, uint256 expiresAt, string tier, string deploymentSubset);
+    event SubscriptionChanged(uint256 vcid, string name, uint256 genRefTime, uint256 expiresAt, string tier, string deploymentSubset);
     event Payment(uint256 vcid, address by, uint256 amount, string tier, uint256 rate);
     event VcConfigRecordChanged(uint256 vcid, string key, string value);
     event SubscriberAdded(address subscriber);
@@ -17,7 +17,7 @@ interface ISubscriptions {
 
     /// @dev Called by: authorized subscriber (plan) contracts
     /// Creates a new VC
-    function createVC(string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint, uint);
+    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint, uint);
 
     /// @dev Called by: authorized subscriber (plan) contracts
     /// Extends the subscription of an existing VC.
@@ -34,6 +34,17 @@ interface ISubscriptions {
 
     /// @dev Returns the genesis ref time delay
     function getGenesisRefTimeDelay() external view returns (uint256);
+
+    function getVcData(uint256 vcId) external view returns (
+        string memory name,
+        string memory tier,
+        uint256 rate,
+        uint expiresAt,
+        uint256 genRefTime,
+        address owner,
+        string memory deploymentSubset,
+        bool isCertified
+    );
 
     /*
      *   Governance methods

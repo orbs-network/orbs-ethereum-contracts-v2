@@ -24,7 +24,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
     await d.erc20.approve(subscriber.address, firstPayment, {from: appOwner.address});
 
-    let r = await subscriber.createVC(firstPayment, false, "main",  {from: appOwner.address});
+    let r = await subscriber.createVC("vc-name", firstPayment, false, "main",  {from: appOwner.address});
 
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
@@ -41,6 +41,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(firstSubsc.genRefTime).to.be.bignumber.equal(expectedGenRefTime);
     expect(firstSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(firstSubsc.tier).to.equal("defaultTier");
+    expect(firstSubsc.name).to.equal("vc-name");
 
     let vcid = bn(firstSubsc.vcid);
     expect(r).to.have.paymentEvent({vcid, by: appOwner.address, amount: firstPayment, tier: "defaultTier", rate: monthlyRate});
@@ -86,7 +87,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
     await d.erc20.approve(subscriber.address, firstPayment, {from: appOwner.address});
 
-    let r = await subscriber.createVC(firstPayment, true, "main",  {from: appOwner.address});
+    let r = await subscriber.createVC("vc-name", firstPayment, true, "main",  {from: appOwner.address});
 
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
@@ -156,11 +157,11 @@ describe('subscriptions-high-level-flows', async () => {
     const amount = 10;
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main",  {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    r = await subs.createVC(amount, false, "main",  {from: owner.address});
+    r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
   });
 
@@ -172,7 +173,7 @@ describe('subscriptions-high-level-flows', async () => {
     const amount = 10;
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main",  {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
     const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
 
@@ -229,7 +230,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     const amount = 10;
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main", {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
     const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
     expect(r).to.have.a.vcCreatedEvent({
@@ -273,10 +274,50 @@ describe('subscriptions-high-level-flows', async () => {
 
     const amount = 10;
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main", {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent({
       genRefTime: bn(await d.web3.txTimestamp(r) + newDelay)
     });
-  })
+  });
+
+  it.only('gets vc data', async () => {
+    const d = await Driver.new();
+
+    const newDelay = 4*60*60;
+    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}));
+    await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+
+    const subs = await d.newSubscriber("tier", 1);
+
+    const owner = d.newParticipant();
+
+    const amount = 10;
+    await owner.assignAndApproveOrbs(amount, subs.address);
+    let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
+
+    const event = subscriptionChangedEvents(r)[0];
+    const vcid = bn(event.vcid);
+    const vcData = await d.subscriptions.getVcData(vcid);
+    expect([
+        vcData[0],
+        vcData[1],
+        vcData[2],
+        vcData[3],
+        vcData[4],
+        vcData[5],
+        vcData[6],
+        vcData[7]
+    ]).to.deep.eq([
+      'vc-name' /* name */,
+      'tier' /* tier */,
+      '1' /* rate */,
+      event.expiresAt /* expiresAt */,
+      event.genRefTime /* genRefTime */,
+      owner.address /* owner */,
+      'main' /* deploymentSubset */,
+      false /* isCertified */
+    ])
+
+  });
 
 });
