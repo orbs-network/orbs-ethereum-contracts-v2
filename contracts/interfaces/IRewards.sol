@@ -44,7 +44,7 @@ interface IRewards {
     function getFeeBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
-    function withdrawFees() external;
+    function withdrawFees(address guardian) external;
 
     // bootstrap
 
@@ -59,7 +59,7 @@ interface IRewards {
     function getBootstrapBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
-    function withdrawBootstrapFunds() external;
+    function withdrawBootstrapFunds(address guardian) external;
 
     /// @return The timestamp of the last reward assignment.
     function getLastRewardAssignmentTime() external view returns (uint256 time);
@@ -73,6 +73,14 @@ interface IRewards {
 
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
     function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
+
+    event StakingRewardsBalanceMigrated(address guardian, uint256 amount, address toRewardsContract);
+
+    function migrateStakingRewardsBalance(address guardian) external;
+
+    event StakingRewardsMigrationAccepted(address from, address guardian, uint256 amount);
+
+    function acceptStakingRewardsMigration(address guardian, uint256 amount) external;
 
     event EmergencyWithdrawal(address addr);
 

@@ -263,28 +263,17 @@ describe('staking-rewards', async () => {
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+    await evmMine(d.web3, 1000);
 
-    await d.rewards.assignRewards();
+    let r = await d.rewards.assignRewards();
 
-    // first fromBlock must be 0
+    // first fromBlock, toBlock must be in the past
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        1,
-        100,
+        r.blockNumber - 10,
+        r.blockNumber + 10,
         1,
         0,
-        [v.address],
-        [fromTokenUnits(5)],
-        {from: v.address})
-    );
-
-    // first txIndex must be 0 (initial distribution)
-    await expectRejected(d.rewards.distributeStakingRewards(
-        fromTokenUnits(5),
-        0,
-        100,
-        1,
-        1,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address})
@@ -302,22 +291,28 @@ describe('staking-rewards', async () => {
         {from: v.address})
     );
 
-    let r = await d.rewards.distributeStakingRewards(
+    let fromBlock = bn(2);
+    let toBlock = bn(fromBlock + 100);
+    let txIndex = bn(3);
+    let split = bn(1);
+
+    // First fromBlock, toBlock txIndex can be of any value as long as fromBlock is in the past
+    r = await d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
-        1,
-        0,
+        fromBlock,
+        toBlock,
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
       );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
       distributer: v.address,
-      fromBlock: bn(0),
-      toBlock: bn(100),
-      split: bn(1),
-      txIndex: bn(0),
+      fromBlock,
+      toBlock,
+      split,
+      txIndex,
       to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
@@ -325,9 +320,9 @@ describe('staking-rewards', async () => {
     // next txIndex must increment the previous one
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
-        1,
+        fromBlock,
+        toBlock,
+        split,
         0,
         [v.address],
         [fromTokenUnits(5)],
@@ -339,73 +334,80 @@ describe('staking-rewards', async () => {
         0,
         100,
         1,
-        2,
+        txIndex.add(bn(2)),
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
       )
     );
 
+    txIndex = txIndex.add(bn(1));
     r = await d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
-        1,
-        1,
+        fromBlock,
+        toBlock,
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
       distributer: v.address,
-      fromBlock: bn(0),
-      toBlock: bn(100),
-      split: bn(1),
-      txIndex: bn(1),
+      fromBlock,
+      toBlock,
+      split,
+      txIndex,
       to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
+    txIndex = txIndex.add(bn(1));
     r = await d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
-        1,
-        2,
+        fromBlock,
+        toBlock,
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
       distributer: v.address,
-      fromBlock: bn(0),
-      toBlock: bn(100),
-      split: bn(1),
-      txIndex: bn(2),
+      fromBlock,
+      toBlock,
+      split,
+      txIndex,
       to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
+
+    txIndex = txIndex.add(bn(1));
 
     // next split must equal previous
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
-        2,
-        3,
+        fromBlock,
+        toBlock,
+        split.add(bn(1)),
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
     );
+
+    split = bn(2);
+    txIndex = bn(0);
 
     // next fromBlock must be previous toBlock + 1
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        99,
-        200,
-        2,
-        0,
+        toBlock.sub(bn(1)),
+        toBlock.add(bn(100)),
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
@@ -414,35 +416,38 @@ describe('staking-rewards', async () => {
 
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        100,
-        200,
-        2,
-        0,
+        toBlock,
+        toBlock.add(bn(100)),
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
     );
+
+    fromBlock = toBlock.add(bn(1))
 
     // next toBlock must be at least new fromBlock
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        101,
-        100,
-        2,
-        0,
+        fromBlock,
+        fromBlock.sub(bn(1)),
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
         )
     );
 
+    toBlock = fromBlock.add(bn(99))
     // on new distribution, txIndex must be 0
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        101,
-        200,
-        2,
+        fromBlock,
+        toBlock,
+        split,
         1,
         [v.address],
         [fromTokenUnits(5)],
@@ -453,41 +458,41 @@ describe('staking-rewards', async () => {
     // split can be changed on new distribution
     r = await d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        101,
-        200,
-        3,
-        0,
+        fromBlock,
+        toBlock,
+        split,
+        txIndex,
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
       distributer: v.address,
-      fromBlock: bn(101),
-      toBlock: bn(200),
-      split: bn(3),
-      txIndex: bn(0),
+      fromBlock,
+      toBlock,
+      split,
+      txIndex,
       to: [v.address],
       amounts: [bn(fromTokenUnits(5))]
     });
 
-    // state is per address, different distributor must start from fromBlock==0
+    // state is per address, different distributor can start from any txIndex and past fromBlock, toBlock
     r = await d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
+        10,
+        20,
         1,
-        0,
+        5,
         [v2.address],
         [fromTokenUnits(5)],
         {from: v2.address}
     );
     expect(r).to.have.a.stakingRewardsDistributedEvent({
       distributer: v2.address,
-      fromBlock: bn(0),
-      toBlock: bn(100),
+      fromBlock: bn(10),
+      toBlock: bn(20),
       split: bn(1),
-      txIndex: bn(0),
+      txIndex: bn(5),
       to: [v2.address],
       amounts: [bn(fromTokenUnits(5))]
     });
@@ -495,7 +500,7 @@ describe('staking-rewards', async () => {
     // toBlock must be in the past
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        101,
+        21,
         (r.blockNumber + 10000),
         1,
         0,
@@ -734,7 +739,7 @@ describe('staking-rewards', async () => {
     );
   });
 
-  it("only commits the stake change of the senbder's guardian address", async () => {
+  it("only commits the stake change of the sender's guardian address", async () => {
     const d = await Driver.new();
 
     const {v: v1} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
@@ -773,5 +778,68 @@ describe('staking-rewards', async () => {
     expect(committeeSnapshotEvents(r).length).to.eq(1);
 
   });
+
+  it("allows anyone to migrate staking rewards to a new contract", async () => {
+    const d = await Driver.new();
+
+    const {v: v1} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+    const {v: v2} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
+
+    /* top up staking rewards pool */
+    const g = d.functionalOwner;
+
+    const annualRate = 12000;
+    const annualCap = fromTokenUnits(20000000);
+    const poolAmount = annualCap.mul(bn(2));
+
+    await d.rewards.setAnnualStakingRewardsRate(annualRate, annualCap, {from: g.address});
+
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    await d.rewards.assignRewards();
+
+    const v1balance = bn(await d.rewards.getStakingRewardBalance(v1.address));
+    expect(v1balance).to.be.bignumber.greaterThan(bn(0));
+
+    // migrating to the same contract has no effect
+    let r = await d.rewards.migrateStakingRewardsBalance(v1.address);
+    expect(r).to.not.have.a.stakingRewardsMigrationAcceptedEvent();
+    expect(r).to.not.have.a.stakingRewardsBalanceMigratedEvent();
+    expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
+
+    const newRewardsContract = await d.web3.deploy('Rewards', [d.erc20.address, d.bootstrapToken.address], null, d.session);
+    await d.contractRegistry.set('rewards', newRewardsContract.address, {from: d.functionalOwner.address});
+
+    // migrating to the new contract
+    r = await d.rewards.migrateStakingRewardsBalance(v1.address);
+    expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsMigrationAcceptedEvent({
+      from: d.rewards.address,
+      guardian: v1.address,
+      amount: v1balance
+    });
+    expect(r).to.have.withinContract(d.rewards).a.stakingRewardsBalanceMigratedEvent({
+      guardian: v1.address,
+      amount: v1balance,
+      toRewardsContract: newRewardsContract.address
+    });
+    expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(bn(0));
+    expect(bn(await newRewardsContract.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
+
+    // anyone can migrate
+    const migrator = d.newParticipant();
+    await migrator.assignAndApproveOrbs(100, newRewardsContract.address);
+    r = await newRewardsContract.acceptStakingRewardsMigration(v2.address, 100, {from: migrator.address});
+    expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsMigrationAcceptedEvent({
+      from: migrator.address,
+      guardian: v2.address,
+      amount: bn(100)
+    });
+
+  });
+
+
 
 });

@@ -90,18 +90,14 @@ async function sumBalances(d: Driver, committee: Participant[]): Promise<{fees: 
 }
 
 describe('rewards', async () => {
-    it('withdraws to guardian address even if sent from orbs address, and updates balances', async () => {
+    it('withdraws staking rewards of guardian address even if sent from orbs address, and updates balances', async () => {
         const {d, committee} = await fullCommittee(true);
 
         // await d.rewards.assignRewards();
         await evmIncreaseTime(d.web3, 12*30*24*60*60);
         let r = await d.rewards.assignRewards();
         const stakingRewards = stakingRewardsAssignedEvents(r)[0].amounts;
-        const fees = committee.map(() => feesAssignedEvents(r)[0].certifiedGuardianAmount);
-        const bootstrapRewards = committee.map(() => bootstrapRewardsAssignedEvents(r)[0].certifiedGuardianAmount);
 
-        await d.rewards.withdrawFees({from: committee[0].address});
-        await d.rewards.withdrawBootstrapFunds({from: committee[0].address});
         r = await d.rewards.distributeStakingRewards(
             stakingRewards[0],
             0,
@@ -113,11 +109,6 @@ describe('rewards', async () => {
             {from: committee[0].address}
         );
         expect(r).to.have.a.stakedEvent({stakeOwner: committee[0].address, amount: stakingRewards[0]});
-        expect(await d.erc20.balanceOf(committee[0].address)).to.bignumber.eq(fees[0]);
-        expect(await d.bootstrapToken.balanceOf(committee[0].address)).to.bignumber.eq(bootstrapRewards[0]);
-
-        await d.rewards.withdrawFees({from: committee[1].orbsAddress});
-        await d.rewards.withdrawBootstrapFunds({from: committee[1].orbsAddress});
 
         r = await d.rewards.distributeStakingRewards(
             stakingRewards[1],
@@ -130,15 +121,9 @@ describe('rewards', async () => {
             {from: committee[1].orbsAddress}
         );
         expect(r).to.have.a.stakedEvent({stakeOwner: committee[1].address, amount: stakingRewards[1]});
-        expect(await d.erc20.balanceOf(committee[1].address)).to.bignumber.eq(fees[1]);
-        expect(await d.bootstrapToken.balanceOf(committee[1].address)).to.bignumber.eq(bootstrapRewards[1]);
 
-        expect(await d.rewards.getFeeBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
-        expect(await d.rewards.getFeeBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
         expect(await d.rewards.getStakingRewardBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
         expect(await d.rewards.getStakingRewardBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
-        expect(await d.rewards.getBootstrapBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
-        expect(await d.rewards.getBootstrapBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
     });
 
     // todo - rewards contract tests

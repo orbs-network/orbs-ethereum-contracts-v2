@@ -129,13 +129,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         certifiedGuardianBootstrap = generalGuardianBootstrap + toUint256Granularity(uint48(_settings.certificationCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
-    function withdrawBootstrapFunds() external onlyWhenActive {
-        address guardianAddress = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
-
-        uint48 amount = balances[guardianAddress].bootstrapRewards;
-        balances[guardianAddress].bootstrapRewards = 0;
-        emit BootstrapRewardsWithdrawn(guardianAddress, toUint256Granularity(amount));
-        require(transfer(bootstrapToken, guardianAddress, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
+    function withdrawBootstrapFunds(address guardian) external {
+        uint48 amount = balances[guardian].bootstrapRewards;
+        balances[guardian].bootstrapRewards = 0;
+        emit BootstrapRewardsWithdrawn(guardian, toUint256Granularity(amount));
+        require(transfer(bootstrapToken, guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
     // staking rewards
@@ -214,16 +212,14 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         DistributorBatchState memory ds = distributorBatchState[vars.guardianAddr];
         vars.firstTxBySender = ds.nextTxIndex == 0;
 
-        require(!vars.firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
-
         if (vars.firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
-            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
+            require(vars.firstTxBySender || txIndex == 0, "txIndex must be 0 for the first transaction of a new (non-initial) distribution batch");
             require(toBlock < block.number, "toBlock must be in the past");
             require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
             ds.fromBlock = fromBlock;
             ds.toBlock = toBlock;
             ds.split = split;
-            ds.nextTxIndex = 1;
+            ds.nextTxIndex = txIndex + 1;
             distributorBatchState[vars.guardianAddr] = ds;
         } else {
             require(txIndex == ds.nextTxIndex, "txIndex mismatch");
@@ -272,13 +268,36 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         }
     }
 
-    function withdrawFees() external onlyWhenActive {
-        address guardianAddress = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
+    function withdrawFees(address guardian) external {
+        uint48 amount = balances[guardian].fees;
+        balances[guardian].fees = 0;
+        emit FeesWithdrawn(guardian, toUint256Granularity(amount));
+        require(transfer(erc20, guardian, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
+    }
 
-        uint48 amount = balances[guardianAddress].fees;
-        balances[guardianAddress].fees = 0;
-        emit FeesWithdrawn(guardianAddress, toUint256Granularity(amount));
-        require(transfer(erc20, guardianAddress, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
+    function migrateStakingRewardsBalance(address guardian) external {
+        IRewards currentRewardsContract = getRewardsContract();
+        if (currentRewardsContract == this) {
+            return;
+        }
+
+        uint48 balance = balances[guardian].stakingRewards;
+        balances[guardian].stakingRewards = 0;
+
+        require(approve(erc20, address(currentRewardsContract), balance), "migrateStakingBalance: approve failed");
+        currentRewardsContract.acceptStakingRewardsMigration(guardian, toUint256Granularity(balance));
+
+        emit StakingRewardsBalanceMigrated(guardian, toUint256Granularity(balance), address(currentRewardsContract));
+    }
+
+    function acceptStakingRewardsMigration(address guardian, uint256 amount) external {
+        uint48 amount48 = toUint48Granularity(amount);
+        require(transferFrom(erc20, msg.sender, address(this), amount48), "acceptStakingMigration: transfer failed");
+
+        uint48 balance = balances[guardian].stakingRewards + amount48;
+        balances[guardian].stakingRewards = balance;
+
+        emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
 
     function emergencyWithdraw() external onlyMigrationOwner {

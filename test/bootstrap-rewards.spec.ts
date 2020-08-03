@@ -85,7 +85,7 @@ describe('bootstrap-rewards-level-flows', async () => {
       expect(tokenBalances[i].sub(initialBalance[i])).to.be.bignumber.equal(expectedRewards.toString());
 
       // claim the funds
-      const r = await d.rewards.withdrawBootstrapFunds({from: v.address});
+      const r = await d.rewards.withdrawBootstrapFunds(v.address);
       const tokenBalance = await d.bootstrapToken.balanceOf(v.address);
       expect(r).to.have.a.bootstrapRewardsWithdrawnEvent({
             guardian: v.address,

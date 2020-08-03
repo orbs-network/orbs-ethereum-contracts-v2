@@ -42,6 +42,18 @@ export interface MaxDelegatorsStakingRewardsChangedEvent {
     maxDelegatorsStakingRewardsPercentMille: string|BN
 }
 
+export interface StakingRewardsBalanceMigratedEvent {
+    guardian: string;
+    amount: number|BN;
+    toRewardsContract: string;
+}
+
+export interface StakingRewardsMigrationAcceptedEvent {
+    from: string;
+    guardian: string;
+    amount: number|BN;
+}
+
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
 
@@ -51,18 +63,20 @@ export interface RewardsContract extends OwnedContract {
     setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;
+    migrateStakingRewardsBalance(guardian: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
+    acceptStakingRewardsMigration(guardian: string, amount: number|BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     setCertificationCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    withdrawBootstrapFunds(params?: TransactionConfig): Promise<TransactionReceipt>;
+    withdrawBootstrapFunds(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getBootstrapBalance(address: string): Promise<string>;
 
     emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // fees
-    withdrawFees(params?: TransactionConfig): Promise<TransactionReceipt>;
+    withdrawFees(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getFeeBalance(address: string): Promise<string>;
 
     emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;

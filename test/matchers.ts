@@ -28,8 +28,8 @@ import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
   BootstrapRewardsWithdrawnEvent,
   FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
-  StakingRewardAssignedEvent,
-  StakingRewardsDistributedEvent
+  StakingRewardAssignedEvent, StakingRewardsBalanceMigratedEvent,
+  StakingRewardsDistributedEvent, StakingRewardsMigrationAcceptedEvent
 } from "../typings/rewards-contract";
 import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
@@ -225,6 +225,8 @@ declare global {
       delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
       transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>)
+      stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
+      stakingRewardsMigrationAcceptedEvent(data?: Partial<StakingRewardsMigrationAcceptedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }
