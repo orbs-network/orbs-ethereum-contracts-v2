@@ -152,8 +152,8 @@ describe('fees-wallet-contract', async () => {
     const expected3 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
     let totalExpected = expected1.add(expected2).add(expected3);
     const currentBalance: BN = bn(await d.erc20.balanceOf(collector.address));
-    if (totalExpected.sub(currentBalance).abs().lt(bn(10))) {
-      totalExpected = currentBalance; // Allow a rounding error;
+    if (totalExpected.sub(currentBalance).abs().lt(totalExpected.div(bn(100)))) {
+      totalExpected = currentBalance; // Allow a 1% rounding error;
     }
     expect(currentBalance).to.bignumber.eq(totalExpected);
   });
