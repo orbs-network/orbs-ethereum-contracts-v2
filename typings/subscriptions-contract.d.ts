@@ -7,6 +7,7 @@ import {OwnedContract} from "./base-contract";
 
 export interface SubscriptionChangedEvent {
   vcid: number | BN;
+  name: string;
   genRefTime: number | BN;
   expiresAt: number | BN;
   tier: 'defaultTier';
@@ -38,12 +39,35 @@ export interface VcCreatedEvent {
     owner: string;
 }
 
+export interface SubscriberAddedEvent {
+  subscriber: string;
+}
+
+export interface SubscriberRemovedEvent {
+  subscriber: string;
+}
+
+export interface GenesisRefTimeDelayChangedEvent {
+  newGenesisRefTimeDelay: number|BN;
+};
+
 export interface SubscriptionsContract extends OwnedContract {
   addSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
+  removeSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcConfigRecord(vcid: number|BN, key: string, value: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getVcConfigRecord(vcid: number|BN, key: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcOwner(vcid: number|BN, owner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGenesisRefTimeDelay(genRefTimeDelay: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   getGenesisRefTimeDelay(params?: TransactionConfig): Promise<string>;
+  getVcData(vcid: number|string|BN, params?: TransactionConfig): Promise<[
+    string /* name */,
+    string /* tier */,
+    string /* rate */,
+    string /* expiresAt */,
+    string /* genRefTime */,
+    string /* owner */,
+    string /* deploymentSubset */,
+    boolean /* isCertified */
+  ]>;
 }

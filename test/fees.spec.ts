@@ -51,7 +51,7 @@ describe('fees-contract', async () => {
       await d.erc20.assign(appOwner.address, payment);
       await d.erc20.approve(subs.address, payment, {from: appOwner.address});
 
-      let r = await subs.createVC(payment, isCertified, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+      let r = await subs.createVC("vc-name", payment, isCertified, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
       const vcid = vcCreatedEvents(r)[0].vcid;
       let startTime = await d.web3.txTimestamp(r);
 
@@ -171,7 +171,7 @@ describe('fees-contract', async () => {
     await d.erc20.assign(appOwner.address, firstPayment);
     await d.erc20.approve(subs.address, firstPayment, {from: appOwner.address});
 
-    let r = await subs.createVC(firstPayment, false, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
+    let r = await subs.createVC("vc-name", firstPayment, false, DEPLOYMENT_SUBSET_MAIN, {from: appOwner.address});
     let startTime = await d.web3.txTimestamp(r);
     expect(r).to.have.a.subscriptionChangedEvent({
       expiresAt: bn(startTime + MONTH_IN_SECONDS * initialDurationInMonths)
