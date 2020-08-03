@@ -18,12 +18,23 @@ export class Web3Session {
      gasRecorder: GasRecorder = new GasRecorder();
 }
 
-export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
-    ETHEREUM_MNEMONIC,
-    ETHEREUM_URL,
-    0,
-    400,
-    false
+const ganache = require("ganache-core");
+
+export const defaultWeb3Provider = () => process.env.GANACHE_CORE ?
+        new Web3(ganache.provider({
+            mnemonic: ETHEREUM_MNEMONIC,
+            default_balance_ether: 100,
+            total_accounts: 400,
+            gasPrice: 1,
+            gasLimit: "0x7fffffff"
+        }))
+    :
+        new Web3(new HDWalletProvider(
+        ETHEREUM_MNEMONIC,
+        ETHEREUM_URL,
+        0,
+        400,
+        false
 ));
 
 type ContractEntry = {
@@ -61,6 +72,7 @@ export class Web3Driver{
                 }).send({
                     from: accounts[0],
                     gasPrice: GAS_PRICE_DEPLOY,
+                    gas: 10000000,
                     ...(options || {})
                 }, (err, _txHash) => {
                     if (!err) {
@@ -119,6 +131,8 @@ export class Web3Driver{
     }
 
     refresh(){
+        if (process.env.GANACHE_CORE) return;
+
         this.web3 = this.web3Provider();
         for (const entry of this.contracts.values()){
             entry.web3Contract = null;
