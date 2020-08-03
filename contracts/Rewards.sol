@@ -255,7 +255,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return toUint256Granularity(balances[addr].fees);
     }
 
-    function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private returns (uint256 guardianFee) {
+    function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private pure returns (uint256 guardianFee) {
         uint n = committee.length;
         if (isCertified)  {
             n = 0;
