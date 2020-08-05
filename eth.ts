@@ -183,7 +183,6 @@ export class Contract {
                     gas: 10000000,
                     ...opts
                 });
-                if (action == "send") this.web3.log(`block: ${ret.blockNumber}`);
             } catch(e) {
                 this.web3.log(`error calling ${method}: ${e.toString()}`);
                 if (/Invalid JSON RPC response/.exec(e.toString())) {

@@ -1,9 +1,9 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, expectRejected} from "./driver";
+import {Driver} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, evmMine, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, evmMine, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 import {committeeSnapshotEvents} from "./event-parsing";
 
 chai.use(require('chai-bn')(BN));
@@ -277,7 +277,7 @@ describe('staking-rewards', async () => {
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address})
-    );
+    , /toBlock must be in the past/);
 
     // should fail if total does not match actual total
     await expectRejected(d.rewards.distributeStakingRewards(
@@ -289,10 +289,21 @@ describe('staking-rewards', async () => {
         [],
         [],
         {from: v.address})
-    );
+    , /list must contain at least one recipient/);
+
+    await expectRejected(d.rewards.distributeStakingRewards(
+        fromTokenUnits(5),
+        0,
+        100,
+        1,
+        1,
+        [v.address],
+        [1],
+        {from: v.address})
+    , /StakingContract::distributeRewards - incorrect total amount/);
 
     let fromBlock = bn(2);
-    let toBlock = bn(fromBlock + 100);
+    let toBlock = fromBlock.add(bn(100));
     let txIndex = bn(3);
     let split = bn(1);
 
@@ -328,18 +339,19 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(5)],
         {from: v.address}
       )
-    );
+    , /txIndex mismatch/);
+
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
-        0,
-        100,
+        fromBlock,
+        toBlock,
         1,
         txIndex.add(bn(2)),
         [v.address],
         [fromTokenUnits(5)],
         {from: v.address}
       )
-    );
+    , /txIndex mismatch/);
 
     txIndex = txIndex.add(bn(1));
     r = await d.rewards.distributeStakingRewards(
@@ -396,7 +408,7 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(5)],
         {from: v.address}
         )
-    );
+    , /split mismatch/);
 
     split = bn(2);
     txIndex = bn(0);
@@ -412,7 +424,7 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(5)],
         {from: v.address}
         )
-    );
+    , /fromBlock mismatch/);
 
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(5),
@@ -424,7 +436,7 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(5)],
         {from: v.address}
         )
-    );
+    , /fromBlock mismatch/);
 
     fromBlock = toBlock.add(bn(1))
 
@@ -439,7 +451,7 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(5)],
         {from: v.address}
         )
-    );
+    , /toBlock must be at least fromBlock/);
 
     toBlock = fromBlock.add(bn(99))
     // on new distribution, txIndex must be 0
@@ -453,7 +465,7 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(5)],
         {from: v.address}
         )
-    );
+    , /txIndex must be 0 for the first transaction/);
 
     // split can be changed on new distribution
     r = await d.rewards.distributeStakingRewards(
@@ -507,7 +519,7 @@ describe('staking-rewards', async () => {
         [v2.address],
         [fromTokenUnits(5)],
         {from: v2.address}
-    ));
+    ), /toBlock must be in the past/);
 
   });
 
@@ -667,7 +679,7 @@ describe('staking-rewards', async () => {
         [v.address, delegator.address],
         [fromTokenUnits(33333), fromTokenUnits(66667)],
         {from: v.address}
-    ));
+    ), /Total delegators reward must be less then maxDelegatorsStakingRewardsPercentMille of total amount/);
 
     await expectRejected(d.rewards.distributeStakingRewards(
         fromTokenUnits(2),
@@ -678,7 +690,7 @@ describe('staking-rewards', async () => {
         [delegator.address],
         [fromTokenUnits(2)],
         {from: v.address}
-    ));
+    ), /Total delegators reward must be less then maxDelegatorsStakingRewardsPercentMille of total amount/);
 
     await d.rewards.distributeStakingRewards(
         fromTokenUnits(100000),

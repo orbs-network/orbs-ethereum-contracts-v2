@@ -2,7 +2,7 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY, expectRejected} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));
@@ -10,7 +10,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
-import {bn, evmIncreaseTimeForQueries, getTopBlockTimestamp} from "./helpers";
+import {bn, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 
 describe('protocol-contract', async () => {
 
@@ -57,8 +57,8 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTimeForQueries(d.web3, 3);
 
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address}));
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 2, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 2, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
   });
 
   it('allows protocol upgrade to be scheduled before the latest upgrade schedule when latest upgrade did not yet take place', async () => {
@@ -81,8 +81,8 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime, {from: d.functionalOwner.address})); // fromTimestamps likely equal n, {from: d.functionalOwner.addressow
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime-1, {from: d.functionalOwner.address})); // fromTimestamps behind n, {from: d.functionalOwner.addressow
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/); // fromTimestamps likely equal n, {from: d.functionalOwner.addressow
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime-1, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/); // fromTimestamps behind n, {from: d.functionalOwner.addressow
   });
 
   it('does not allow protocol downgrade', async () => {
@@ -99,7 +99,7 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTimeForQueries(d.web3, 3);
 
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address}), /protocol version must be greater or equal to current version/);
   });
 
   it('allows upgrading to current version (an abort mechanism)', async () => {
@@ -200,13 +200,13 @@ describe('protocol-contract', async () => {
 
     // create a second deployment subset
     await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address});
-    await expectRejected(d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address}), /deployment subset already exists/);
   });
 
-  it('does not allow setting a protocol version on a non-existent deploayment subset', async () => {
+  it('does not allow setting a protocol version on a non-existent deployment subset', async () => {
     const d = await Driver.new();
     let currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalOwner.address}), /deployment subset does not exist/);
 
     // create a second deployment subset
     await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 0, {from: d.functionalOwner.address});
