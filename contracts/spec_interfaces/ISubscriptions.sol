@@ -12,6 +12,7 @@ interface ISubscriptions {
     event SubscriberAdded(address subscriber);
     event SubscriberRemoved(address subscriber);
     event GenesisRefTimeDelayChanged(uint256 newGenesisRefTimeDelay);
+    event MinimumInitialVcPaymentChanged(uint256 newMinimumInitialVcPayment);
 
     /*
      *   Methods restricted to other Orbs contracts
@@ -57,6 +58,9 @@ interface ISubscriptions {
 
     /// @dev Called by the owner to set the genesis ref time delay
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalOwner */;
+
+    /// @dev Called by the owner to set the minimum initial vc payment
+    function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalOwner */;
 
     /// @dev Updates the address of the contract registry
     function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;

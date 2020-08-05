@@ -49,7 +49,11 @@ export interface SubscriberRemovedEvent {
 
 export interface GenesisRefTimeDelayChangedEvent {
   newGenesisRefTimeDelay: number|BN;
-};
+}
+
+export interface MinimumInitialVcPaymentChangedEvent {
+  newMinimumInitialVcPayment: number|BN;
+}
 
 export interface SubscriptionsContract extends OwnedContract {
   addSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -60,6 +64,8 @@ export interface SubscriptionsContract extends OwnedContract {
   setVcOwner(vcid: number|BN, owner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGenesisRefTimeDelay(genRefTimeDelay: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   getGenesisRefTimeDelay(params?: TransactionConfig): Promise<string>;
+  setMinimumInitialVcPayment(newMin: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  getMinimumInitialVcPayment(params?: TransactionConfig): Promise<string>;
   getVcData(vcid: number|string|BN, params?: TransactionConfig): Promise<[
     string /* name */,
     string /* tier */,

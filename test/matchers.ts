@@ -14,7 +14,7 @@ import {
   VcOwnerChangedEvent,
   VcCreatedEvent,
   SubscriberAddedEvent,
-  SubscriberRemovedEvent, GenesisRefTimeDelayChangedEvent
+  SubscriberRemovedEvent, GenesisRefTimeDelayChangedEvent, MinimumInitialVcPaymentChangedEvent
 } from "../typings/subscriptions-contract";
 import {
   StakeChangeEvent,
@@ -235,6 +235,7 @@ declare global {
       genesisRefTimeDelayChangedEvent(data?: Partial<GenesisRefTimeDelayChangedEvent>);
       stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
       stakingRewardsMigrationAcceptedEvent(data?: Partial<StakingRewardsMigrationAcceptedEvent>);
+      minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }
