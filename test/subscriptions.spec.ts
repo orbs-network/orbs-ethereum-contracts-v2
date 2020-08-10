@@ -72,7 +72,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(subscriber.address)).is.bignumber.equal('0');
     expect(await d.erc20.balanceOf(d.subscriptions.address)).is.bignumber.equal('0');
 
-    expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
+    expect(await d.erc20.balanceOf(d.generalFeesWallet.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
   it('registers and pays for a certification VC', async () => {
@@ -133,7 +133,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(subscriber.address)).is.bignumber.equal('0');
     expect(await d.erc20.balanceOf(d.subscriptions.address)).is.bignumber.equal('0');
 
-    expect(await d.erc20.balanceOf(d.rewards.address)).is.bignumber.equal(firstPayment.add(secondPayment));
+    expect(await d.erc20.balanceOf(d.certifiedFeesWallet.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
   it('adds and removes subscriber only by functional owner', async () => {

@@ -36,18 +36,8 @@ describe('bootstrap-rewards-level-flows', async () => {
     await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
     await d.rewards.setCertificationCommitteeAnnualBootstrap(annualAmountCertification, {from: g.address});
 
-    await g.assignAndApproveExternalToken(poolAmount, d.rewards.address);
-    let r = await d.rewards.topUpBootstrapPool(fromTokenUnits(1), {from: g.address});
-    expect(r).to.have.a.bootstrapAddedToPoolEvent({
-      added: fromTokenUnits(1),
-      total: fromTokenUnits(1)
-    });
-
-    r = await d.rewards.topUpBootstrapPool(poolAmount.sub(fromTokenUnits(1)), {from: g.address});
-    expect(r).to.have.a.bootstrapAddedToPoolEvent({
-      added: poolAmount.sub(fromTokenUnits(1)),
-      total: poolAmount
-    });
+    await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
+    await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
 
     // create committee
 
@@ -59,10 +49,10 @@ describe('bootstrap-rewards-level-flows', async () => {
     const {v: v3} = await d.newGuardian(initStakeLesser, true, false, true);
     const {v: v4, r: firstAssignTxRes} = await d.newGuardian(initStakeLesser, false, false, true);
     const startTime = await d.web3.txTimestamp(firstAssignTxRes);
-    const generalCommittee: Participant[] = [v1, v2, v3, v4];
+    const committee: Participant[] = [v1, v2, v3, v4];
 
     const initialBalance:BN[] = [];
-    for (const v of generalCommittee) {
+    for (const v of committee) {
       initialBalance.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
 
@@ -84,19 +74,19 @@ describe('bootstrap-rewards-level-flows', async () => {
     });
 
     const tokenBalances:BN[] = [];
-    for (const v of generalCommittee) {
+    for (const v of committee) {
       tokenBalances.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
 
-    for (const v of generalCommittee) {
-      const i = generalCommittee.indexOf(v);
+    for (const v of committee) {
+      const i = committee.indexOf(v);
 
       const expectedRewards = (i % 2 == 0) ? expectedCertificationCommitteeRewards : expectedGeneralCommitteeRewards;
       expect(tokenBalances[i].sub(initialBalance[i])).to.be.bignumber.equal(expectedRewards.toString());
 
       // claim the funds
-      const r = await d.rewards.withdrawBootstrapFunds({from: v.address});
-      const tokenBalance = await d.externalToken.balanceOf(v.address);
+      const r = await d.rewards.withdrawBootstrapFunds(v.address);
+      const tokenBalance = await d.bootstrapToken.balanceOf(v.address);
       expect(r).to.have.a.bootstrapRewardsWithdrawnEvent({
             guardian: v.address,
             amount: bn(tokenBalance)

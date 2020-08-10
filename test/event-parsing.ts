@@ -3,10 +3,12 @@ import * as _ from "lodash";
 import {SubscriptionChangedEvent, VcCreatedEvent} from "../typings/subscriptions-contract";
 import {compiledContracts} from "../compiled-contracts";
 import {
-    BootstrapRewardsWithdrawnEvent,
     FeesAddedToBucketEvent,
+    FeesWithdrawnFromBucketEvent
+} from "../typings/fees-wallet-contract";
+import {
+    BootstrapRewardsWithdrawnEvent,
     FeesWithdrawnEvent,
-    FeesWithdrawnFromBucketEvent, StakingRewardsAddedToPoolEvent
 } from "../typings/rewards-contract";
 
 const elections = compiledContracts["Elections"];
@@ -19,6 +21,7 @@ const rewards = compiledContracts["Rewards"];
 const protocol = compiledContracts["Protocol"];
 const contractRegistry = compiledContracts["ContractRegistry"];
 const delegations = compiledContracts["Delegations"];
+const feesWallet = compiledContracts["FeesWallet"];
 
 export function parseLogs(txResult, contract, eventSignature, contractAddress?: string) {
     const abi = new Web3().eth.abi;
@@ -43,11 +46,8 @@ export const delegatedEvents = (txResult, contractAddress?: string) => parseLogs
 export const delegatedStakeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "DelegatedStakeChanged(address,uint256,uint256,address[],uint256[])", contractAddress);
 export const subscriptionChangedEvents = (txResult, contractAddress?: string): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,string,uint256,uint256,string,string)", contractAddress);
 export const paymentEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)", contractAddress);
-export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, rewards, "FeesAddedToBucket(uint256,uint256,uint256,bool)", contractAddress);
-export const feesWithdrawnFromBucketEvents = (txResult, contractAddress?: string): FeesWithdrawnFromBucketEvent[] => parseLogs(txResult, rewards, "FeesWithdrawnToBucket(uint256,uint256,uint256,bool)", contractAddress);
-export const feesWithdrawnEvents = (txResult, contractAddress?: string): FeesWithdrawnEvent[] => parseLogs(txResult, rewards, "FeesWithdrawn(address,uint256)", contractAddress);
-export const bootstrapRewardsWithdrawnEvents = (txResult, contractAddress?: string): BootstrapRewardsWithdrawnEvent[] => parseLogs(txResult, rewards, "BootstrapRewardsWithdrawn(address,uint256)", contractAddress);
-export const stakingRewardsAddedToPoolEvents = (txResult, contractAddress?: string): StakingRewardsAddedToPoolEvent[] => parseLogs(txResult, rewards, "StakingRewardsAddedToPool(uint256,uint256)", contractAddress);
+export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, feesWallet, "FeesAddedToBucket(uint256,uint256,uint256)", contractAddress);
+export const feesWithdrawnFromBucketEvents = (txResult, contractAddress?: string): FeesWithdrawnFromBucketEvent[] => parseLogs(txResult, feesWallet, "FeesWithdrawnToBucket(uint256,uint256,uint256)", contractAddress);
 export const stakingRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsAssigned(address[],uint256[])", contractAddress);
 export const stakingRewardsDistributedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsDistributed(address,uint256,uint256,uint256,uint256,address[],uint256[])", contractAddress);
 export const feesAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "FeesAssigned(uint256,uint256)", contractAddress);

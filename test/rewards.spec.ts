@@ -10,7 +10,13 @@ import {
 import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
-import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
+import {
+    bootstrapRewardsAssignedEvents,
+    gasReportEvents,
+    stakingRewardsAssignedEvents,
+    feesAssignedEvents
+} from "./event-parsing";
+
 
 declare const web3: Web3;
 
@@ -83,63 +89,41 @@ async function sumBalances(d: Driver, committee: Participant[]): Promise<{fees: 
     return r;
 }
 
-async function getTotalBalances(d: Driver): Promise<{fees: string, staking: string, bootstrap: string}> {
-    const r = await d.rewards.getTotalBalances();
-    return {
-        fees: r[0],
-        staking: r[1],
-        bootstrap: r[2]
-    }
-}
-
 describe('rewards', async () => {
-    it("maintains total balances", async () => {
-        const d = await Driver.new();
+    it('withdraws staking rewards of guardian address even if sent from orbs address, and updates balances', async () => {
+        const {d, committee} = await fullCommittee(true);
 
-        const poolAmount = fromTokenUnits(1000000);
-        await d.erc20.assign(d.accounts[0], poolAmount);
-        await d.erc20.approve(d.rewards.address, poolAmount);
-        await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
-        await d.rewards.topUpStakingRewardsPool(poolAmount);
+        // await d.rewards.assignRewards();
+        await evmIncreaseTime(d.web3, 12*30*24*60*60);
+        let r = await d.rewards.assignRewards();
+        const stakingRewards = stakingRewardsAssignedEvents(r)[0].amounts;
 
-        await d.externalToken.assign(d.accounts[0], poolAmount);
-        await d.externalToken.approve(d.rewards.address, poolAmount);
-        await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-        await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-        await d.rewards.topUpBootstrapPool(poolAmount);
+        r = await d.rewards.distributeStakingRewards(
+            stakingRewards[0],
+            0,
+            1,
+            1,
+            0,
+            [committee[0].address],
+            [stakingRewards[0]],
+            {from: committee[0].address}
+        );
+        expect(r).to.have.a.stakedEvent({stakeOwner: committee[0].address, amount: stakingRewards[0]});
 
-        const committee: Participant[] = await Promise.all(_.range(defaultDriverOptions.maxCommitteeSize).map(async () =>
-            (await d.newGuardian(BASE_STAKE, true, false, true)).v
-        ));
+        r = await d.rewards.distributeStakingRewards(
+            stakingRewards[1],
+            0,
+            1,
+            1,
+            0,
+            [committee[1].address],
+            [stakingRewards[1]],
+            {from: committee[1].orbsAddress}
+        );
+        expect(r).to.have.a.stakedEvent({stakeOwner: committee[1].address, amount: stakingRewards[1]});
 
-        const monthlyRate = fromTokenUnits(1000);
-        const subs = await d.newSubscriber('defaultTier', monthlyRate);
-        const appOwner = d.newParticipant();
-
-        await createVC(d, true, subs, monthlyRate, appOwner);
-
-        await evmIncreaseTime(d.web3, MONTH_IN_SECONDS);
-        await d.rewards.assignRewards();
-        let expectedTotals = await sumBalances(d, committee);
-        expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
-
-        await d.rewards.withdrawFeeFunds({from: committee[0].address});
-        expectedTotals = await sumBalances(d, committee);
-        expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
-
-        await d.rewards.withdrawBootstrapFunds({from: committee[0].address});
-        expectedTotals = await sumBalances(d, committee);
-        expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
-
-        await d.rewards.distributeOrbsTokenStakingRewards(fromTokenUnits(1), 0, 1, 5, 0, [committee[0].address], [fromTokenUnits(1)], {from: committee[0].address});
-        expectedTotals = await sumBalances(d, committee);
-        expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
-
-        await evmIncreaseTime(d.web3, MONTH_IN_SECONDS);
-        await d.rewards.assignRewards();
-        expectedTotals = await sumBalances(d, committee);
-        expect(await getTotalBalances(d)).to.deep.eq(expectedTotals);
-
+        expect(await d.rewards.getStakingRewardBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
+        expect(await d.rewards.getStakingRewardBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
     });
 
     // todo - rewards contract tests
@@ -151,7 +135,7 @@ describe('rewards', async () => {
         await evmIncreaseTime(d.web3, 12*30*24*60*60);
         await d.rewards.assignRewards();
 
-        expect(await d.externalToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
 
         await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalOwner.address}));
@@ -159,9 +143,9 @@ describe('rewards', async () => {
         expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
 
         expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
-        expect(await d.externalToken.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
-        expect(await d.externalToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
     });
 
 });
