@@ -149,11 +149,6 @@ describe('subscriptions-high-level-flows', async () => {
     expect(r).to.have.a.subscriberRemovedEvent({subscriber: subscriber.address})
   });
 
-  it('should not add a subscriber with a zero address', async () => {
-    const d = await Driver.new();
-    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.functionalOwner.address}), /must provide a valid address/);
-  });
-
   it('is able to create multiple VCs from the same subscriber', async () => {
     const d = await Driver.new();
     const subs = await d.newSubscriber("tier", 1);

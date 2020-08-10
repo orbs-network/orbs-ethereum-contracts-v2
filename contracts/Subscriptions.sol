@@ -56,7 +56,6 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     }
 
     function addSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
-        require(addr != address(0), "must provide a valid address");
         // todo: emit event
         authorizedSubscribers[addr] = true;
 
@@ -64,7 +63,6 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     }
 
     function removeSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
-        require(addr != address(0), "must provide a valid address");
         require(authorizedSubscribers[addr], "given add is not an authorized subscriber");
 
         authorizedSubscribers[addr] = false;
