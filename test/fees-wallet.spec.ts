@@ -46,14 +46,14 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(2, d.generalFeesWallet.address);
 
     const now = await d.web3.txTimestamp(rNow);
-    let r = await d.generalFeesWallet.fillFeeBuckets(1, 10, now, {from: assigner.address});
+    let r = await d.generalFeesWallet.fillFeeBuckets(1, 1000, now, {from: assigner.address});
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now).toString(),
       added: bn(1).toString(),
       total: bn(1).toString(),
     });
 
-    r = await d.generalFeesWallet.fillFeeBuckets(1, 10, now + 1, {from: assigner.address});
+    r = await d.generalFeesWallet.fillFeeBuckets(1, 1000, now + 1, {from: assigner.address});
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now).toString(),
       added: bn(1).toString(),
