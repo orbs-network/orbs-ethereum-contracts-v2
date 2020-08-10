@@ -5,7 +5,6 @@ import {
     defaultDriverOptions,
     BANNING_LOCK_TIMEOUT,
     Driver,
-    expectRejected,
     Participant, ZERO_ADDR
 } from "./driver";
 import chai from "chai";
@@ -15,7 +14,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
 
 const baseStake = 100;
 
@@ -80,8 +79,8 @@ describe('elections-high-level-flows', async () => {
 
         const v = d.newParticipant();
 
-        await expectRejected(d.elections.readyToSync({from: v.address}));
-        await expectRejected(d.elections.readyForCommittee({from: v.address}));
+        await expectRejected(d.elections.readyToSync({from: v.address}), /Cannot resolve address/);
+        await expectRejected(d.elections.readyForCommittee({from: v.address}), /Cannot resolve address/);
     });
 
     it('handle delegation requests', async () => {
@@ -318,8 +317,8 @@ describe('elections-high-level-flows', async () => {
 
         const v = d.newParticipant();
         await v.stake(V1_STAKE);
-        await expectRejected(v.readyToSync());
-        await expectRejected(v.readyForCommittee());
+        await expectRejected(v.readyToSync(), /Cannot resolve address/);
+        await expectRejected(v.readyForCommittee(), /Cannot resolve address/);
     });
 
     it('staking before or after delegating has the same effect', async () => {
@@ -694,7 +693,7 @@ describe('elections-high-level-flows', async () => {
 
         const tipGuardian = delegatees[thresholdCrossingIndex];
         await d.elections.voteOut(ZERO_ADDR, {from: tipGuardian.address});
-        await expectRejected(votedOutGuardian.readyForCommittee());
+        await expectRejected(votedOutGuardian.readyForCommittee(), /caller is voted-out/);
     });
 
     it("VoteOut: update vote weight in response to staking and delegation", async () => {
@@ -776,10 +775,10 @@ describe('elections-high-level-flows', async () => {
             addrs: []
         });
 
-        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}));
-        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}));
-        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.address}));
-        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.orbsAddress}));
+        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}), /caller is voted-out/);
+        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}), /caller is voted-out/);
+        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.address}), /caller is voted-out/);
+        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.orbsAddress}), /caller is voted-out/);
     });
 
     it("sets and gets settings, only functional owner allowed to set", async () => {
@@ -791,28 +790,28 @@ describe('elections-high-level-flows', async () => {
         const voteOutPercentageThreshold  = bn(current[2]);
         const banningPercentageThreshold  = bn(current[3]);
 
-        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteUnreadyTimeoutSecondsChangedEvent({
             newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
             oldValue: voteOutTimeoutSeconds.toString()
         });
 
-        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.minSelfStakePercentMilleChangedEvent({
             newValue: minSelfStakePercentMille.add(bn(1)).toString(),
             oldValue: minSelfStakePercentMille.toString()
         });
 
-        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
             newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
             oldValue: voteOutPercentageThreshold.toString()
         });
 
-        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
             newValue: banningPercentageThreshold.add(bn(1)).toString(),

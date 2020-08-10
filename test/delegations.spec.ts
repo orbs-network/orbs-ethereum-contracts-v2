@@ -3,7 +3,6 @@ import 'mocha';
 import BN from "bn.js";
 import {
     Driver,
-    expectRejected,
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
@@ -12,7 +11,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn} from "./helpers";
+import {bn, expectRejected} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 
 describe('delegations-contract', async () => {
@@ -24,14 +23,12 @@ describe('delegations-contract', async () => {
 
         const participant = d.newParticipant();
 
-        await expectRejected(participant.stake(5, rogueStakingContract), "should not accept notifications from an address other than the staking contract");
+        await expectRejected(participant.stake(5, rogueStakingContract), /caller is not the staking contract/);
         await participant.stake(5);
         await d.contractRegistry.set("staking", rogueStakingContract.address, {from: d.functionalOwner.address});
         await participant.stake(5, rogueStakingContract)
 
         // TODO - to check stakeChangeBatch use a mock staking contract that would satisfy the interface but would allow sending stakeChangeBatch when there are no rewards to distribue
-        // await expectRejected(d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
-        // await d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: stakingAddr});
     });
 
     it('selfDelegatedStake toggles to zero if delegating to another', async () => {
@@ -438,14 +435,14 @@ describe('delegations-contract', async () => {
        const d1 = d.newParticipant();
        const v1 = d.newParticipant();
 
-       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.functionalOwner.address}));
+       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
        await d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address});
 
-       await expectRejected(d.delegations.finalizeDelegationImport({from: d.functionalOwner.address}));
+       await expectRejected(d.delegations.finalizeDelegationImport({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
        let r = await d.delegations.finalizeDelegationImport({from: d.migrationOwner.address});
        expect(r).to.have.a.delegationImportFinalizedEvent({});
 
-       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address}));
+       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address}), /delegation import was finalized/);
     });
 
     it('properly handles a delegation when self stake of delegator is not yet initialized', async () => {

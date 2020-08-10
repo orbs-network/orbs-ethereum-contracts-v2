@@ -222,9 +222,9 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             ds.nextTxIndex = txIndex + 1;
             distributorBatchState[vars.guardianAddr] = ds;
         } else {
-            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
-            require(toBlock == ds.toBlock, "toBlock mismatch");
             require(fromBlock == ds.fromBlock, "fromBlock mismatch");
+            require(toBlock == ds.toBlock, "toBlock mismatch");
+            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             require(split == ds.split, "split mismatch");
             distributorBatchState[vars.guardianAddr].nextTxIndex = txIndex + 1;
         }

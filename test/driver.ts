@@ -575,14 +575,3 @@ export class Participant {
     }
 
 }
-
-export async function expectRejected(promise: Promise<any>, msg?: string) {
-    try {
-        await promise;
-    } catch (err) {
-        // TODO verify correct error
-        return
-    }
-    throw new Error(msg || "expected promise to reject")
-}
-

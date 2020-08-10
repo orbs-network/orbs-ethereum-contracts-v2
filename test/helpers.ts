@@ -89,3 +89,15 @@ export function transpose(obj, key, fields?) {
     return transposed;
 }
 
+const expect = chai.expect;
+
+export async function expectRejected(promise: Promise<any>, expectedErrorMsg: RegExp) {
+    try {
+        await promise;
+    } catch (err) {
+        expect(err.toString()).to.match(expectedErrorMsg);
+        return
+    }
+    throw new Error("expected promise to reject")
+}
+

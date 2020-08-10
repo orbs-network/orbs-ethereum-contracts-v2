@@ -4,12 +4,12 @@ import BN from "bn.js";
 import * as _ from "lodash";
 import {
     defaultDriverOptions,
-    Driver, expectRejected,
+    Driver,
     Participant
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
-import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 import {
     bootstrapRewardsAssignedEvents,
     gasReportEvents,
@@ -138,7 +138,7 @@ describe('rewards', async () => {
         expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
 
-        await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalOwner.address}));
+        await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
         let r = await d.rewards.emergencyWithdraw({from: d.migrationOwner.address});
         expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
 

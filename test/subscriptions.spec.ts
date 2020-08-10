@@ -1,10 +1,10 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, expectRejected, ZERO_ADDR} from "./driver";
+import {Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
-import {bn} from "./helpers";
+import {bn, expectRejected} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
@@ -140,18 +140,13 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber('tier', 1);
 
-    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to add a subscriber");
+    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /caller is not the functionalOwner/);
     let r = await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
     expect(r).to.have.a.subscriberAddedEvent({subscriber: subscriber.address})
 
-    await expectRejected(d.subscriptions.removeSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to remove a subscriber");
+    await expectRejected(d.subscriptions.removeSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /caller is not the functionalOwner/);
     r = await d.subscriptions.removeSubscriber(subscriber.address, {from: d.functionalOwner.address});
     expect(r).to.have.a.subscriberRemovedEvent({subscriber: subscriber.address})
-  });
-
-  it('should not add a subscriber with a zero address', async () => {
-    const d = await Driver.new();
-    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.functionalOwner.address}), "Should not deploy a subscriber with a zero address");
   });
 
   it('is able to create multiple VCs from the same subscriber', async () => {
@@ -224,7 +219,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(v).to.equal("");
 
     // reject if set by non owner
-    await expectRejected(d.subscriptions.setVcConfigRecord(vcid, key, value, {from: nonOwner.address}));
+    await expectRejected(d.subscriptions.setVcConfigRecord(vcid, key, value, {from: nonOwner.address}), /only vc owner can set a vc config record/);
   });
 
   it('allows VC owner to transfer ownership', async () => {
@@ -246,7 +241,7 @@ describe('subscriptions-high-level-flows', async () => {
     const newOwner = d.newParticipant();
 
     const nonOwner = d.newParticipant();
-    await expectRejected(d.subscriptions.setVcOwner(vcid, newOwner.address, {from: nonOwner.address}));
+    await expectRejected(d.subscriptions.setVcOwner(vcid, newOwner.address, {from: nonOwner.address}), /only the vc owner can transfer ownership/);
 
     r = await d.subscriptions.setVcOwner(vcid, newOwner.address, {from: owner.address});
     expect(r).to.have.a.vcOwnerChangedEvent({
@@ -255,7 +250,7 @@ describe('subscriptions-high-level-flows', async () => {
       newOwner: newOwner.address
     });
 
-    await expectRejected(d.subscriptions.setVcOwner(vcid, owner.address, {from: owner.address}));
+    await expectRejected(d.subscriptions.setVcOwner(vcid, owner.address, {from: owner.address}), /only the vc owner can transfer ownership/);
 
     r = await d.subscriptions.setVcOwner(vcid, owner.address, {from: newOwner.address});
     expect(r).to.have.a.vcOwnerChangedEvent({
@@ -276,7 +271,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.subscriptions.setMinimumInitialVcPayment(amount, {from: d.functionalOwner.address});
 
     await owner.assignAndApproveOrbs(amount - 1, subs.address);
-    expectRejected(subs.createVC("vc-name", amount - 1, false, "main", {from: owner.address}));
+    expectRejected(subs.createVC("vc-name", amount - 1, false, "main", {from: owner.address}), /initial VC payment must be at least minimumInitialVcPayment/);
 
     await owner.assignAndApproveOrbs(amount, subs.address);
     await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
@@ -294,7 +289,7 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
 
     const newDelay = 4*60*60;
-    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}));
+    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
     let r = await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
     expect(r).to.have.a.genesisRefTimeDelayChangedEvent({newGenesisRefTimeDelay: bn(newDelay)})
 
@@ -314,7 +309,7 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
 
     const newMin = 1000;
-    await expectRejected(d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.migrationOwner.address}));
+    await expectRejected(d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
     let r = await d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.functionalOwner.address});
     expect(r).to.have.a.minimumInitialVcPaymentChangedEvent({newMinimumInitialVcPayment: bn(newMin)})
 
@@ -323,10 +318,6 @@ describe('subscriptions-high-level-flows', async () => {
 
   it('gets vc data', async () => {
     const d = await Driver.new();
-
-    const newDelay = 4*60*60;
-    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}));
-    await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
 
     const subs = await d.newSubscriber("tier", 1);
 
