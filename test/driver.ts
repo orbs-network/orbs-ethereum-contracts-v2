@@ -525,11 +525,13 @@ export class Participant {
     }
 
     async becomeGuardian(stake: number|BN, certified: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
-        await this.registerAsGuardian();
+        let r = await this.registerAsGuardian();
         if (certified) {
-            await this.becomeCertified();
+            r = await this.becomeCertified();
         }
-        let r = await this.stake(stake);
+        if (bn(stake).gt(bn(0))) {
+            r = await this.stake(stake);
+        }
         if (signalReadyToSync) {
             r = await this.readyToSync();
         }
