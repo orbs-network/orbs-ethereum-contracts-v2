@@ -40,14 +40,14 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(2, d.generalFeesWallet.address);
 
     const now = await d.web3.txTimestamp(rNow);
-    let r = await d.generalFeesWallet.fillFeeBuckets(1, 10, now, {from: assigner.address});
+    let r = await d.generalFeesWallet.fillFeeBuckets(1, 1000, now, {from: assigner.address});
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now).toString(),
       added: bn(1).toString(),
       total: bn(1).toString(),
     });
 
-    r = await d.generalFeesWallet.fillFeeBuckets(1, 10, now + 1, {from: assigner.address});
+    r = await d.generalFeesWallet.fillFeeBuckets(1, 1000, now + 1, {from: assigner.address});
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now).toString(),
       added: bn(1).toString(),
@@ -59,15 +59,16 @@ describe('fees-wallet-contract', async () => {
     const d = await Driver.new();
 
     const {v: assigner, r: rNow} = await d.newGuardian(1, false, false, true);
-    await assigner.assignAndApproveOrbs(42, d.generalFeesWallet.address);
+    await assigner.assignAndApproveOrbs(100000, d.generalFeesWallet.address);
 
-    const rate = bn(10);
+    const rate = bn(1000);
+    const amount = bn(2001);
     const now = await d.web3.txTimestamp(rNow);
-    let r = await d.generalFeesWallet.fillFeeBuckets(21, rate, now, {from: assigner.address});
+    let r = await d.generalFeesWallet.fillFeeBuckets(amount, rate, now, {from: assigner.address});
     const expectedAmounts = [
         bn(MONTH_IN_SECONDS - now % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)),
         bn(rate),
-        bn(21 - rate - bn(MONTH_IN_SECONDS - now % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
+        bn(amount - rate - bn(MONTH_IN_SECONDS - now % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
     ];
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now),
@@ -85,12 +86,12 @@ describe('fees-wallet-contract', async () => {
       total: expectedAmounts[2],
     });
 
-    r = await d.generalFeesWallet.fillFeeBuckets(21, rate, now + 1, {from: assigner.address});
+    r = await d.generalFeesWallet.fillFeeBuckets(amount, rate, now + 1, {from: assigner.address});
     const now2 = await d.web3.txTimestamp(r);
     const expectedAmounts2 = [
       bn(MONTH_IN_SECONDS - now2 % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)),
       rate,
-      bn(21 - rate - bn(MONTH_IN_SECONDS - now2 % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
+      bn(amount - rate - bn(MONTH_IN_SECONDS - now2 % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
     ];
 
     expect(r).to.have.a.feesAddedToBucketEvent({
