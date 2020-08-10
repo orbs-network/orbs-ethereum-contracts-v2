@@ -55,7 +55,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
 
     function addSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
         require(addr != address(0), "must provide a valid address");
-
+        // todo: emit event
         authorizedSubscribers[addr] = true;
 
         emit SubscriberAdded(addr);
