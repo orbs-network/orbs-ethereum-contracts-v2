@@ -266,6 +266,30 @@ describe('subscriptions-high-level-flows', async () => {
 
   });
 
+  it('enforces initial payment is at least minimumInitialVcPayment', async () => {
+    const d = await Driver.new();
+    const subs = await d.newSubscriber("tier", 1);
+
+    const owner = d.newParticipant();
+
+    const amount = 10;
+    await d.subscriptions.setMinimumInitialVcPayment(amount, {from: d.functionalOwner.address});
+
+    await owner.assignAndApproveOrbs(amount - 1, subs.address);
+    expectRejected(subs.createVC("vc-name", amount - 1, false, "main", {from: owner.address}));
+
+    await owner.assignAndApproveOrbs(amount, subs.address);
+    await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
+
+    await owner.assignAndApproveOrbs(amount + 1, subs.address);
+    let r = await subs.createVC("vc-name", amount + 1, false, "main", {from: owner.address});
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+
+    // can be extended with any amount
+    await owner.assignAndApproveOrbs(1, subs.address);
+    await subs.extendSubscription(vcid, 1, {from: owner.address});
+  });
+
   it('allows only the functional owner to set default genesis ref time delay', async () => {
     const d = await Driver.new();
 
@@ -284,6 +308,17 @@ describe('subscriptions-high-level-flows', async () => {
     expect(r).to.have.a.subscriptionChangedEvent({
       genRefTime: bn(await d.web3.txTimestamp(r) + newDelay)
     });
+  });
+
+  it('allows only the functional owner to set minimumInitialVcPayment', async () => {
+    const d = await Driver.new();
+
+    const newMin = 1000;
+    await expectRejected(d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.migrationOwner.address}));
+    let r = await d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.functionalOwner.address});
+    expect(r).to.have.a.minimumInitialVcPaymentChangedEvent({newMinimumInitialVcPayment: bn(newMin)})
+
+    expect(await d.subscriptions.getMinimumInitialVcPayment()).to.bignumber.eq(bn(newMin));
   });
 
   it('gets vc data', async () => {

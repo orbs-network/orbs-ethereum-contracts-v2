@@ -33,6 +33,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
 
     uint public nextVcid;
     uint public genesisRefTimeDelay;
+    uint256 public minimumInitialVcPayment;
 
     IERC20 public erc20;
 
@@ -74,6 +75,7 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         require(getProtocolContract().deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
+        require(amount >= minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
 
         uint vcid = nextVcid++;
         VirtualChain memory vc = VirtualChain({
@@ -125,8 +127,17 @@ contract Subscriptions is ISubscriptions, ContractRegistryAccessor, WithClaimabl
         emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
     }
 
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) external onlyFunctionalOwner {
+        minimumInitialVcPayment = newMinimumInitialVcPayment;
+        emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
+    }
+
     function getGenesisRefTimeDelay() external view returns (uint) {
         return genesisRefTimeDelay;
+    }
+
+    function getMinimumInitialVcPayment() external view returns (uint) {
+        return minimumInitialVcPayment;
     }
 
     function getVcData(uint256 vcId) external view returns (
