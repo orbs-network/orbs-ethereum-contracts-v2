@@ -11,7 +11,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     IERC20 public token;
     address public client;
 
-    uint lastApprovedAt;
+    uint lastWithdrawal;
     uint annualRate;
 
     modifier onlyClient() {
@@ -23,7 +23,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client) public {
         token = _token;
         client = _client;
-        lastApprovedAt = now; // TODO init here, or in first call to setMaxAnnualRate?
+        lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?
     }
 
     /// @dev Returns the address of the underlying staked token.
@@ -44,17 +44,14 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         require(token.transferFrom(msg.sender, address(this), amount), "ProtocolWallet::topUp - insufficient allowance");
     }
 
-    /// @dev Approves withdraw from pool to a spender, limited by the pool's MaxRate.
+    /// @dev withdraws from the pool to a spender, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
-    /// Flow:
-    /// PoolWallet.approveTransfer(amount);
-    /// ERC20.transferFrom(PoolWallet, client, amount)
     function withdraw(uint256 amount) external onlyClient {
-        uint duration = now - lastApprovedAt;
+        uint duration = now - lastWithdrawal;
         uint maxAmount = duration.mul(annualRate).div(365 * 24 * 60 * 60);
-        require(amount <= maxAmount, "ProtocolWallet:approve - requested amount is larger than allowed by rate");
+        require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
-        lastApprovedAt = now;
+        lastWithdrawal = now;
         if (amount > 0) {
             require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
         }
@@ -67,8 +64,14 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         emit MaxAnnualRateSet(_annualRate);
     }
 
+    /// @dev Sets a new transfer rate for the Orbs pool.
+    function resetOutstandingTokens() external onlyMigrationOwner { //TODO add test
+        lastWithdrawal = now;
+        emit OutstandingTokensReset();
+    }
+
     /// @dev transfer the entire pool's balance to a new wallet.
-    function emergencyWithdraw() external onlyMigrationOwner {
+    function emergencyWithdraw() external onlyMigrationOwner { 
         emit EmergencyWithdrawal(msg.sender);
         require(token.transfer(msg.sender, getBalance()), "ProtocolWallet::emergencyWithdraw - transfer failed");
     }

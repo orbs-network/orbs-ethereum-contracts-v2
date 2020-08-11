@@ -10,6 +10,7 @@ export interface GuardianRegisteredEvent {
 
 export interface GuardianDataUpdatedEvent {
     addr: string,
+    isRegistered: boolean,
     ip: string,
     orbsAddr: string,
     name: string,

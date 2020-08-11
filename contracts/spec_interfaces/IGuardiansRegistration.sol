@@ -5,8 +5,8 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface IGuardiansRegistration {
 	event GuardianRegistered(address addr);
-	event GuardianDataUpdated(address addr, bytes4 ip, address orbsAddr, string name, string website, string contact);
 	event GuardianUnregistered(address addr);
+	event GuardianDataUpdated(address addr, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website, string contact);
 	event GuardianMetadataChanged(address addr, string key, string newValue, string oldValue);
 
 	/*
@@ -35,13 +35,8 @@ interface IGuardiansRegistration {
     /// Used also by the Election contract
 	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time);
 
-
-	// TODO added the following two getters for the elections contract which only needs ip and orbs address. Using getGuardianData caused "Unused Variables" warnings.
-
-	/// @dev Returns a guardian's orbs address
-	/// Used also by the Election contract
-	function getGuardianOrbsAddress(address addr) external view returns (address orbsAddr);
-
+	/// @dev Returns the Orbs addresses of a list of guardians
+	/// Used also by the committee contract
 	function getGuardiansOrbsAddress(address[] calldata addrs) external view returns (address[] memory orbsAddrs);
 
 	/// @dev Returns a guardian's ip

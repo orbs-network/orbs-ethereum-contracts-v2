@@ -10,7 +10,7 @@ import {
 import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
-import {gasReportEvents} from "./event-parsing";
+import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
 
 declare const web3: Web3;
 
@@ -28,21 +28,20 @@ const tlog = (s) => console.log(Math.floor(Date.now()/1000 - t0/1000), s);
 
 async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Promise<{d: Driver, committee: Participant[]}> {
     tlog("Creating driver..");
-    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, maxDelegationRatio: 255});
+    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, minSelfStakePercentMille: 0});
     tlog("Driver created");
 
+    const g = d.newParticipant();
     const poolAmount = fromTokenUnits(1000000);
-    await d.erc20.assign(d.accounts[0], poolAmount);
-    await d.erc20.approve(d.rewards.address, poolAmount);
+    await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
-    await d.rewards.topUpStakingRewardsPool(poolAmount);
     tlog("Staking pools topped up");
 
-    await d.externalToken.assign(d.accounts[0], poolAmount);
-    await d.externalToken.approve(d.rewards.address, poolAmount);
+    await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
+    await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
     await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-    await d.rewards.topUpBootstrapPool(poolAmount);
     tlog("Bootstrap pools topped up");
 
     let committee: Participant[] = [];
@@ -116,7 +115,7 @@ describe('gas usage scenarios', async () => {
         // const ge = gasReportEvents(r);
         // ge.forEach(e => console.log(JSON.stringify(e)));
 
-        d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
+        d.logGasUsageSummary("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", [delegator]);
     });
 
     it("Delegation change, top of committee and bottom committee switch places", async () => {
@@ -246,7 +245,7 @@ describe('gas usage scenarios', async () => {
     it("Auto-voteout is cast, threshold is reached and top committee member leaves", async () => {
         const {d, committee} = await fullCommittee(true);
 
-        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteOutThreshold / 100));
+        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThreshold / 100));
         await Promise.all(
             voters.map(v => d.elections.voteUnready(committee[0].address, {from: v.orbsAddress}))
         );
@@ -286,7 +285,7 @@ describe('gas usage scenarios', async () => {
     it("Manual-voteout is cast, threshold is reached and top committee member leaves", async () => {
         const {d, committee} = await fullCommittee(true);
 
-        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteOutThreshold / 100));
+        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThreshold / 100));
         await Promise.all(
             voters.map(v => d.elections.voteOut(committee[0].address, {from: v.address}))
         );
@@ -313,7 +312,8 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommittee(true);
 
         await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.rewards.assignRewards();
+        let r = await d.rewards.assignRewards();
+        console.log(feesAssignedEvents(r));
 
         await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
 
@@ -333,7 +333,7 @@ describe('gas usage scenarios', async () => {
         const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
 
         d.resetGasRecording();
-        await d.rewards.distributeOrbsTokenStakingRewards(
+        await d.rewards.distributeStakingRewards(
             balance.div(bn(batchSize)).mul(bn(batchSize)),
             0,
             100,

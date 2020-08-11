@@ -10,10 +10,11 @@ import "./spec_interfaces/IProtocolWallet.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./WithClaimableFunctionalOwnership.sol";
+import "./spec_interfaces/IFeesWallet.sol";
 
 contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
-    using SafeMath for uint48; // TODO this is meaningless for overflow detection, SafeMath is only for uint256. Should still detect underflows
+    using SafeMath for uint48;
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
@@ -24,14 +25,8 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     Settings settings;
 
-    struct PoolsAndTotalBalances {
-        uint48 bootstrapPool;
-        uint48 stakingPool;
-        uint48 bootstrapRewardsTotalBalance;
-        uint48 feesTotalBalance;
-        uint48 stakingRewardsTotalBalance;
-    }
-    PoolsAndTotalBalances poolsAndTotalBalances;
+    IERC20 bootstrapToken;
+    IERC20 erc20;
 
     struct Balance {
         uint48 bootstrapRewards;
@@ -40,12 +35,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
     }
     mapping(address => Balance) balances;
 
-    uint256 constant feeBucketTimePeriod = 30 days;
-    mapping(uint256 => uint256) generalFeePoolBuckets;
-    mapping(uint256 => uint256) certifiedFeePoolBuckets;
-
-    IERC20 bootstrapToken;
-    IERC20 erc20;
     uint256 lastAssignedAt;
 
     modifier onlyCommitteeContract() {
@@ -75,25 +64,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         settings.certificationCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalOwner onlyWhenActive {
+    function setMaxDelegatorsStakingRewards(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalOwner onlyWhenActive {
         require(maxDelegatorsStakingRewardsPercentMille <= 100000, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
         settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
         emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
-    }
-
-    function topUpBootstrapPool(uint256 amount) external onlyWhenActive {
-        uint48 _amount48 = toUint48Granularity(amount);
-        uint48 bootstrapPool = uint48(poolsAndTotalBalances.bootstrapPool.add(_amount48)); // todo may overflow
-        poolsAndTotalBalances.bootstrapPool = bootstrapPool;
-
-        IERC20 _bootstrapToken = bootstrapToken;
-        require(transferFrom(_bootstrapToken, msg.sender, address(this), _amount48), "Rewards::topUpFixedPool - insufficient allowance");
-
-        IProtocolWallet wallet = getBootstrapRewardsWallet();
-        require(_bootstrapToken.approve(address(wallet), amount), "Rewards::topUpBootstrapPool - approve failed");
-        wallet.topUp(amount);
-
-        emit BootstrapAddedToPool(amount, toUint256Granularity(bootstrapPool));
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
@@ -122,13 +96,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         (uint256 generalGuardianFee, uint256 certifiedGuardianFee) = collectFees(committee, certification);
         (uint256[] memory stakingRewards) = collectStakingRewards(committee, committeeWeights, _settings);
 
-        PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
-
-        Totals memory origTotals = Totals({
-            bootstrapRewardsTotalBalance: totals.bootstrapRewardsTotalBalance,
-            feesTotalBalance: totals.feesTotalBalance,
-            stakingRewardsTotalBalance: totals.stakingRewardsTotalBalance
-        });
+        Totals memory totals;
 
         Balance memory balance;
         for (uint i = 0; i < committee.length; i++) {
@@ -138,17 +106,16 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
             balance.fees += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
             balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
 
-            totals.bootstrapRewardsTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap); // todo may overflow
-            totals.feesTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee); // todo may overflow
-            totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]); // todo may overflow
+            totals.bootstrapRewardsTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap);
+            totals.feesTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
+            totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]);
 
             balances[committee[i]] = balance;
         }
 
-        getStakingRewardsWallet().withdraw(toUint256Granularity(uint48(totals.stakingRewardsTotalBalance.sub(origTotals.stakingRewardsTotalBalance))));
-        getBootstrapRewardsWallet().withdraw(toUint256Granularity(uint48(totals.bootstrapRewardsTotalBalance.sub(origTotals.bootstrapRewardsTotalBalance))));
+        getStakingRewardsWallet().withdraw(toUint256Granularity(totals.stakingRewardsTotalBalance));
+        getBootstrapRewardsWallet().withdraw(toUint256Granularity(totals.bootstrapRewardsTotalBalance));
 
-        poolsAndTotalBalances = totals;
         lastAssignedAt = now;
 
         emit StakingRewardsAssigned(committee, stakingRewards);
@@ -162,19 +129,11 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         certifiedGuardianBootstrap = generalGuardianBootstrap + toUint256Granularity(uint48(_settings.certificationCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
-    function withdrawBootstrapFunds() external onlyWhenActive {
-        uint48 amount = balances[msg.sender].bootstrapRewards;
-
-        PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
-
-        require(amount <= _poolsAndTotalBalances.bootstrapPool, "not enough balance in the bootstrap pool for this withdrawal");
-        balances[msg.sender].bootstrapRewards = 0;
-        _poolsAndTotalBalances.bootstrapRewardsTotalBalance = uint48(_poolsAndTotalBalances.bootstrapRewardsTotalBalance.sub(amount));
-        _poolsAndTotalBalances.bootstrapPool = uint48(_poolsAndTotalBalances.bootstrapPool.sub(amount));
-        poolsAndTotalBalances = _poolsAndTotalBalances;
-
-        emit BootstrapRewardsWithdrawn(msg.sender, toUint256Granularity(amount));
-        require(transfer(bootstrapToken, msg.sender, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
+    function withdrawBootstrapFunds(address guardian) external {
+        uint48 amount = balances[guardian].bootstrapRewards;
+        balances[guardian].bootstrapRewards = 0;
+        emit BootstrapRewardsWithdrawn(guardian, toUint256Granularity(amount));
+        require(transfer(bootstrapToken, guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
     // staking rewards
@@ -184,21 +143,6 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         _settings.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
         _settings.annualCap = toUint48Granularity(annual_cap);
         settings = _settings;
-    }
-
-    function topUpStakingRewardsPool(uint256 amount) external onlyWhenActive {
-        uint48 amount48 = toUint48Granularity(amount);
-        uint48 total48 = uint48(poolsAndTotalBalances.stakingPool.add(amount48));
-        poolsAndTotalBalances.stakingPool = total48;
-
-        IERC20 _erc20 = erc20;
-        require(_erc20.transferFrom(msg.sender, address(this), amount), "Rewards::topUpProRataPool - insufficient allowance");
-
-        IProtocolWallet wallet = getStakingRewardsWallet();
-        require(_erc20.approve(address(wallet), amount), "Rewards::topUpProRataPool - approve failed");
-        wallet.topUp(amount);
-
-        emit StakingRewardsAddedToPool(amount, toUint256Granularity(total48));
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {
@@ -222,7 +166,7 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastAssignedAt);
 
-            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight)); // todo make 100000 constant?
+            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight));
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
                 curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days));
@@ -243,18 +187,18 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         return delegatorRewards.mul(100000) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors
     }
 
-    struct VistributeOrbsTokenStakingRewardsVars {
+    struct distributeStakingRewardsVars {
         bool firstTxBySender;
         address guardianAddr;
         uint256 delegatorsAmount;
     }
-    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
-        require(to.length > 0, "list must containt at least one recipient");
+    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
+        require(to.length > 0, "list must contain at least one recipient");
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
         require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
 
-        VistributeOrbsTokenStakingRewardsVars memory vars;
+        distributeStakingRewardsVars memory vars;
 
         vars.guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
 
@@ -263,41 +207,31 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
                 vars.delegatorsAmount = vars.delegatorsAmount.add(amounts[i]);
             }
         }
-        require(isDelegatorRewardsBelowThreshold(vars.delegatorsAmount, totalAmount), "Total delegators reward (to[1:n]) must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
+        require(isDelegatorRewardsBelowThreshold(vars.delegatorsAmount, totalAmount), "Total delegators reward must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
 
         DistributorBatchState memory ds = distributorBatchState[vars.guardianAddr];
         vars.firstTxBySender = ds.nextTxIndex == 0;
 
-        require(!vars.firstTxBySender || fromBlock == 0, "on the first batch fromBlock must be 0");
-
         if (vars.firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
-            require(txIndex == 0, "txIndex must be 0 for the first transaction of a new distribution batch");
+            require(vars.firstTxBySender || txIndex == 0, "txIndex must be 0 for the first transaction of a new (non-initial) distribution batch");
             require(toBlock < block.number, "toBlock must be in the past");
             require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
             ds.fromBlock = fromBlock;
             ds.toBlock = toBlock;
             ds.split = split;
-            ds.nextTxIndex = 1;
+            ds.nextTxIndex = txIndex + 1;
             distributorBatchState[vars.guardianAddr] = ds;
         } else {
-            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
-            require(toBlock == ds.toBlock, "toBlock mismatch");
             require(fromBlock == ds.fromBlock, "fromBlock mismatch");
+            require(toBlock == ds.toBlock, "toBlock mismatch");
+            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
             require(split == ds.split, "split mismatch");
             distributorBatchState[vars.guardianAddr].nextTxIndex = txIndex + 1;
         }
 
         require(totalAmount_uint48 <= balances[vars.guardianAddr].stakingRewards, "not enough member balance for this distribution");
 
-        PoolsAndTotalBalances memory _poolsAndTotalBalances = poolsAndTotalBalances;
-
-        require(totalAmount_uint48 <= _poolsAndTotalBalances.stakingPool, "not enough balance in the staking pool for this distribution");
-
-        _poolsAndTotalBalances.stakingPool = uint48(_poolsAndTotalBalances.stakingPool.sub(totalAmount_uint48));
         balances[vars.guardianAddr].stakingRewards = uint48(balances[vars.guardianAddr].stakingRewards.sub(totalAmount_uint48));
-        _poolsAndTotalBalances.stakingRewardsTotalBalance = uint48(_poolsAndTotalBalances.stakingRewardsTotalBalance.sub(totalAmount_uint48));
-
-        poolsAndTotalBalances = _poolsAndTotalBalances;
 
         IStakingContract stakingContract = getStakingContract();
 
@@ -309,63 +243,22 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
 
-    // fees
-
-    function getFeeBalance(address addr) external view returns (uint256) {
-        return toUint256Granularity(balances[addr].fees);
-    }
-
-    uint constant MAX_FEE_BUCKET_ITERATIONS = 24;
-
     function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256 generalGuardianFee, uint256 certifiedGuardianFee) {
-        // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
-        // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-
-        // Fee pool
-        uint _lastAssignedAt = lastAssignedAt;
-        uint bucketsPayed = 0;
-        uint generalFeePoolAmount = 0;
-        uint certificationFeePoolAmount = 0;
-        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastAssignedAt < now) {
-            uint256 bucketStart = _bucketTime(_lastAssignedAt);
-            uint256 bucketEnd = bucketStart.add(feeBucketTimePeriod);
-            uint256 payUntil = Math.min(bucketEnd, now);
-            uint256 bucketDuration = payUntil.sub(_lastAssignedAt);
-            uint256 remainingBucketTime = bucketEnd.sub(_lastAssignedAt);
-
-            uint256 bucketTotal = generalFeePoolBuckets[bucketStart];
-            uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
-            generalFeePoolAmount += amount;
-            bucketTotal = bucketTotal.sub(amount);
-            generalFeePoolBuckets[bucketStart] = bucketTotal;
-            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, false);
-
-            bucketTotal = certifiedFeePoolBuckets[bucketStart];
-            amount = bucketTotal * bucketDuration / remainingBucketTime;
-            certificationFeePoolAmount += amount;
-            bucketTotal = bucketTotal.sub(amount);
-            certifiedFeePoolBuckets[bucketStart] = bucketTotal;
-            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal, true);
-
-            _lastAssignedAt = payUntil;
-
-            assert(_lastAssignedAt <= bucketEnd);
-            if (_lastAssignedAt == bucketEnd) {
-                delete generalFeePoolBuckets[bucketStart];
-                delete certifiedFeePoolBuckets[bucketStart];
-            }
-
-            bucketsPayed++;
-        }
+        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees();
+        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees();
 
         generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
         certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
     }
 
-    function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private returns (uint256 guardianFee) {
+    function getFeeBalance(address addr) external view returns (uint256) {
+        return toUint256Granularity(balances[addr].fees);
+    }
+
+    function divideFees(address[] memory committee, bool[] memory certification, uint256 amount, bool isCertified) private pure returns (uint256 guardianFee) {
         uint n = committee.length;
         if (isCertified)  {
-            n = 0; // todo - this is calculated in other places, get as argument to save gas
+            n = 0;
             for (uint i = 0; i < committee.length; i++) {
                 if (certification[i]) n++;
             }
@@ -373,73 +266,44 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         if (n > 0) {
             guardianFee = toUint256Granularity(toUint48Granularity(amount.div(n)));
         }
-
-        uint256 remainder = amount.sub(guardianFee.mul(n));
-        if (remainder > 0) {
-            fillFeeBucket(_bucketTime(now), remainder, isCertified);
-        }
     }
 
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp, false);
+    function withdrawFees(address guardian) external {
+        uint48 amount = balances[guardian].fees;
+        balances[guardian].fees = 0;
+        emit FeesWithdrawn(guardian, toUint256Granularity(amount));
+        require(transfer(erc20, guardian, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
-    function fillCertificationFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external onlyWhenActive {
-        fillFeeBuckets(amount, monthlyRate, fromTimestamp, true);
-    }
-
-    function fillFeeBucket(uint256 bucketId, uint256 amount, bool isCertified) private {
-        uint256 total;
-        if (isCertified) {
-            total = certifiedFeePoolBuckets[bucketId].add(amount);
-            certifiedFeePoolBuckets[bucketId] = total;
-        } else {
-            total = generalFeePoolBuckets[bucketId].add(amount);
-            generalFeePoolBuckets[bucketId] = total;
+    function migrateStakingRewardsBalance(address guardian) external {
+        IRewards currentRewardsContract = getRewardsContract();
+        if (currentRewardsContract == this) {
+            return;
         }
 
-        emit FeesAddedToBucket(bucketId, amount, total, isCertified);
+        uint48 balance = balances[guardian].stakingRewards;
+        balances[guardian].stakingRewards = 0;
+
+        require(approve(erc20, address(currentRewardsContract), balance), "migrateStakingBalance: approve failed");
+        currentRewardsContract.acceptStakingRewardsMigration(guardian, toUint256Granularity(balance));
+
+        emit StakingRewardsBalanceMigrated(guardian, toUint256Granularity(balance), address(currentRewardsContract));
     }
 
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp, bool isCertified) private {
-        assignRewards(); // to handle rate change in the middle of a bucket time period (TBD - this is nice to have, consider removing)
+    function acceptStakingRewardsMigration(address guardian, uint256 amount) external {
+        uint48 amount48 = toUint48Granularity(amount);
+        require(transferFrom(erc20, msg.sender, address(this), amount48), "acceptStakingMigration: transfer failed");
 
-        uint256 bucket = _bucketTime(fromTimestamp);
-        uint256 _amount = amount;
+        uint48 balance = balances[guardian].stakingRewards + amount48;
+        balances[guardian].stakingRewards = balance;
 
-        // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(feeBucketTimePeriod - fromTimestamp % feeBucketTimePeriod).div(feeBucketTimePeriod));
-        fillFeeBucket(bucket, bucketAmount, isCertified);
-        _amount = _amount.sub(bucketAmount);
-
-        // following buckets are added with the monthly rate
-        while (_amount > 0) {
-            bucket = bucket.add(feeBucketTimePeriod);
-            bucketAmount = Math.min(monthlyRate, _amount);
-            fillFeeBucket(bucket, bucketAmount, isCertified);
-            _amount = _amount.sub(bucketAmount);
-        }
-
-        assert(_amount == 0);
-
-        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriptions to rewards");
+        emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
 
-    function withdrawFeeFunds() external onlyWhenActive {
-        uint48 amount = balances[msg.sender].fees;
-        balances[msg.sender].fees = 0;
-        poolsAndTotalBalances.feesTotalBalance = uint48(poolsAndTotalBalances.feesTotalBalance.sub(amount));
-        emit FeesWithdrawn(msg.sender, toUint256Granularity(amount));
-        require(transfer(erc20, msg.sender, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
-    }
-
-    function getTotalBalances() external view returns (uint256 feesTotalBalance, uint256 stakingRewardsTotalBalance, uint256 bootstrapRewardsTotalBalance) {
-        PoolsAndTotalBalances memory totals = poolsAndTotalBalances;
-        return (toUint256Granularity(totals.feesTotalBalance), toUint256Granularity(totals.stakingRewardsTotalBalance), toUint256Granularity(totals.bootstrapRewardsTotalBalance));
-    }
-
-    function _bucketTime(uint256 time) private pure returns (uint256) {
-        return time - time % feeBucketTimePeriod;
+    function emergencyWithdraw() external onlyMigrationOwner {
+        emit EmergencyWithdrawal(msg.sender);
+        require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
+        require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
     }
 
 }

@@ -1,8 +1,9 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, expectRejected, ZERO_ADDR} from "./driver";
+import {Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
+import {expectRejected} from "./helpers";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -44,7 +45,7 @@ describe('contract-registry-high-level-flows', async () => {
     const nonGovernor = d.newParticipant();
     const contract2Name = "committee";
     const addr3 = d.newParticipant().address;
-    await expectRejected(registry.set(contract2Name, addr3, {from: nonGovernor.address}));
+    await expectRejected(registry.set(contract2Name, addr3, {from: nonGovernor.address}), /caller is not the functionalOwner/);
 
     // now by governor
     r = await registry.set(contract2Name, addr3, {from: owner.address});
@@ -58,7 +59,7 @@ describe('contract-registry-high-level-flows', async () => {
 
   it('reverts when getting a non existent entry', async () => {
     const d = await Driver.new();
-    await expectRejected(d.contractRegistry.get("nonexistent" as any));
+    await expectRejected(d.contractRegistry.get("nonexistent" as any), /the contract name is not registered/);
   });
 
   it('allows only the contract owner to update the address of the contract registry', async () => { // TODO - consider splitting and moving this
@@ -66,10 +67,10 @@ describe('contract-registry-high-level-flows', async () => {
     const subscriber = await d.newSubscriber("tier", 1);
 
     const newAddr = d.newParticipant().address;
-    await expectRejected(d.elections.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
-    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
-    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
-    await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
+    await expectRejected(d.elections.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
+    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
+    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
+    await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
 
     let r = await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});

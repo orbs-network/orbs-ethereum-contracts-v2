@@ -4,7 +4,7 @@ import "./IContractRegistry.sol";
 
 
 /// @title Elections contract interface
-interface ICertification /* is Ownable */ { // TODO rename to IGuardianIdentification? or make certification API more generic?
+interface ICertification /* is Ownable */ {
 	event GuardianCertificationUpdate(address guardian, bool isCertified);
 
 	/*

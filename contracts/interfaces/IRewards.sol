@@ -12,8 +12,7 @@ interface IRewards {
     // staking
 
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
-    event StakingRewardsAssigned(address[] assignees, uint256[] amounts); // todo balance?
-    event StakingRewardsAddedToPool(uint256 added, uint256 total);
+    event StakingRewardsAssigned(address[] assignees, uint256[] amounts);
     event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
@@ -22,10 +21,7 @@ interface IRewards {
     /// @dev Distributes msg.sender's orbs token rewards to a list of addresses, by transferring directly into the staking contract.
     /// @dev `to[0]` must be the sender's main address
     /// @dev Total delegators reward (`to[1:n]`) must be less then maxDelegatorsStakingRewardsPercentMille of total amount
-    function distributeOrbsTokenStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external;
-
-    /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
-    function topUpStakingRewardsPool(uint256 amount) external;
+    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external;
 
     /*
     *   Reward-governor methods
@@ -39,8 +35,6 @@ interface IRewards {
 
     event FeesAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
     event FeesWithdrawn(address guardian, uint256 amount);
-    event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total, bool isCertified);
-    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total, bool isCertified);
 
     /*
      *   External methods
@@ -50,22 +44,11 @@ interface IRewards {
     function getFeeBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
-    function withdrawFeeFunds() external;
-
-    /// @dev Called by: subscriptions contract
-    /// Top-ups the certification fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillCertificationFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
-
-    /// @dev Called by: subscriptions contract
-    /// Top-ups the general fee pool with the given amount at the given rate (typically called by the subscriptions contract)
-    function fillGeneralFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external;
-
-    function getTotalBalances() external view returns (uint256 feesTotalBalance, uint256 stakingRewardsTotalBalance, uint256 bootstrapRewardsTotalBalance);
+    function withdrawFees(address guardian) external;
 
     // bootstrap
 
     event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
-    event BootstrapAddedToPool(uint256 added, uint256 total);
     event BootstrapRewardsWithdrawn(address guardian, uint256 amount);
 
     /*
@@ -76,14 +59,10 @@ interface IRewards {
     function getBootstrapBalance(address addr) external view returns (uint256 balance);
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
-    function withdrawBootstrapFunds() external;
+    function withdrawBootstrapFunds(address guardian) external;
 
     /// @return The timestamp of the last reward assignment.
     function getLastRewardAssignmentTime() external view returns (uint256 time);
-
-    /// @dev Transfers the given amount of bootstrap tokens form the sender to this contract and update the pool.
-    /// Assumes the tokens were approved for transfer
-    function topUpBootstrapPool(uint256 amount) external;
 
     /*
      * Reward-governor methods
@@ -95,6 +74,17 @@ interface IRewards {
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
     function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
 
+    event StakingRewardsBalanceMigrated(address guardian, uint256 amount, address toRewardsContract);
+
+    function migrateStakingRewardsBalance(address guardian) external;
+
+    event StakingRewardsMigrationAccepted(address from, address guardian, uint256 amount);
+
+    function acceptStakingRewardsMigration(address guardian, uint256 amount) external;
+
+    event EmergencyWithdrawal(address addr);
+
+    function emergencyWithdraw() external /* onlyMigrationManager */;
 
     /*
      * General governance

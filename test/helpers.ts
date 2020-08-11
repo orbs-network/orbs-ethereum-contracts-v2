@@ -60,10 +60,6 @@ export async function getTopBlockTimestamp(d: Driver) : Promise<number> {
     );
 }
 
-export async function txTimestamp(web3: Web3Driver, r: TransactionReceipt): Promise<number> { // TODO move
-    return (await web3.eth.getBlock(r.blockNumber)).timestamp as number;
-}
-
 export function fromTokenUnits(n: (number|BN)): BN {
     return bn(n).mul(bn("1000000000000000"));
 }
@@ -91,5 +87,17 @@ export function transpose(obj, key, fields?) {
         transposed[item[key]] = item;
     }
     return transposed;
+}
+
+const expect = chai.expect;
+
+export async function expectRejected(promise: Promise<any>, expectedErrorMsg: RegExp) {
+    try {
+        await promise;
+    } catch (err) {
+        expect(err.toString()).to.match(expectedErrorMsg);
+        return
+    }
+    throw new Error("expected promise to reject")
 }
 
