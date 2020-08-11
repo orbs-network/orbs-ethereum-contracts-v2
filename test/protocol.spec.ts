@@ -46,7 +46,7 @@ describe('protocol-contract', async () => {
   it('does not allow protocol upgrade to be scheduled before the latest upgrade schedule when latest upgrade already took place', async () => {
     const d = await Driver.new();
 
-    const currTime: number = await getTopBlockTimestamp(d);
+    let currTime: number = await getTopBlockTimestamp(d);
     let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3, {from: d.functionalOwner.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
@@ -56,9 +56,10 @@ describe('protocol-contract', async () => {
     });
 
     await evmIncreaseTimeForQueries(d.web3, 3);
+    currTime += 3;
 
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 2, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime - 1, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
   });
 
   it('allows protocol upgrade to be scheduled before the latest upgrade schedule when latest upgrade did not yet take place', async () => {
