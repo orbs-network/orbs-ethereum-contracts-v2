@@ -5,8 +5,8 @@ import "./IContractRegistry.sol";
 /// @title Elections contract interface
 interface IGuardiansRegistration {
 	event GuardianRegistered(address addr);
-	event GuardianDataUpdated(address addr, bytes4 ip, address orbsAddr, string name, string website, string contact);
 	event GuardianUnregistered(address addr);
+	event GuardianDataUpdated(address addr, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website, string contact);
 	event GuardianMetadataChanged(address addr, string key, string newValue, string oldValue);
 
 	/*
