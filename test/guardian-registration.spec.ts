@@ -27,6 +27,9 @@ describe('guardian-registration', async () => {
         v.website,
         v.contact
     , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
@@ -83,6 +86,9 @@ describe('guardian-registration', async () => {
     });
 
     r = await d.guardiansRegistration.unregisterGuardian({from: v.address});
+    expect(r).to.have.a.guardianUnregisteredEvent({
+      addr: v.address
+    });
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: false,
@@ -104,7 +110,11 @@ describe('guardian-registration', async () => {
         v.name,
         v.website,
         v.contact
-    , {from: v.address});expect(r).to.have.a.guardianDataUpdatedEvent({
+    , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
       ip: v.ip,
@@ -149,7 +159,11 @@ describe('guardian-registration', async () => {
         v.name,
         v.website,
         v.contact
-        , {from: v.address});expect(r).to.have.a.guardianDataUpdatedEvent({
+        , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
       ip: v.ip,
@@ -188,7 +202,11 @@ describe('guardian-registration', async () => {
         v.name,
         v.website,
         v.contact
-        , {from: v.address});expect(r).to.have.a.guardianDataUpdatedEvent({
+        , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
+    expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
       ip: v.ip,
@@ -219,6 +237,10 @@ describe('guardian-registration', async () => {
         v.website,
         "",
         {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
+
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
@@ -614,6 +636,9 @@ describe('guardian-registration', async () => {
         v.website,
         v.contact
         , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
@@ -680,6 +705,9 @@ describe('guardian-registration', async () => {
         v.website,
         v.contact
         , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,
@@ -704,6 +732,9 @@ describe('guardian-registration', async () => {
         v.website,
         v.contact
         , {from: v.address});
+    expect(r).to.have.a.guardianRegisteredEvent({
+      addr: v.address
+    });
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
       isRegistered: true,

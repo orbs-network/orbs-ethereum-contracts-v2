@@ -36,6 +36,8 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		require(!isRegistered(msg.sender), "registerGuardian: Guardian is already registered");
 
 		guardians[msg.sender].registrationTime = now;
+		emit GuardianRegistered(msg.sender);
+
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website, contact);
 
 		getElectionsContract().guardianRegistered(msg.sender);
@@ -72,8 +74,8 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		delete guardians[msg.sender];
 
 		getElectionsContract().guardianUnregistered(msg.sender);
-
 		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website, guardian.contact);
+		emit GuardianUnregistered(msg.sender);
 	}
 
     /// @dev Returns a guardian's data

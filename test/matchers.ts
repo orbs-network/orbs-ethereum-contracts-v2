@@ -185,7 +185,9 @@ declare global {
       delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
       committeeSnapshotEvent(data?: Partial<CommitteeSnapshotEvent>): void;
       guardianCommitteeChangeEvent(data?: Partial<GuardianCommitteeChangeEvent>): void;
+      guardianRegisteredEvent(data?: Partial<GuardianRegisteredEvent>): void;
       guardianMetadataChangedEvent(data?: Partial<GuardianMetadataChangedEvent>): void;
+      guardianUnregisteredEvent(data?: Partial<GuardianUnregisteredEvent>): void;
       guardianDataUpdatedEvent(data?: Partial<GuardianDataUpdatedEvent>): void;
       stakeChangedEvent(data?: Partial<StakeChangeEvent>): void; // Elections?
       stakedEvent(data?: Partial<StakedEvent>): void;
