@@ -2,7 +2,7 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {Driver, expectRejected} from "./driver";
+import {Driver} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));
@@ -10,7 +10,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
-import {bn, evmIncreaseTime, evmIncreaseTimeForQueries, getTopBlockTimestamp} from "./helpers";
+import {bn, evmIncreaseTime, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
@@ -53,7 +53,7 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(amount, {from: p.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(amount, {from: p.address}), /caller is not the wallet client/);
     await d.stakingRewardsWallet.withdraw(amount, {from: client.address});
     expect(await d.erc20.balanceOf(client.address)).to.eq(amount.toString());
   });
@@ -67,7 +67,7 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await expectRejected(d.stakingRewardsWallet.setClient(client.address, {from: d.migrationOwner.address}));
+    await expectRejected(d.stakingRewardsWallet.setClient(client.address, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
     let r = await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
     expect(r).to.have.a.clientSetEvent({client: client.address});
 
@@ -75,7 +75,7 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(amount, {from: p.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(amount, {from: p.address}), /caller is not the wallet client/);
     await d.stakingRewardsWallet.withdraw(amount, {from: client.address});
     expect(await d.erc20.balanceOf(client.address)).to.eq(amount.toString());
   });
@@ -91,13 +91,13 @@ describe('protocol-contract', async () => {
     const client = d.newParticipant();
     await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
 
-    await expectRejected(d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.functionalOwner.address}));
+    await expectRejected(d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
     let r = await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
     expect(r).to.have.a.maxAnnualRateSetEvent({ maxAnnualRate: amount });
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}), /requested amount is larger than allowed by rate/);
     await d.stakingRewardsWallet.withdraw(amount.div(bn(2)), {from: client.address});
     expect(await d.erc20.balanceOf(client.address)).to.eq(amount.div(bn(2)).toString());
   });
@@ -116,7 +116,7 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}), /requested amount is larger than allowed by rate/);
     await d.stakingRewardsWallet.withdraw(amount.div(bn(2)), {from: client.address});
     expect(await d.erc20.balanceOf(client.address)).to.eq(amount.div(bn(2)).toString());
   });
@@ -139,7 +139,7 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}), /requested amount is larger than allowed by rate/);
   });
 
   it('rate change applies retroactively', async () => {
@@ -157,12 +157,12 @@ describe('protocol-contract', async () => {
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
     await d.stakingRewardsWallet.setMaxAnnualRate(1, {from: d.migrationOwner.address});
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(2, {from: client.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(2, {from: client.address}), /requested amount is larger than allowed by rate/);
     await d.stakingRewardsWallet.withdraw(1, {from: client.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
 
-    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}));
+    await expectRejected(d.stakingRewardsWallet.withdraw(amount.mul(bn(3)).div(bn(4)), {from: client.address}), /requested amount is larger than allowed by rate/);
   });
 
   it('performs emergency withdrawal only by the migration manager', async () => {
@@ -173,7 +173,7 @@ describe('protocol-contract', async () => {
     await p.assignAndApproveOrbs(amount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
-    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalOwner.address}));
+    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
     let r = await d.stakingRewardsWallet.emergencyWithdraw({from: d.migrationOwner.address});
     expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
 

@@ -11,7 +11,6 @@ import { CertificationContract } from "./certification-contract";
 import { DelegationsContract } from "./delegations-contract";
 import {RewardsContract} from "./rewards-contract";
 import {ProtocolWalletContract} from "./protocol-wallet-contract";
-import {GuardiansWalletContract} from "./guardians-wallet-contract";
 import {FeesWalletContract} from "./fees-wallet-contract";
 
 /**
@@ -33,5 +32,4 @@ export type Contracts = {
     Delegations: DelegationsContract;
     ProtocolWallet: ProtocolWalletContract;
     FeesWallet: FeesWalletContract;
-    GuardiansWallet: GuardiansWalletContract;
 }

@@ -11,17 +11,31 @@ export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
+const GAS_PRICE = parseInt(process.env.GAS_PRICE  || '1000000000'); // default: 1 Gwei
+const GAS_PRICE_DEPLOY = parseInt(process.env.GAS_PRICE_DEPLOY  || `${GAS_PRICE}`); // default: GAS_PRICE
+
 export class Web3Session {
      gasRecorder: GasRecorder = new GasRecorder();
 }
 
-export const defaultWeb3Provider = () => new Web3(new HDWalletProvider(
-    ETHEREUM_MNEMONIC,
-    ETHEREUM_URL,
-    0,
-    400,
-    false
-    ));
+const ganache = require("ganache-core");
+
+export const defaultWeb3Provider = () => process.env.GANACHE_CORE ?
+        new Web3(ganache.provider({
+            mnemonic: ETHEREUM_MNEMONIC,
+            default_balance_ether: 100,
+            total_accounts: 400,
+            gasPrice: 1,
+            gasLimit: "0x7fffffff"
+        }))
+    :
+        new Web3(new HDWalletProvider(
+        ETHEREUM_MNEMONIC,
+        ETHEREUM_URL,
+        0,
+        400,
+        false
+));
 
 type ContractEntry = {
     web3Contract : Web3Contract | null;
@@ -29,7 +43,7 @@ type ContractEntry = {
 }
 export class Web3Driver{
     private web3 : Web3;
-    private contracts = new Map<string, ContractEntry>();
+    public contracts = new Map<string, ContractEntry>();
     private defaultSession = new Web3Session();
 
     constructor(private web3Provider : () => Web3 = defaultWeb3Provider){
@@ -49,6 +63,7 @@ export class Web3Driver{
         const abi = compiledContracts[contractName].abi;
         const accounts = await this.web3.eth.getAccounts();
         let web3Contract;
+        let txHash;
         for (let attempt = 0; attempt < 5; attempt++) {
             try {
                 web3Contract = await new this.web3.eth.Contract(abi).deploy({
@@ -56,8 +71,13 @@ export class Web3Driver{
                     arguments: args || []
                 }).send({
                     from: accounts[0],
-                    gasPrice: 1000000000,
+                    gasPrice: GAS_PRICE_DEPLOY,
+                    gas: 10000000,
                     ...(options || {})
+                }, (err, _txHash) => {
+                    if (!err) {
+                        txHash = _txHash;
+                    }
                 });
             } catch (e) {
                 if (/Invalid JSON RPC response/.exec(e.toString())) {
@@ -72,7 +92,7 @@ export class Web3Driver{
             }
 
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
-            this.log("Deployed " + contractName);
+            this.log("Deployed " + contractName + " at " + web3Contract.options.address);
 
             return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
         }
@@ -111,6 +131,8 @@ export class Web3Driver{
     }
 
     refresh(){
+        if (process.env.GANACHE_CORE) return;
+
         this.web3 = this.web3Provider();
         for (const entry of this.contracts.values()){
             entry.web3Contract = null;
@@ -157,7 +179,7 @@ export class Contract {
             try {
                 ret = await this.web3Contract.methods[method](...args)[action]({
                     from: accounts[0],
-                    gasPrice: 1000000000,
+                    gasPrice: GAS_PRICE,
                     gas: 10000000,
                     ...opts
                 });

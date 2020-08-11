@@ -3,7 +3,6 @@ import 'mocha';
 import BN from "bn.js";
 import {
     Driver,
-    expectRejected,
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
@@ -12,7 +11,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn} from "./helpers";
+import {bn, expectRejected} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 
 describe('delegations-contract', async () => {
@@ -24,14 +23,12 @@ describe('delegations-contract', async () => {
 
         const participant = d.newParticipant();
 
-        await expectRejected(participant.stake(5, rogueStakingContract), "should not accept notifications from an address other than the staking contract");
+        await expectRejected(participant.stake(5, rogueStakingContract), /caller is not the staking contract/);
         await participant.stake(5);
         await d.contractRegistry.set("staking", rogueStakingContract.address, {from: d.functionalOwner.address});
         await participant.stake(5, rogueStakingContract)
 
         // TODO - to check stakeChangeBatch use a mock staking contract that would satisfy the interface but would allow sending stakeChangeBatch when there are no rewards to distribue
-        // await expectRejected(d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: nonStakingAddr}), "should not accept notifications from an address other than the staking contract");
-        // await d.delegations.stakeChangeBatch([d.accounts[0]], [1], [true], [1], {from: stakingAddr});
     });
 
     it('selfDelegatedStake toggles to zero if delegating to another', async () => {
@@ -438,18 +435,22 @@ describe('delegations-contract', async () => {
        const d1 = d.newParticipant();
        const v1 = d.newParticipant();
 
-       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.functionalOwner.address}));
+       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
        await d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address});
 
-       await expectRejected(d.delegations.finalizeDelegationImport({from: d.functionalOwner.address}));
+       await expectRejected(d.delegations.finalizeDelegationImport({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
        let r = await d.delegations.finalizeDelegationImport({from: d.migrationOwner.address});
        expect(r).to.have.a.delegationImportFinalizedEvent({});
 
-       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address}));
+       await expectRejected(d.delegations.importDelegations([d1.address], [v1.address], false, {from: d.migrationOwner.address}), /delegation import was finalized/);
     });
 
     it('properly handles a delegation when self stake of delegator is not yet initialized', async () => {
         const d = await Driver.new();
+
+        const d1 = d.newParticipant();
+        const {v} = await d.newGuardian(100, false, false, true);
+        await d1.delegate(v);
 
         const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
         await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
@@ -457,13 +458,27 @@ describe('delegations-contract', async () => {
         await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
         await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
 
-        const d1 = d.newParticipant();
         await d1.stake(100);
 
         await d.staking.setStakeChangeNotifier(d.delegations.address);
         await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
 
+        let r = await d.delegations.refreshStake(d1.address);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v.address,
+            delegatedStake: bn(200)
+        });
+        expect(r).to.have.a.committeeSnapshotEvent({addrs: [v.address]});
+    });
+
+    it('properly handles a stake change notifications when previous notifications were not given', async () => {
+        const d = await Driver.new();
+
         const v = d.newParticipant();
+
+        const d1 = d.newParticipant();
+        await d1.stake(100);
+
         let r = await d1.delegate(v);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: d1.address,
@@ -472,6 +487,24 @@ describe('delegations-contract', async () => {
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v.address,
             delegatedStake: bn(100)
+        });
+
+        const otherDelegationContract = await d.web3.deploy("Delegations", [], null, d.session);
+        await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
+
+        await d.staking.setStakeChangeNotifier(otherDelegationContract.address);
+        await d.contractRegistry.set("delegations", otherDelegationContract.address, {from: d.functionalOwner.address});
+
+        r = await d1.stake(200);
+        expect(r).to.not.have.withinContract(d.delegations).a.delegatedStakeChangedEvent();
+
+        await d.staking.setStakeChangeNotifier(d.delegations.address);
+        await d.contractRegistry.set("delegations", d.delegations.address, {from: d.functionalOwner.address});
+
+        r = await d1.stake(300);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: v.address,
+            delegatedStake: bn(600)
         });
     });
 

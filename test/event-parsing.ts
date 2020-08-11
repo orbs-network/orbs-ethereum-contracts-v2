@@ -6,6 +6,10 @@ import {
     FeesAddedToBucketEvent,
     FeesWithdrawnFromBucketEvent
 } from "../typings/fees-wallet-contract";
+import {
+    BootstrapRewardsWithdrawnEvent,
+    FeesWithdrawnEvent,
+} from "../typings/rewards-contract";
 
 const elections = compiledContracts["Elections"];
 const committee = compiledContracts["Committee"];
@@ -17,7 +21,6 @@ const rewards = compiledContracts["Rewards"];
 const protocol = compiledContracts["Protocol"];
 const contractRegistry = compiledContracts["ContractRegistry"];
 const delegations = compiledContracts["Delegations"];
-const guardianWallet = compiledContracts["GuardiansWallet"];
 const feesWallet = compiledContracts["FeesWallet"];
 
 export function parseLogs(txResult, contract, eventSignature, contractAddress?: string) {
@@ -41,11 +44,15 @@ export const stakedEvents = (txResult, contractAddress?: string) => parseLogs(tx
 export const unstakedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, staking, "Unstaked(address,uint256,uint256)", contractAddress);
 export const delegatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "Delegated(address,address)", contractAddress);
 export const delegatedStakeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "DelegatedStakeChanged(address,uint256,uint256,address[],uint256[])", contractAddress);
-export const subscriptionChangedEvents = (txResult, contractAddress?: string): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,uint256,uint256,string,string)", contractAddress);
+export const subscriptionChangedEvents = (txResult, contractAddress?: string): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,string,uint256,uint256,string,string)", contractAddress);
 export const paymentEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)", contractAddress);
 export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, feesWallet, "FeesAddedToBucket(uint256,uint256,uint256)", contractAddress);
 export const feesWithdrawnFromBucketEvents = (txResult, contractAddress?: string): FeesWithdrawnFromBucketEvent[] => parseLogs(txResult, feesWallet, "FeesWithdrawnToBucket(uint256,uint256,uint256)", contractAddress);
+export const stakingRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsAssigned(address[],uint256[])", contractAddress);
 export const stakingRewardsDistributedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "StakingRewardsDistributed(address,uint256,uint256,uint256,uint256,address[],uint256[])", contractAddress);
+export const feesAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "FeesAssigned(uint256,uint256)", contractAddress);
+export const bootstrapRewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "BootstrapRewardsAssigned(uint256,uint256)", contractAddress);
+export const bootstrapAddedToPoolEvents = (txResult, contractAddress?: string) => parseLogs(txResult, rewards, "BootstrapAddedToPool(uint256,uint256)", contractAddress);
 export const vcConfigRecordChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "VcConfigRecordChanged(uint256,string,string)", contractAddress);
 export const vcOwnerChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "VcOwnerChanged(uint256,address,address)", contractAddress);
 export const vcCreatedEvents = (txResult, contractAddress?: string): VcCreatedEvent[] => parseLogs(txResult, subscriptions, "VcCreated(uint256,address)", contractAddress);
@@ -73,6 +80,5 @@ export const minSelfStakePercentMilleChangedEvents = (txResult, contractAddress?
 export const banningLockTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningLockTimeoutSecondsChanged(uint32,uint32)");
 export const voteOutPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutPercentageThresholdChanged(uint8,uint8)");
 export const banningPercentageThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningPercentageThresholdChanged(uint8,uint8)");
-export const rewardsAssignedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, guardianWallet, "RewardsAssigned(address[],uint256[],uint256[],uint256[])");
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);

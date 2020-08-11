@@ -5,7 +5,6 @@ import {
     defaultDriverOptions,
     BANNING_LOCK_TIMEOUT,
     Driver,
-    expectRejected,
     Participant, ZERO_ADDR
 } from "./driver";
 import chai from "chai";
@@ -15,7 +14,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, fromTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
 
 const baseStake = 100;
 
@@ -80,8 +79,8 @@ describe('elections-high-level-flows', async () => {
 
         const v = d.newParticipant();
 
-        await expectRejected(d.elections.readyToSync({from: v.address}));
-        await expectRejected(d.elections.readyForCommittee({from: v.address}));
+        await expectRejected(d.elections.readyToSync({from: v.address}), /Cannot resolve address/);
+        await expectRejected(d.elections.readyForCommittee({from: v.address}), /Cannot resolve address/);
     });
 
     it('handle delegation requests', async () => {
@@ -193,13 +192,13 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('VoteUnready: votes out a committee member', async () => {
-        assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
-        assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
+        assert(defaultDriverOptions.voteUnreadyThreshold < 98); // so each committee member will hold a positive stake
+        assert(Math.floor(defaultDriverOptions.voteUnreadyThreshold / 2) >= 98 - defaultDriverOptions.voteUnreadyThreshold); // so the committee list will be ordered by stake
 
         const stakesPercentage = [
-            Math.ceil(defaultDriverOptions.voteOutThreshold / 2),
-            Math.floor(defaultDriverOptions.voteOutThreshold / 2),
-            98 - defaultDriverOptions.voteOutThreshold,
+            Math.ceil(defaultDriverOptions.voteUnreadyThreshold / 2),
+            Math.floor(defaultDriverOptions.voteUnreadyThreshold / 2),
+            98 - defaultDriverOptions.voteUnreadyThreshold,
             1,
             1
         ];
@@ -262,7 +261,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('VoteUnready: discards stale votes', async () => {
-        assert(defaultDriverOptions.voteOutThreshold > 50); // so one out of two equal committee members does not cross the threshold
+        assert(defaultDriverOptions.voteUnreadyThreshold > 50); // so one out of two equal committee members does not cross the threshold
 
         const committeeSize = 2;
         const d = await Driver.new({maxCommitteeSize: committeeSize});
@@ -287,7 +286,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         // ...*.* TiMe wArP *.*.....
-        await evmIncreaseTime(d.web3, defaultDriverOptions.voteOutTimeout);
+        await evmIncreaseTime(d.web3, defaultDriverOptions.voteUnreadyTimeout);
 
         r = await d.elections.voteUnready(committee[1].address, {from: committee[1].orbsAddress}); // this should have crossed the vote-out threshold, but the previous vote had timed out
         expect(r).to.have.a.voteUnreadyCastedEvent({
@@ -318,8 +317,8 @@ describe('elections-high-level-flows', async () => {
 
         const v = d.newParticipant();
         await v.stake(V1_STAKE);
-        await expectRejected(v.readyToSync());
-        await expectRejected(v.readyForCommittee());
+        await expectRejected(v.readyToSync(), /Cannot resolve address/);
+        await expectRejected(v.readyForCommittee(), /Cannot resolve address/);
     });
 
     it('staking before or after delegating has the same effect', async () => {
@@ -433,6 +432,37 @@ describe('elections-high-level-flows', async () => {
             addrs: [v1.address],
             weights: [new BN(1030)]
         });
+    });
+
+    it('guardian with zero self stake can have delegated stake when minSelfStakePercentMille == 0', async () => {
+        const d = await Driver.new({maxCommitteeSize: 2, minSelfStakePercentMille: 0});
+
+        const {v} = await d.newGuardian(0, false, false, true);
+        const delegator = d.newParticipant();
+        await delegator.stake(100);
+        let r = await delegator.delegate(v);
+        expect(r).to.have.a.stakeChangedEvent({
+            addr: v.address,
+            effective_stake: bn(100),
+        });
+        expect(r).to.have.a.committeeSnapshotEvent({
+            addrs: [v.address],
+            weights: [bn(100)],
+        });
+    });
+
+    it('guardian with zero self stake cannot have delegated stake when minSelfStakePercentMille > 0', async () => {
+        const d = await Driver.new({maxCommitteeSize: 2, minSelfStakePercentMille: 1});
+
+        const {v} = await d.newGuardian(0, false, false, true);
+        const delegator = d.newParticipant();
+        await delegator.stake(100);
+        let r = await delegator.delegate(v);
+        expect(r).to.have.a.stakeChangedEvent({
+            addr: v.address,
+            effective_stake: bn(0),
+        });
+        expect((await d.committee.getCommittee())[0].length).to.eq(0);
     });
 
     it('ensures guardian who delegated cannot join committee even when owning enough stake', async () => {
@@ -594,7 +624,6 @@ describe('elections-high-level-flows', async () => {
             delegatorTotalStakes: [bn(rewards[2].amount), bn(rewards[3].amount), bn(rewards[4].amount)]
         });
 
-
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: c.address,
             selfDelegatedStake: bn(0),
@@ -664,7 +693,7 @@ describe('elections-high-level-flows', async () => {
 
         const tipGuardian = delegatees[thresholdCrossingIndex];
         await d.elections.voteOut(ZERO_ADDR, {from: tipGuardian.address});
-        await expectRejected(votedOutGuardian.readyForCommittee());
+        await expectRejected(votedOutGuardian.readyForCommittee(), /caller is voted-out/);
     });
 
     it("VoteOut: update vote weight in response to staking and delegation", async () => {
@@ -746,10 +775,10 @@ describe('elections-high-level-flows', async () => {
             addrs: []
         });
 
-        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}));
-        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}));
-        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.address}));
-        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.orbsAddress}));
+        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}), /caller is voted-out/);
+        await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}), /caller is voted-out/);
+        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.address}), /caller is voted-out/);
+        await expectRejected(d.elections.readyForCommittee({from: votedOutGuardian.orbsAddress}), /caller is voted-out/);
     });
 
     it("sets and gets settings, only functional owner allowed to set", async () => {
@@ -761,28 +790,28 @@ describe('elections-high-level-flows', async () => {
         const voteOutPercentageThreshold  = bn(current[2]);
         const banningPercentageThreshold  = bn(current[3]);
 
-        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteUnreadyTimeoutSecondsChangedEvent({
             newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
             oldValue: voteOutTimeoutSeconds.toString()
         });
 
-        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.minSelfStakePercentMilleChangedEvent({
             newValue: minSelfStakePercentMille.add(bn(1)).toString(),
             oldValue: minSelfStakePercentMille.toString()
         });
 
-        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
             newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
             oldValue: voteOutPercentageThreshold.toString()
         });
 
-        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
             newValue: banningPercentageThreshold.add(bn(1)).toString(),
@@ -801,14 +830,14 @@ describe('elections-high-level-flows', async () => {
 });
 
 export async function voteOutScenario_setupDelegatorsAndGuardians(driver: Driver) {
-    assert(defaultDriverOptions.banningThreshold < 98); // so each committee member will hold a positive stake
-    assert(Math.floor(defaultDriverOptions.banningThreshold / 2) >= 98 - defaultDriverOptions.banningThreshold); // so the committee list will be ordered by stake
+    assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
+    assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
 
     // -------------- SETUP ---------------
     const stakesPercentage = [
-        Math.ceil(defaultDriverOptions.banningThreshold / 2),
-        Math.floor(defaultDriverOptions.banningThreshold / 2),
-        98 - defaultDriverOptions.banningThreshold,
+        Math.ceil(defaultDriverOptions.voteOutThreshold / 2),
+        Math.floor(defaultDriverOptions.voteOutThreshold / 2),
+        98 - defaultDriverOptions.voteOutThreshold,
         1,
     ];
     const thresholdCrossingIndex = 1;

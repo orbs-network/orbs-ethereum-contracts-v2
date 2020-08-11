@@ -49,11 +49,11 @@ interface IElections /* is IStakeChangeNotifier */ {
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was registered
-	function guardianRegistered(address addr) external /* onlyGuardiansRegistrationContract */;
+	function guardianRegistered(address addr) external;
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was unregistered
-	function guardianUnregistered(address addr) external /* onlyGuardiansRegistrationContract */;
+	function guardianUnregistered(address addr) external                      /* onlyGuardiansRegistrationContract */;
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change

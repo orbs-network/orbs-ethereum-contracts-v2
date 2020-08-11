@@ -9,7 +9,6 @@ import {
     defaultDriverOptions,
     BANNING_LOCK_TIMEOUT,
     Driver,
-    expectRejected,
     Participant, ZERO_ADDR
 } from "./driver";
 import chai from "chai";
@@ -19,9 +18,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, fromTokenUnits, minAddress} from "./helpers";
-import {ETHEREUM_URL} from "../eth";
-
+import {bn, evmIncreaseTime, expectRejected, fromTokenUnits, minAddress} from "./helpers";
 
 describe('committee', async () => {
 
@@ -325,14 +322,15 @@ describe('committee', async () => {
 
         const committee: Participant[] = await Promise.all(_.range(maxCommitteeSize.toNumber()).map(async (i) => (await d.newGuardian(fromTokenUnits(100 + i), false, false, true)).v));
 
-        await expectRejected(d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
+
         let r = await d.committee.setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments.add(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.maxTimeBetweenRewardAssignmentsChangedEvent({
             newValue: maxTimeBetweenRewardAssignments.add(bn(1)).toString(),
             oldValue: maxTimeBetweenRewardAssignments.toString()
         });
 
-        await expectRejected(d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.migrationOwner.address}));
+        await expectRejected(d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
         r = await d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.functionalOwner.address});
         expect(r).to.have.a.maxCommitteeSizeChangedEvent({
             newValue: maxCommitteeSize.sub(bn(1)).toString(),
@@ -355,8 +353,8 @@ describe('committee', async () => {
        const d = await Driver.new();
 
        await d.committee.setMaxCommittee(32, {from: d.functionalOwner.address});
-       await expectRejected(d.committee.setMaxCommittee(33, {from: d.functionalOwner.address}));
-       await expectRejected(d.committee.setMaxCommittee(0, {from: d.functionalOwner.address}));
+       await expectRejected(d.committee.setMaxCommittee(33, {from: d.functionalOwner.address}), /maxCommitteeSize must be 32 at most/);
+       await expectRejected(d.committee.setMaxCommittee(0, {from: d.functionalOwner.address}), /maxCommitteeSize must be larger than 0/);
     });
 
     it("allows only elections to notify committee on changes", async () => {
@@ -367,17 +365,17 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}));
+        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}), /caller is not the elections/);
         await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
 
-        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: notElections}));
+        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: notElections}), /caller is not the elections/);
         await d.committee.memberCertificationChange(v.address,true,  {from: elections});
 
         const v2 = d.newParticipant();
-        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}));
+        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}), /caller is not the elections/);
         await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
 
-        await expectRejected(d.committee.removeMember(v2.address, {from: notElections}));
+        await expectRejected(d.committee.removeMember(v2.address, {from: notElections}), /caller is not the elections/);
         await d.committee.removeMember(v2.address, {from: elections});
     });
 
@@ -392,10 +390,10 @@ describe('committee', async () => {
 
         await d.committee.lock({from: d.migrationOwner.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}));
-        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: elections}));
-        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}));
-        await expectRejected(d.committee.removeMember(v2.address, {from: elections}));
+        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.removeMember(v2.address, {from: elections}), /contract is locked for this operation/);
 
         await d.committee.unlock({from: d.migrationOwner.address});
 
@@ -409,8 +407,8 @@ describe('committee', async () => {
     it("validate constructor arguments (0 < maxCommitteeSize <= 32)", async () => {
         const d = await Driver.new();
 
-        await expectRejected(d.web3.deploy('Committee', [0, 1]));
-        await expectRejected(d.web3.deploy('Committee', [33, 1]));
+        await expectRejected(d.web3.deploy('Committee', [0, 1]), /maxCommitteeSize must be larger than 0/);
+        await expectRejected(d.web3.deploy('Committee', [33, 1]), /maxCommitteeSize must be 32 at most/);
         await d.web3.deploy('Committee', [1, 1]);
     });
 
@@ -422,12 +420,12 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}));
+        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}), /weight is out of range/);
         await d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), {from: elections});
 
         const v2 = await d.newParticipant();
 
-        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(96)), true, {from: elections}));
+        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(96)), true, {from: elections}), /weight is out of range/);
         await d.committee.addMember(v2.address, bn(2).pow(bn(96)).sub(bn(1)), true, {from: elections});
     });
 
@@ -541,11 +539,15 @@ describe('committee', async () => {
             weight: bn(1)
         });
         expect(r1).to.not.have.a.committeeSnapshotEvent();
-        expect(r1).to.not.have.a.rewardsAssignedEvent();
+        expect(r1).to.not.have.a.stakingRewardsAssignedEvent();
+        expect(r1).to.not.have.a.feesAssignedEvent();
+        expect(r1).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         let r = await c.stake(1);
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.rewardsAssignedEvent();
+        expect(r).to.not.have.a.stakingRewardsAssignedEvent();
+        expect(r).to.not.have.a.feesAssignedEvent();
+        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         await evmIncreaseTime(d.web3, maxTimeBetweenRewardAssignments);
 
@@ -558,9 +560,11 @@ describe('committee', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [c.address]
         });
-        expect(r).to.have.a.rewardsAssignedEvent({
+        expect(r).to.have.a.stakingRewardsAssignedEvent({
             assignees: [c.address]
         });
+        expect(r).to.have.a.feesAssignedEvent({});
+        expect(r).to.have.a.bootstrapRewardsAssignedEvent({});
 
         r = await c.stake(1);
         expect(r).to.have.a.guardianCommitteeChangeEvent({
@@ -569,6 +573,8 @@ describe('committee', async () => {
             weight: bn(4)
         });
         expect(r).to.not.have.a.committeeSnapshotEvent();
-        expect(r).to.not.have.a.rewardsAssignedEvent();
+        expect(r).to.not.have.a.stakingRewardsAssignedEvent();
+        expect(r).to.not.have.a.feesAssignedEvent();
+        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
     })
 });

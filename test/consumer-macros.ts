@@ -20,7 +20,7 @@ export async function createVC(d : Driver, isCertified?: boolean, subscriber?: M
         from: appOwner.address
     });
 
-    return subscriber.createVC(firstPayment, isCertified || false, DEPLOYMENT_SUBSET_MAIN, {
+    return subscriber.createVC("vc-name", firstPayment, isCertified || false, DEPLOYMENT_SUBSET_MAIN, {
         from: appOwner.address
     });
 }
