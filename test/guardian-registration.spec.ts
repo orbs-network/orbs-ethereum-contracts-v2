@@ -3,8 +3,8 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
-import {subscriptionChangedEvents} from "./event-parsing";
-import {expectRejected} from "./helpers";
+import {evmIncreaseTime, expectRejected} from "./helpers";
+import {GuardiansRegistrationContract} from "../typings/guardian-registration-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -772,6 +772,54 @@ describe('guardian-registration', async () => {
         v2.contact
         , {from: v2.address});
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
+  });
+
+  it('is able to migrate registered guardians from a previous contract', async () => {
+    const d = await Driver.new();
+
+    const v1 = d.newParticipant();
+    let r = await v1.registerAsGuardian();
+    const v1RegistrationTime = await d.web3.txTimestamp(r);
+    await d.guardiansRegistration.setMetadata("REWARDS_FREQUENCY_SEC", "123", {from: v1.address});
+
+    const v2 = d.newParticipant();
+    r = await v2.registerAsGuardian();
+    const v2RegistrationTime = await d.web3.txTimestamp(r);
+
+    await evmIncreaseTime(d.web3, 5);
+
+    v1.ip = "0x12121212";
+    r = await d.guardiansRegistration.updateGuardianIp(v1.ip, {from: v1.address});
+    const v1LastUpdateTime = await d.web3.txTimestamp(r);
+    const v2LastUpdateTime = v2RegistrationTime;
+
+    const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
+    d.guardiansRegistration = null as any;
+
+    const v1Data = await newContract.getGuardianData(v1.address);
+
+    expect(v1Data.ip.toString()).to.eq(v1.ip);
+    expect(v1Data.orbsAddr.toString()).to.eq(v1.orbsAddress);
+    expect(v1Data.name.toString()).to.eq(v1.name);
+    expect(v1Data.website.toString()).to.eq(v1.website);
+    expect(v1Data.contact.toString()).to.eq(v1.contact);
+    expect(v1Data.registration_time.toString()).to.eq(v1RegistrationTime.toString());
+    expect(v1Data.last_update_time.toString()).to.eq(v1LastUpdateTime.toString());
+    expect(await newContract.getMetadata(v1.address, "REWARDS_FREQUENCY_SEC")).to.eq("123");
+
+    const v2Data = await newContract.getGuardianData(v2.address);
+
+    expect(v2Data.ip.toString()).to.eq(v2.ip);
+    expect(v2Data.orbsAddr.toString()).to.eq(v2.orbsAddress);
+    expect(v2Data.name.toString()).to.eq(v2.name);
+    expect(v2Data.website.toString()).to.eq(v2.website);
+    expect(v2Data.contact.toString()).to.eq(v2.contact);
+    expect(v2Data.registration_time.toString()).to.eq(v2RegistrationTime.toString());
+    expect(v2Data.last_update_time.toString()).to.eq(v2LastUpdateTime.toString());
+
+    expect(await newContract.resolveGuardianAddress(v1.orbsAddress)).to.eq(v1.address);
+    await expectRejected(newContract.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
+    await expectRejected(newContract.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, v2.contact, {from: v2.address}), /orbs address is already in use/);
   });
 
 
