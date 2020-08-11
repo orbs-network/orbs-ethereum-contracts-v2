@@ -2,7 +2,7 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY, expectRejected} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));
@@ -10,7 +10,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
-import {bn, evmIncreaseTimeForQueries, getTopBlockTimestamp} from "./helpers";
+import {bn, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 
 describe('protocol-contract', async () => {
 
@@ -20,7 +20,7 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     let currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.migrationOwner.address}));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
     await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
   });
 
@@ -28,7 +28,7 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     const newOwner = d.newParticipant();
-    await expectRejected(d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.migrationOwner.address}));
+    await expectRejected(d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
     await d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.functionalOwner.address});
 
   });
@@ -40,14 +40,14 @@ describe('protocol-contract', async () => {
     await d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.functionalOwner.address});
 
     let currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: newOwner.address}));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: newOwner.address}), /caller is not the functionalOwner/);
     await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 100, {from: d.functionalOwner.address});
 
     const notNewOwner = d.newParticipant();
-    await expectRejected(d.protocol.claimFunctionalOwnership({from: notNewOwner.address}));
+    await expectRejected(d.protocol.claimFunctionalOwnership({from: notNewOwner.address}), /Caller is not the pending functionalOwner/);
 
     await d.protocol.claimFunctionalOwnership({from: newOwner.address});
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalOwner.address}), /caller is not the functionalOwner/);
     await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: newOwner.address});
   });
 
@@ -58,7 +58,7 @@ describe('protocol-contract', async () => {
 
     const newAddr = d.newParticipant().address;
 
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
     await d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address});
   });
 
@@ -66,7 +66,7 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     const newOwner = d.newParticipant();
-    await expectRejected(d.protocol.transferMigrationOwnership(newOwner.address, {from: d.functionalOwner.address}));
+    await expectRejected(d.protocol.transferMigrationOwnership(newOwner.address, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
     await d.protocol.transferMigrationOwnership(newOwner.address, {from: d.migrationOwner.address});
 
   });
@@ -78,14 +78,14 @@ describe('protocol-contract', async () => {
     await d.protocol.transferMigrationOwnership(newOwner.address, {from: d.migrationOwner.address});
 
     const newAddr = d.newParticipant().address;
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: newOwner.address}));
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: newOwner.address}), /caller is not the migrationOwner/);
     await d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address});
 
     const notNewOwner = d.newParticipant();
-    await expectRejected(d.protocol.claimMigrationOwnership({from: notNewOwner.address}));
+    await expectRejected(d.protocol.claimMigrationOwnership({from: notNewOwner.address}), /Caller is not the pending migrationOwner/);
 
     await d.protocol.claimMigrationOwnership({from: newOwner.address});
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address}));
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address}), /caller is not the migrationOwner/);
     await d.protocol.setContractRegistry(newAddr, {from: newOwner.address});
   });
 

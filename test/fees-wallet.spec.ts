@@ -1,20 +1,12 @@
 import 'mocha';
 
-import * as _ from "lodash";
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant, expectRejected} from "./driver";
+import {Driver} from "./driver";
 import chai from "chai";
 import {
   feesAddedToBucketEvents,
-  rewardsAssignedEvents,
-  subscriptionChangedEvents,
-  vcCreatedEvents
 } from "./event-parsing";
-import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
-import {TransactionReceipt} from "web3-core";
-import {Web3Driver} from "../eth";
-import {FeesAddedToBucketEvent} from "../typings/fees-wallet-contract";
-import {RewardsAssignedEvent} from "../typings/guardians-wallet-contract";
+import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -38,7 +30,7 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(2, d.generalFeesWallet.address);
 
     const now = await d.web3.txTimestamp(rNow);
-    await expectRejected(d.generalFeesWallet.fillFeeBuckets(1, 10, now - MONTH_IN_SECONDS, {from: assigner.address}));
+    await expectRejected(d.generalFeesWallet.fillFeeBuckets(1, 10, now - MONTH_IN_SECONDS, {from: assigner.address}), /cannot fill bucket from the past/);
   });
 
   it('should fill fee buckets (one bucket)', async () => {
@@ -48,14 +40,14 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(2, d.generalFeesWallet.address);
 
     const now = await d.web3.txTimestamp(rNow);
-    let r = await d.generalFeesWallet.fillFeeBuckets(1, 10, now, {from: assigner.address});
+    let r = await d.generalFeesWallet.fillFeeBuckets(1, 1000, now, {from: assigner.address});
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now).toString(),
       added: bn(1).toString(),
       total: bn(1).toString(),
     });
 
-    r = await d.generalFeesWallet.fillFeeBuckets(1, 10, now + 1, {from: assigner.address});
+    r = await d.generalFeesWallet.fillFeeBuckets(1, 1000, now + 1, {from: assigner.address});
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now).toString(),
       added: bn(1).toString(),
@@ -67,15 +59,16 @@ describe('fees-wallet-contract', async () => {
     const d = await Driver.new();
 
     const {v: assigner, r: rNow} = await d.newGuardian(1, false, false, true);
-    await assigner.assignAndApproveOrbs(42, d.generalFeesWallet.address);
+    await assigner.assignAndApproveOrbs(100000, d.generalFeesWallet.address);
 
-    const rate = bn(10);
+    const rate = bn(1000);
+    const amount = bn(2001);
     const now = await d.web3.txTimestamp(rNow);
-    let r = await d.generalFeesWallet.fillFeeBuckets(21, rate, now, {from: assigner.address});
+    let r = await d.generalFeesWallet.fillFeeBuckets(amount, rate, now, {from: assigner.address});
     const expectedAmounts = [
         bn(MONTH_IN_SECONDS - now % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)),
         bn(rate),
-        bn(21 - rate - bn(MONTH_IN_SECONDS - now % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
+        bn(amount - rate - bn(MONTH_IN_SECONDS - now % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
     ];
     expect(r).to.have.a.feesAddedToBucketEvent({
       bucketId: bucketId(now),
@@ -93,12 +86,12 @@ describe('fees-wallet-contract', async () => {
       total: expectedAmounts[2],
     });
 
-    r = await d.generalFeesWallet.fillFeeBuckets(21, rate, now + 1, {from: assigner.address});
+    r = await d.generalFeesWallet.fillFeeBuckets(amount, rate, now + 1, {from: assigner.address});
     const now2 = await d.web3.txTimestamp(r);
     const expectedAmounts2 = [
       bn(MONTH_IN_SECONDS - now2 % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)),
       rate,
-      bn(21 - rate - bn(MONTH_IN_SECONDS - now2 % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
+      bn(amount - rate - bn(MONTH_IN_SECONDS - now2 % MONTH_IN_SECONDS).mul(rate).div(bn(MONTH_IN_SECONDS)).toNumber())
     ];
 
     expect(r).to.have.a.feesAddedToBucketEvent({
@@ -154,8 +147,8 @@ describe('fees-wallet-contract', async () => {
     const expected3 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
     let totalExpected = expected1.add(expected2).add(expected3);
     const currentBalance: BN = bn(await d.erc20.balanceOf(collector.address));
-    if (totalExpected.sub(currentBalance).abs().lt(bn(10))) {
-      totalExpected = currentBalance; // Allow a rounding error;
+    if (totalExpected.sub(currentBalance).abs().lt(totalExpected.div(bn(100)))) {
+      totalExpected = currentBalance; // Allow a 1% rounding error;
     }
     expect(currentBalance).to.bignumber.eq(totalExpected);
   });
@@ -168,7 +161,7 @@ describe('fees-wallet-contract', async () => {
 
     const now = await d.web3.txTimestamp(rNow);
     await d.generalFeesWallet.fillFeeBuckets(30, 10, now, {from: assigner.address});
-    await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}));
+    await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}), /caller is not the rewards contract/);
 
     await d.contractRegistry.set("rewards", assigner.address, {from: d.functionalOwner.address});
     await d.generalFeesWallet.collectFees({from: assigner.address});
@@ -184,7 +177,7 @@ describe('fees-wallet-contract', async () => {
 
     await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
 
-    await expectRejected(d.generalFeesWallet.emergencyWithdraw({from: d.functionalOwner.address}));
+    await expectRejected(d.generalFeesWallet.emergencyWithdraw({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
     let r = await d.generalFeesWallet.emergencyWithdraw({from: d.migrationOwner.address});
     expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
 
@@ -205,8 +198,8 @@ describe('fees-wallet-contract', async () => {
     const newFeesWallet = await d.web3.deploy('FeesWallet', [d.erc20.address], null, d.session);
 
     for (const bucket of buckets) {
-      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalOwner.address}));
-      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId).add(bn(1)), {from: d.migrationOwner.address}));
+      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
+      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId).add(bn(1)), {from: d.migrationOwner.address}), /bucketStartTime must be the  start time of a bucket/);
       r = await d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.migrationOwner.address});
       expect(r).to.have.withinContract(d.generalFeesWallet).a.feesWithdrawnFromBucketEvent({
         bucketId: bucket.bucketId,

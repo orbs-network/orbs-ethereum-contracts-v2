@@ -40,7 +40,7 @@ export interface CommitteeContract extends OwnedContract {
     addMember(addr: string, weight: number|BN, certification: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
     removeMember(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getLowestCommitteeMember(params?: TransactionConfig): Promise<string>;
-    getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>, Array<bool>]>;
+    getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>, Array<boolean>]>;
     getCommitteeInfo(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
     setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     setMaxCommittee(maxCommitteeSize: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;

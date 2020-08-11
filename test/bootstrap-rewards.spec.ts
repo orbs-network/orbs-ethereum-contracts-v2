@@ -7,6 +7,7 @@ import chai from "chai";
 import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
+import {bootstrapRewardsAssignedEvents} from "./event-parsing";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -52,7 +53,7 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     const initialBalance:BN[] = [];
     for (const v of committee) {
-      initialBalance.push(new BN(await d.guardiansWallet.getBootstrapBalance(v.address)));
+      initialBalance.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
 
     await sleep(3000);
@@ -67,14 +68,14 @@ describe('bootstrap-rewards-level-flows', async () => {
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
     const expectedCertificationCommitteeRewards = expectedGeneralCommitteeRewards.add(calcRewards(annualAmountCertification));
 
-    expect(assignRewardsTxRes).to.have.a.rewardsAssignedEvent({
-      assignees: committee.map(v => v.address),
-      bootstrapRewards: [expectedCertificationCommitteeRewards, expectedGeneralCommitteeRewards, expectedCertificationCommitteeRewards, expectedGeneralCommitteeRewards].map(x => x.toString())
+    expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
+      generalGuardianAmount: expectedGeneralCommitteeRewards.toString(),
+      certifiedGuardianAmount: expectedCertificationCommitteeRewards.toString()
     });
 
     const tokenBalances:BN[] = [];
     for (const v of committee) {
-      tokenBalances.push(new BN(await d.guardiansWallet.getBootstrapBalance(v.address)));
+      tokenBalances.push(new BN(await d.rewards.getBootstrapBalance(v.address)));
     }
 
     for (const v of committee) {
@@ -84,7 +85,7 @@ describe('bootstrap-rewards-level-flows', async () => {
       expect(tokenBalances[i].sub(initialBalance[i])).to.be.bignumber.equal(expectedRewards.toString());
 
       // claim the funds
-      const r = await d.guardiansWallet.withdrawBootstrapFunds({from: v.address});
+      const r = await d.rewards.withdrawBootstrapFunds(v.address);
       const tokenBalance = await d.bootstrapToken.balanceOf(v.address);
       expect(r).to.have.a.bootstrapRewardsWithdrawnEvent({
             guardian: v.address,

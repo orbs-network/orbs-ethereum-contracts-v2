@@ -70,10 +70,11 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 	function unregisterGuardian() external onlyRegisteredGuardian onlyWhenActive {
 		delete orbsAddressToEthereumAddress[guardians[msg.sender].orbsAddr];
 		delete ipToGuardian[guardians[msg.sender].ip];
+		Guardian memory guardian = guardians[msg.sender];
 		delete guardians[msg.sender];
 
 		getElectionsContract().guardianUnregistered(msg.sender);
-
+		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website, guardian.contact);
 		emit GuardianUnregistered(msg.sender);
 	}
 
@@ -146,6 +147,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 
 	function _updateGuardian(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
+		require(orbsAddr != guardianAddr, "orbs address must be different than the guardian address");
 		require(bytes(name).length != 0, "name must be given");
 
 		delete ipToGuardian[guardians[guardianAddr].ip];
@@ -163,7 +165,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		guardians[guardianAddr].contact = contact;
 		guardians[guardianAddr].lastUpdateTime = now;
 
-        emit GuardianDataUpdated(guardianAddr, ip, orbsAddr, name, website, contact);
+        emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website, contact);
     }
 
 }

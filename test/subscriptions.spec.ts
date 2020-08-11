@@ -1,10 +1,10 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, expectRejected, ZERO_ADDR} from "./driver";
+import {Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
-import {bn} from "./helpers";
+import {bn, expectRejected} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
@@ -24,7 +24,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
     await d.erc20.approve(subscriber.address, firstPayment, {from: appOwner.address});
 
-    let r = await subscriber.createVC(firstPayment, false, "main",  {from: appOwner.address});
+    let r = await subscriber.createVC("vc-name", firstPayment, false, "main",  {from: appOwner.address});
 
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
@@ -41,6 +41,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(firstSubsc.genRefTime).to.be.bignumber.equal(expectedGenRefTime);
     expect(firstSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(firstSubsc.tier).to.equal("defaultTier");
+    expect(firstSubsc.name).to.equal("vc-name");
 
     let vcid = bn(firstSubsc.vcid);
     expect(r).to.have.paymentEvent({vcid, by: appOwner.address, amount: firstPayment, tier: "defaultTier", rate: monthlyRate});
@@ -86,7 +87,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.assign(appOwner.address, firstPayment); // TODO extract assign+approve to driver in two places
     await d.erc20.approve(subscriber.address, firstPayment, {from: appOwner.address});
 
-    let r = await subscriber.createVC(firstPayment, true, "main",  {from: appOwner.address});
+    let r = await subscriber.createVC("vc-name", firstPayment, true, "main",  {from: appOwner.address});
 
     expect(r).to.have.subscriptionChangedEvent();
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
@@ -135,17 +136,17 @@ describe('subscriptions-high-level-flows', async () => {
     expect(await d.erc20.balanceOf(d.certifiedFeesWallet.address)).is.bignumber.equal(firstPayment.add(secondPayment));
   });
 
-  it('registers subsciber only by functional owner', async () => {
+  it('adds and removes subscriber only by functional owner', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber('tier', 1);
 
-    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), "Non-owner should not be able to add a subscriber");
-    await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
-  });
+    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /caller is not the functionalOwner/);
+    let r = await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    expect(r).to.have.a.subscriberAddedEvent({subscriber: subscriber.address})
 
-  it('should not add a subscriber with a zero address', async () => {
-    const d = await Driver.new();
-    await expectRejected(d.subscriptions.addSubscriber(ZERO_ADDR, {from: d.functionalOwner.address}), "Should not deploy a subscriber with a zero address");
+    await expectRejected(d.subscriptions.removeSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /caller is not the functionalOwner/);
+    r = await d.subscriptions.removeSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    expect(r).to.have.a.subscriberRemovedEvent({subscriber: subscriber.address})
   });
 
   it('is able to create multiple VCs from the same subscriber', async () => {
@@ -156,11 +157,11 @@ describe('subscriptions-high-level-flows', async () => {
     const amount = 10;
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main",  {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    r = await subs.createVC(amount, false, "main",  {from: owner.address});
+    r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
   });
 
@@ -172,7 +173,7 @@ describe('subscriptions-high-level-flows', async () => {
     const amount = 10;
 
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main",  {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
     const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
 
@@ -218,7 +219,7 @@ describe('subscriptions-high-level-flows', async () => {
     expect(v).to.equal("");
 
     // reject if set by non owner
-    await expectRejected(d.subscriptions.setVcConfigRecord(vcid, key, value, {from: nonOwner.address}));
+    await expectRejected(d.subscriptions.setVcConfigRecord(vcid, key, value, {from: nonOwner.address}), /only vc owner can set a vc config record/);
   });
 
   it('allows VC owner to transfer ownership', async () => {
@@ -229,7 +230,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     const amount = 10;
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main", {from: owner.address});
+    let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
     const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
     expect(r).to.have.a.vcCreatedEvent({
@@ -240,7 +241,7 @@ describe('subscriptions-high-level-flows', async () => {
     const newOwner = d.newParticipant();
 
     const nonOwner = d.newParticipant();
-    await expectRejected(d.subscriptions.setVcOwner(vcid, newOwner.address, {from: nonOwner.address}));
+    await expectRejected(d.subscriptions.setVcOwner(vcid, newOwner.address, {from: nonOwner.address}), /only the vc owner can transfer ownership/);
 
     r = await d.subscriptions.setVcOwner(vcid, newOwner.address, {from: owner.address});
     expect(r).to.have.a.vcOwnerChangedEvent({
@@ -249,7 +250,7 @@ describe('subscriptions-high-level-flows', async () => {
       newOwner: newOwner.address
     });
 
-    await expectRejected(d.subscriptions.setVcOwner(vcid, owner.address, {from: owner.address}));
+    await expectRejected(d.subscriptions.setVcOwner(vcid, owner.address, {from: owner.address}), /only the vc owner can transfer ownership/);
 
     r = await d.subscriptions.setVcOwner(vcid, owner.address, {from: newOwner.address});
     expect(r).to.have.a.vcOwnerChangedEvent({
@@ -260,12 +261,37 @@ describe('subscriptions-high-level-flows', async () => {
 
   });
 
+  it('enforces initial payment is at least minimumInitialVcPayment', async () => {
+    const d = await Driver.new();
+    const subs = await d.newSubscriber("tier", 1);
+
+    const owner = d.newParticipant();
+
+    const amount = 10;
+    await d.subscriptions.setMinimumInitialVcPayment(amount, {from: d.functionalOwner.address});
+
+    await owner.assignAndApproveOrbs(amount - 1, subs.address);
+    expectRejected(subs.createVC("vc-name", amount - 1, false, "main", {from: owner.address}), /initial VC payment must be at least minimumInitialVcPayment/);
+
+    await owner.assignAndApproveOrbs(amount, subs.address);
+    await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
+
+    await owner.assignAndApproveOrbs(amount + 1, subs.address);
+    let r = await subs.createVC("vc-name", amount + 1, false, "main", {from: owner.address});
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+
+    // can be extended with any amount
+    await owner.assignAndApproveOrbs(1, subs.address);
+    await subs.extendSubscription(vcid, 1, {from: owner.address});
+  });
+
   it('allows only the functional owner to set default genesis ref time delay', async () => {
     const d = await Driver.new();
 
     const newDelay = 4*60*60;
-    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}));
-    await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
+    let r = await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+    expect(r).to.have.a.genesisRefTimeDelayChangedEvent({newGenesisRefTimeDelay: bn(newDelay)})
 
     const subs = await d.newSubscriber("tier", 1);
 
@@ -273,10 +299,57 @@ describe('subscriptions-high-level-flows', async () => {
 
     const amount = 10;
     await owner.assignAndApproveOrbs(amount, subs.address);
-    let r = await subs.createVC(amount, false, "main", {from: owner.address});
+    r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent({
       genRefTime: bn(await d.web3.txTimestamp(r) + newDelay)
     });
-  })
+  });
+
+  it('allows only the functional owner to set minimumInitialVcPayment', async () => {
+    const d = await Driver.new();
+
+    const newMin = 1000;
+    await expectRejected(d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
+    let r = await d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.functionalOwner.address});
+    expect(r).to.have.a.minimumInitialVcPaymentChangedEvent({newMinimumInitialVcPayment: bn(newMin)})
+
+    expect(await d.subscriptions.getMinimumInitialVcPayment()).to.bignumber.eq(bn(newMin));
+  });
+
+  it('gets vc data', async () => {
+    const d = await Driver.new();
+
+    const subs = await d.newSubscriber("tier", 1);
+
+    const owner = d.newParticipant();
+
+    const amount = 10;
+    await owner.assignAndApproveOrbs(amount, subs.address);
+    let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
+
+    const event = subscriptionChangedEvents(r)[0];
+    const vcid = bn(event.vcid);
+    const vcData = await d.subscriptions.getVcData(vcid);
+    expect([
+        vcData[0],
+        vcData[1],
+        vcData[2],
+        vcData[3],
+        vcData[4],
+        vcData[5],
+        vcData[6],
+        vcData[7]
+    ]).to.deep.eq([
+      'vc-name' /* name */,
+      'tier' /* tier */,
+      '1' /* rate */,
+      event.expiresAt /* expiresAt */,
+      event.genRefTime /* genRefTime */,
+      owner.address /* owner */,
+      'main' /* deploymentSubset */,
+      false /* isCertified */
+    ])
+
+  });
 
 });
