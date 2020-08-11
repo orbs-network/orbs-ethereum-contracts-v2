@@ -43,11 +43,9 @@ interface IFeesWallet {
      * Emergency
      */
 
-    event EmergencyWithdrawal(address addr);
-
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
     function emergencyWithdraw() external /* OnlyMigrationOwner */;
 
-    //   constructor(IERC20 token);
+//   constructor(IERC20 token);    
 
 }
