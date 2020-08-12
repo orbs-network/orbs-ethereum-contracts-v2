@@ -53,6 +53,7 @@ export type DriverOptions = {
     orbsTokenAddress?: string;
     bootstrapTokenAddress?: string;
     stakingContractAddress?: string;
+    stakingContractHandlerContractAddress?: string;
 
     contractRegistryAddress?: string;
     delegationsAddress?: string;
@@ -125,7 +126,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     web3Provider: defaultWeb3Provider,
 };
 
-export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet';
+export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet' | 'stakingContractHandler';
 
 export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
@@ -152,6 +153,7 @@ export class Driver {
         public bootstrapRewardsWallet: Contracts['ProtocolWallet'],
         public generalFeesWallet: Contracts['FeesWallet'],
         public certifiedFeesWallet: Contracts['FeesWallet'],
+        public stakingContractHandler: Contracts['StakingContractHandler'],
         public contractRegistry: Contracts["ContractRegistry"]
     ) {}
 
@@ -210,10 +212,15 @@ export class Driver {
             :
             await web3.deploy('TestingERC20', [], null, session);
 
+        const stakingContractHandler = options.stakingContractHandlerContractAddress ?
+            await web3.getExisting('StakingContractHandler', options.stakingContractHandlerContractAddress, session)
+            :
+            await web3.deploy('StakingContractHandler', [], null, session);
+
         const staking = options.stakingContractAddress ?
             await web3.getExisting('StakingContract', options.stakingContractAddress, session)
             :
-            await Driver.newStakingContract(web3, delegations.address, erc20.address, session);
+            await Driver.newStakingContract(web3, stakingContractHandler.address, erc20.address, session);
 
         const rewards = options.rewardsAddress ?
             await web3.getExisting('Rewards', options.rewardsAddress, session)
@@ -283,6 +290,8 @@ export class Driver {
         await contractRegistry.set("bootstrapRewardsWallet", bootstrapRewardsWallet.address);
         await contractRegistry.set("generalFeesWallet", generalFeesWallet.address);
         await contractRegistry.set("certifiedFeesWallet", certifiedFeesWallet.address);
+        await contractRegistry.set("stakingContractHandler", stakingContractHandler.address);
+
         await contractRegistry.set("_bootstrapToken", externalToken.address);
         await contractRegistry.set("_erc20", erc20.address);
 
@@ -296,6 +305,7 @@ export class Driver {
         await committee.setContractRegistry(contractRegistry.address);
         await generalFeesWallet.setContractRegistry(contractRegistry.address);
         await certifiedFeesWallet.setContractRegistry(contractRegistry.address);
+        await stakingContractHandler.setContractRegistry(contractRegistry.address);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
 
@@ -348,6 +358,7 @@ export class Driver {
             bootstrapRewardsWallet,
             generalFeesWallet,
             certifiedFeesWallet,
+            stakingContractHandler,
             contractRegistry
         );
 
@@ -375,6 +386,7 @@ export class Driver {
         const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.get('bootstrapRewardsWallet'), session);
         const generalFeesWallet = await web3.getExisting('FeesWallet', await contractRegistry.get('generalFeesWallet'), session);
         const certifiedFeesWallet = await web3.getExisting('FeesWallet', await contractRegistry.get('certifiedFeesWallet'), session);
+        const stakingContractHandler = await web3.getExisting('StakingContractHandler', await contractRegistry.get('stakingContractHandler'), session);
 
         return new Driver(web3, session,
             accounts,
@@ -393,6 +405,7 @@ export class Driver {
             bootstrapRewardsWallet,
             generalFeesWallet,
             certifiedFeesWallet,
+            stakingContractHandler,
             contractRegistry
         );
     }
