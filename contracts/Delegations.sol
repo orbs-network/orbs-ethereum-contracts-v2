@@ -28,7 +28,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 
 	uint256 totalDelegatedStake;
 
-	modifier onlyStakeChangeNotifierWrapperContract() {
+	modifier onlyStakingContractHandler() {
 		require(msg.sender == address(getStakingContractHandler()), "caller is not the staking contract handler");
 
 		_;
@@ -160,7 +160,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		_stakeChange(addr, getStakingContractHandler().getStakeBalanceOf(addr), true);
 	}
 
-	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external onlyStakeChangeNotifierWrapperContract onlyWhenActive {
+	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external onlyStakingContractHandler onlyWhenActive {
 		_stakeChange(_stakeOwner, _updatedStake, true);
 	}
 
@@ -201,7 +201,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 	}
 
 	// TODO add tests to equivalence of batched and non batched notifications
-	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakeChangeNotifierWrapperContract onlyWhenActive {
+	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContractHandler onlyWhenActive {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
@@ -220,7 +220,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAcce
 		return data;
 	}
 
-	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakeChangeNotifierWrapperContract onlyWhenActive {}
+	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
 		uint i = 0;

@@ -11,7 +11,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
-describe.only("staking-contract-handler", async () => {
+describe("staking-contract-handler", async () => {
 
     it("should proxy getStakeBalanceOf and getTotalStakedTokens", async () => {
         const d = await Driver.new();
