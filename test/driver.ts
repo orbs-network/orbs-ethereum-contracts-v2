@@ -311,8 +311,6 @@ export class Driver {
             contractRegistry,
             stakingRewardsWallet,
             bootstrapRewardsWallet,
-            generalFeesWallet,
-            certifiedFeesWallet
         ].map(async (c: OwnedContract) => {
             await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
             await c.claimFunctionalOwnership({from: accounts[1]})

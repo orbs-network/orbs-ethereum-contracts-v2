@@ -11,8 +11,9 @@ import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 import "./spec_interfaces/IFeesWallet.sol";
+import "./Lockable.sol";
 
-contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
+contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
     using SafeMath for uint256;
     using SafeMath for uint48;
 

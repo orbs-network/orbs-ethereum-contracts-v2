@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
+import "./Lockable.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
+contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
 	using BytesLib for bytes;
 
 	uint constant MAX_COMMITTEE_ARRAY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)

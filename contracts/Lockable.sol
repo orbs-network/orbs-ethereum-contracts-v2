@@ -1,26 +1,26 @@
 pragma solidity 0.5.16;
 
-import "./WithClaimableMigrationOwnership.sol";
+import "./ContractRegistryAccessor.sol";
 
-
-/**
- * @title Claimable
- * @dev Extension for the Ownable contract, where the ownership needs to be claimed.
- * This allows the new owner to accept the transfer.
- */
-contract Lockable is WithClaimableMigrationOwnership {
+contract Lockable is ContractRegistryAccessor {
 
     bool public locked;
 
     event Locked();
     event Unlocked();
 
-    function lock() external onlyMigrationOwner {
+    modifier onlyLockOwner() {
+        require(msg.sender == migrationOwner() || msg.sender == address(contractRegistry), "caller is not a lock owner");
+
+        _;
+    }
+
+    function lock() external onlyLockOwner {
         locked = true;
         emit Locked();
     }
 
-    function unlock() external onlyMigrationOwner {
+    function unlock() external onlyLockOwner {
         locked = false;
         emit Unlocked();
     }
