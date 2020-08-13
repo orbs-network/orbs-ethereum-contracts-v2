@@ -126,6 +126,14 @@ describe("staking-contract-handler", async () => {
         });
         expect(r).to.have.a.stakeMigrationNotificationFailedEvent({stakeOwner: p2.address});
         expect(r.gasUsed).to.be.greaterThan(5000000);
-    })
+    });
+
+    it("accepts notifications only from the staking contract", async () => {
+        const d = await Driver.new();
+
+        await expectRejected(d.stakingContractHandler.stakeChange(ZERO_ADDR, 1, true, 1), /caller is not the staking contract/);
+        await expectRejected(d.stakingContractHandler.stakeChangeBatch([ZERO_ADDR], [1], [true], [1]), /caller is not the staking contract/);
+        await expectRejected(d.stakingContractHandler.stakeMigration(ZERO_ADDR, 1), /caller is not the staking contract/);
+    });
 
 })
