@@ -28,6 +28,8 @@ contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctiona
 	mapping (bytes4 => address) public ipToGuardian;
 	mapping (address => mapping(string => string)) public guardianMetadata;
 
+	constructor(IContractRegistry _contractRegistry) Lockable(_contractRegistry) public {}
+
 	/*
      * External methods
      */
@@ -41,7 +43,7 @@ contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctiona
 
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website, contact);
 
-		getElectionsContract().guardianRegistered(msg.sender);
+		electionsContract.guardianRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its properties
@@ -74,7 +76,7 @@ contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctiona
 		Guardian memory guardian = guardians[msg.sender];
 		delete guardians[msg.sender];
 
-		getElectionsContract().guardianUnregistered(msg.sender);
+		electionsContract.guardianUnregistered(msg.sender);
 		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website, guardian.contact);
 		emit GuardianUnregistered(msg.sender);
 	}
@@ -168,5 +170,10 @@ contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctiona
 
         emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website, contact);
     }
+
+	IElections electionsContract;
+	function refreshContracts() external {
+		electionsContract = getElectionsContract();
+	}
 
 }

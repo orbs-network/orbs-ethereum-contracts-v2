@@ -18,7 +18,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, expectRejected, fromTokenUnits, minAddress} from "./helpers";
+import {bn, contractId, evmIncreaseTime, expectRejected, fromTokenUnits, minAddress} from "./helpers";
 
 describe('committee', async () => {
 
@@ -103,7 +103,7 @@ describe('committee', async () => {
             weights: [bn(stake)]
         });
 
-        await d.contractRegistry.set("elections", d.contractsOwnerAddress, {from: d.functionalOwner.address}); // hack to make subsequent call
+        await d.contractRegistry.setContracts([contractId("elections")], [d.contractsOwnerAddress], [false],{from: d.functionalOwner.address}); // hack to make subsequent call
         r = await d.committee.removeMember(v.address, {from: d.contractsOwnerAddress});
         expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
     });
@@ -363,7 +363,7 @@ describe('committee', async () => {
         const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
         const notElections = d.newParticipant().address;
         const elections = d.newParticipant().address;
-        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContracts([contractId("elections")], [elections], [false],{from: d.functionalOwner.address});
 
         await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}), /caller is not the elections/);
         await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
@@ -386,7 +386,7 @@ describe('committee', async () => {
         const v2 = d.newParticipant();
 
         const elections = d.newParticipant().address;
-        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContracts([contractId("elections")], [elections], [false],{from: d.functionalOwner.address});
 
         await d.committee.lock({from: d.migrationOwner.address});
 
@@ -407,9 +407,9 @@ describe('committee', async () => {
     it("validate constructor arguments (0 < maxCommitteeSize <= 32)", async () => {
         const d = await Driver.new();
 
-        await expectRejected(d.web3.deploy('Committee', [0, 1]), /maxCommitteeSize must be larger than 0/);
-        await expectRejected(d.web3.deploy('Committee', [33, 1]), /maxCommitteeSize must be 32 at most/);
-        await d.web3.deploy('Committee', [1, 1]);
+        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, 0, 1]), /maxCommitteeSize must be larger than 0/);
+        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, 33, 1]), /maxCommitteeSize must be 32 at most/);
+        await d.web3.deploy('Committee', [d.contractRegistry.address, 1, 1]);
     });
 
     it("validates weight is within range - less than 2^96", async () => {
@@ -418,7 +418,7 @@ describe('committee', async () => {
         const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
 
         const elections = d.newParticipant().address;
-        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContracts([contractId("elections")], [elections], [false],{from: d.functionalOwner.address});
 
         await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}), /weight is out of range/);
         await d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), {from: elections});
@@ -435,7 +435,7 @@ describe('committee', async () => {
         const nonRegistered = await d.newParticipant();
 
         const elections = d.newParticipant().address;
-        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContracts([contractId("elections")], [elections], [false],{from: d.functionalOwner.address});
 
         let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
@@ -450,7 +450,7 @@ describe('committee', async () => {
         const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
 
         const elections = d.newParticipant().address;
-        await d.contractRegistry.set("elections", elections, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContracts([contractId("elections")], [elections], [false],{from: d.functionalOwner.address});
 
         const r = await d.committee.addMember(v.address, fromTokenUnits(5), false, {from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();

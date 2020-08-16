@@ -9,6 +9,8 @@ contract Certification is ICertification, WithClaimableFunctionalOwnership, Lock
 
     mapping (address => bool) guardianCertification;
 
+    constructor(IContractRegistry _contractRegistry) Lockable(_contractRegistry) public {}
+
     /*
      * External methods
      */
@@ -20,7 +22,12 @@ contract Certification is ICertification, WithClaimableFunctionalOwnership, Lock
     function setGuardianCertification(address addr, bool isCertified) external onlyFunctionalOwner onlyWhenActive {
         guardianCertification[addr] = isCertified;
         emit GuardianCertificationUpdate(addr, isCertified);
-        getElectionsContract().guardianCertificationChanged(addr, isCertified);
+        electionsContract.guardianCertificationChanged(addr, isCertified);
+    }
+
+    IElections electionsContract;
+    function refreshContracts() external {
+        electionsContract = getElectionsContract();
     }
 
 }

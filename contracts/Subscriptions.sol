@@ -38,7 +38,7 @@ contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lock
 
     IERC20 public erc20;
 
-    constructor (IERC20 _erc20) public {
+    constructor (IContractRegistry _contractRegistry, IERC20 _erc20) Lockable(_contractRegistry) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         nextVcid = 1000000;
@@ -73,7 +73,7 @@ contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lock
 
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
-        require(getProtocolContract().deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
+        require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
         require(amount >= minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
 
         uint vcid = nextVcid++;
@@ -109,7 +109,7 @@ contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lock
     function _extendSubscription(uint256 vcid, uint256 amount, address payer) private {
         VirtualChain storage vc = virtualChains[vcid];
 
-        IFeesWallet feesWallet = vc.isCertified ? getCertifiedFeesWallet() : getGeneralFeesWallet();
+        IFeesWallet feesWallet = vc.isCertified ? certifiedFeesWallet : generalFeesWallet;
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
         require(erc20.approve(address(feesWallet), amount), "failed to approve rewards to acquire subscription fees");
 
@@ -158,6 +158,15 @@ contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lock
         owner = vc.owner;
         deploymentSubset = vc.deploymentSubset;
         isCertified = vc.isCertified;
+    }
+
+    IFeesWallet generalFeesWallet;
+    IFeesWallet certifiedFeesWallet;
+    IProtocol protocolContract;
+    function refreshContracts() external {
+        generalFeesWallet = getGeneralFeesWallet();
+        certifiedFeesWallet = getCertifiedFeesWallet();
+        protocolContract = getProtocolContract();
     }
 
 }

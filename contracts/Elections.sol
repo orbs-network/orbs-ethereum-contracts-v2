@@ -33,18 +33,18 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 	Settings settings;
 
 	modifier onlyDelegationsContract() {
-		require(msg.sender == address(getDelegationsContract()), "caller is not the delegations contract");
+		require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
 
 		_;
 	}
 
 	modifier onlyGuardiansRegistrationContract() {
-		require(msg.sender == address(getGuardiansRegistrationContract()), "caller is not the guardian registrations contract");
+		require(msg.sender == address(guardianRegistrationContract), "caller is not the guardian registrations contract");
 
 		_;
 	}
 
-	constructor(uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) public {
+	constructor(IContractRegistry _contractRegistry, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) Lockable(_contractRegistry) public {
 		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be at most 100000");
 		require(voteUnreadyPercentageThreshold >= 0 && voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must be between 0 and 100");
 		require(voteOutPercentageThreshold >= 0 && voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
@@ -65,13 +65,13 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 	/// Notifies a new guardian was unregistered
 	function guardianUnregistered(address addr) external onlyGuardiansRegistrationContract {
 		emit GuardianStatusUpdated(addr, false, false);
-		getCommitteeContract().removeMember(addr);
+		committeeContract.removeMember(addr);
 	}
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external {
-		getCommitteeContract().memberCertificationChange(addr, isCertified);
+		committeeContract.memberCertificationChange(addr, isCertified);
 	}
 
 	function requireNotVotedOut(address addr) private view {
@@ -79,19 +79,19 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 	}
 
 	function readyForCommittee() external {
-		address guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit GuardianStatusUpdated(guardianAddr, true, true);
-		getCommitteeContract().addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), getCertificationContract().isGuardianCertified(guardianAddr));
+		committeeContract.addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), certificationContract.isGuardianCertified(guardianAddr));
 	}
 
 	function readyToSync() external {
-		address guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender); // this validates registration
+		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit GuardianStatusUpdated(guardianAddr, true, false);
-		getCommitteeContract().removeMember(guardianAddr);
+		committeeContract.removeMember(guardianAddr);
 	}
 
 	function clearCommitteeUnreadyVotes(address[] memory committee, address votee) private {
@@ -144,18 +144,18 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 	}
 
 	function voteUnready(address subjectAddr) external onlyWhenActive {
-		address sender = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
+		address sender = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
 		votedUnreadyVotes[sender][subjectAddr] = now;
 		emit VoteUnreadyCasted(sender, subjectAddr);
 
-		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory certification) = getCommitteeContract().getCommittee();
+		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory certification) = committeeContract.getCommittee();
 
 		bool votedUnready = isCommitteeVoteUnreadyThresholdReached(generalCommittee, generalWeights, certification, subjectAddr);
 		if (votedUnready) {
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
 			emit GuardianVotedUnready(subjectAddr);
 			emit GuardianStatusUpdated(subjectAddr, false, false);
-            getCommitteeContract().removeMember(subjectAddr);
+            committeeContract.removeMember(subjectAddr);
 		}
 	}
 
@@ -165,7 +165,7 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 		address prevSubject = voteOutVotes[msg.sender];
 		voteOutVotes[msg.sender] = subject;
 
-		uint256 voterStake = getDelegationsContract().getDelegatedStakes(msg.sender);
+		uint256 voterStake = delegationsContract.getDelegatedStakes(msg.sender);
 
 		if (prevSubject == address(0)) {
 			votersStake[msg.sender] = voterStake;
@@ -175,7 +175,7 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 			delete votersStake[msg.sender];
 		}
 
-		uint totalStake = getDelegationsContract().getTotalDelegatedStake();
+		uint totalStake = delegationsContract.getTotalDelegatedStake();
 
 		if (prevSubject != address(0) && prevSubject != subject) {
 			_applyVoteOutVotesFor(prevSubject, 0, voterStake, totalStake, _settings);
@@ -225,7 +225,7 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 			emit GuardianVotedOut(subjectAddr);
 
 			emit GuardianStatusUpdated(subjectAddr, false, false);
-			getCommitteeContract().removeMember(subjectAddr);
+			committeeContract.removeMember(subjectAddr);
 
 			accumulated = 0;
 		}
@@ -247,7 +247,7 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
 
-		getCommitteeContract().memberWeightChange(addr, effectiveStake);
+		committeeContract.memberWeightChange(addr, effectiveStake);
 	}
 
 	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
@@ -259,15 +259,15 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 	}
 
 	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
-		return getCommitteeEffectiveStake(getStakingContract().getStakeBalanceOf(v), getDelegationsContract().getDelegatedStakes(v), _settings);
+		return getCommitteeEffectiveStake(stakingContract.getStakeBalanceOf(v), delegationsContract.getDelegatedStakes(v), _settings);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
-		getCommitteeContract().removeMember(addr);
+		committeeContract.removeMember(addr);
 	}
 
 	function addMemberToCommittees(address addr, Settings memory _settings) private {
-		getCommitteeContract().addMember(addr, getCommitteeEffectiveStake(addr, _settings), getCertificationContract().isGuardianCertified(addr));
+		committeeContract.addMember(addr, getCommitteeEffectiveStake(addr, _settings), certificationContract.isGuardianCertified(addr));
 	}
 
 	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {
@@ -304,6 +304,19 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 		minSelfStakePercentMille = _settings.minSelfStakePercentMille;
 		voteUnreadyPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
 		voteOutPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
+	}
+
+	ICommittee committeeContract;
+	IDelegations delegationsContract;
+	IGuardiansRegistration guardianRegistrationContract;
+	IStakingContract stakingContract;
+	ICertification certificationContract;
+	function refreshContracts() external {
+		committeeContract = getCommitteeContract();
+		delegationsContract = getDelegationsContract();
+		guardianRegistrationContract = getGuardiansRegistrationContract();
+		stakingContract = getStakingContract();
+		certificationContract = getCertificationContract();
 	}
 
 }

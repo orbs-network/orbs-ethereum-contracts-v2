@@ -30,12 +30,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	uint256 totalDelegatedStake;
 
 	modifier onlyStakingContract() {
-		require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
+		require(msg.sender == address(stakingContract), "caller is not the staking contract");
 
 		_;
 	}
 
-	constructor() public {}
+	constructor(IContractRegistry _contractRegistry) Lockable(_contractRegistry) public {}
 
 	function getTotalDelegatedStake() external view returns (uint256) {
 		return totalDelegatedStake;
@@ -93,16 +93,16 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		totalDelegatedStake = _totalDelegatedStake;
 
 		if (refreshStakeNotification) {
-			IElections elections = getElectionsContract();
+			IElections _electionsContract = electionsContract;
 
-			elections.delegatedStakeChange(
+			_electionsContract.delegatedStakeChange(
 				prevDelegate,
 				prevDelegateStatusAfter.selfDelegatedStake,
 				prevDelegateStatusAfter.delegatedStake,
 				_totalDelegatedStake
 			);
 
-			elections.delegatedStakeChange(
+			_electionsContract.delegatedStakeChange(
 				to,
 			    newDelegateStatusAfter.selfDelegatedStake,
 				newDelegateStatusAfter.delegatedStake,
@@ -134,7 +134,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
-			_stakeChange(from[i], getStakingContract().getStakeBalanceOf(from[i]), refreshStakeNotification);
+			_stakeChange(from[i], stakingContract.getStakeBalanceOf(from[i]), refreshStakeNotification);
 			delegateFrom(from[i], to[i], refreshStakeNotification);
 		}
 
@@ -149,7 +149,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	function refreshStakeNotification(address addr) external onlyWhenActive {
 		StakeOwnerData memory stakeOwnerData = getStakeOwnerData(addr);
 		DelegateStatus memory delegateStatus = getDelegateStatus(stakeOwnerData.delegation);
-		getElectionsContract().delegatedStakeChange(
+		electionsContract.delegatedStakeChange(
 			stakeOwnerData.delegation,
 			delegateStatus.selfDelegatedStake,
 			delegateStatus.delegatedStake,
@@ -158,7 +158,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	function refreshStake(address addr) external onlyWhenActive {
-		_stakeChange(addr, getStakingContract().getStakeBalanceOf(addr), true);
+		_stakeChange(addr, stakingContract.getStakeBalanceOf(addr), true);
 	}
 
 	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external onlyStakingContract onlyWhenActive {
@@ -276,7 +276,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		delegateStatus = getDelegateStatus(stakeOwnerDataBefore.delegation);
 
 		if (_refreshStakeNotification) {
-			getElectionsContract().delegatedStakeChange(
+			electionsContract.delegatedStakeChange(
 				stakeOwnerDataBefore.delegation,
 				delegateStatus.selfDelegatedStake,
 				delegateStatus.delegatedStake,
@@ -294,10 +294,18 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	function getSelfDelegatedStake(address addr) public view returns (uint256) {
-		return _isSelfDelegating(addr) ? getStakingContract().getStakeBalanceOf(addr) : 0;
+		return _isSelfDelegating(addr) ? stakingContract.getStakeBalanceOf(addr) : 0;
 	}
 
 	function _isSelfDelegating(address addr) private view returns (bool) {
 		return getDelegation(addr) == addr;
 	}
+
+	IElections electionsContract;
+	IStakingContract stakingContract;
+	function refreshContracts() external {
+		electionsContract = getElectionsContract();
+		stakingContract = getStakingContract();
+	}
+
 }

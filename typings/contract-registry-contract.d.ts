@@ -4,12 +4,13 @@ import { ContractName, ContractName4Testkit } from "../test/driver";
 import {OwnedContract} from "./base-contract";
 
 export interface ContractRegistryContract extends OwnedContract {
-  set(contractName: ContractName | ContractName4Testkit, addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  get(contractName: ContractName | ContractName4Testkit, params?: TransactionConfig): Promise<string>;
+  setContracts(contractIds: string[] /* bytes32[] */, addrs: string[], isManaged: boolean[], params?: TransactionConfig): Promise<TransactionReceipt>;
+  getContracts(contractIds: string[] /* bytes32[] */, params?: TransactionConfig): Promise<string[]>;
 }
 
 export interface ContractAddressUpdatedEvent {
-  contractName: ContractName,
-  addr: string
+  contractId: string,
+  addr: string,
+  isManaged: boolean
 }
 

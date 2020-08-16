@@ -39,12 +39,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
     uint256 lastAssignedAt;
 
     modifier onlyCommitteeContract() {
-        require(msg.sender == address(getCommitteeContract()), "caller is not the committee contract");
+        require(msg.sender == address(committeeContract), "caller is not the committee contract");
 
         _;
     }
 
-    constructor(IERC20 _erc20, IERC20 _bootstrapToken) public {
+    constructor(IContractRegistry _contractRegistry, IERC20 _erc20, IERC20 _bootstrapToken) Lockable(_contractRegistry) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
@@ -76,7 +76,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
     }
 
     function assignRewards() public onlyWhenActive {
-        (address[] memory committee, uint256[] memory weights, bool[] memory certification) = getCommitteeContract().getCommittee();
+        (address[] memory committee, uint256[] memory weights, bool[] memory certification) = committeeContract.getCommittee();
         _assignRewardsToCommittee(committee, weights, certification);
     }
 
@@ -114,8 +114,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
             balances[committee[i]] = balance;
         }
 
-        getStakingRewardsWallet().withdraw(toUint256Granularity(totals.stakingRewardsTotalBalance));
-        getBootstrapRewardsWallet().withdraw(toUint256Granularity(totals.bootstrapRewardsTotalBalance));
+        stakingRewardsWallet.withdraw(toUint256Granularity(totals.stakingRewardsTotalBalance));
+        bootstrapRewardsWallet.withdraw(toUint256Granularity(totals.bootstrapRewardsTotalBalance));
 
         lastAssignedAt = now;
 
@@ -201,7 +201,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
 
         distributeStakingRewardsVars memory vars;
 
-        vars.guardianAddr = getGuardiansRegistrationContract().resolveGuardianAddress(msg.sender);
+        vars.guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
 
         for (uint i = 0; i < to.length; i++) {
             if (to[i] != vars.guardianAddr) {
@@ -234,19 +234,19 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
 
         balances[vars.guardianAddr].stakingRewards = uint48(balances[vars.guardianAddr].stakingRewards.sub(totalAmount_uint48));
 
-        IStakingContract stakingContract = getStakingContract();
+        IStakingContract _stakingContract = stakingContract;
 
-        approve(erc20, address(stakingContract), totalAmount_uint48);
-        stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
+        approve(erc20, address(_stakingContract), totalAmount_uint48);
+        _stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
-        getDelegationsContract().refreshStakeNotification(vars.guardianAddr);
+        delegationsContract.refreshStakeNotification(vars.guardianAddr);
 
         emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
 
     function collectFees(address[] memory committee, bool[] memory certification) private returns (uint256 generalGuardianFee, uint256 certifiedGuardianFee) {
-        uint generalFeePoolAmount = getGeneralFeesWallet().collectFees();
-        uint certificationFeePoolAmount = getCertifiedFeesWallet().collectFees();
+        uint generalFeePoolAmount = generalFeesWallet.collectFees();
+        uint certificationFeePoolAmount = certifiedFeesWallet.collectFees();
 
         generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
         certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
@@ -305,6 +305,25 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
         emit EmergencyWithdrawal(msg.sender);
         require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
+    }
+
+    ICommittee committeeContract;
+    IDelegations delegationsContract;
+    IGuardiansRegistration guardianRegistrationContract;
+    IStakingContract stakingContract;
+    IFeesWallet generalFeesWallet;
+    IFeesWallet certifiedFeesWallet;
+    IProtocolWallet stakingRewardsWallet;
+    IProtocolWallet bootstrapRewardsWallet;
+    function refreshContracts() external {
+        committeeContract = getCommitteeContract();
+        delegationsContract = getDelegationsContract();
+        guardianRegistrationContract = getGuardiansRegistrationContract();
+        stakingContract = getStakingContract();
+        generalFeesWallet = getGeneralFeesWallet();
+        certifiedFeesWallet = getCertifiedFeesWallet();
+        stakingRewardsWallet = getStakingRewardsWallet();
+        bootstrapRewardsWallet = getBootstrapRewardsWallet();
     }
 
 }

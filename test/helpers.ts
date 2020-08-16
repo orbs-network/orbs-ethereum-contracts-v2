@@ -101,3 +101,7 @@ export async function expectRejected(promise: Promise<any>, expectedErrorMsg: Re
     throw new Error("expected promise to reject")
 }
 
+export function contractId(name: string): string /* bytes32 */ {
+    const fromAscii = Web3.utils.fromAscii(name)
+    return fromAscii.length > 66 ? Web3.utils.keccak256(name) : (fromAscii + "0".repeat(66 - fromAscii.length));
+}

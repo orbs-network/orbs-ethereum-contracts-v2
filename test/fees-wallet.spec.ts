@@ -6,7 +6,7 @@ import chai from "chai";
 import {
   feesAddedToBucketEvents,
 } from "./event-parsing";
-import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, contractId, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
@@ -118,7 +118,7 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(300000000, d.generalFeesWallet.address);
 
     const collector = d.newParticipant();
-    await d.contractRegistry.set("rewards", collector.address, {from: d.functionalOwner.address});
+    await d.contractRegistry.setContracts([contractId("rewards")], [collector.address], [false],{from: d.functionalOwner.address});
 
     const startTime = await d.web3.txTimestamp(await d.generalFeesWallet.collectFees({from: collector.address}));
 
@@ -163,7 +163,7 @@ describe('fees-wallet-contract', async () => {
     await d.generalFeesWallet.fillFeeBuckets(30, 10, now, {from: assigner.address});
     await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}), /caller is not the rewards contract/);
 
-    await d.contractRegistry.set("rewards", assigner.address, {from: d.functionalOwner.address});
+    await d.contractRegistry.setContracts([contractId("rewards")], [assigner.address], [false], {from: d.functionalOwner.address});
     await d.generalFeesWallet.collectFees({from: assigner.address});
   });
 
@@ -195,7 +195,7 @@ describe('fees-wallet-contract', async () => {
     let r = await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
     const buckets = feesAddedToBucketEvents(r);
 
-    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.erc20.address], null, d.session);
+    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.erc20.address], null, d.session);
 
     for (const bucket of buckets) {
       await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
