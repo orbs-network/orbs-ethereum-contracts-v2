@@ -3,10 +3,9 @@ pragma solidity 0.5.16;
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./Lockable.sol";
 
-contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctionalOwnership, Lockable {
+contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 
 	modifier onlyRegisteredGuardian {
 		require(isRegistered(msg.sender), "Guardian is not registered");

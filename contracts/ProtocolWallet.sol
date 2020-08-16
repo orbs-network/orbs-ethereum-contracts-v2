@@ -1,11 +1,10 @@
 pragma solidity 0.5.16;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
-import "./WithClaimableMigrationOwnership.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./ContractRegistryAccessor.sol";
 
-contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, WithClaimableFunctionalOwnership{
+contract ProtocolWallet is IProtocolWallet, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     IERC20 public token;
@@ -20,7 +19,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         _;
     }
 
-    constructor(IERC20 _token, address _client) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client) ContractRegistryAccessor(_contractRegistry, _registryManager) public {
         token = _token;
         client = _client;
         lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?
@@ -59,25 +58,25 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.
-    function setMaxAnnualRate(uint256 _annualRate) external onlyMigrationOwner {
+    function setMaxAnnualRate(uint256 _annualRate) external onlyMigrationManager {
         annualRate = _annualRate;
         emit MaxAnnualRateSet(_annualRate);
     }
 
     /// @dev Sets a new transfer rate for the Orbs pool.
-    function resetOutstandingTokens() external onlyMigrationOwner { //TODO add test
+    function resetOutstandingTokens() external onlyMigrationManager { //TODO add test
         lastWithdrawal = now;
         emit OutstandingTokensReset();
     }
 
     /// @dev transfer the entire pool's balance to a new wallet.
-    function emergencyWithdraw() external onlyMigrationOwner { 
+    function emergencyWithdraw() external onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
         require(token.transfer(msg.sender, getBalance()), "ProtocolWallet::emergencyWithdraw - transfer failed");
     }
 
     /// @dev sets the address of the new contract
-    function setClient(address _client) external onlyFunctionalOwner {
+    function setClient(address _client) external onlyFunctionalManager {
         client = _client;
         emit ClientSet(_client);
     }

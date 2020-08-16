@@ -32,12 +32,12 @@ interface IFeesWallet {
      */
 
     /// @dev Updates the address of the contract registry.
-    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
     /// @dev migrates the fees of bucket starting at startTimestamp.
     /// bucketStartTime must be a bucket's start time.
     /// Calls acceptBucketMigration in the destination contract.
-    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external /* onlyMigrationOwner */;
+    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external /* onlyMigrationManager */;
 
     /*
      * Emergency
@@ -46,7 +46,7 @@ interface IFeesWallet {
     event EmergencyWithdrawal(address addr);
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external /* OnlyMigrationOwner */;
+    function emergencyWithdraw() external /* onlyMigrationManager */;
 
     //   constructor(IERC20 token);
 

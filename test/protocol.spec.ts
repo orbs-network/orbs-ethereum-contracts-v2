@@ -18,7 +18,7 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     let currTime: number = await getTopBlockTimestamp(d);
-    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
+    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
@@ -26,7 +26,7 @@ describe('protocol-contract', async () => {
       fromTimestamp: bn(currTime + 100)
     });
 
-    r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2, {from: d.functionalOwner.address});
+    r = await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 2, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       currentVersion: bn(2),
@@ -34,7 +34,7 @@ describe('protocol-contract', async () => {
       fromTimestamp: bn(await d.web3.txTimestamp(r))
     });
 
-    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, currTime + 100, {from: d.functionalOwner.address});
+    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 3, currTime + 100, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_CANARY,
       currentVersion: bn(2),
@@ -47,7 +47,7 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     let currTime: number = await getTopBlockTimestamp(d);
-    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3, {from: d.functionalOwner.address});
+    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
@@ -58,15 +58,15 @@ describe('protocol-contract', async () => {
     await evmIncreaseTimeForQueries(d.web3, 3);
     currTime += 3;
 
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime - 1, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime, {from: d.functionalManager.address}), /a protocol update can only be scheduled for the future/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime - 1, {from: d.functionalManager.address}), /a protocol update can only be scheduled for the future/);
   });
 
   it('allows protocol upgrade to be scheduled before the latest upgrade schedule when latest upgrade did not yet take place', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
+    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
@@ -74,23 +74,23 @@ describe('protocol-contract', async () => {
       fromTimestamp: bn(currTime + 100)
     });
 
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalOwner.address});
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 99, {from: d.functionalOwner.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalManager.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 99, {from: d.functionalManager.address});
   });
 
   it('does not allow protocol upgrade to be scheduled in the past or now', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/); // fromTimestamps likely equal n, {from: d.functionalOwner.addressow
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime-1, {from: d.functionalOwner.address}), /a protocol update can only be scheduled for the future/); // fromTimestamps behind n, {from: d.functionalOwner.addressow
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime, {from: d.functionalManager.address}), /a protocol update can only be scheduled for the future/); // fromTimestamps likely equal n, {from: d.functionalOwner.addressow
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime-1, {from: d.functionalManager.address}), /a protocol update can only be scheduled for the future/); // fromTimestamps behind n, {from: d.functionalOwner.addressow
   });
 
   it('does not allow protocol downgrade', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address});
+    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
@@ -100,14 +100,14 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTimeForQueries(d.web3, 3);
 
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address}), /protocol version must be greater or equal to current version/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalManager.address}), /protocol version must be greater or equal to current version/);
   });
 
   it('allows upgrading to current version (an abort mechanism)', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address});
+    let r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(1),
@@ -117,7 +117,7 @@ describe('protocol-contract', async () => {
 
     await evmIncreaseTimeForQueries(d.web3, 3);
 
-    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalOwner.address});
+    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(3),
@@ -125,7 +125,7 @@ describe('protocol-contract', async () => {
       fromTimestamp: bn(currTime + 100)
     });
 
-    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 50, {from: d.functionalOwner.address});
+    r = await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 50, {from: d.functionalManager.address});
     expect(r).to.have.a.protocolVersionChangedEvent({
       deploymentSubset: DEPLOYMENT_SUBSET_MAIN,
       currentVersion: bn(3),
@@ -142,7 +142,7 @@ describe('protocol-contract', async () => {
 
     // first upgrade
     let currTime: number = await getTopBlockTimestamp(d);
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3, {from: d.functionalOwner.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 3, {from: d.functionalManager.address});
 
     reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
     expect(reportedVersion).to.be.bignumber.equal(bn(1));
@@ -154,7 +154,7 @@ describe('protocol-contract', async () => {
 
     // the second upgrade
     currTime = await getTopBlockTimestamp(d);
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalOwner.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 3, {from: d.functionalManager.address});
 
     reportedVersion = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
     expect(reportedVersion).to.be.bignumber.equal(bn(2));
@@ -170,14 +170,14 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     const currTime: number = await getTopBlockTimestamp(d);
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalManager.address});
 
     // future upgrade should not affect the current version
     let reportedVersionMain = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_MAIN);
     expect(reportedVersionMain).to.be.bignumber.equal(bn(1));
 
     // create a second deployment subset
-    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address});
+    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalManager.address});
 
     let reportedVersionCanary = await d.protocol.getProtocolVersion(DEPLOYMENT_SUBSET_CANARY);
     expect(reportedVersionCanary).to.be.bignumber.equal(bn(3));
@@ -200,18 +200,18 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     // create a second deployment subset
-    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address});
-    await expectRejected(d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalOwner.address}), /deployment subset already exists/);
+    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalManager.address});
+    await expectRejected(d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 3, {from: d.functionalManager.address}), /deployment subset already exists/);
   });
 
   it('does not allow setting a protocol version on a non-existent deployment subset', async () => {
     const d = await Driver.new();
     let currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalOwner.address}), /deployment subset does not exist/);
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalManager.address}), /deployment subset does not exist/);
 
     // create a second deployment subset
-    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 0, {from: d.functionalOwner.address});
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalOwner.address});
+    await d.protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_CANARY, 0, {from: d.functionalManager.address});
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_CANARY, 1, currTime + 100, {from: d.functionalManager.address});
   });
 
 });

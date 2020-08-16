@@ -248,12 +248,12 @@ export class Driver {
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, accounts[0], erc20.address, rewards.address], null, session);
 
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, accounts[0], externalToken.address, rewards.address], null, session);
 
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
@@ -303,40 +303,26 @@ export class Driver {
             erc20.address],
             [
                 false,
-                true, // true,
-                true, // true,
-                true, // true,
-                true, // true,
-                true, // true,
-                true, // true,
-                true, // true,
-                true, // true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
                 false,
                 false,
-                true, // true,
-                true, // true,
+                true,
+                true,
                 false,
                 false,
             ]);
 
-        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1);
+        await contractRegistry.setManager("migrationManager", accounts[0]);
+        await contractRegistry.setManager("functionalManager", accounts[1]);
 
-        await Promise.all([
-            elections,
-            delegations,
-            subscriptions,
-            rewards,
-            protocol,
-            certification,
-            guardiansRegistration,
-            committee,
-            contractRegistry,
-            stakingRewardsWallet,
-            bootstrapRewardsWallet,
-        ].map(async (c: OwnedContract) => {
-            await c.transferFunctionalOwnership(accounts[1], {from: accounts[0]});
-            await c.claimFunctionalOwnership({from: accounts[1]})
-        }));
+        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: accounts[1]});
 
         // TODO remove when setting in constructor
         await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: accounts[1]});
@@ -436,22 +422,24 @@ export class Driver {
         return this.accounts[2];
     }
 
-    get migrationOwner(): Participant {
+    get migrationManager(): Participant {
         return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[0], this.accounts[0], this);
     }
 
-    get functionalOwner(): Participant {
+    get registryManager(): Participant {
+        return this.migrationManager;
+    }
+
+    get functionalManager(): Participant {
         return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[1], this.accounts[1], this);
     }
 
     subscribers: any[] = [];
 
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
-        const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.contractRegistry.address, this.migrationOwner.address, this.erc20.address, tier, monthlyRate], null, this.session);
+        const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.contractRegistry.address, this.migrationManager.address, this.erc20.address, tier, monthlyRate], null, this.session);
         // await subscriber.refreshContracts();
-        await subscriber.transferFunctionalOwnership(this.functionalOwner.address);
-        await subscriber.claimFunctionalOwnership({from: this.functionalOwner.address});
-        await this.subscriptions.addSubscriber(subscriber.address, {from: this.functionalOwner.address});
+        await this.subscriptions.addSubscriber(subscriber.address, {from: this.functionalManager.address});
         this.subscribers.push(subscriber);
         return subscriber;
     }
@@ -562,11 +550,11 @@ export class Participant {
     }
 
     async becomeCertified() {
-        return await this.driver.certification.setGuardianCertification(this.address, true, {from: this.driver.functionalOwner.address});
+        return await this.driver.certification.setGuardianCertification(this.address, true, {from: this.driver.functionalManager.address});
     }
 
     async becomeNotCertified() {
-        return await this.driver.certification.setGuardianCertification(this.address, false, {from: this.driver.functionalOwner.address});
+        return await this.driver.certification.setGuardianCertification(this.address, false, {from: this.driver.functionalManager.address});
     }
 
     async becomeGuardian(stake: number|BN, certified: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {

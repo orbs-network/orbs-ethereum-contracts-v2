@@ -2,10 +2,9 @@ pragma solidity 0.5.16;
 
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./Lockable.sol";
 
-contract Certification is ICertification, WithClaimableFunctionalOwnership, Lockable {
+contract Certification is ICertification, Lockable {
 
     mapping (address => bool) guardianCertification;
 
@@ -19,7 +18,7 @@ contract Certification is ICertification, WithClaimableFunctionalOwnership, Lock
         return guardianCertification[addr];
     }
 
-    function setGuardianCertification(address addr, bool isCertified) external onlyFunctionalOwner onlyWhenActive {
+    function setGuardianCertification(address addr, bool isCertified) external onlyFunctionalManager onlyWhenActive {
         guardianCertification[addr] = isCertified;
         emit GuardianCertificationUpdate(addr, isCertified);
         electionsContract.guardianCertificationChanged(addr, isCertified);

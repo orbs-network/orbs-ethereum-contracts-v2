@@ -4,11 +4,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./Lockable.sol";
 
-contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lockable {
+contract Subscriptions is ISubscriptions, Lockable {
     using SafeMath for uint256;
 
     enum CommitteeType {
@@ -56,14 +55,14 @@ contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lock
         return virtualChains[vcid].configRecords[key];
     }
 
-    function addSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
+    function addSubscriber(address addr) external onlyFunctionalManager onlyWhenActive {
         // todo: emit event
         authorizedSubscribers[addr] = true;
 
         emit SubscriberAdded(addr);
     }
 
-    function removeSubscriber(address addr) external onlyFunctionalOwner onlyWhenActive {
+    function removeSubscriber(address addr) external onlyFunctionalManager onlyWhenActive {
         require(authorizedSubscribers[addr], "given add is not an authorized subscriber");
 
         authorizedSubscribers[addr] = false;
@@ -121,12 +120,12 @@ contract Subscriptions is ISubscriptions, WithClaimableFunctionalOwnership, Lock
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 
-    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalOwner onlyWhenActive {
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalManager onlyWhenActive {
         genesisRefTimeDelay = newGenesisRefTimeDelay;
         emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
     }
 
-    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) external onlyFunctionalOwner {
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) external onlyFunctionalManager {
         minimumInitialVcPayment = newMinimumInitialVcPayment;
         emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
     }

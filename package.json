@@ -6,7 +6,7 @@
   "repository": "https://github.com/orbs-network/orbs-ethereum-contracts-v2",
   "scripts": {
     "deploy-beta": "npm run prepublish && node --require ./tsinit.js ./deploy-beta.ts",
-    "test": "export GANACHE_CORE=true && npm run prepublish && mocha --exit --bail --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
+    "test": "export GANACHE_CORE=true && npm run prepublish && mocha --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-ropsten": "export ETHEREUM_URL=https://ropsten.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-kovan": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-gas-scenarios": "npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/gas-scenarios.spec.ts --timeout 600000",

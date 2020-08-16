@@ -48,8 +48,8 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
-    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
@@ -67,11 +67,11 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await expectRejected(d.stakingRewardsWallet.setClient(client.address, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-    let r = await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
+    await expectRejected(d.stakingRewardsWallet.setClient(client.address, {from: d.migrationManager.address}), /sender is not the functional manager/);
+    let r = await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
     expect(r).to.have.a.clientSetEvent({client: client.address});
 
-    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
@@ -89,10 +89,10 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
 
-    await expectRejected(d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    let r = await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
+    await expectRejected(d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.functionalManager.address}), /sender is not the migration manager/);
+    let r = await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
     expect(r).to.have.a.maxAnnualRateSetEvent({ maxAnnualRate: amount });
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
@@ -111,8 +111,8 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
-    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
 
@@ -130,8 +130,8 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
-    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS / 2);
 
@@ -151,11 +151,11 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
-    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
 
     await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
-    await d.stakingRewardsWallet.setMaxAnnualRate(1, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(1, {from: d.migrationManager.address});
 
     await expectRejected(d.stakingRewardsWallet.withdraw(2, {from: client.address}), /requested amount is larger than allowed by rate/);
     await d.stakingRewardsWallet.withdraw(1, {from: client.address});
@@ -173,19 +173,19 @@ describe('protocol-contract', async () => {
     await p.assignAndApproveOrbs(amount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
-    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    let r = await d.stakingRewardsWallet.emergencyWithdraw({from: d.migrationOwner.address});
-    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
+    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
+    let r = await d.stakingRewardsWallet.emergencyWithdraw({from: d.migrationManager.address});
+    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
 
-    expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.eq(amount);
+    expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(amount);
   });
 
   it('skips ERC20 withdrawal when amount is zero', async () => {
     const d = await Driver.new();
 
     const client = d.newParticipant();
-    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalOwner.address});
-    await d.stakingRewardsWallet.setMaxAnnualRate(1000, {from: d.migrationOwner.address});
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(1000, {from: d.migrationManager.address});
 
     await client.assignAndApproveOrbs(1000, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(1000, {from: client.address});

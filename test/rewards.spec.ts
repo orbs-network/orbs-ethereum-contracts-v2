@@ -37,12 +37,12 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const poolAmount = fromTokenUnits(1000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
+    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
@@ -138,12 +138,12 @@ describe('rewards', async () => {
         expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
 
-        await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-        let r = await d.rewards.emergencyWithdraw({from: d.migrationOwner.address});
-        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
+        await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
+        let r = await d.rewards.emergencyWithdraw({from: d.migrationManager.address});
+        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
 
-        expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
-        expect(await d.bootstrapToken.balanceOf(d.migrationOwner.address)).to.bignumber.gt(bn(0));
+        expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.gt(bn(0));
+        expect(await d.bootstrapToken.balanceOf(d.migrationManager.address)).to.bignumber.gt(bn(0));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
         expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
     });

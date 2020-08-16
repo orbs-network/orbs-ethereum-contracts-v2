@@ -1,12 +1,10 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/IProtocol.sol";
-import "./WithClaimableFunctionalOwnership.sol";
-import "./WithClaimableMigrationOwnership.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 
-contract Protocol is IProtocol, WithClaimableFunctionalOwnership, Lockable {
+contract Protocol is IProtocol, Lockable {
 
     struct DeploymentSubset {
         bool exists;
@@ -27,7 +25,7 @@ contract Protocol is IProtocol, WithClaimableFunctionalOwnership, Lockable {
         (, currentVersion) = checkPrevUpgrades(deploymentSubset);
     }
 
-    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyFunctionalOwner onlyWhenActive {
+    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external onlyFunctionalManager onlyWhenActive {
         require(!deploymentSubsets[deploymentSubset].exists, "deployment subset already exists");
 
         deploymentSubsets[deploymentSubset].currentVersion = initialProtocolVersion;
@@ -38,7 +36,7 @@ contract Protocol is IProtocol, WithClaimableFunctionalOwnership, Lockable {
         emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now);
     }
 
-    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyFunctionalOwner onlyWhenActive {
+    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external onlyFunctionalManager onlyWhenActive {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
         require(fromTimestamp > now, "a protocol update can only be scheduled for the future");
 

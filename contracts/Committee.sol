@@ -4,12 +4,11 @@ import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./Lockable.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
+contract Committee is ICommittee, Lockable {
 	using BytesLib for bytes;
 
 	uint constant MAX_COMMITTEE_ARRAY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)
@@ -323,12 +322,12 @@ contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
 	 * Governance
 	 */
 
-	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external onlyFunctionalManager /* todo onlyWhenActive */ {
 		emit MaxTimeBetweenRewardAssignmentsChanged(maxTimeBetweenRewardAssignments, settings.maxTimeBetweenRewardAssignments);
 		settings.maxTimeBetweenRewardAssignments = maxTimeBetweenRewardAssignments;
 	}
 
-	function setMaxCommittee(uint8 maxCommitteeSize) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setMaxCommittee(uint8 maxCommitteeSize) external onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		Settings memory _settings = settings;

@@ -14,7 +14,7 @@ describe('contract-registry-high-level-flows', async () => {
 
   it('registers contracts only by functional owner and emits events', async () => {
     const d = await Driver.new();
-    const owner = d.functionalOwner;
+    const owner = d.registryManager;
     const registry = d.contractRegistry;
 
     const contract1Name = "protocol";
@@ -45,7 +45,7 @@ describe('contract-registry-high-level-flows', async () => {
     const nonGovernor = d.newParticipant();
     const contract2Name = "committee";
     const addr3 = d.newParticipant().address;
-    await expectRejected(registry.setContracts([contractId(contract2Name)], [addr3], [false], {from: nonGovernor.address}), /caller is not the functionalOwner/);
+    await expectRejected(registry.setContracts([contractId(contract2Name)], [addr3], [false], {from: nonGovernor.address}), /caller is not the registryManager/);
 
     // now by governor
     r = await registry.setContracts([contractId(contract2Name)], [addr3], [false], {from: owner.address});
@@ -67,19 +67,34 @@ describe('contract-registry-high-level-flows', async () => {
     const subscriber = await d.newSubscriber("tier", 1);
 
     const newAddr = d.newParticipant().address;
-    await expectRejected(d.elections.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
+    await expectRejected(d.elections.setContractRegistry(newAddr, {from: d.functionalManager.address}), /caller is not the registryManager/);
+    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: d.functionalManager.address}), /caller is not the registryManager/);
+    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalManager.address}), /caller is not the registryManager/);
+    await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalManager.address}), /caller is not the registryManager/);
 
-    let r = await d.elections.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    let r = await d.elections.setContractRegistry(newAddr, {from: d.migrationManager.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
-    r = await d.rewards.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    r = await d.rewards.setContractRegistry(newAddr, {from: d.migrationManager.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
-    r = await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    r = await d.subscriptions.setContractRegistry(newAddr, {from: d.migrationManager.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
-    r = await subscriber.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    r = await subscriber.setContractRegistry(newAddr, {from: d.migrationManager.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+  });
+
+  it('sets a manager only by registry manager', async () => {
+    const d = await Driver.new();
+
+    const p = d.newParticipant();
+
+    const nonOwner = d.newParticipant();
+    await expectRejected(d.contractRegistry.setManager("newRole", p.address, {from: nonOwner.address}), /caller is not the registryManager/);
+
+    let r = await d.contractRegistry.setManager("newRole", p.address, {from: d.registryManager.address});
+    expect(r).to.have.a.managerChangedEvent({
+      role: "newRole",
+      newManager: p.address
+    });
   });
 
 });

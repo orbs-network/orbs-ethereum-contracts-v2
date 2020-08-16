@@ -27,7 +27,7 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     /* top up bootstrap reward  pool */
 
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualAmountGeneral = fromTokenUnits(10000000);
     const annualAmountCertification = fromTokenUnits(20000000);

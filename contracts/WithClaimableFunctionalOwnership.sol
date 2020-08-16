@@ -33,7 +33,7 @@ contract WithClaimableFunctionalOwnership is Context{
     /**
      * @dev Throws if called by any account other than the functionalOwner.
      */
-    modifier onlyFunctionalOwner() {
+    modifier onlyFunctionalManager() {
         require(isFunctionalOwner(), "WithClaimableFunctionalOwnership: caller is not the functionalOwner");
         _;
     }
@@ -52,7 +52,7 @@ contract WithClaimableFunctionalOwnership is Context{
      * NOTE: Renouncing functionalOwnership will leave the contract without an functionalOwner,
      * thereby removing any functionality that is only available to the functionalOwner.
      */
-    function renounceFunctionalOwnership() public onlyFunctionalOwner {
+    function renounceFunctionalOwnership() public onlyFunctionalManager {
         emit FunctionalOwnershipTransferred(_functionalOwner, address(0));
         _functionalOwner = address(0);
     }
@@ -77,7 +77,7 @@ contract WithClaimableFunctionalOwnership is Context{
      * @dev Allows the current functionalOwner to set the pendingOwner address.
      * @param newFunctionalOwner The address to transfer functionalOwnership to.
      */
-    function transferFunctionalOwnership(address newFunctionalOwner) public onlyFunctionalOwner {
+    function transferFunctionalOwnership(address newFunctionalOwner) public onlyFunctionalManager {
         pendingFunctionalOwner = newFunctionalOwner;
     }
     /**

@@ -38,14 +38,14 @@ interface ICommittee {
 	 * Governance
 	 */
 
-	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setMaxCommittee(uint8 maxCommitteeSize) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external /* onlyFunctionalManager onlyWhenActive */;
+	function setMaxCommittee(uint8 maxCommitteeSize) external /* onlyFunctionalManager onlyWhenActive */;
 
 	event MaxTimeBetweenRewardAssignmentsChanged(uint32 newValue, uint32 oldValue);
 	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
 
     /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
     /*
      * Getters

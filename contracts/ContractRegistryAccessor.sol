@@ -10,24 +10,42 @@ import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./interfaces/IRewards.sol";
-import "./WithClaimableMigrationOwnership.sol";
+import "./WithClaimableRegistryManagement.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
 import "./IContractRegistryListener.sol";
 
-contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
+contract ContractRegistryAccessor is WithClaimableRegistryManagement {
+
+    modifier onlyMigrationManager {
+        require(contractRegistry.getManager("migrationManager") == msg.sender, "sender is not the migration manager");
+
+        _;
+    }
+
+    modifier onlyFunctionalManager {
+        require(contractRegistry.getManager("functionalManager") == msg.sender, "sender is not the functional manager");
+
+        _;
+    }
+
+    modifier onlyEmergencyManager {
+        require(contractRegistry.getManager("emergencyManager") == msg.sender, "sender is not the emergency manager");
+
+        _;
+    }
 
     IContractRegistry contractRegistry;
 
     constructor(IContractRegistry _contractRegistry, address _registryManager) public {
         require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
-        require(address(_registryManager) != address(0), "_regsitryManage cannot be 0");
+        require(address(_registryManager) != address(0), "_registryManager cannot be 0");
         setContractRegistry(_contractRegistry);
-        _transferMigrationOwnership(_registryManager);
+        _transferRegistryManagement(_registryManager);
     }
 
     event ContractRegistryAddressUpdated(address addr);
 
-    function setContractRegistry(IContractRegistry _contractRegistry) public onlyMigrationOwner {
+    function setContractRegistry(IContractRegistry _contractRegistry) public onlyRegistryManager {
         contractRegistry = _contractRegistry;
         emit ContractRegistryAddressUpdated(address(_contractRegistry));
     }
@@ -105,4 +123,7 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
         address[] memory addrs = contractRegistry.getContracts(arr);
         return addrs[0];
     }
+
+    function refreshManagers(string calldata role, address newManager) external {}
+
 }

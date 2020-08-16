@@ -11,11 +11,10 @@ import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./Lockable.sol";
 
 
-contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
+contract Elections is IElections, Lockable {
 	using SafeMath for uint256;
 
 	mapping (address => mapping (address => uint256)) votedUnreadyVotes; // by => to => timestamp
@@ -270,24 +269,24 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 		committeeContract.addMember(addr, getCommitteeEffectiveStake(addr, _settings), certificationContract.isGuardianCertified(addr));
 	}
 
-	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalManager /* todo onlyWhenActive */ {
 		emit VoteUnreadyTimeoutSecondsChanged(voteUnreadyTimeoutSeconds, settings.voteUnreadyTimeoutSeconds);
 		settings.voteUnreadyTimeoutSeconds = voteUnreadyTimeoutSeconds;
 	}
 
-	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be 100000 at most");
 		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
 		settings.minSelfStakePercentMille = minSelfStakePercentMille;
 	}
 
-	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
 		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
 		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
 	}
 
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external onlyFunctionalOwner /* todo onlyWhenActive */ {
+	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must not be larger than 100");
 		emit VoteUnreadyPercentageThresholdChanged(voteUnreadyPercentageThreshold, settings.voteUnreadyPercentageThreshold);
 		settings.voteUnreadyPercentageThreshold = voteUnreadyPercentageThreshold;

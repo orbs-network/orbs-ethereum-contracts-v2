@@ -28,7 +28,7 @@ import {
   VoteOutPercentageThresholdChangedEvent,
 } from "../typings/elections-contract";
 import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
-import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
+import {ContractAddressUpdatedEvent, ManagerChangedEvent} from "../typings/contract-registry-contract";
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
   BootstrapRewardsWithdrawnEvent,
@@ -236,6 +236,7 @@ declare global {
       minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
       stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
       stakingRewardsMigrationAcceptedEvent(data?: Partial<StakingRewardsMigrationAcceptedEvent>);
+      managerChangedEvent(data?: Partial<ManagerChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

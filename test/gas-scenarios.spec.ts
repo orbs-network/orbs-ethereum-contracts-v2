@@ -35,13 +35,13 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const poolAmount = fromTokenUnits(1000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalOwner.address});
+    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
     tlog("Staking pools topped up");
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
-    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalOwner.address});
+    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
     tlog("Bootstrap pools topped up");
 
     let committee: Participant[] = [];
@@ -99,7 +99,7 @@ describe('gas usage scenarios', async () => {
     it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
         const {d, committee} = await fullCommittee();
 
-        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
+        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalManager.address});
 
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
@@ -315,7 +315,7 @@ describe('gas usage scenarios', async () => {
         let r = await d.rewards.assignRewards();
         console.log(feesAssignedEvents(r));
 
-        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalOwner.address});
+        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalManager.address});
 
         const v = committee[0];
 
@@ -390,13 +390,13 @@ describe('gas usage scenarios', async () => {
             delegations.map(d => d[0].address),
             delegations.map(d => d[1].address),
             false
-        , {from: d.migrationOwner.address});
+        , {from: d.migrationManager.address});
         expect(r).to.have.a.delegationsImportedEvent({
             from: delegations.map(d => d[0].address),
             to: delegations.map(d => d[1].address)
         });
 
-        d.logGasUsageSummary("import 50 delegations, unregistered guardians", [d.migrationOwner]);
+        d.logGasUsageSummary("import 50 delegations, unregistered guardians", [d.migrationManager]);
     });
 
 });

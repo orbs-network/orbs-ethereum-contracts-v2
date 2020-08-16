@@ -54,15 +54,15 @@ interface ISubscriptions {
      */
 
     /// @dev Called by the owner to authorize a subscriber (plan)
-    function addSubscriber(address addr) external /* onlyFunctionalOwner */;
+    function addSubscriber(address addr) external /* onlyFunctionalManager */;
 
     /// @dev Called by the owner to set the genesis ref time delay
-    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalOwner */;
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalManager */;
 
     /// @dev Called by the owner to set the minimum initial vc payment
-    function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalOwner */;
+    function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalManager */;
 
     /// @dev Updates the address of the contract registry
-    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
 }

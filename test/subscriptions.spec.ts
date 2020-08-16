@@ -140,12 +140,12 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber('tier', 1);
 
-    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /caller is not the functionalOwner/);
-    let r = await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    await expectRejected(d.subscriptions.addSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /sender is not the functional manager/);
+    let r = await d.subscriptions.addSubscriber(subscriber.address, {from: d.functionalManager.address});
     expect(r).to.have.a.subscriberAddedEvent({subscriber: subscriber.address})
 
-    await expectRejected(d.subscriptions.removeSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /caller is not the functionalOwner/);
-    r = await d.subscriptions.removeSubscriber(subscriber.address, {from: d.functionalOwner.address});
+    await expectRejected(d.subscriptions.removeSubscriber(subscriber.address, {from: d.contractsNonOwnerAddress}), /sender is not the functional manager/);
+    r = await d.subscriptions.removeSubscriber(subscriber.address, {from: d.functionalManager.address});
     expect(r).to.have.a.subscriberRemovedEvent({subscriber: subscriber.address})
   });
 
@@ -268,7 +268,7 @@ describe('subscriptions-high-level-flows', async () => {
     const owner = d.newParticipant();
 
     const amount = 10;
-    await d.subscriptions.setMinimumInitialVcPayment(amount, {from: d.functionalOwner.address});
+    await d.subscriptions.setMinimumInitialVcPayment(amount, {from: d.functionalManager.address});
 
     await owner.assignAndApproveOrbs(amount - 1, subs.address);
     expectRejected(subs.createVC("vc-name", amount - 1, false, "main", {from: owner.address}), /initial VC payment must be at least minimumInitialVcPayment/);
@@ -289,8 +289,8 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
 
     const newDelay = 4*60*60;
-    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-    let r = await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalOwner.address});
+    await expectRejected(d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.migrationManager.address}), /sender is not the functional manager/);
+    let r = await d.subscriptions.setGenesisRefTimeDelay(newDelay, {from: d.functionalManager.address});
     expect(r).to.have.a.genesisRefTimeDelayChangedEvent({newGenesisRefTimeDelay: bn(newDelay)})
 
     const subs = await d.newSubscriber("tier", 1);
@@ -309,8 +309,8 @@ describe('subscriptions-high-level-flows', async () => {
     const d = await Driver.new();
 
     const newMin = 1000;
-    await expectRejected(d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-    let r = await d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.functionalOwner.address});
+    await expectRejected(d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.migrationManager.address}), /sender is not the functional manager/);
+    let r = await d.subscriptions.setMinimumInitialVcPayment(newMin, {from: d.functionalManager.address});
     expect(r).to.have.a.minimumInitialVcPaymentChangedEvent({newMinimumInitialVcPayment: bn(newMin)})
 
     expect(await d.subscriptions.getMinimumInitialVcPayment()).to.bignumber.eq(bn(newMin));

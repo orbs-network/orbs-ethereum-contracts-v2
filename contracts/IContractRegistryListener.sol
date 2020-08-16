@@ -4,4 +4,6 @@ interface IContractRegistryListener {
 
     function refreshContracts() external;
 
+    function refreshManagers(string calldata role, address newManager) external;
+
 }
