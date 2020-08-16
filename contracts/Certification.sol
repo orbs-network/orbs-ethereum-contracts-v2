@@ -9,7 +9,7 @@ contract Certification is ICertification, WithClaimableFunctionalOwnership, Lock
 
     mapping (address => bool) guardianCertification;
 
-    constructor(IContractRegistry _contractRegistry) Lockable(_contractRegistry) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryOwner) Lockable(_contractRegistry, _registryOwner) public {}
 
     /*
      * External methods

@@ -15,7 +15,7 @@ contract Lockable is ContractRegistryAccessor {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry) ContractRegistryAccessor(_contractRegistry) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryManager) ContractRegistryAccessor(_contractRegistry, _registryManager) public {}
 
     function lock() external onlyLockOwner {
         locked = true;

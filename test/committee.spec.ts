@@ -407,9 +407,9 @@ describe('committee', async () => {
     it("validate constructor arguments (0 < maxCommitteeSize <= 32)", async () => {
         const d = await Driver.new();
 
-        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, 0, 1]), /maxCommitteeSize must be larger than 0/);
-        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, 33, 1]), /maxCommitteeSize must be 32 at most/);
-        await d.web3.deploy('Committee', [d.contractRegistry.address, 1, 1]);
+        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.migrationOwner.address, 0, 1]), /maxCommitteeSize must be larger than 0/);
+        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.migrationOwner.address, 33, 1]), /maxCommitteeSize must be 32 at most/);
+        await d.web3.deploy('Committee', [d.contractRegistry.address, d.migrationOwner.address, 1, 1]);
     });
 
     it("validates weight is within range - less than 2^96", async () => {
