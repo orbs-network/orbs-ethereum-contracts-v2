@@ -11,6 +11,8 @@ interface IContractRegistry {
 	/// @dev returns the current address of the given contracts
 	function getContracts(bytes32[] calldata contractIds) external view returns (address[] memory);
 
+	function getContractIds() external view returns (bytes32[] memory);
+
 	function setManager(string calldata role, address manager) external /* onlyFunctionalManager */;
 
 	function getManager(string calldata role) external view returns (address);

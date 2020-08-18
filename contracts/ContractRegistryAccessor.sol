@@ -16,20 +16,25 @@ import "./IContractRegistryListener.sol";
 
 contract ContractRegistryAccessor is WithClaimableRegistryManagement {
 
+    function isManager(string memory role) internal view returns (bool) {
+        IContractRegistry _contractRegistry = contractRegistry;
+        return msg.sender == registryManager() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
+    }
+
     modifier onlyMigrationManager {
-        require(contractRegistry.getManager("migrationManager") == msg.sender, "sender is not the migration manager");
+        require(isManager("migrationManager"), "sender is not the migration manager");
 
         _;
     }
 
     modifier onlyFunctionalManager {
-        require(contractRegistry.getManager("functionalManager") == msg.sender, "sender is not the functional manager");
+        require(isManager("functionalManager"), "sender is not the functional manager");
 
         _;
     }
 
     modifier onlyEmergencyManager {
-        require(contractRegistry.getManager("emergencyManager") == msg.sender, "sender is not the emergency manager");
+        require(isManager("emergencyManager"), "sender is not the emergency manager");
 
         _;
     }
@@ -37,8 +42,6 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement {
     IContractRegistry contractRegistry;
 
     constructor(IContractRegistry _contractRegistry, address _registryManager) public {
-        require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
-        require(address(_registryManager) != address(0), "_registryManager cannot be 0");
         setContractRegistry(_contractRegistry);
         _transferRegistryManagement(_registryManager);
     }

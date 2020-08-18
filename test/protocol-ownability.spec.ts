@@ -32,7 +32,7 @@ describe('protocol-contract', async () => {
     const newAddr = d.newParticipant().address;
 
     await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.functionalManager.address}), /caller is not the registryManager/);
-    await d.protocol.setContractRegistry(newAddr, {from: d.migrationManager.address});
+    await d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address});
   });
 
   it('only current registry manager can transfer registry ownership', async () => {
@@ -40,7 +40,7 @@ describe('protocol-contract', async () => {
 
     const newOwner = d.newParticipant();
     await expectRejected(d.protocol.transferRegistryManagement(newOwner.address, {from: d.functionalManager.address}), /caller is not the registryManager/);
-    await d.protocol.transferRegistryManagement(newOwner.address, {from: d.migrationManager.address});
+    await d.protocol.transferRegistryManagement(newOwner.address, {from: d.registryManager.address});
 
   });
 
@@ -48,17 +48,17 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     const newManager = d.newParticipant();
-    await d.protocol.transferRegistryManagement(newManager.address, {from: d.migrationManager.address});
+    await d.protocol.transferRegistryManagement(newManager.address, {from: d.registryManager.address});
 
     const newAddr = d.newParticipant().address;
     await expectRejected(d.protocol.setContractRegistry(newAddr, {from: newManager.address}), /caller is not the registryManager/);
-    await d.protocol.setContractRegistry(newAddr, {from: d.migrationManager.address});
+    await d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address});
 
     const notNewOwner = d.newParticipant();
     await expectRejected(d.protocol.claimRegistryManagement({from: notNewOwner.address}), /Caller is not the pending registryManager/);
 
     await d.protocol.claimRegistryManagement({from: newManager.address});
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.migrationManager.address}), /caller is not the registryManager/);
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address}), /caller is not the registryManager/);
     await d.protocol.setContractRegistry(newAddr, {from: newManager.address});
   });
 

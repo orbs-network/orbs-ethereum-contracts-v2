@@ -319,16 +319,16 @@ export class Driver {
                 false,
             ]);
 
-        await contractRegistry.setManager("migrationManager", accounts[0]);
-        await contractRegistry.setManager("functionalManager", accounts[1]);
+        await contractRegistry.setManager("migrationManager", accounts[1]);
+        await contractRegistry.setManager("functionalManager", accounts[2]);
 
-        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: accounts[1]});
+        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: accounts[2]});
 
         // TODO remove when setting in constructor
-        await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: accounts[1]});
-        await rewards.setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap, {from: accounts[1]});
-        await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: accounts[1]});
-        await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: accounts[1]});
+        await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: accounts[2]});
+        await rewards.setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap, {from: accounts[2]});
+        await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: accounts[2]});
+        await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: accounts[2]});
 
         await stakingRewardsWallet.setMaxAnnualRate(stakingRewardsWalletRate);
         await bootstrapRewardsWallet.setMaxAnnualRate(bootstrapRewardsWalletRate);
@@ -409,8 +409,8 @@ export class Driver {
 
     static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
-        const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[0] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
-        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[0]});
+        const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[1] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
+        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[1]});
         return staking;
     }
 
@@ -419,26 +419,25 @@ export class Driver {
     }
 
     get contractsNonOwnerAddress() {
-        return this.accounts[2];
-    }
-
-    get migrationManager(): Participant {
-        return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[0], this.accounts[0], this);
+        return this.accounts[3];
     }
 
     get registryManager(): Participant {
-        return this.migrationManager;
+        return new Participant("registry-manager", "registry-manager-website", "registry-manager-contact", this.accounts[0], this.accounts[0], this);
+    }
+
+    get migrationManager(): Participant {
+        return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[1], this.accounts[1], this);
     }
 
     get functionalManager(): Participant {
-        return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[1], this.accounts[1], this);
+        return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[2], this.accounts[2], this);
     }
 
     subscribers: any[] = [];
 
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
-        const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.contractRegistry.address, this.migrationManager.address, this.erc20.address, tier, monthlyRate], null, this.session);
-        // await subscriber.refreshContracts();
+        const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.contractRegistry.address, this.registryManager.address, this.erc20.address, tier, monthlyRate], null, this.session);
         await this.subscriptions.addSubscriber(subscriber.address, {from: this.functionalManager.address});
         this.subscribers.push(subscriber);
         return subscriber;
@@ -446,7 +445,7 @@ export class Driver {
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
         name = name || `Guardian${this.participants.length}`;
-        const RESERVED_ACCOUNTS = 3;
+        const RESERVED_ACCOUNTS = 4;
         const v = new Participant(
             name,
             `${name}-website`,

@@ -109,4 +109,7 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 		return managers[role]; // todo - allow zero address?
 	}
 
+	function getContractIds() external view returns (bytes32[] memory) {
+		return contractIds;
+	}
 }

@@ -20,15 +20,15 @@ describe('protocol-contract-lockdown', async () => {
     const d = await Driver.new();
 
     const contractRegistry = d.newParticipant();
-    await d.protocol.setContractRegistry(contractRegistry.address, {from: d.migrationManager.address});
+    await d.protocol.setContractRegistry(contractRegistry.address, {from: d.registryManager.address});
 
     await expectRejected(d.protocol.lock({from: d.functionalManager.address}), /caller is not a lock owner/);
-    let r = await d.protocol.lock({from: d.migrationManager.address});
+    let r = await d.protocol.lock({from: d.registryManager.address});
     expect(r).to.have.a.lockedEvent();
-    r = await d.protocol.unlock({from: d.migrationManager.address});
+    r = await d.protocol.unlock({from: d.registryManager.address});
     expect(r).to.have.a.unlockedEvent();
 
-    await d.protocol.lock({from: d.migrationManager.address});
+    await d.protocol.lock({from: d.registryManager.address});
 
     await expectRejected(d.protocol.unlock({from: d.functionalManager.address}), /caller is not a lock owner/);
     r = await d.protocol.unlock({from: contractRegistry.address});
@@ -40,13 +40,13 @@ describe('protocol-contract-lockdown', async () => {
   it('rejects calls to createNewDeploymentSubset and setProtocolVersion when locked', async () => {
     const d = await Driver.new();
 
-    await d.protocol.lock({from: d.migrationManager.address});
+    await d.protocol.lock({from: d.registryManager.address});
 
     let currTime: number = await getTopBlockTimestamp(d);
     await expectRejected(d.protocol.createDeploymentSubset("newdeploymentsubset", 1, {from: d.functionalManager.address}), /contract is locked for this operation/);
     await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalManager.address}), /contract is locked for this operation/);
 
-    await d.protocol.unlock({from: d.migrationManager.address});
+    await d.protocol.unlock({from: d.registryManager.address});
 
     currTime = await getTopBlockTimestamp(d);
     await d.protocol.createDeploymentSubset("newdeploymentsubset", 1, {from: d.functionalManager.address});

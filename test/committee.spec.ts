@@ -313,7 +313,7 @@ describe('committee', async () => {
         });
     });
 
-    it("sets and gets settings, only functional owner allowed to set", async () => {
+    it("sets and gets settings, only functional manager/registry manager allowed to set", async () => {
         const d = await Driver.new();
 
         const current = await d.committee.getSettings();
@@ -331,7 +331,7 @@ describe('committee', async () => {
         });
 
         await expectRejected(d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.functionalManager.address});
+        r = await d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.registryManager.address});
         expect(r).to.have.a.maxCommitteeSizeChangedEvent({
             newValue: maxCommitteeSize.sub(bn(1)).toString(),
             oldValue: maxCommitteeSize.toString()
@@ -388,14 +388,14 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContracts([contractId("elections")], [elections], [false],{from: d.registryManager.address});
 
-        await d.committee.lock({from: d.migrationManager.address});
+        await d.committee.lock({from: d.registryManager.address});
 
         await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.removeMember(v2.address, {from: elections}), /contract is locked for this operation/);
 
-        await d.committee.unlock({from: d.migrationManager.address});
+        await d.committee.unlock({from: d.registryManager.address});
 
         await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
         await d.committee.memberCertificationChange(v.address,true,  {from: elections});
@@ -407,9 +407,9 @@ describe('committee', async () => {
     it("validate constructor arguments (0 < maxCommitteeSize <= 32)", async () => {
         const d = await Driver.new();
 
-        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.migrationManager.address, 0, 1]), /maxCommitteeSize must be larger than 0/);
-        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.migrationManager.address, 33, 1]), /maxCommitteeSize must be 32 at most/);
-        await d.web3.deploy('Committee', [d.contractRegistry.address, d.migrationManager.address, 1, 1]);
+        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.registryManager.address, 0, 1]), /maxCommitteeSize must be larger than 0/);
+        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.registryManager.address, 33, 1]), /maxCommitteeSize must be 32 at most/);
+        await d.web3.deploy('Committee', [d.contractRegistry.address, d.registryManager.address, 1, 1]);
     });
 
     it("validates weight is within range - less than 2^96", async () => {
