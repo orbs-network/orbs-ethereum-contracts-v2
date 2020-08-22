@@ -21,45 +21,45 @@ describe('contract-registry-high-level-flows', async () => {
     const addr1 = d.newParticipant().address;
 
     // set
-    let r = await registry.setContracts([contractId(contract1Name)], [addr1], [false], {from: owner.address});
+    let r = await registry.setContract(contract1Name, addr1, false, {from: owner.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
-      contractId: contractId(contract1Name),
+      contractId: contract1Name,
       addr: addr1
     });
 
     // get
-    expect((await registry.getContracts([contractId(contract1Name)]))[0]).to.equal(addr1);
+    expect(await registry.getContract(contract1Name)).to.equal(addr1);
 
     // update
     const addr2 = d.newParticipant().address;
-    r = await registry.setContracts([contractId(contract1Name)], [addr2], [false], {from: owner.address});
+    r = await registry.setContract(contract1Name, addr2, false, {from: owner.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
-      contractId: contractId(contract1Name),
+      contractId: contract1Name,
       addr: addr2
     });
 
     // get the updated address
-    expect((await registry.getContracts([contractId(contract1Name)]))[0]).to.equal(addr2);
+    expect(await registry.getContract(contract1Name)).to.equal(addr2);
 
     // set another by non governor
     const nonGovernor = d.newParticipant();
     const contract2Name = "committee";
     const addr3 = d.newParticipant().address;
-    await expectRejected(registry.setContracts([contractId(contract2Name)], [addr3], [false], {from: nonGovernor.address}), /caller is not the functionalOwner/);
+    await expectRejected(registry.setContract(contract2Name, addr3, false, {from: nonGovernor.address}), /caller is not the functionalOwner/);
 
     // now by governor
-    r = await registry.setContracts([contractId(contract2Name)], [addr3], [false], {from: owner.address});
+    r = await registry.setContract(contract2Name, addr3, false, {from: owner.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
-      contractId: contractId(contract2Name),
+      contractId: contract2Name,
       addr: addr3
     });
-    expect((await registry.getContracts([contractId(contract2Name)]))[0]).to.equal(addr3);
+    expect(await registry.getContract(contract2Name)).to.equal(addr3);
 
   });
 
   it('reverts when getting a non existent entry', async () => {
     const d = await Driver.new();
-    await expectRejected(d.contractRegistry.getContracts([contractId("nonexistent") as any]), /the contract id is not registered/);
+    await expectRejected(d.contractRegistry.getContract("nonexistent"), /the contract id is not registered/);
   });
 
   it('allows only the contract owner to update the address of the contract registry', async () => { // TODO - consider splitting and moving this
