@@ -45,7 +45,7 @@ contract ContractRegistry is IContractRegistry, WithClaimableMigrationOwnership,
 	}
 
 	function getContract(string calldata contractName) external view returns (address) {
-		return contracts[contractName];
+		return contracts[contractName]; // TODO revert when contract doesn't exist?
 	}
 
 	function getManagedContracts() external view returns (address[] memory) {

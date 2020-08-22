@@ -9,8 +9,8 @@ export interface ContractRegistryContract extends OwnedContract {
 }
 
 export interface ContractAddressUpdatedEvent {
-  contractId: string,
+  contractName: string,
   addr: string,
-  isManaged: boolean
+  managedContract: boolean
 }
 
