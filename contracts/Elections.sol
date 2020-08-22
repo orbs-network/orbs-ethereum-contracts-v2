@@ -12,9 +12,10 @@ import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./WithClaimableFunctionalOwnership.sol";
+import "./Lockable.sol";
 
 
-contract Elections is IElections, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
+contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
 
 	mapping (address => mapping (address => uint256)) votedUnreadyVotes; // by => to => timestamp

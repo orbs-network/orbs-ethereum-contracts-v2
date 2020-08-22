@@ -11,7 +11,6 @@ import "./spec_interfaces/IDelegation.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./interfaces/IRewards.sol";
 import "./WithClaimableMigrationOwnership.sol";
-import "./Lockable.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
 
 contract ContractRegistryAccessor is WithClaimableMigrationOwnership {

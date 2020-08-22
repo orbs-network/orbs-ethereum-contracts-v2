@@ -12,7 +12,7 @@ import "./spec_interfaces/IFeesWallet.sol";
 
 
 /// @title Fees Wallet contract interface, manages the fee buckets
-contract FeesWallet is IFeesWallet, ContractRegistryAccessor, WithClaimableFunctionalOwnership {
+contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
     using SafeMath for uint256;
 
     event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total);

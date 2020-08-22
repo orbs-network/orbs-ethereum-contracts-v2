@@ -4,8 +4,9 @@ import "./spec_interfaces/IProtocol.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./ContractRegistryAccessor.sol";
+import "./Lockable.sol";
 
-contract Protocol is IProtocol, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
+contract Protocol is IProtocol, WithClaimableFunctionalOwnership, Lockable {
 
     struct DeploymentSubset {
         bool exists;

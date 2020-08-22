@@ -13,8 +13,9 @@ import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 import "./IStakeChangeNotifier.sol";
+import "./Lockable.sol";
 
-contract Delegations is IDelegations, IStakeChangeNotifier, ContractRegistryAccessor, WithClaimableFunctionalOwnership, Lockable {
+contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctionalOwnership, Lockable {
 	using SafeMath for uint256;
 	using SafeMath for uint96;
 

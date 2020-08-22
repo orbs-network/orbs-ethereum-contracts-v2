@@ -12,19 +12,29 @@ const expect = chai.expect;
 
 import {bn, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 
-describe('protocol-contract', async () => {
+describe('protocol-contract-lockdown', async () => {
 
   // functional owner
 
-  it('allows only the migration owner to lock and unlock the contract', async () => {
+  it('allows only the migration owner and the contract registry to lock and unlock the contract', async () => {
     const d = await Driver.new();
 
-    await expectRejected(d.protocol.lock({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
+    const contractRegistry = d.newParticipant();
+    await d.protocol.setContractRegistry(contractRegistry.address, {from: d.migrationOwner.address});
+
+    await expectRejected(d.protocol.lock({from: d.functionalOwner.address}), /caller is not a lock owner/);
     let r = await d.protocol.lock({from: d.migrationOwner.address});
     expect(r).to.have.a.lockedEvent();
-    await expectRejected(d.protocol.unlock({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
     r = await d.protocol.unlock({from: d.migrationOwner.address});
     expect(r).to.have.a.unlockedEvent();
+
+    await d.protocol.lock({from: d.migrationOwner.address});
+
+    await expectRejected(d.protocol.unlock({from: d.functionalOwner.address}), /caller is not a lock owner/);
+    r = await d.protocol.unlock({from: contractRegistry.address});
+    expect(r).to.have.a.unlockedEvent();
+    r = await d.protocol.lock({from: contractRegistry.address});
+    expect(r).to.have.a.lockedEvent();
   });
 
   it('rejects calls to createNewDeploymentSubset and setProtocolVersion when locked', async () => {
