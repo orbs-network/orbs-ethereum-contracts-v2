@@ -15,9 +15,8 @@ interface IContractRegistry {
 	/// @dev returns the list of contract addresses managed by the registry
 	function getManagedContracts() external view returns (address[] memory);
 
-	function getContractIds() external view returns (bytes32[] memory);
-
 	function setManager(string calldata role, address manager) external /* onlyRegistryManager */;
 
 	function getManager(string calldata role) external view returns (address);
+
 }
