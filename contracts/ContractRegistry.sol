@@ -10,7 +10,7 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 
 	mapping (string => address) managers;
 
-	function setContract(string calldata contractName, address addr, bool managedContract) external onlyFunctionalOwner {
+	function setContract(string calldata contractName, address addr, bool managedContract) external onlyRegistryManager {
 		require(!managedContract || addr != address(0), "managed contract may not have address(0)");
 		removeManagedContract(contracts[contractName]);
 		contracts[contractName] = addr;
