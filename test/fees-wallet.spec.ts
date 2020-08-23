@@ -118,7 +118,7 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(300000000, d.generalFeesWallet.address);
 
     const collector = d.newParticipant();
-    await d.contractRegistry.setContracts([contractId("rewards")], [collector.address], [false],{from: d.registryManager.address});
+    await d.contractRegistry.setContract("rewards", collector.address, false,{from: d.registryManager.address});
 
     const startTime = await d.web3.txTimestamp(await d.generalFeesWallet.collectFees({from: collector.address}));
 
@@ -163,7 +163,7 @@ describe('fees-wallet-contract', async () => {
     await d.generalFeesWallet.fillFeeBuckets(30, 10, now, {from: assigner.address});
     await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}), /caller is not the rewards contract/);
 
-    await d.contractRegistry.setContracts([contractId("rewards")], [assigner.address], [false], {from: d.registryManager.address});
+    await d.contractRegistry.setContract("rewards", assigner.address, false, {from: d.registryManager.address});
     await d.generalFeesWallet.collectFees({from: assigner.address});
   });
 
