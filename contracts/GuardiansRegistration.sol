@@ -28,7 +28,7 @@ contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctiona
 	mapping (bytes4 => address) public ipToGuardian;
 	mapping (address => mapping(string => string)) public guardianMetadata;
 
-	constructor(IContractRegistry _contractRegistry, address _registryOwner) Lockable(_contractRegistry, _registryOwner) public {}
+	constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
 
 	/*
      * External methods
