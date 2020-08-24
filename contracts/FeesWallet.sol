@@ -27,12 +27,12 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
     uint256 lastCollectedAt;
 
     modifier onlyRewardsContract() {
-        require(msg.sender == address(getRewardsContract()), "caller is not the rewards contract");
+        require(msg.sender == address(rewardsContract), "caller is not the rewards contract");
 
         _;
     }
 
-    constructor(IERC20 _token) public {
+    constructor(IContractRegistry _contractRegistry, IERC20 _token) ContractRegistryAccessor(_contractRegistry) public {
         token = _token;
         lastCollectedAt = now;
     }
@@ -150,6 +150,11 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
 
     function _bucketTime(uint256 time) private pure returns (uint256) {
         return time - time % BUCKET_TIME_PERIOD;
+    }
+
+    IRewards rewardsContract;
+    function refreshContracts() external {
+        rewardsContract = getRewardsContract();
     }
 
 }

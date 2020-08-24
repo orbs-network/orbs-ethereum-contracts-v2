@@ -17,6 +17,8 @@ contract Protocol is IProtocol, WithClaimableFunctionalOwnership, Lockable {
 
     mapping (string => DeploymentSubset) deploymentSubsets;
 
+    constructor(IContractRegistry _contractRegistry) Lockable(_contractRegistry) public {}
+
     function deploymentSubsetExists(string calldata deploymentSubset) external view returns (bool) {
         return deploymentSubsets[deploymentSubset].exists;
     }
@@ -58,4 +60,6 @@ contract Protocol is IProtocol, WithClaimableFunctionalOwnership, Lockable {
         currentVersion = prevUpgradeExecuted ? deploymentSubsets[deploymentSubset].nextVersion :
                                                deploymentSubsets[deploymentSubset].currentVersion;
     }
+
+    function refreshContracts() external {}
 }

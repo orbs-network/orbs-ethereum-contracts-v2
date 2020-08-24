@@ -17,5 +17,7 @@ export interface OwnedContract extends Contract {
     lock(params?: TransactionConfig): Promise<TransactionReceipt>;
     unlock(params?: TransactionConfig): Promise<TransactionReceipt>;
 
+    refreshContracts(): Promise<TransactionReceipt>;
+
     setContractRegistry(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 }

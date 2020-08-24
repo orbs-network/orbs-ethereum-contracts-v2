@@ -3,7 +3,7 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, evmMine, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, contractId, evmIncreaseTime, evmMine, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 import {committeeSnapshotEvents} from "./event-parsing";
 
 chai.use(require('chai-bn')(BN));
@@ -822,8 +822,8 @@ describe('staking-rewards', async () => {
     expect(r).to.not.have.a.stakingRewardsBalanceMigratedEvent();
     expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
 
-    const newRewardsContract = await d.web3.deploy('Rewards', [d.erc20.address, d.bootstrapToken.address], null, d.session);
-    await d.contractRegistry.set('rewards', newRewardsContract.address, {from: d.functionalOwner.address});
+    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.erc20.address, d.bootstrapToken.address], null, d.session);
+    await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.functionalOwner.address});
 
     // migrating to the new contract
     r = await d.rewards.migrateStakingRewardsBalance(v1.address);

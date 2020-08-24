@@ -46,7 +46,7 @@ contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
 	Settings settings;
 
 	modifier onlyElectionsContract() {
-		require(msg.sender == address(getElectionsContract()), "caller is not the elections");
+		require(msg.sender == address(electionsContract), "caller is not the elections");
 
 		_;
 	}
@@ -203,19 +203,19 @@ contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
 	}
 
 	function assignRewardsIfNeeded(Settings memory _settings) private {
-        IRewards rewardsContract = getRewardsContract();
-        uint lastAssignment = rewardsContract.getLastRewardAssignmentTime();
+        IRewards _rewardsContract = rewardsContract;
+        uint lastAssignment = _rewardsContract.getLastRewardAssignmentTime();
         if (now - lastAssignment < _settings.maxTimeBetweenRewardAssignments) {
              return;
         }
 
 		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCertification) = _getCommittee();
-        rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCertification);
+        _rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCertification);
 
 		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
 	}
 
-	constructor(uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) public {
+	constructor(IContractRegistry _contractRegistry, uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) Lockable(_contractRegistry) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(_maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		settings = Settings({
@@ -371,11 +371,11 @@ contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
 	 */
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
-		return getGuardiansRegistrationContract().getGuardiansOrbsAddress(addrs);
+		return guardianRegistrationContract.getGuardiansOrbsAddress(addrs);
 	}
 
 	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
-		return getGuardiansRegistrationContract().getGuardianIps(addrs);
+		return guardianRegistrationContract.getGuardianIps(addrs);
 	}
 
 	function _loadCertification(address[] memory addrs) private view returns (bool[] memory) {
@@ -384,6 +384,15 @@ contract Committee is ICommittee, WithClaimableFunctionalOwnership, Lockable {
 			certification[i] = membersData[addrs[i]].isCertified;
 		}
 		return certification;
+	}
+
+	IElections electionsContract;
+	IRewards rewardsContract;
+	IGuardiansRegistration guardianRegistrationContract;
+	function refreshContracts() external {
+		electionsContract = getElectionsContract();
+		rewardsContract = getRewardsContract();
+		guardianRegistrationContract = getGuardiansRegistrationContract();
 	}
 
 }

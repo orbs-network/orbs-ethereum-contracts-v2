@@ -18,67 +18,72 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
     IContractRegistry contractRegistry;
 
+    constructor(IContractRegistry _contractRegistry) public {
+        require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
+        setContractRegistry(_contractRegistry);
+    }
+
     event ContractRegistryAddressUpdated(address addr);
 
-    function setContractRegistry(IContractRegistry _contractRegistry) external onlyMigrationOwner {
+    function setContractRegistry(IContractRegistry _contractRegistry) public onlyMigrationOwner {
         contractRegistry = _contractRegistry;
         emit ContractRegistryAddressUpdated(address(_contractRegistry));
     }
 
     function getProtocolContract() public view returns (IProtocol) {
-        return IProtocol(contractRegistry.get("protocol"));
+        return IProtocol(contractRegistry.getContract("protocol"));
     }
 
     function getRewardsContract() public view returns (IRewards) {
-        return IRewards(contractRegistry.get("rewards"));
+        return IRewards(contractRegistry.getContract("rewards"));
     }
 
     function getCommitteeContract() public view returns (ICommittee) {
-        return ICommittee(contractRegistry.get("committee"));
+        return ICommittee(contractRegistry.getContract("committee"));
     }
 
     function getElectionsContract() public view returns (IElections) {
-        return IElections(contractRegistry.get("elections"));
+        return IElections(contractRegistry.getContract("elections"));
     }
 
     function getDelegationsContract() public view returns (IDelegations) {
-        return IDelegations(contractRegistry.get("delegations"));
+        return IDelegations(contractRegistry.getContract("delegations"));
     }
 
     function getGuardiansRegistrationContract() public view returns (IGuardiansRegistration) {
-        return IGuardiansRegistration(contractRegistry.get("guardiansRegistration"));
+        return IGuardiansRegistration(contractRegistry.getContract("guardiansRegistration"));
     }
 
     function getCertificationContract() public view returns (ICertification) {
-        return ICertification(contractRegistry.get("certification"));
+        return ICertification(contractRegistry.getContract("certification"));
     }
 
     function getStakingContract() public view returns (IStakingContract) {
-        return IStakingContract(contractRegistry.get("staking"));
+        return IStakingContract(contractRegistry.getContract("staking"));
     }
 
     function getSubscriptionsContract() public view returns (ISubscriptions) {
-        return ISubscriptions(contractRegistry.get("subscriptions"));
+        return ISubscriptions(contractRegistry.getContract("subscriptions"));
     }
 
     function getStakingRewardsWallet() public view returns (IProtocolWallet) {
-        return IProtocolWallet(contractRegistry.get("stakingRewardsWallet"));
+        return IProtocolWallet(contractRegistry.getContract("stakingRewardsWallet"));
     }
 
     function getBootstrapRewardsWallet() public view returns (IProtocolWallet) {
-        return IProtocolWallet(contractRegistry.get("bootstrapRewardsWallet"));
+        return IProtocolWallet(contractRegistry.getContract("bootstrapRewardsWallet"));
     }
 
     function getGeneralFeesWallet() public view returns (IFeesWallet) {
-        return IFeesWallet(contractRegistry.get("generalFeesWallet"));
+        return IFeesWallet(contractRegistry.getContract("generalFeesWallet"));
     }
 
     function getCertifiedFeesWallet() public view returns (IFeesWallet) {
-        return IFeesWallet(contractRegistry.get("certifiedFeesWallet"));
+        return IFeesWallet(contractRegistry.getContract("certifiedFeesWallet"));
     }
 
     function getStakingContractHandler() public view returns (IStakingContractHandler) {
-        return IStakingContractHandler(contractRegistry.get("stakingContractHandler"));
+        return IStakingContractHandler(contractRegistry.getContract("stakingContractHandler"));
     }
 
 }
