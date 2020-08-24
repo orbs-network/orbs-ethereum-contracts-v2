@@ -65,7 +65,7 @@ describe("staking-contract-handler", async () => {
         const newRevertingNotifier = await d.web3.deploy('RevertingStakeChangeNotifier' as any, [], null, d.session);
         await newRegistry.setContract("delegations", newRevertingNotifier.address, false);
 
-        await d.staking.addMigrationDestination(newStaking.address, {from: d.registryManager.address});
+        await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
         r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});
         expect(r).to.have.a.migratedStakeEvent({
             stakeOwner: p2.address,
