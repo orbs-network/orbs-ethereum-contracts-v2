@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IMigratableFeesWallet.sol";
 import "./ContractRegistryAccessor.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 
 
@@ -125,7 +124,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
     /// @dev migrates the fees of bucket starting at startTimestamp.
     /// bucketStartTime must be a bucket's start time.
     /// Calls acceptBucketMigration in the destination contract.
-    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external onlyMigrationOwner {
+    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external onlyMigrationManager {
         require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
 
         uint bucketAmount = buckets[bucketStartTime];
@@ -143,7 +142,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
      */
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external onlyMigrationOwner {
+    function emergencyWithdraw() external onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
         require(token.transfer(msg.sender, token.balanceOf(address(this))), "IFeesWallet::emergencyWithdraw - transfer failed (fee token)");
     }

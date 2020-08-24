@@ -27,7 +27,7 @@ describe('staking-rewards', async () => {
   it('should distribute staking rewards to guardians in general committee', async () => {
     /* top up staking rewards pool */
     const d = await Driver.new();
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(200000000000);
@@ -137,7 +137,7 @@ describe('staking-rewards', async () => {
     const d = await Driver.new();
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = bn(12000);
     const poolAmount = fromTokenUnits(2000000000);
@@ -251,7 +251,7 @@ describe('staking-rewards', async () => {
     const {v: v2} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = 12000;
     const poolAmount = fromTokenUnits(20000000);
@@ -531,7 +531,7 @@ describe('staking-rewards', async () => {
     const delegator = d.newParticipant();
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = 12000;
     const poolAmount = fromTokenUnits(20000000);
@@ -595,7 +595,7 @@ describe('staking-rewards', async () => {
     const delegator = d.newParticipant();
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = 12000;
     const poolAmount = fromTokenUnits(20000000);
@@ -652,7 +652,7 @@ describe('staking-rewards', async () => {
     const delegator = d.newParticipant();
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = 12000;
     const poolAmount = fromTokenUnits(20000000);
@@ -667,7 +667,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.assignRewards();
 
-    let r = await d.rewards.setMaxDelegatorsStakingRewards(66666, {from: d.functionalOwner.address});
+    let r = await d.rewards.setMaxDelegatorsStakingRewards(66666, {from: d.functionalManager.address});
     expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({maxDelegatorsStakingRewardsPercentMille: bn(66666)});
 
     await expectRejected(d.rewards.distributeStakingRewards(
@@ -758,7 +758,7 @@ describe('staking-rewards', async () => {
     const {v: v2} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = 12000;
     const annualCap = fromTokenUnits(20000000);
@@ -798,7 +798,7 @@ describe('staking-rewards', async () => {
     const {v: v2} = await d.newGuardian(fromTokenUnits(100000000), false, false, true);
 
     /* top up staking rewards pool */
-    const g = d.functionalOwner;
+    const g = d.functionalManager;
 
     const annualRate = 12000;
     const annualCap = fromTokenUnits(20000000);
@@ -822,8 +822,8 @@ describe('staking-rewards', async () => {
     expect(r).to.not.have.a.stakingRewardsBalanceMigratedEvent();
     expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
 
-    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.migrationOwner.address, d.erc20.address, d.bootstrapToken.address], null, d.session);
-    await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.functionalOwner.address});
+    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.registryManager.address, d.erc20.address, d.bootstrapToken.address], null, d.session);
+    await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryManager.address});
 
     // migrating to the new contract
     r = await d.rewards.migrateStakingRewardsBalance(v1.address);

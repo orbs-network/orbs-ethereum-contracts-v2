@@ -9,11 +9,10 @@ import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./Lockable.sol";
 
-contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFunctionalOwnership, Lockable {
+contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, Lockable {
     using SafeMath for uint256;
     using SafeMath for uint48;
 
@@ -57,15 +56,15 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalManager onlyWhenActive {
         settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalOwner onlyWhenActive {
+    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalManager onlyWhenActive {
         settings.certificationCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
     }
 
-    function setMaxDelegatorsStakingRewards(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalOwner onlyWhenActive {
+    function setMaxDelegatorsStakingRewards(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalManager onlyWhenActive {
         require(maxDelegatorsStakingRewardsPercentMille <= 100000, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
         settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
         emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
@@ -139,7 +138,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalOwner onlyWhenActive {
+    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalManager onlyWhenActive {
         Settings memory _settings = settings;
         _settings.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
         _settings.annualCap = toUint48Granularity(annual_cap);
@@ -301,7 +300,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, WithClaimableFu
         emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
 
-    function emergencyWithdraw() external onlyMigrationOwner {
+    function emergencyWithdraw() external onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
         require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");

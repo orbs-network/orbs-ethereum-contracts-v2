@@ -64,12 +64,12 @@ interface IElections /* is IStakeChangeNotifier */ {
 	 */
 
 	/// @dev Updates the address of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
-	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalOwner onlyWhenActive */;
+	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalManager onlyWhenActive */;
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
+	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
 		uint32 minSelfStakePercentMille,

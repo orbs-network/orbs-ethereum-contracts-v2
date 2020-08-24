@@ -28,7 +28,7 @@ interface IRewards {
     */
 
     /// @dev Assigns rewards and sets a new monthly rate for the pro-rata pool.
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyFunctionalOwner */;
+    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyFunctionalManager */;
 
 
     // fees
@@ -69,10 +69,10 @@ interface IRewards {
      */
 
     /// @dev Assigns rewards and sets a new monthly rate for the geenral commitee bootstrap.
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
 
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
-    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalOwner */;
+    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
 
     event StakingRewardsBalanceMigrated(address guardian, uint256 amount, address toRewardsContract);
 
@@ -91,7 +91,7 @@ interface IRewards {
      */
 
     /// @dev Updates the address of the contract registry
-    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
 
 }

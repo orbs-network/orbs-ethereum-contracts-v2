@@ -20,73 +20,46 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     let currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalOwner.address});
+    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.migrationManager.address}), /sender is not the functional manager/);
+    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: d.functionalManager.address});
   });
 
-  it('only current functional owner can transfer functional ownership', async () => {
-    const d = await Driver.new();
+  // registry manager
 
-    const newOwner = d.newParticipant();
-    await expectRejected(d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-    await d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.functionalOwner.address});
-
-  });
-
-  it('does not transfer functional ownership until claimed by new owner', async () => {
-    const d = await Driver.new();
-
-    const newOwner = d.newParticipant();
-    await d.protocol.transferFunctionalOwnership(newOwner.address, {from: d.functionalOwner.address});
-
-    let currTime: number = await getTopBlockTimestamp(d);
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 2, currTime + 100, {from: newOwner.address}), /caller is not the functionalOwner/);
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 3, currTime + 100, {from: d.functionalOwner.address});
-
-    const notNewOwner = d.newParticipant();
-    await expectRejected(d.protocol.claimFunctionalOwnership({from: notNewOwner.address}), /Caller is not the pending functionalOwner/);
-
-    await d.protocol.claimFunctionalOwnership({from: newOwner.address});
-    await expectRejected(d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: d.functionalOwner.address}), /caller is not the functionalOwner/);
-    await d.protocol.setProtocolVersion(DEPLOYMENT_SUBSET_MAIN, 4, currTime + 100, {from: newOwner.address});
-  });
-
-  // migration owner
-
-  it('allows only the migration owner to set contract registry', async () => {
+  it('allows only the registry manager to set contract registry', async () => {
     const d = await Driver.new();
 
     const newAddr = d.newParticipant().address;
 
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    await d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.functionalManager.address}), /caller is not the registryManager/);
+    await d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address});
   });
 
-  it('only current migration owner can transfer migration ownership', async () => {
+  it('only current registry manager can transfer registry ownership', async () => {
     const d = await Driver.new();
 
     const newOwner = d.newParticipant();
-    await expectRejected(d.protocol.transferMigrationOwnership(newOwner.address, {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    await d.protocol.transferMigrationOwnership(newOwner.address, {from: d.migrationOwner.address});
+    await expectRejected(d.protocol.transferRegistryManagement(newOwner.address, {from: d.functionalManager.address}), /caller is not the registryManager/);
+    await d.protocol.transferRegistryManagement(newOwner.address, {from: d.registryManager.address});
 
   });
 
-  it('does not transfer migration ownership until claimed by new owner', async () => {
+  it('does not transfer registry ownership until claimed by new owner', async () => {
     const d = await Driver.new();
 
-    const newOwner = d.newParticipant();
-    await d.protocol.transferMigrationOwnership(newOwner.address, {from: d.migrationOwner.address});
+    const newManager = d.newParticipant();
+    await d.protocol.transferRegistryManagement(newManager.address, {from: d.registryManager.address});
 
     const newAddr = d.newParticipant().address;
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: newOwner.address}), /caller is not the migrationOwner/);
-    await d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address});
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: newManager.address}), /caller is not the registryManager/);
+    await d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address});
 
     const notNewOwner = d.newParticipant();
-    await expectRejected(d.protocol.claimMigrationOwnership({from: notNewOwner.address}), /Caller is not the pending migrationOwner/);
+    await expectRejected(d.protocol.claimRegistryManagement({from: notNewOwner.address}), /Caller is not the pending registryManager/);
 
-    await d.protocol.claimMigrationOwnership({from: newOwner.address});
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.migrationOwner.address}), /caller is not the migrationOwner/);
-    await d.protocol.setContractRegistry(newAddr, {from: newOwner.address});
+    await d.protocol.claimRegistryManagement({from: newManager.address});
+    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address}), /caller is not the registryManager/);
+    await d.protocol.setContractRegistry(newAddr, {from: newManager.address});
   });
 
 

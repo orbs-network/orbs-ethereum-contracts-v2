@@ -24,6 +24,6 @@ interface ICertification /* is Ownable */ {
 	 */
 
     /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationOwner */;
+	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
 }

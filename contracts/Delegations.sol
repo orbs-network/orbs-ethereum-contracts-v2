@@ -11,11 +11,10 @@ import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
-import "./WithClaimableFunctionalOwnership.sol";
 import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
 
-contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctionalOwnership, Lockable {
+contract Delegations is IDelegations, IStakeChangeNotifier, Lockable {
 	using SafeMath for uint256;
 	using SafeMath for uint96;
 
@@ -130,7 +129,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		_;
 	}
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool refreshStakeNotification) external onlyMigrationOwner onlyDuringDelegationImport {
+	function importDelegations(address[] calldata from, address[] calldata to, bool refreshStakeNotification) external onlyMigrationManager onlyDuringDelegationImport {
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
@@ -141,7 +140,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		emit DelegationsImported(from, to, refreshStakeNotification);
 	}
 
-	function finalizeDelegationImport() external onlyMigrationOwner onlyDuringDelegationImport {
+	function finalizeDelegationImport() external onlyMigrationManager onlyDuringDelegationImport {
 		delegationImportFinalized = true;
 		emit DelegationImportFinalized();
 	}

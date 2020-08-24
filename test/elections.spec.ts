@@ -790,29 +790,29 @@ describe('elections-high-level-flows', async () => {
         const voteOutPercentageThreshold  = bn(current[2]);
         const banningPercentageThreshold  = bn(current[3]);
 
-        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-        let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalOwner.address});
+        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.voteUnreadyTimeoutSecondsChangedEvent({
             newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
             oldValue: voteOutTimeoutSeconds.toString()
         });
 
-        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-        r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalOwner.address});
+        await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.minSelfStakePercentMilleChangedEvent({
             newValue: minSelfStakePercentMille.add(bn(1)).toString(),
             oldValue: minSelfStakePercentMille.toString()
         });
 
-        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-        r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
             newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
             oldValue: voteOutPercentageThreshold.toString()
         });
 
-        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationOwner.address}), /caller is not the functionalOwner/);
-        r = await d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalOwner.address});
+        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
             newValue: banningPercentageThreshold.add(bn(1)).toString(),
             oldValue: banningPercentageThreshold.toString()

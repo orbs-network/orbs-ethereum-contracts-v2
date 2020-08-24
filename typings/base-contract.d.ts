@@ -9,10 +9,8 @@ export interface ContractRegistryAddressUpdatedEvent {
 }
 
 export interface OwnedContract extends Contract {
-    transferFunctionalOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-    claimFunctionalOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
-    transferMigrationOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-    claimMigrationOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
+    transferRegistryManagement(newManager: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+    claimRegistryManagement(params?: TransactionConfig): Promise<TransactionReceipt>;
 
     lock(params?: TransactionConfig): Promise<TransactionReceipt>;
     unlock(params?: TransactionConfig): Promise<TransactionReceipt>;

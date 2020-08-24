@@ -34,7 +34,7 @@ describe("staking-contract-handler", async () => {
         await expectRejected(revertingNotifier.stakeChangeBatch([ZERO_ADDR], [0], [false], [0]), /RevertingStakeChangeNotifier: stakeChangeBatch reverted/);
         await expectRejected(revertingNotifier.stakeMigration(ZERO_ADDR, 0), /RevertingStakeChangeNotifier: stakeMigration reverted/);
 
-        await d.contractRegistry.setContract("delegations", revertingNotifier.address, false, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContract("delegations", revertingNotifier.address, false, {from: d.registryManager.address});
 
         const p = d.newParticipant();
         let r = await p.stake(100);
@@ -56,7 +56,7 @@ describe("staking-contract-handler", async () => {
         // Stake migration - both staking contracts will notify, requires a complex setup
         const newRegistry = await d.web3.deploy('ContractRegistry', [], null, d.session);
 
-        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.migrationOwner.address], null, d.session);
+        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryManager.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
 
         const newStaking = await d.newStakingContract(newHandler.address, d.erc20.address);
@@ -65,7 +65,7 @@ describe("staking-contract-handler", async () => {
         const newRevertingNotifier = await d.web3.deploy('RevertingStakeChangeNotifier' as any, [], null, d.session);
         await newRegistry.setContract("delegations", newRevertingNotifier.address, false);
 
-        await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationOwner.address});
+        await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
         r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});
         expect(r).to.have.a.migratedStakeEvent({
             stakeOwner: p2.address,
@@ -78,7 +78,7 @@ describe("staking-contract-handler", async () => {
         const d = await Driver.new();
 
         const gasConsumingNotifier = await d.web3.deploy('GasConsumingStakeChangeNotifier' as any, [], null, d.session);
-        await d.contractRegistry.setContract("delegations", gasConsumingNotifier.address, false, {from: d.functionalOwner.address});
+        await d.contractRegistry.setContract("delegations", gasConsumingNotifier.address, false, {from: d.registryManager.address});
 
         // make sure it consumes too much gas
         expect((await gasConsumingNotifier.stakeChange(ZERO_ADDR, 0, false, 0)).gasUsed).to.be.greaterThan(5000000);
@@ -107,7 +107,7 @@ describe("staking-contract-handler", async () => {
         // Stake migration - both staking contracts will notify, requires a complex setup
         const newRegistry = await d.web3.deploy('ContractRegistry', [], null, d.session);
 
-        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.migrationOwner.address], null, d.session);
+        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryManager.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
 
         const newStaking = await d.newStakingContract(newHandler.address, d.erc20.address);
@@ -116,7 +116,7 @@ describe("staking-contract-handler", async () => {
         const newRevertingNotifier = await d.web3.deploy('GasConsumingStakeChangeNotifier' as any, [], null, d.session);
         await newRegistry.setContract("delegations", newRevertingNotifier.address, false);
 
-        await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationOwner.address});
+        await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
         r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});
         expect(r).to.have.a.migratedStakeEvent({
             stakeOwner: p2.address,

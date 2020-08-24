@@ -10,7 +10,7 @@ contract Lockable is ContractRegistryAccessor {
     event Unlocked();
 
     modifier onlyLockOwner() {
-        require(msg.sender == migrationOwner() || msg.sender == address(contractRegistry), "caller is not a lock owner");
+        require(msg.sender == registryManager() || msg.sender == address(contractRegistry), "caller is not a lock owner");
 
         _;
     }

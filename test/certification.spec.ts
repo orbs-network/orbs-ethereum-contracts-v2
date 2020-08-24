@@ -23,7 +23,7 @@ describe('certification-contract', async () => {
         expect(defaultCertification).to.equal(false);
 
         // Set
-        let r = await d.certification.setGuardianCertification(v1.address, true, {from: d.functionalOwner.address});
+        let r = await d.certification.setGuardianCertification(v1.address, true, {from: d.functionalManager.address});
         expect(r).to.have.a.guardianCertificationUpdateEvent({
             guardian: v1.address,
             isCertified: true
@@ -34,7 +34,7 @@ describe('certification-contract', async () => {
         expect(currentCertification).to.equal(true);
 
         // Update
-        r = await d.certification.setGuardianCertification(v1.address, false, {from: d.functionalOwner.address});
+        r = await d.certification.setGuardianCertification(v1.address, false, {from: d.functionalManager.address});
         expect(r).to.have.a.guardianCertificationUpdateEvent({
             guardian: v1.address,
             isCertified: false

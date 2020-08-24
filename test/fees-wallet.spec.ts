@@ -118,7 +118,7 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(300000000, d.generalFeesWallet.address);
 
     const collector = d.newParticipant();
-    await d.contractRegistry.setContract("rewards", collector.address, false,{from: d.functionalOwner.address});
+    await d.contractRegistry.setContract("rewards", collector.address, false,{from: d.registryManager.address});
 
     const startTime = await d.web3.txTimestamp(await d.generalFeesWallet.collectFees({from: collector.address}));
 
@@ -163,7 +163,7 @@ describe('fees-wallet-contract', async () => {
     await d.generalFeesWallet.fillFeeBuckets(30, 10, now, {from: assigner.address});
     await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}), /caller is not the rewards contract/);
 
-    await d.contractRegistry.setContract("rewards", assigner.address, false, {from: d.functionalOwner.address});
+    await d.contractRegistry.setContract("rewards", assigner.address, false, {from: d.registryManager.address});
     await d.generalFeesWallet.collectFees({from: assigner.address});
   });
 
@@ -177,11 +177,11 @@ describe('fees-wallet-contract', async () => {
 
     await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
 
-    await expectRejected(d.generalFeesWallet.emergencyWithdraw({from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-    let r = await d.generalFeesWallet.emergencyWithdraw({from: d.migrationOwner.address});
-    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationOwner.address});
+    await expectRejected(d.generalFeesWallet.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
+    let r = await d.generalFeesWallet.emergencyWithdraw({from: d.migrationManager.address});
+    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
 
-    expect(await d.erc20.balanceOf(d.migrationOwner.address)).to.bignumber.eq(amount);
+    expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(amount);
   });
 
   it('performs migration only by the migration manager', async () => {
@@ -195,12 +195,12 @@ describe('fees-wallet-contract', async () => {
     let r = await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
     const buckets = feesAddedToBucketEvents(r);
 
-    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.migrationOwner.address, d.erc20.address], null, d.session);
+    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.registryManager.address, d.erc20.address], null, d.session);
 
     for (const bucket of buckets) {
-      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalOwner.address}), /caller is not the migrationOwner/);
-      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId).add(bn(1)), {from: d.migrationOwner.address}), /bucketStartTime must be the  start time of a bucket/);
-      r = await d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.migrationOwner.address});
+      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalManager.address}), /sender is not the migration manager/);
+      await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId).add(bn(1)), {from: d.migrationManager.address}), /bucketStartTime must be the  start time of a bucket/);
+      r = await d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.migrationManager.address});
       expect(r).to.have.withinContract(d.generalFeesWallet).a.feesWithdrawnFromBucketEvent({
         bucketId: bucket.bucketId,
         withdrawn: bucket.total,
