@@ -374,7 +374,7 @@ export class Driver {
         const bootstrapRewardsWallet = await web3.getExisting('ProtocolWallet', await contractRegistry.getContract('bootstrapRewardsWallet'), session);
         const generalFeesWallet = await web3.getExisting('FeesWallet', await contractRegistry.getContract('generalFeesWallet'), session);
         const certifiedFeesWallet = await web3.getExisting('FeesWallet', await contractRegistry.getContract('certifiedFeesWallet'), session);
-        const stakingContractHandler = await web3.getExisting('StakingContractHandler', await contractRegistry.get('stakingContractHandler'), session);
+        const stakingContractHandler = await web3.getExisting('StakingContractHandler', await contractRegistry.getContract('stakingContractHandler'), session);
 
         return new Driver(web3, session,
             accounts,
