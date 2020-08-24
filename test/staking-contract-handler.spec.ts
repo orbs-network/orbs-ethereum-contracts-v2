@@ -56,7 +56,7 @@ describe("staking-contract-handler", async () => {
         // Stake migration - both staking contracts will notify, requires a complex setup
         const newRegistry = await d.web3.deploy('ContractRegistry', [], null, d.session);
 
-        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address], null, d.session);
+        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.migrationOwner.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
 
         const newStaking = await d.newStakingContract(newHandler.address, d.erc20.address);
@@ -107,7 +107,7 @@ describe("staking-contract-handler", async () => {
         // Stake migration - both staking contracts will notify, requires a complex setup
         const newRegistry = await d.web3.deploy('ContractRegistry', [], null, d.session);
 
-        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address], null, d.session);
+        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.migrationOwner.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
 
         const newStaking = await d.newStakingContract(newHandler.address, d.erc20.address);
