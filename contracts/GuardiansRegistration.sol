@@ -30,33 +30,34 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 	constructor(IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) public {
 		require(previousContract != IGuardiansRegistration(0) || guardiansToMigrate.length == 0, "A guardian address list was provided for migration without the previous contract");
 
-		bytes4 ip;
-		address orbsAddr;
-		string memory name;
-		string memory website;
-		string memory contact;
-		uint registrationTime;
-		uint lastUpdateTime;
-		string memory rewardsFreqMetadata;
-
 		for (uint i = 0; i < guardiansToMigrate.length; i++) {
-			(ip, orbsAddr, name, website, contact, registrationTime, lastUpdateTime) = previousContract.getGuardianData(guardiansToMigrate[i]);
-			guardians[guardiansToMigrate[i]] = Guardian({
-				orbsAddr: orbsAddr,
-				ip: ip,
-				name: name,
-				website: website,
-				contact: contact,
-				registrationTime: registrationTime,
-				lastUpdateTime: lastUpdateTime
-			});
-			orbsAddressToGuardianAddress[orbsAddr] = guardiansToMigrate[i];
-			ipToGuardian[ip] = guardiansToMigrate[i];
+			migrateGuardianData(previousContract, guardiansToMigrate[i]);
+			migrateGuardianMetadata(previousContract, guardiansToMigrate[i]);
+		}
+	}
 
-			rewardsFreqMetadata = previousContract.getMetadata(guardiansToMigrate[i], "REWARDS_FREQUENCY_SEC");
-			if (bytes(rewardsFreqMetadata).length > 0) {
-				guardianMetadata[guardiansToMigrate[i]]["REWARDS_FREQUENCY_SEC"] = rewardsFreqMetadata;
-			}
+	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
+		(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
+		guardians[guardianAddress] = Guardian({
+			orbsAddr: orbsAddr,
+			ip: ip,
+			name: name,
+			website: website,
+			contact: contact,
+			registrationTime: registrationTime,
+			lastUpdateTime: lastUpdateTime
+		});
+		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
+		ipToGuardian[ip] = guardianAddress;
+
+		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website, contact);
+	}
+
+	string constant REWARDS_FREQUENCY_SEC_METADATA_KEY = "REWARDS_FREQUENCY_SEC";
+	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
+		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, REWARDS_FREQUENCY_SEC_METADATA_KEY);
+		if (bytes(rewardsFreqMetadata).length > 0) {
+			_setMetadata(guardianAddress, REWARDS_FREQUENCY_SEC_METADATA_KEY, rewardsFreqMetadata);
 		}
 	}
 
@@ -87,11 +88,15 @@ contract GuardiansRegistration is IGuardiansRegistration, ContractRegistryAccess
 		_updateGuardian(guardianAddr, ip, data.orbsAddr, data.name, data.website, data.contact);
 	}
 
-    /// @dev Called by a prticipant to update additional guardian metadata properties.
+    /// @dev Called by a guardian to update additional guardian metadata properties.
     function setMetadata(string calldata key, string calldata value) external onlyRegisteredGuardian onlyWhenActive {
-		string memory oldValue = guardianMetadata[msg.sender][key];
-		guardianMetadata[msg.sender][key] = value;
-		emit GuardianMetadataChanged(msg.sender, key, value, oldValue);
+		_setMetadata(msg.sender, key, value);
+	}
+
+    function _setMetadata(address guardian, string memory key, string memory value) private {
+		string memory oldValue = guardianMetadata[guardian][key];
+		guardianMetadata[guardian][key] = value;
+		emit GuardianMetadataChanged(guardian, key, value, oldValue);
 	}
 
 	function getMetadata(address addr, string calldata key) external view returns (string memory) {

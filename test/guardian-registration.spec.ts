@@ -12,7 +12,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 
 // todo: test that committees are updated as a result of registration changes
-describe('guardian-registration', async () => {
+describe.only('guardian-registration', async () => {
 
   it("registers, updates and unregisters a guardian", async () => {
     const d = await Driver.new();
@@ -774,7 +774,7 @@ describe('guardian-registration', async () => {
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
   });
 
-  it('is able to migrate registered guardians from a previous contract', async () => {
+  it.only('is able to migrate registered guardians from a previous contract', async () => {
     const d = await Driver.new();
 
     const v1 = d.newParticipant();
@@ -794,6 +794,24 @@ describe('guardian-registration', async () => {
     const v2LastUpdateTime = v2RegistrationTime;
 
     const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
+    const creationTx = await newContract.getCreationTx()
+    expect(creationTx).to.have.a.guardianDataUpdatedEvent({
+      addr: v1.address,
+      orbsAddr: v1.orbsAddress,
+      name: v1.name,
+      website: v1.website,
+      contact: v1.contact,
+      isRegistered: true
+    });
+    expect(creationTx).to.have.a.guardianMetadataChangedEvent({key: "REWARDS_FREQUENCY_SEC", newValue: "123", oldValue: ""});
+    expect(creationTx).to.have.a.guardianDataUpdatedEvent({
+      addr: v2.address,
+      orbsAddr: v2.orbsAddress,
+      name: v2.name,
+      website: v2.website,
+      contact: v2.contact,
+      isRegistered: true
+    });
     d.guardiansRegistration = null as any;
 
     const v1Data = await newContract.getGuardianData(v1.address);
