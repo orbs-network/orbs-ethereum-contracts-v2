@@ -14,6 +14,12 @@ export interface UnstakedEvent {
   totalStakedAmount: number | BN;
 }
 
+export interface MigratedStakeEvent {
+  stakeOwner: string,
+  amount: number|BN,
+  totalStakedAmount: number|BN
+}
+
 export interface StakingContract extends Contract {
   setStakeChangeNotifier(electionsAddr: string, params?: TransactionConfig ): Promise<TransactionReceipt>
   stake(amount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -21,4 +27,6 @@ export interface StakingContract extends Contract {
   restake(params?: TransactionConfig): Promise<TransactionReceipt>;
   distributeRewards(totalAmount: number | BN, stakeOwners: string[], amounts: number[] | BN[], params?: TransactionConfig): Promise<TransactionReceipt>;
   getStakeBalanceOf(stakeOwner: string, params?: TransactionConfig): Promise<BN>; // view
+  addMigrationDestination(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  migrateStakedTokens(newStakingContract: string, amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 }
