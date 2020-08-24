@@ -47,7 +47,7 @@ describe('contract-registry-high-level-flows', async () => {
     const nonGovernor = d.newParticipant();
     const contract2Name = "committee";
     const addr3 = d.newParticipant().address;
-    await expectRejected(registry.setContract(contract2Name, addr3, false, {from: nonGovernor.address}), /caller is not the functionalOwner/);
+    await expectRejected(registry.setContract(contract2Name, addr3, false, {from: nonGovernor.address}), /caller is not the registryManager/);
 
     // now by governor
     r = await registry.setContract(contract2Name, addr3, false, {from: owner.address});
@@ -109,24 +109,19 @@ describe('contract-registry-high-level-flows', async () => {
     const c1 = await contract();
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(0));
 
-    await registry.setContracts([contractId("c1")], [c1.address], [true]);
+    await registry.setContract("c1", c1.address, true);
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(1));
 
     const c2 = await contract();
     expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(0));
 
-    const c3 = await contract();
-    expect(await c3.refreshContractsCount()).to.bignumber.eq(bn(0));
-
-    await registry.setContracts([contractId("c2"), contractId("c3")], [c2.address, c3.address], [true, false]);
+    await registry.setContract("c2", c2.address, false);
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(2));
-    expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(1));
-    expect(await c3.refreshContractsCount()).to.bignumber.eq(bn(0));
+    expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(0));
 
-    await registry.setContracts([contractId("c2")], [ZERO_ADDR], [false]);
+    await registry.setContract("c2", ZERO_ADDR, false);
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(3));
-    expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(1));
-    expect(await c3.refreshContractsCount()).to.bignumber.eq(bn(0));
+    expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(0));
   });
 
   it('sets and unsets roles', async () => {
