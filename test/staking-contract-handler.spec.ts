@@ -54,7 +54,7 @@ describe("staking-contract-handler", async () => {
         expect(r).to.have.a.stakeChangeBatchNotificationFailedEvent({stakeOwners: [p2.address]});
 
         // Stake migration - both staking contracts will notify, requires a complex setup
-        const newRegistry = await d.web3.deploy('ContractRegistry', [], null, d.session);
+        const newRegistry = await d.web3.deploy('ContractRegistry', [d.registryManager.address], null, d.session);
 
         const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryManager.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
@@ -105,7 +105,7 @@ describe("staking-contract-handler", async () => {
         expect(r.gasUsed).to.be.greaterThan(5000000);
 
         // Stake migration - both staking contracts will notify, requires a complex setup
-        const newRegistry = await d.web3.deploy('ContractRegistry', [], null, d.session);
+        const newRegistry = await d.web3.deploy('ContractRegistry', [d.registryManager.address], null, d.session);
 
         const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryManager.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);

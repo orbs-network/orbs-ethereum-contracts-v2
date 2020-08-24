@@ -192,15 +192,20 @@ export class Driver {
             genesisRefTimeDelay
         } = Object.assign({}, defaultDriverOptions, options);
 
-        const contractRegistry: ContractRegistryContract = options.contractRegistryAddress ?
+        const initManager = accounts[0];
+        const registryManager = accounts[1];
+        const migrationManager = accounts[2];
+        const functionalManager = accounts[3];
+
+        const contractRegistry = options.contractRegistryAddress ?
             await web3.getExisting('ContractRegistry', options.contractRegistryAddress, session)
             :
-            await web3.deploy('ContractRegistry', [accounts[0]], null, session);
+            await web3.deploy('ContractRegistry', [registryManager], null, session);
 
         const delegations = options.delegationsAddress ?
             await web3.getExisting('Delegations', options.delegationsAddress, session)
             :
-            await web3.deploy("Delegations", [contractRegistry.address, accounts[0]], null, session);
+            await web3.deploy("Delegations", [contractRegistry.address, registryManager], null, session);
 
         const externalToken = options.bootstrapTokenAddress ?
             await web3.getExisting('TestingERC20', options.bootstrapTokenAddress, session)
@@ -215,7 +220,7 @@ export class Driver {
         const stakingContractHandler = options.stakingContractHandlerContractAddress ?
             await web3.getExisting('StakingContractHandler', options.stakingContractHandlerContractAddress, session)
             :
-            await web3.deploy('StakingContractHandler', [contractRegistry.address, accounts[0]], null, session);
+            await web3.deploy('StakingContractHandler', [contractRegistry.address, registryManager], null, session);
 
         const staking = options.stakingContractAddress ?
             await web3.getExisting('StakingContract', options.stakingContractAddress, session)
@@ -225,57 +230,57 @@ export class Driver {
         const rewards = options.rewardsAddress ?
             await web3.getExisting('Rewards', options.rewardsAddress, session)
             :
-            await web3.deploy('Rewards', [contractRegistry.address, accounts[0], erc20.address, externalToken.address], null, session);
+            await web3.deploy('Rewards', [contractRegistry.address, registryManager, erc20.address, externalToken.address], null, session);
 
         const elections = options.electionsAddress ?
             await web3.getExisting('Elections', options.electionsAddress, session)
             :
-            await web3.deploy("Elections", [contractRegistry.address, accounts[0], minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
+            await web3.deploy("Elections", [contractRegistry.address, registryManager, minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
 
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
             :
-            await web3.deploy('Subscriptions', [contractRegistry.address, accounts[0], erc20.address], null, session);
+            await web3.deploy('Subscriptions', [contractRegistry.address, registryManager, erc20.address], null, session);
 
         const protocol = options.protocolAddress ?
             await web3.getExisting('Protocol', options.protocolAddress, session)
             :
-            await web3.deploy('Protocol', [contractRegistry.address, accounts[0]], null, session);
+            await web3.deploy('Protocol', [contractRegistry.address, registryManager], null, session);
 
         const certification = options.certificationAddress ?
             await web3.getExisting('Certification', options.certificationAddress, session)
             :
-            await web3.deploy('Certification', [contractRegistry.address, accounts[0]], null, session);
+            await web3.deploy('Certification', [contractRegistry.address, registryManager], null, session);
 
         const committee = options.committeeAddress ?
             await web3.getExisting('Committee', options.committeeAddress, session)
             :
-            await web3.deploy('Committee', [contractRegistry.address, accounts[0], maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
+            await web3.deploy('Committee', [contractRegistry.address, registryManager, maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
 
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, accounts[0], erc20.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, erc20.address, rewards.address], null, session);
 
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, accounts[0], externalToken.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, externalToken.address, rewards.address], null, session);
 
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
             :
-            await web3.deploy('GuardiansRegistration', [contractRegistry.address, accounts[0], ZERO_ADDR, []], null, session);
+            await web3.deploy('GuardiansRegistration', [contractRegistry.address, registryManager, ZERO_ADDR, []], null, session);
 
         const generalFeesWallet = options.generalFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.generalFeesWalletAddress, session)
             :
-            await web3.deploy('FeesWallet', [contractRegistry.address, accounts[0], erc20.address], null, session);
+            await web3.deploy('FeesWallet', [contractRegistry.address, registryManager, erc20.address], null, session);
 
         const certifiedFeesWallet = options.certifiedFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.certifiedFeesWalletAddress, session)
             :
-            await web3.deploy('FeesWallet', [contractRegistry.address, accounts[0], erc20.address], null, session);
+            await web3.deploy('FeesWallet', [contractRegistry.address, registryManager, erc20.address], null, session);
 
         await Promise.all([
             contractRegistry.setContract("staking", staking.address, false),
@@ -297,16 +302,16 @@ export class Driver {
             contractRegistry.setContract("_erc20", erc20.address, false),
         ]);
 
-        await contractRegistry.setManager("migrationManager", accounts[1]);
-        await contractRegistry.setManager("functionalManager", accounts[2]);
+        await contractRegistry.setManager("migrationManager", migrationManager);
+        await contractRegistry.setManager("functionalManager", functionalManager);
 
-        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: accounts[2]});
+        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
 
         // TODO remove when setting in constructor
-        await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: accounts[2]});
-        await rewards.setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap, {from: accounts[2]});
-        await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: accounts[2]});
-        await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: accounts[2]});
+        await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: functionalManager});
+        await rewards.setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap, {from: functionalManager});
+        await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: functionalManager});
+        await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: functionalManager});
 
         await stakingRewardsWallet.setMaxAnnualRate(stakingRewardsWalletRate);
         await bootstrapRewardsWallet.setMaxAnnualRate(bootstrapRewardsWalletRate);
@@ -314,6 +319,21 @@ export class Driver {
         if (genesisRefTimeDelay != null) {
             await subscriptions.setGenesisRefTimeDelay(genesisRefTimeDelay);
         }
+
+        await Promise.all([
+            contractRegistry.initializationComplete(),
+            rewards.initializationComplete(),
+            delegations.initializationComplete(),
+            elections.initializationComplete(),
+            subscriptions.initializationComplete(),
+            protocol.initializationComplete(),
+            certification.initializationComplete(),
+            guardiansRegistration.initializationComplete(),
+            committee.initializationComplete(),
+            generalFeesWallet.initializationComplete(),
+            certifiedFeesWallet.initializationComplete(),
+            stakingContractHandler.initializationComplete()
+        ]);
 
         const d = new Driver(web3, session,
             accounts,
@@ -390,8 +410,8 @@ export class Driver {
 
     static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
-        const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[1] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
-        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[1]});
+        const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[2] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
+        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[2]});
         return staking;
     }
 
@@ -400,19 +420,23 @@ export class Driver {
     }
 
     get contractsNonOwnerAddress() {
-        return this.accounts[3];
+        return this.accounts[4];
+    }
+
+    get initializationManager(): Participant {
+        return new Participant("initialization-manager", "initialization-manager-website", "initialization-manager-contact", this.accounts[0], this.accounts[0], this);
     }
 
     get registryManager(): Participant {
-        return new Participant("registry-manager", "registry-manager-website", "registry-manager-contact", this.accounts[0], this.accounts[0], this);
+        return new Participant("registry-manager", "registry-manager-website", "registry-manager-contact", this.accounts[1], this.accounts[1], this);
     }
 
     get migrationManager(): Participant {
-        return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[1], this.accounts[1], this);
+        return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[2], this.accounts[2], this);
     }
 
     get functionalManager(): Participant {
-        return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[2], this.accounts[2], this);
+        return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[3], this.accounts[3], this);
     }
 
     subscribers: any[] = [];
@@ -426,7 +450,7 @@ export class Driver {
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
         name = name || `Guardian${this.participants.length}`;
-        const RESERVED_ACCOUNTS = 4;
+        const RESERVED_ACCOUNTS = 5;
         const v = new Participant(
             name,
             `${name}-website`,

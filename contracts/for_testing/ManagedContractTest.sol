@@ -2,7 +2,7 @@ pragma solidity 0.5.16;
 
 import "../ContractRegistryAccessor.sol";
 
-contract ManagedContract is ContractRegistryAccessor {
+contract ManagedContractTest is ContractRegistryAccessor {
 
     constructor(IContractRegistry _contractRegistry, address _registryManager) ContractRegistryAccessor(_contractRegistry, _registryManager) public {}
 

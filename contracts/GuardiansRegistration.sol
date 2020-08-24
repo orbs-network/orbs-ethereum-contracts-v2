@@ -4,8 +4,9 @@ import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract GuardiansRegistration is IGuardiansRegistration, Lockable {
+contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
 	modifier onlyRegisteredGuardian {
 		require(isRegistered(msg.sender), "Guardian is not registered");

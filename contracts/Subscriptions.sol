@@ -6,8 +6,9 @@ import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract Subscriptions is ISubscriptions, Lockable {
+contract Subscriptions is ISubscriptions, ManagedContract {
     using SafeMath for uint256;
 
     enum CommitteeType {

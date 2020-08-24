@@ -3,15 +3,26 @@ import "./spec_interfaces/IContractRegistry.sol";
 import "./IContractRegistryListener.sol";
 import "./WithClaimableRegistryManagement.sol";
 import "./spec_interfaces/ILockable.sol";
+import "./Initializable.sol";
 
-contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement {
+contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegistryManagement {
 
 	mapping (string => address) contracts;
 	address[] managedContractAddresses;
 
 	mapping (string => address) managers;
 
-	function setContract(string calldata contractName, address addr, bool managedContract) external onlyRegistryManager {
+	modifier onlyManager {
+		require(msg.sender == registryManager() || msg.sender == initializationManager(), "caller is not the registryManager");
+
+		_;
+	}
+
+	constructor (address registryManager) public {
+		_transferRegistryManagement(registryManager);
+	}
+
+	function setContract(string calldata contractName, address addr, bool managedContract) external onlyManager {
 		require(!managedContract || addr != address(0), "managed contract may not have address(0)");
 		removeManagedContract(contracts[contractName]);
 		contracts[contractName] = addr;
@@ -22,13 +33,13 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 		notifyOnContractsChange();
 	}
 
-	function lockContracts() external onlyRegistryManager {
+	function lockContracts() external onlyManager {
 		for (uint i = 0; i < managedContractAddresses.length; i++) {
 			ILockable(managedContractAddresses[i]).lock();
 		}
 	}
 
-	function unlockContracts() external onlyRegistryManager {
+	function unlockContracts() external onlyManager {
 		for (uint i = 0; i < managedContractAddresses.length; i++) {
 			ILockable(managedContractAddresses[i]).unlock();
 		}
@@ -66,7 +77,7 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 		return managedContractAddresses;
 	}
 
-	function setManager(string calldata role, address manager) external onlyRegistryManager {
+	function setManager(string calldata role, address manager) external onlyManager {
 		managers[role] = manager;
 		emit ManagerChanged(role, manager);
 	}

@@ -4,8 +4,9 @@ import "./spec_interfaces/IProtocolWallet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract ProtocolWallet is IProtocolWallet, Lockable {
+contract ProtocolWallet is IProtocolWallet, ManagedContract {
     using SafeMath for uint256;
 
     IERC20 public token;

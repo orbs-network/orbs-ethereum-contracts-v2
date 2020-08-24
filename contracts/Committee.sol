@@ -8,9 +8,10 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
 import "./interfaces/IElections.sol";
+import "./ManagedContract.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, Lockable {
+contract Committee is ICommittee, ManagedContract {
 	using BytesLib for bytes;
 
 	uint constant MAX_COMMITTEE_ARRAY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)

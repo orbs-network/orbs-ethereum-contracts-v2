@@ -12,7 +12,7 @@ const expect = chai.expect;
 
 describe('contract-registry-high-level-flows', async () => {
 
-  it('registers contracts only by functional owner and emits events', async () => {
+  it('registers contracts only by registry manager and emits events', async () => {
     const d = await Driver.new();
     const owner = d.registryManager;
     const registry = d.contractRegistry;
@@ -98,23 +98,23 @@ describe('contract-registry-high-level-flows', async () => {
   it('sets and unsets contracts, notifies only managed', async () => {
     const d = await Driver.new()
 
-    const registry = await d.web3.deploy('ContractRegistry' as any, []);
-    const contract = () => d.web3.deploy('ManagedContract' as any, [registry.address, d.registryManager.address]);
+    const registry = await d.web3.deploy('ContractRegistry' as any, [d.registryManager.address]);
+    const contract = () => d.web3.deploy('ManagedContractTest' as any, [registry.address, d.registryManager.address]);
 
     const c1 = await contract();
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(0));
 
-    await registry.setContract("c1", c1.address, true);
+    await registry.setContract("c1", c1.address, true, {from: d.registryManager.address});
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(1));
 
     const c2 = await contract();
     expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(0));
 
-    await registry.setContract("c2", c2.address, false);
+    await registry.setContract("c2", c2.address, false, {from: d.registryManager.address});
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(2));
     expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(0));
 
-    await registry.setContract("c2", ZERO_ADDR, false);
+    await registry.setContract("c2", ZERO_ADDR, false, {from: d.registryManager.address});
     expect(await c1.refreshContractsCount()).to.bignumber.eq(bn(3));
     expect(await c2.refreshContractsCount()).to.bignumber.eq(bn(0));
   });
@@ -123,14 +123,14 @@ describe('contract-registry-high-level-flows', async () => {
     const d = await Driver.new()
 
     const m1 = d.newParticipant().address;
-    let r = await d.contractRegistry.setManager("role1", m1);
+    let r = await d.contractRegistry.setManager("role1", m1, {from: d.registryManager.address});
     expect(r).to.have.a.managerChangedEvent({
         role: "role1",
         newManager: m1
     });
     expect(await d.contractRegistry.getManager("role1")).to.eq(m1);
 
-    r = await d.contractRegistry.setManager("role1", ZERO_ADDR);
+    r = await d.contractRegistry.setManager("role1", ZERO_ADDR, {from: d.registryManager.address});
     expect(r).to.have.a.managerChangedEvent({
       role: "role1",
       newManager: ZERO_ADDR
@@ -138,7 +138,7 @@ describe('contract-registry-high-level-flows', async () => {
     expect(await d.contractRegistry.getManager("role1")).to.eq(ZERO_ADDR);
 
     const m2 = d.newParticipant().address;
-    r = await d.contractRegistry.setManager("role2", m2);
+    r = await d.contractRegistry.setManager("role2", m2, {from: d.registryManager.address});
     expect(r).to.have.a.managerChangedEvent({
       role: "role2",
       newManager: m2
