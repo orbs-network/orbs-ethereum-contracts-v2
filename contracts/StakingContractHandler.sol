@@ -7,6 +7,8 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
 
     uint constant NOTIFICATION_GAS_LIMIT = 5000000;
 
+    constructor(IContractRegistry _contractRegistry) public ContractRegistryAccessor(_contractRegistry) {}
+
     modifier onlyStakingContract() {
         require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
 
@@ -14,7 +16,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     }
 
     function stakeChange(address _stakeOwner, uint256 _amount, bool _sign, uint256 _updatedStake) external onlyStakingContract {
-        IStakeChangeNotifier notifier = IStakeChangeNotifier(address(getDelegationsContract()));
+        IStakeChangeNotifier notifier = delegationsContract;
         (bool success,) = address(notifier).call.gas(NOTIFICATION_GAS_LIMIT)(abi.encodeWithSelector(
                             notifier.stakeChange.selector, _stakeOwner, _amount, _sign, _updatedStake));
         if (!success) {
@@ -28,7 +30,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     /// @param _signs bool[] The signs of the added (true) or subtracted (false) amounts.
     /// @param _updatedStakes uint256[] The updated total staked amounts.
     function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract {
-        IStakeChangeNotifier notifier = IStakeChangeNotifier(address(getDelegationsContract()));
+        IStakeChangeNotifier notifier = delegationsContract;
         (bool success,) = address(notifier).call.gas(NOTIFICATION_GAS_LIMIT)(abi.encodeWithSelector(
                 notifier.stakeChangeBatch.selector, _stakeOwners, _amounts, _signs, _updatedStakes));
         if (!success) {
@@ -40,7 +42,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     /// @param _stakeOwner address The address of the subject stake owner.
     /// @param _amount uint256 The migrated amount.
     function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract {
-        IStakeChangeNotifier notifier = IStakeChangeNotifier(address(getDelegationsContract()));
+        IStakeChangeNotifier notifier = delegationsContract;
         (bool success,) = address(notifier).call.gas(NOTIFICATION_GAS_LIMIT)(abi.encodeWithSelector(
                 notifier.stakeMigration.selector, _stakeOwner, _amount));
         if (!success) {
@@ -59,6 +61,13 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     /// @return uint256 The total staked tokens of all stake owners.
     function getTotalStakedTokens() external view returns (uint256) {
         return getStakingContract().getTotalStakedTokens();
+    }
+
+    IStakeChangeNotifier delegationsContract;
+    IStakingContract stakingContract;
+    function refreshContracts() external {
+        delegationsContract = IStakeChangeNotifier(address(getDelegationsContract()));
+        stakingContract = getStakingContract();
     }
 
 }

@@ -11,8 +11,7 @@ chai.use(require('./matchers'));
 
 const expect = chai.expect;
 
-// todo: test that committees are updated as a result of registration changes
-describe.only('guardian-registration', async () => {
+describe('guardian-registration', async () => {
 
   it("registers, updates and unregisters a guardian", async () => {
     const d = await Driver.new();
@@ -774,7 +773,7 @@ describe.only('guardian-registration', async () => {
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
   });
 
-  it.only('is able to migrate registered guardians from a previous contract', async () => {
+  it('is able to migrate registered guardians from a previous contract', async () => {
     const d = await Driver.new();
 
     const v1 = d.newParticipant();
@@ -793,7 +792,7 @@ describe.only('guardian-registration', async () => {
     const v1LastUpdateTime = await d.web3.txTimestamp(r);
     const v2LastUpdateTime = v2RegistrationTime;
 
-    const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
+    const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
     const creationTx = await newContract.getCreationTx()
     expect(creationTx).to.have.a.guardianDataUpdatedEvent({
       addr: v1.address,

@@ -169,7 +169,7 @@ export class Contract {
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
-        this.web3.log(`calling method: ${method}`);
+        this.web3.log(`calling method: ${method} ${args}`);
 
         const accounts = await this.web3.eth.getAccounts();
         let opts = {};
@@ -188,7 +188,7 @@ export class Contract {
                     ...opts
                 });
             } catch(e) {
-                this.web3.log(`error calling ${method}: ${e.toString()}`);
+                this.web3.log(`error calling ${method} ${args}: ${e.toString()}`);
                 if (/Invalid JSON RPC response/.exec(e.toString())) {
                     this.web3.log(`Calling contract method "${method}" failed, retrying`);
                     await new Promise(resolve => setTimeout(resolve, 1000));

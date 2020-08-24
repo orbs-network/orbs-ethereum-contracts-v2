@@ -254,7 +254,6 @@ describe('delegations-contract', async () => {
        const d = await Driver.new();
 
        const otherDelegationContract = await d.web3.deploy("Delegations", [d.contractRegistry.address], null, d.session);
-       await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
 
        await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.functionalOwner.address});
 
@@ -306,7 +305,6 @@ describe('delegations-contract', async () => {
        const d = await Driver.new();
 
        const otherDelegationContract = await d.web3.deploy("Delegations", [d.contractRegistry.address], null, d.session);
-       await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
 
        await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.functionalOwner.address});
 
@@ -367,7 +365,6 @@ describe('delegations-contract', async () => {
        const d = await Driver.new();
 
        const otherDelegationContract = await d.web3.deploy("Delegations", [d.contractRegistry.address], null, d.session);
-       await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
 
        await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.functionalOwner.address});
 
@@ -447,7 +444,6 @@ describe('delegations-contract', async () => {
         await d1.delegate(v);
 
         const otherDelegationContract = await d.web3.deploy("Delegations", [d.contractRegistry.address], null, d.session);
-        await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
 
         await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.functionalOwner.address});
 
@@ -482,7 +478,6 @@ describe('delegations-contract', async () => {
         });
 
         const otherDelegationContract = await d.web3.deploy("Delegations", [d.contractRegistry.address], null, d.session);
-        await otherDelegationContract.setContractRegistry(d.contractRegistry.address);
 
         await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.functionalOwner.address});
 

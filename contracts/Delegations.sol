@@ -29,7 +29,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 
 	uint256 totalDelegatedStake;
 
-	modifier onlyStakingContract() {
+	modifier onlyStakingContractHandler() {
 		require(msg.sender == address(stakingContractHandler), "caller is not the staking contract handler");
 
 		_;
@@ -302,10 +302,10 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	IElections electionsContract;
-	IStakingContract stakingContract;
+	IStakingContractHandler stakingContractHandler;
 	function refreshContracts() external {
 		electionsContract = getElectionsContract();
-		stakingContract = getStakingContract();
+		stakingContractHandler = getStakingContractHandler();
 	}
 
 }
