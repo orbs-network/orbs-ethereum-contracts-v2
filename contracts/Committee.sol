@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./Lockable.sol";
+import "./interfaces/IRewards.sol";
+import "./interfaces/IElections.sol";
 
 /// @title Elections contract interface
 contract Committee is ICommittee, Lockable {
@@ -389,9 +391,9 @@ contract Committee is ICommittee, Lockable {
 	IRewards rewardsContract;
 	IGuardiansRegistration guardianRegistrationContract;
 	function refreshContracts() external {
-		electionsContract = getElectionsContract();
-		rewardsContract = getRewardsContract();
-		guardianRegistrationContract = getGuardiansRegistrationContract();
+		electionsContract = IElections(getElectionsContract());
+		rewardsContract = IRewards(getRewardsContract());
+		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
 	}
 
 }

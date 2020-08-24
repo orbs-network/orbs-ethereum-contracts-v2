@@ -2,6 +2,8 @@ pragma solidity 0.5.16;
 
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
+import "./IStakeChangeNotifier.sol";
+import "./IStakingContract.sol";
 
 contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier, ContractRegistryAccessor {
 
@@ -54,20 +56,20 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     /// @param _stakeOwner address The address to check.
     /// @return uint256 The total stake.
     function getStakeBalanceOf(address _stakeOwner) external view returns (uint256) {
-        return getStakingContract().getStakeBalanceOf(_stakeOwner);
+        return stakingContract.getStakeBalanceOf(_stakeOwner);
     }
 
     /// @dev Returns the total amount staked tokens (excluding unstaked tokens).
     /// @return uint256 The total staked tokens of all stake owners.
     function getTotalStakedTokens() external view returns (uint256) {
-        return getStakingContract().getTotalStakedTokens();
+        return stakingContract.getTotalStakedTokens();
     }
 
     IStakeChangeNotifier delegationsContract;
     IStakingContract stakingContract;
     function refreshContracts() external {
-        delegationsContract = IStakeChangeNotifier(address(getDelegationsContract()));
-        stakingContract = getStakingContract();
+        delegationsContract = IStakeChangeNotifier(getDelegationsContract());
+        stakingContract = IStakingContract(getStakingContract());
     }
 
 }

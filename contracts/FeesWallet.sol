@@ -8,6 +8,7 @@ import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IMigratableFeesWallet.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
+import "./interfaces/IRewards.sol";
 
 
 /// @title Fees Wallet contract interface, manages the fee buckets
@@ -153,7 +154,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
 
     IRewards rewardsContract;
     function refreshContracts() external {
-        rewardsContract = getRewardsContract();
+        rewardsContract = IRewards(getRewardsContract());
     }
 
 }

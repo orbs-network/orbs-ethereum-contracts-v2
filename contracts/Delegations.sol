@@ -13,6 +13,7 @@ import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
+import "./spec_interfaces/IStakingContractHandler.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, Lockable {
 	using SafeMath for uint256;
@@ -303,8 +304,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, Lockable {
 	IElections electionsContract;
 	IStakingContractHandler stakingContractHandler;
 	function refreshContracts() external {
-		electionsContract = getElectionsContract();
-		stakingContractHandler = getStakingContractHandler();
+		electionsContract = IElections(getElectionsContract());
+		stakingContractHandler = IStakingContractHandler(getStakingContractHandler());
 	}
 
 }

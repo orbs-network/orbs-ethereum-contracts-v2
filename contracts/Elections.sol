@@ -311,11 +311,11 @@ contract Elections is IElections, Lockable {
 	IStakingContract stakingContract;
 	ICertification certificationContract;
 	function refreshContracts() external {
-		committeeContract = getCommitteeContract();
-		delegationsContract = getDelegationsContract();
-		guardianRegistrationContract = getGuardiansRegistrationContract();
-		stakingContract = getStakingContract();
-		certificationContract = getCertificationContract();
+		committeeContract = ICommittee(getCommitteeContract());
+		delegationsContract = IDelegations(getDelegationsContract());
+		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
+		stakingContract = IStakingContract(getStakingContract());
+		certificationContract = ICertification(getCertificationContract());
 	}
 
 }

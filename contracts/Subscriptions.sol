@@ -163,9 +163,9 @@ contract Subscriptions is ISubscriptions, Lockable {
     IFeesWallet certifiedFeesWallet;
     IProtocol protocolContract;
     function refreshContracts() external {
-        generalFeesWallet = getGeneralFeesWallet();
-        certifiedFeesWallet = getCertifiedFeesWallet();
-        protocolContract = getProtocolContract();
+        generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
+        certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
+        protocolContract = IProtocol(getProtocolContract());
     }
 
 }
