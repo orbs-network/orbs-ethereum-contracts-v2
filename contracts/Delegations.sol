@@ -29,8 +29,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 
 	uint256 totalDelegatedStake;
 
-	modifier onlyStakingContract() {
-		require(msg.sender == address(stakingContract), "caller is not the staking contract");
+	modifier onlyStakingContractHandler() {
+		require(msg.sender == address(stakingContractHandler), "caller is not the staking contract handler");
 
 		_;
 	}
@@ -134,7 +134,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
-			_stakeChange(from[i], stakingContract.getStakeBalanceOf(from[i]), refreshStakeNotification);
+			_stakeChange(from[i], stakingContractHandler.getStakeBalanceOf(from[i]), refreshStakeNotification);
 			delegateFrom(from[i], to[i], refreshStakeNotification);
 		}
 
@@ -158,10 +158,10 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	function refreshStake(address addr) external onlyWhenActive {
-		_stakeChange(addr, stakingContract.getStakeBalanceOf(addr), true);
+		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr), true);
 	}
 
-	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external onlyStakingContract onlyWhenActive {
+	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external onlyStakingContractHandler onlyWhenActive {
 		_stakeChange(_stakeOwner, _updatedStake, true);
 	}
 
@@ -202,7 +202,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	// TODO add tests to equivalence of batched and non batched notifications
-	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContract onlyWhenActive {
+	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContractHandler onlyWhenActive {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
@@ -221,7 +221,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		return data;
 	}
 
-	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContract onlyWhenActive {}
+	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
 		uint i = 0;
@@ -294,7 +294,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	function getSelfDelegatedStake(address addr) public view returns (uint256) {
-		return _isSelfDelegating(addr) ? stakingContract.getStakeBalanceOf(addr) : 0;
+		return _isSelfDelegating(addr) ? stakingContractHandler.getStakeBalanceOf(addr) : 0;
 	}
 
 	function _isSelfDelegating(address addr) private view returns (bool) {
@@ -302,10 +302,10 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 	}
 
 	IElections electionsContract;
-	IStakingContract stakingContract;
+	IStakingContractHandler stakingContractHandler;
 	function refreshContracts() external {
 		electionsContract = getElectionsContract();
-		stakingContract = getStakingContract();
+		stakingContractHandler = getStakingContractHandler();
 	}
 
 }

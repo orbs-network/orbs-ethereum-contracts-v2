@@ -27,7 +27,7 @@ import {
   VoteUnreadyPercentageThresholdChangedEvent,
   VoteOutPercentageThresholdChangedEvent,
 } from "../typings/elections-contract";
-import { StakedEvent, UnstakedEvent } from "../typings/staking-contract";
+import {MigratedStakeEvent, StakedEvent, UnstakedEvent} from "../typings/staking-contract";
 import {ContractAddressUpdatedEvent} from "../typings/contract-registry-contract";
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
@@ -69,6 +69,10 @@ import {
   FeesAddedToBucketEvent, FeesWithdrawnFromBucketEvent,
 
 } from "../typings/fees-wallet-contract";
+import {
+  StakeChangeBatchNotificationFailedEvent,
+  StakeChangeNotificationFailedEvent, StakeMigrationNotificationFailedEvent
+} from "../typings/stake-change-handler-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -236,6 +240,10 @@ declare global {
       minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
       stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
       stakingRewardsMigrationAcceptedEvent(data?: Partial<StakingRewardsMigrationAcceptedEvent>);
+      stakeChangeNotificationFailedEvent(data?: Partial<StakeChangeNotificationFailedEvent>);
+      stakeChangeBatchNotificationFailedEvent(data?: Partial<StakeChangeBatchNotificationFailedEvent>);
+      stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);
+      migratedStakeEvent(data?: Partial<MigratedStakeEvent>);
 
       withinContract(contract: Contract): Assertion;
     }
