@@ -1,6 +1,7 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IStakingContractHandler.sol";
 import "./spec_interfaces/IProtocol.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./interfaces/IElections.sol";
@@ -80,4 +81,9 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
     function getCertifiedFeesWallet() public view returns (IFeesWallet) {
         return IFeesWallet(contractRegistry.getContract("certifiedFeesWallet"));
     }
+
+    function getStakingContractHandler() public view returns (IStakingContractHandler) {
+        return IStakingContractHandler(contractRegistry.getContract("stakingContractHandler"));
+    }
+
 }
