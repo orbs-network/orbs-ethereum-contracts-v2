@@ -1,13 +1,11 @@
 pragma solidity 0.5.16;
 
 import "./ContractRegistryAccessor.sol";
+import "./spec_interfaces/ILockable.sol";
 
-contract Lockable is ContractRegistryAccessor {
+contract Lockable is ILockable, ContractRegistryAccessor {
 
     bool public locked;
-
-    event Locked();
-    event Unlocked();
 
     modifier onlyLockOwner() {
         require(msg.sender == registryManager() || msg.sender == address(contractRegistry), "caller is not a lock owner");
@@ -25,6 +23,10 @@ contract Lockable is ContractRegistryAccessor {
     function unlock() external onlyLockOwner {
         locked = false;
         emit Unlocked();
+    }
+
+    function isLocked() external view returns (bool) {
+        return locked;
     }
 
     modifier onlyWhenActive() {

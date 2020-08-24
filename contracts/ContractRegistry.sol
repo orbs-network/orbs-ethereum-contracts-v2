@@ -2,6 +2,7 @@ pragma solidity 0.5.16;
 import "./spec_interfaces/IContractRegistry.sol";
 import "./IContractRegistryListener.sol";
 import "./WithClaimableRegistryManagement.sol";
+import "./spec_interfaces/ILockable.sol";
 
 contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement {
 
@@ -19,6 +20,18 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 		}
 		emit ContractAddressUpdated(contractName, addr, managedContract);
 		notifyOnContractsChange();
+	}
+
+	function lockContracts() external onlyRegistryManager {
+		for (uint i = 0; i < managedContractAddresses.length; i++) {
+			ILockable(managedContractAddresses[i]).lock();
+		}
+	}
+
+	function unlockContracts() external onlyRegistryManager {
+		for (uint i = 0; i < managedContractAddresses.length; i++) {
+			ILockable(managedContractAddresses[i]).unlock();
+		}
 	}
 
 	function notifyOnContractsChange() private {
