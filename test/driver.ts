@@ -258,7 +258,7 @@ export class Driver {
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
             :
-            await web3.deploy('GuardiansRegistration', [], null, session);
+            await web3.deploy('GuardiansRegistration', [ZERO_ADDR, []], null, session);
 
         const generalFeesWallet = options.generalFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.generalFeesWalletAddress, session)
