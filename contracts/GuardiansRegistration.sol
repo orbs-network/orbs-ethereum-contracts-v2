@@ -23,11 +23,43 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 		uint256 lastUpdateTime;
 	}
 	mapping (address => Guardian) public guardians;
-	mapping (address => address) public orbsAddressToEthereumAddress;
+	mapping (address => address) public orbsAddressToGuardianAddress;
 	mapping (bytes4 => address) public ipToGuardian;
 	mapping (address => mapping(string => string)) public guardianMetadata;
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
+	constructor(IContractRegistry _contractRegistry, address _registryManager, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) Lockable(_contractRegistry, _registryManager) public {
+		require(previousContract != IGuardiansRegistration(0) || guardiansToMigrate.length == 0, "A guardian address list was provided for migration without the previous contract");
+
+		for (uint i = 0; i < guardiansToMigrate.length; i++) {
+			migrateGuardianData(previousContract, guardiansToMigrate[i]);
+			migrateGuardianMetadata(previousContract, guardiansToMigrate[i]);
+		}
+	}
+
+	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
+		(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
+		guardians[guardianAddress] = Guardian({
+			orbsAddr: orbsAddr,
+			ip: ip,
+			name: name,
+			website: website,
+			contact: contact,
+			registrationTime: registrationTime,
+			lastUpdateTime: lastUpdateTime
+		});
+		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
+		ipToGuardian[ip] = guardianAddress;
+
+		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website, contact);
+	}
+
+	string constant REWARDS_FREQUENCY_SEC_METADATA_KEY = "REWARDS_FREQUENCY_SEC";
+	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
+		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, REWARDS_FREQUENCY_SEC_METADATA_KEY);
+		if (bytes(rewardsFreqMetadata).length > 0) {
+			_setMetadata(guardianAddress, REWARDS_FREQUENCY_SEC_METADATA_KEY, rewardsFreqMetadata);
+		}
+	}
 
 	/*
      * External methods
@@ -56,11 +88,15 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 		_updateGuardian(guardianAddr, ip, data.orbsAddr, data.name, data.website, data.contact);
 	}
 
-    /// @dev Called by a prticipant to update additional guardian metadata properties.
+    /// @dev Called by a guardian to update additional guardian metadata properties.
     function setMetadata(string calldata key, string calldata value) external onlyRegisteredGuardian onlyWhenActive {
-		string memory oldValue = guardianMetadata[msg.sender][key];
-		guardianMetadata[msg.sender][key] = value;
-		emit GuardianMetadataChanged(msg.sender, key, value, oldValue);
+		_setMetadata(msg.sender, key, value);
+	}
+
+    function _setMetadata(address guardian, string memory key, string memory value) private {
+		string memory oldValue = guardianMetadata[guardian][key];
+		guardianMetadata[guardian][key] = value;
+		emit GuardianMetadataChanged(guardian, key, value, oldValue);
 	}
 
 	function getMetadata(address addr, string calldata key) external view returns (string memory) {
@@ -70,7 +106,7 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 
 	/// @dev Called by a participant who wishes to unregister
 	function unregisterGuardian() external onlyRegisteredGuardian onlyWhenActive {
-		delete orbsAddressToEthereumAddress[guardians[msg.sender].orbsAddr];
+		delete orbsAddressToGuardianAddress[guardians[msg.sender].orbsAddr];
 		delete ipToGuardian[guardians[msg.sender].ip];
 		Guardian memory guardian = guardians[msg.sender];
 		delete guardians[msg.sender];
@@ -115,7 +151,7 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 		if (isRegistered(ethereumOrOrbsAddress)) {
 			ethereumAddress = ethereumOrOrbsAddress;
 		} else {
-			ethereumAddress = orbsAddressToEthereumAddress[ethereumOrOrbsAddress];
+			ethereumAddress = orbsAddressToGuardianAddress[ethereumOrOrbsAddress];
 		}
 
 		require(ethereumAddress != address(0), "Cannot resolve address");
@@ -139,7 +175,7 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddrs) {
 		ethereumAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {
-			ethereumAddrs[i] = orbsAddressToEthereumAddress[orbsAddrs[i]];
+			ethereumAddrs[i] = orbsAddressToGuardianAddress[orbsAddrs[i]];
 		}
 	}
 
@@ -156,9 +192,9 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 		require(ipToGuardian[ip] == address(0), "ip is already in use");
 		ipToGuardian[ip] = guardianAddr;
 
-		delete orbsAddressToEthereumAddress[guardians[guardianAddr].orbsAddr];
-		require(orbsAddressToEthereumAddress[orbsAddr] == address(0), "orbs address is already in use");
-		orbsAddressToEthereumAddress[orbsAddr] = guardianAddr;
+		delete orbsAddressToGuardianAddress[guardians[guardianAddr].orbsAddr];
+		require(orbsAddressToGuardianAddress[orbsAddr] == address(0), "orbs address is already in use");
+		orbsAddressToGuardianAddress[orbsAddr] = guardianAddr;
 
 		guardians[guardianAddr].orbsAddr = orbsAddr;
 		guardians[guardianAddr].ip = ip;

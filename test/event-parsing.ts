@@ -27,10 +27,10 @@ export function parseLogs(txResult, contract, eventSignature, contractAddress?: 
     const abi = new Web3().eth.abi;
     const inputs = contract.abi.find(e => e.name == eventSignature.split('(')[0]).inputs;
     const eventSignatureHash = abi.encodeEventSignature(eventSignature);
-    return _.values(txResult.events)
+    return _.values(txResult.events || txResult.logs)
         .reduce((x,y) => x.concat(y), [])
         .filter(e => contractAddress == null || contractAddress == e.address)
-        .map(e => e.raw)
+        .map(e => e.raw || e)
         .filter(e => e.topics[0] === eventSignatureHash)
         .map(e => abi.decodeLog(inputs, e.data, e.topics.slice(1) /*assume all events are non-anonymous*/));
 }

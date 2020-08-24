@@ -94,7 +94,11 @@ export class Web3Driver{
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
             this.log("Deployed " + contractName + " at " + web3Contract.options.address);
 
-            return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
+            while (txHash == null) {
+                await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+
+            return new Contract(this, session, abi, web3Contract.options.address, txHash) as Contracts[N];
         }
 
         throw new Error(`Failed deploying contract ${contractName} after 5 attempts`);
@@ -149,7 +153,7 @@ export class Web3Driver{
 
 export class Contract {
 
-    constructor(public web3: Web3Driver, private session: Web3Session, abi: any, public address: string) {
+    constructor(public web3: Web3Driver, private session: Web3Session, abi: any, public address: string, public txHash?: string) {
         Object.keys(this.web3Contract.methods)
             .filter(x => x[0] != '0')
             .forEach(m => {
@@ -165,7 +169,7 @@ export class Contract {
     }
 
     private async callContractMethod(method: string, methodAbi, args: any[]) {
-        this.web3.log(`calling method: ${method}`);
+        this.web3.log(`calling method: ${method} ${args}`);
 
         const accounts = await this.web3.eth.getAccounts();
         let opts = {};
@@ -184,7 +188,7 @@ export class Contract {
                     ...opts
                 });
             } catch(e) {
-                this.web3.log(`error calling ${method}: ${e.toString()}`);
+                this.web3.log(`error calling ${method} ${args}: ${e.toString()}`);
                 if (/Invalid JSON RPC response/.exec(e.toString())) {
                     this.web3.log(`Calling contract method "${method}" failed, retrying`);
                     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -200,5 +204,13 @@ export class Contract {
         }
 
         throw new Error(`Calling contract method "${method}" failed after 5 attempts`);
+    }
+
+    async getCreationTx(): Promise<TransactionReceipt> {
+        if (this.txHash == null) {
+            throw new Error("Unable to get tx receipt for a contract not deployed by the testkit");
+        }
+
+        return this.web3.eth.getTransactionReceipt(this.txHash);
     }
 }
