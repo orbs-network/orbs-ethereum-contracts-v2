@@ -13,7 +13,7 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor, WithClaimableFunct
 
     IERC20 erc20;
 
-    constructor(IContractRegistry _contractRegistry, IERC20 _erc20, string memory _tier, uint256 _monthlyRate) ContractRegistryAccessor(_contractRegistry) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, string memory _tier, uint256 _monthlyRate) ContractRegistryAccessor(_contractRegistry, _registryManager) public {
         require(bytes(_tier).length > 0, "must specify a valid tier label");
 
         tier = _tier;

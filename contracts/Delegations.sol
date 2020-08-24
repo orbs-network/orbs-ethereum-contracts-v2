@@ -35,7 +35,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, WithClaimableFunctio
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry) Lockable(_contractRegistry) public {}
+	constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
 
 	function getTotalDelegatedStake() external view returns (uint256) {
 		return totalDelegatedStake;

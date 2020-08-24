@@ -28,7 +28,7 @@ contract GuardiansRegistration is IGuardiansRegistration, WithClaimableFunctiona
 	mapping (bytes4 => address) public ipToGuardian;
 	mapping (address => mapping(string => string)) public guardianMetadata;
 
-	constructor(IContractRegistry _contractRegistry, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) Lockable(_contractRegistry) public {
+	constructor(IContractRegistry _contractRegistry, address _registryManager, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) Lockable(_contractRegistry, _registryManager) public {
 		require(previousContract != IGuardiansRegistration(0) || guardiansToMigrate.length == 0, "A guardian address list was provided for migration without the previous contract");
 
 		for (uint i = 0; i < guardiansToMigrate.length; i++) {

@@ -195,7 +195,7 @@ describe('fees-wallet-contract', async () => {
     let r = await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
     const buckets = feesAddedToBucketEvents(r);
 
-    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.erc20.address], null, d.session);
+    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.migrationOwner.address, d.erc20.address], null, d.session);
 
     for (const bucket of buckets) {
       await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalOwner.address}), /caller is not the migrationOwner/);

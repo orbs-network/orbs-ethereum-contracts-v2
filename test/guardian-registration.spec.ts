@@ -792,8 +792,8 @@ describe('guardian-registration', async () => {
     const v1LastUpdateTime = await d.web3.txTimestamp(r);
     const v2LastUpdateTime = v2RegistrationTime;
 
-    const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
-    const creationTx = await newContract.getCreationTx()
+    const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.migrationOwner.address, d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
+    const creationTx = await newContract.getCreationTx();
     expect(creationTx).to.have.a.guardianDataUpdatedEvent({
       addr: v1.address,
       orbsAddr: v1.orbsAddress,

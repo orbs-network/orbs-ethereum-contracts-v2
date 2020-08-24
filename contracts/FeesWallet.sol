@@ -32,7 +32,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, IERC20 _token) ContractRegistryAccessor(_contractRegistry) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token) ContractRegistryAccessor(_contractRegistry, _registryManager) public {
         token = _token;
         lastCollectedAt = now;
     }

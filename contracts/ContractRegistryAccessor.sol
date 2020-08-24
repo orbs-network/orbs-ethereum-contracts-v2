@@ -18,9 +18,10 @@ contract ContractRegistryAccessor is WithClaimableMigrationOwnership {
 
     IContractRegistry contractRegistry;
 
-    constructor(IContractRegistry _contractRegistry) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager) public {
         require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
         setContractRegistry(_contractRegistry);
+        _transferMigrationOwnership(_registryManager);
     }
 
     event ContractRegistryAddressUpdated(address addr);

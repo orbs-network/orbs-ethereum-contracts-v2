@@ -44,7 +44,7 @@ contract Elections is IElections, WithClaimableFunctionalOwnership, Lockable {
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) Lockable(_contractRegistry) public {
+	constructor(IContractRegistry _contractRegistry, address _registryManager, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) Lockable(_contractRegistry, _registryManager) public {
 		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be at most 100000");
 		require(voteUnreadyPercentageThreshold >= 0 && voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must be between 0 and 100");
 		require(voteOutPercentageThreshold >= 0 && voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
