@@ -27,12 +27,6 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 		}
 	}
 
-	function notifyOnManagersChange(string memory role, address newManager) private {
-		for (uint i = 0; i < managedContractAddresses.length; i++) {
-			IContractRegistryListener(managedContractAddresses[i]).refreshManagers(role, newManager);
-		}
-	}
-
 	function addManagedContract(address addr) private {
 		managedContractAddresses[managedContractAddresses.length++] = addr;
 	}
@@ -61,7 +55,6 @@ contract ContractRegistry is IContractRegistry, WithClaimableRegistryManagement 
 
 	function setManager(string calldata role, address manager) external onlyRegistryManager {
 		managers[role] = manager;
-		notifyOnManagersChange(role, manager);
 		emit ManagerChanged(role, manager);
 	}
 

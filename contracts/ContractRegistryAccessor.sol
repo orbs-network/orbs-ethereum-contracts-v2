@@ -105,6 +105,4 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement {
         return IFeesWallet(contractRegistry.getContract("certifiedFeesWallet"));
     }
 
-    function refreshManagers(string calldata role, address newManager) external {}
-
 }

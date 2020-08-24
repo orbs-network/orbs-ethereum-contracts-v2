@@ -129,52 +129,32 @@ describe('contract-registry-high-level-flows', async () => {
     expect(await c3.refreshContractsCount()).to.bignumber.eq(bn(0));
   });
 
-  it('sets and unsets roles, notifies only managed', async () => {
+  it('sets and unsets roles', async () => {
     const d = await Driver.new()
 
-    const registry = await d.web3.deploy('ContractRegistry' as any, []);
-    const contract = () => d.web3.deploy('ManagedContract' as any, [registry.address, d.registryManager.address]);
-
-    const c1 = await contract();
-    expect(await c1.refreshManagersCount()).to.bignumber.eq(bn(0));
-
-    await registry.setContracts([contractId("c1")], [c1.address], [true]);
-    expect(await c1.refreshManagersCount()).to.bignumber.eq(bn(0));
-
     const m1 = d.newParticipant().address;
-    await registry.setManager("role1", m1);
-    expect(await c1.refreshManagersCount()).to.bignumber.eq(bn(1));
+    let r = await d.contractRegistry.setManager("role1", m1);
+    expect(r).to.have.a.managerChangedEvent({
+        role: "role1",
+        newManager: m1
+    });
+    expect(await d.contractRegistry.getManager("role1")).to.eq(m1);
 
-    const c2 = await contract();
-    expect(await c2.refreshManagersCount()).to.bignumber.eq(bn(0));
+    r = await d.contractRegistry.setManager("role1", ZERO_ADDR);
+    expect(r).to.have.a.managerChangedEvent({
+      role: "role1",
+      newManager: ZERO_ADDR
+    });
+    expect(await d.contractRegistry.getManager("role1")).to.eq(ZERO_ADDR);
 
-    const c3 = await contract();
-    expect(await c3.refreshManagersCount()).to.bignumber.eq(bn(0));
-
-    await registry.setContracts([contractId("c2"), contractId("c3")], [c2.address, c3.address], [true, false]);
-    expect(await c1.refreshManagersCount()).to.bignumber.eq(bn(1));
-    expect(await c1.notifiedRole(1)).to.eq("role1");
-    expect(await c1.notifiedManager(1)).to.eq(m1);
-    expect(await c2.refreshManagersCount()).to.bignumber.eq(bn(0));
-    expect(await c3.refreshManagersCount()).to.bignumber.eq(bn(0));
-
-    await registry.setManager("role1", ZERO_ADDR);
-    expect(await c1.refreshManagersCount()).to.bignumber.eq(bn(2));
-    expect(await c1.notifiedRole(2)).to.eq("role1");
-    expect(await c1.notifiedManager(2)).to.eq(ZERO_ADDR);
-    expect(await c2.refreshManagersCount()).to.bignumber.eq(bn(1));
-    expect(await c2.notifiedRole(1)).to.eq("role1");
-    expect(await c2.notifiedManager(1)).to.eq(ZERO_ADDR);
-    expect(await c3.refreshManagersCount()).to.bignumber.eq(bn(0));
-
-    await registry.setContracts([contractId("c2")], [ZERO_ADDR], [false]);
     const m2 = d.newParticipant().address;
-    await registry.setManager("role2", m2);
-    expect(await c1.refreshManagersCount()).to.bignumber.eq(bn(3));
-    expect(await c1.notifiedRole(3)).to.eq("role2");
-    expect(await c1.notifiedManager(3)).to.eq(m2);
-    expect(await c2.refreshManagersCount()).to.bignumber.eq(bn(1));
-    expect(await c3.refreshManagersCount()).to.bignumber.eq(bn(0));
+    r = await d.contractRegistry.setManager("role2", m2);
+    expect(r).to.have.a.managerChangedEvent({
+      role: "role2",
+      newManager: m2
+    });
+    expect(await d.contractRegistry.getManager("role2")).to.eq(m2);
+
   });
 
 });
