@@ -39,7 +39,7 @@ describe('protocol-contract', async () => {
     const d = await Driver.new();
 
     const newOwner = d.newParticipant();
-    await expectRejected(d.protocol.transferRegistryManagement(newOwner.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.protocol.transferRegistryManagement(newOwner.address, {from: d.functionalManager.address}), /caller is not the registryManager/);
     await d.protocol.transferRegistryManagement(newOwner.address, {from: d.registryManager.address});
 
   });
