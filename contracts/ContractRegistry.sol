@@ -13,7 +13,7 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 	mapping (string => address) managers;
 
 	modifier onlyManager {
-		require(msg.sender == registryManager() || msg.sender == initializationManager(), "caller is not the registryManager");
+		require(msg.sender == registryManager() || msg.sender == initializationManager(), "sender is not an admin (registryManager or initializationManager)");
 
 		_;
 	}

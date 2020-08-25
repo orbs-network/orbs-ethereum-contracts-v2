@@ -217,7 +217,7 @@ contract Committee is ICommittee, ManagedContract {
 		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager, uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) Lockable(_contractRegistry, _registryManager) public {
+	constructor(IContractRegistry _contractRegistry, address _registryManager, uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryManager) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(_maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		settings = Settings({

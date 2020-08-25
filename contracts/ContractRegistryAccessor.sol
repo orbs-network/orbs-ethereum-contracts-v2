@@ -8,6 +8,12 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     IContractRegistry contractRegistry;
 
+    modifier onlyAdmin {
+        require(isAdmin(), "sender is not an admin (registryManger or initializationManager)");
+
+        _;
+    }
+
     function isManager(string memory role) internal view returns (bool) {
         IContractRegistry _contractRegistry = contractRegistry;
         return isAdmin() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
@@ -25,8 +31,7 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     event ContractRegistryAddressUpdated(address addr);
 
-    function setContractRegistry(IContractRegistry _contractRegistry) public {
-        require(isAdmin(), "caller is not the registryManager");
+    function setContractRegistry(IContractRegistry _contractRegistry) public onlyAdmin {
         contractRegistry = _contractRegistry;
         emit ContractRegistryAddressUpdated(address(_contractRegistry));
     }

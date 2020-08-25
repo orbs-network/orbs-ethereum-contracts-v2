@@ -21,7 +21,7 @@ contract ProtocolWallet is IProtocolWallet, ManagedContract {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client) Lockable(_contractRegistry, _registryManager) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client) ManagedContract(_contractRegistry, _registryManager) public {
         token = _token;
         client = _client;
         lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?

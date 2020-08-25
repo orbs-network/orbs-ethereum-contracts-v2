@@ -80,6 +80,7 @@ contract WithClaimableRegistryManagement is Context {
     function transferRegistryManagement(address newRegistryManager) public onlyRegistryManager {
         pendingRegistryManager = newRegistryManager;
     }
+
     /**
      * @dev Allows the pendingRegistryManager address to finalize the transfer.
      */

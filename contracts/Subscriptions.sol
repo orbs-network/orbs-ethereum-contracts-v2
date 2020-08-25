@@ -38,7 +38,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     IERC20 public erc20;
 
-    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20) Lockable(_contractRegistry, _registryManager) public {
+    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         nextVcid = 1000000;

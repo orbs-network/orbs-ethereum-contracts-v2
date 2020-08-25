@@ -4,6 +4,8 @@ import "./Lockable.sol";
 
 contract ManagedContract is Lockable {
 
+    constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
+
     modifier onlyMigrationManager {
         require(isManager("migrationManager"), "sender is not the migration manager");
 
@@ -21,6 +23,5 @@ contract ManagedContract is Lockable {
 
         _;
     }
-
 
 }

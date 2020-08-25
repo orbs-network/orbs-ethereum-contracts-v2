@@ -10,7 +10,7 @@ contract Certification is ICertification, ManagedContract {
 
     mapping (address => bool) guardianCertification;
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryManager) ManagedContract(_contractRegistry, _registryManager) public {}
 
     /*
      * External methods

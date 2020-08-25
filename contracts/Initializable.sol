@@ -4,6 +4,8 @@ contract Initializable {
 
     address public _initializationManager;
 
+    event InitializationComplete();
+
     constructor() public{
         _initializationManager = msg.sender;
     }
@@ -14,7 +16,7 @@ contract Initializable {
 
     function initializationComplete() external {
         require(msg.sender == initializationManager(), "caller is not the initialization manager");
-
         _initializationManager = address(0);
+        emit InitializationComplete();
     }
 }
