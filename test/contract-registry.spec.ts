@@ -221,20 +221,32 @@ describe('contract-registry-high-level-flows', async () => {
 
   it('sets a new registry only if new points at previous', async () => {
     const d = await Driver.new();
+
     expect(await d.contractRegistry.getPreviousContractRegistry()).to.eq(ZERO_ADDR);
+
+    const testManaged = await d.web3.deploy('ManagedContractTest' as any, [d.contractRegistry.address, d.registryManager.address]);
+    await d.contractRegistry.setContract('ManagedContractTest', testManaged.address, true, {from: d.registryManager.address});
 
     const invalidNewRegistry = await d.web3.deploy('ContractRegistry', [d.newParticipant().address, d.registryManager.address]);
     await expectRejected(d.contractRegistry.setNewContractRegistry(invalidNewRegistry.address, {from: d.contractsNonOwnerAddress}), /sender is not an admin/);
     await expectRejected(d.contractRegistry.setNewContractRegistry(invalidNewRegistry.address, {from: d.registryManager.address}), /must provide the previous contract registry/);
 
+    expect(await testManaged.delegations()).to.eq(d.delegations.address);
+
     const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryManager.address]);
     let r = await d.contractRegistry.setNewContractRegistry(newRegistry.address, {from: d.registryManager.address});
-
     const managedContracts = await d.contractRegistry.getManagedContracts();
     for (const managedAddr of managedContracts) {
       const contract = d.web3.getExisting('ManagedContract' as any, managedAddr);
       expect(r).to.have.withinContract(contract).a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
     }
+
+    expect(await testManaged.delegations()).to.eq(ZERO_ADDR);
+
+    await newRegistry.setContract('delegations', d.delegations.address, true, {from: d.registryManager.address});
+    await newRegistry.setContract('ManagedContractTest', testManaged.address, true, {from: d.registryManager.address});
+
+    expect(await testManaged.delegations()).to.eq(d.delegations.address);
   });
 
 });
