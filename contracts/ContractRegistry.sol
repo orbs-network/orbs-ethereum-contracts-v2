@@ -7,6 +7,8 @@ import "./Initializable.sol";
 
 contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegistryManagement {
 
+	IContractRegistry previousContractRegistry;
+
 	mapping (string => address) contracts;
 	address[] managedContractAddresses;
 
@@ -18,8 +20,13 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 		_;
 	}
 
-	constructor (address registryManager) public {
+	constructor (IContractRegistry _previousContractRegistry, address registryManager) public {
+		previousContractRegistry = _previousContractRegistry;
 		_transferRegistryManagement(registryManager);
+	}
+
+	function getPreviousContractRegistry() external view returns (IContractRegistry) {
+		return previousContractRegistry;
 	}
 
 	function setContract(string calldata contractName, address addr, bool managedContract) external onlyManager {
@@ -86,4 +93,10 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 		return managers[role]; // todo - allow zero address?
 	}
 
+	function setNewContractRegistry(IContractRegistry newRegistry) external onlyManager {
+		for (uint i = 0; i < managedContractAddresses.length; i++) {
+			IContractRegistryListener(managedContractAddresses[i]).setContractRegistry(newRegistry);
+			IContractRegistryListener(managedContractAddresses[i]).refreshContracts();
+		}
+	}
 }

@@ -23,4 +23,8 @@ interface IContractRegistry {
 
 	function unlockContracts() external /* onlyAdmin */;
 
+	function setNewContractRegistry(IContractRegistry newRegistry) external /* onlyAdmin */;
+
+	function getPreviousContractRegistry() external view returns (IContractRegistry);
+
 }

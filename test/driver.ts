@@ -200,7 +200,7 @@ export class Driver {
         const contractRegistry = options.contractRegistryAddress ?
             await web3.getExisting('ContractRegistry', options.contractRegistryAddress, session)
             :
-            await web3.deploy('ContractRegistry', [registryManager], null, session);
+            await web3.deploy('ContractRegistry', [ZERO_ADDR, registryManager], null, session);
 
         const delegations = options.delegationsAddress ?
             await web3.getExisting('Delegations', options.delegationsAddress, session)

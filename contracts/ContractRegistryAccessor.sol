@@ -20,7 +20,7 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
     }
 
     function isAdmin() internal view returns (bool) {
-        return msg.sender == registryManager() || msg.sender == initializationManager();
+        return msg.sender == registryManager() || msg.sender == initializationManager() || msg.sender == address(contractRegistry);
     }
 
     constructor(IContractRegistry _contractRegistry, address _registryManager) public {
@@ -31,9 +31,10 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     event ContractRegistryAddressUpdated(address addr);
 
-    function setContractRegistry(IContractRegistry _contractRegistry) public onlyAdmin {
-        contractRegistry = _contractRegistry;
-        emit ContractRegistryAddressUpdated(address(_contractRegistry));
+    function setContractRegistry(IContractRegistry newContractRegistry) public onlyAdmin {
+        require(newContractRegistry.getPreviousContractRegistry() == contractRegistry, "new contract registry must provide the previous contract registry");
+        contractRegistry = newContractRegistry;
+        emit ContractRegistryAddressUpdated(address(newContractRegistry));
     }
 
     function getProtocolContract() internal view returns (address) {
