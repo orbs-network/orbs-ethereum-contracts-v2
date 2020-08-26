@@ -5,7 +5,7 @@ import "../ManagedContract.sol";
 
 contract ManagedContractTest is ManagedContract {
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) ManagedContract(_contractRegistry, _registryManager) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
 
     uint public refreshContractsCount;
 

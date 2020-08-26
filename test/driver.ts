@@ -199,19 +199,19 @@ export class Driver {
         } = Object.assign({}, defaultDriverOptions, options);
 
         const initManager = accounts[0];
-        const registryManager = accounts[1];
+        const registryAdmin = accounts[1];
         const migrationManager = accounts[2];
         const functionalManager = accounts[3];
 
         const contractRegistry = options.contractRegistryAddress ?
             await web3.getExisting('ContractRegistry', options.contractRegistryAddress, session)
             :
-            await web3.deploy('ContractRegistry', [ZERO_ADDR, registryManager], null, session);
+            await web3.deploy('ContractRegistry', [ZERO_ADDR, registryAdmin], null, session);
 
         const delegations = options.delegationsAddress ?
             await web3.getExisting('Delegations', options.delegationsAddress, session)
             :
-            await web3.deploy("Delegations", [contractRegistry.address, registryManager], null, session);
+            await web3.deploy("Delegations", [contractRegistry.address, registryAdmin], null, session);
 
         const externalToken = options.bootstrapTokenAddress ?
             await web3.getExisting('TestingERC20', options.bootstrapTokenAddress, session)
@@ -226,7 +226,7 @@ export class Driver {
         const stakingContractHandler = options.stakingContractHandlerAddress ?
             await web3.getExisting('StakingContractHandler', options.stakingContractHandlerAddress, session)
             :
-            await web3.deploy('StakingContractHandler', [contractRegistry.address, registryManager], null, session);
+            await web3.deploy('StakingContractHandler', [contractRegistry.address, registryAdmin], null, session);
 
         const staking = options.stakingContractAddress ?
             await web3.getExisting('StakingContract', options.stakingContractAddress, session)
@@ -236,7 +236,7 @@ export class Driver {
         const rewards = options.rewardsAddress ?
             await web3.getExisting('Rewards', options.rewardsAddress, session)
             :
-            await web3.deploy('Rewards', [contractRegistry.address, registryManager, erc20.address, externalToken.address,
+            await web3.deploy('Rewards', [contractRegistry.address, registryAdmin, erc20.address, externalToken.address,
                 generalCommitteeAnnualBootstrap,
                 certifiedCommitteeAnnualBootstrap,
                 stakingRewardsAnnualRateInPercentMille,
@@ -247,75 +247,75 @@ export class Driver {
         const elections = options.electionsAddress ?
             await web3.getExisting('Elections', options.electionsAddress, session)
             :
-            await web3.deploy("Elections", [contractRegistry.address, registryManager, minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
+            await web3.deploy("Elections", [contractRegistry.address, registryAdmin, minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
 
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
             :
-            await web3.deploy('Subscriptions', [contractRegistry.address, registryManager, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment], null, session);
+            await web3.deploy('Subscriptions', [contractRegistry.address, registryAdmin, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment], null, session);
 
         const protocol = options.protocolAddress ?
             await web3.getExisting('Protocol', options.protocolAddress, session)
             :
-            await web3.deploy('Protocol', [contractRegistry.address, registryManager], null, session);
+            await web3.deploy('Protocol', [contractRegistry.address, registryAdmin], null, session);
 
         const certification = options.certificationAddress ?
             await web3.getExisting('Certification', options.certificationAddress, session)
             :
-            await web3.deploy('Certification', [contractRegistry.address, registryManager], null, session);
+            await web3.deploy('Certification', [contractRegistry.address, registryAdmin], null, session);
 
         const committee = options.committeeAddress ?
             await web3.getExisting('Committee', options.committeeAddress, session)
             :
-            await web3.deploy('Committee', [contractRegistry.address, registryManager, maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
+            await web3.deploy('Committee', [contractRegistry.address, registryAdmin, maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
 
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, erc20.address, rewards.address, stakingRewardsWalletRate], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryAdmin, erc20.address, rewards.address, stakingRewardsWalletRate], null, session);
 
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, externalToken.address, rewards.address, bootstrapRewardsWalletRate], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryAdmin, externalToken.address, rewards.address, bootstrapRewardsWalletRate], null, session);
 
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
             :
-            await web3.deploy('GuardiansRegistration', [contractRegistry.address, registryManager, ZERO_ADDR, []], null, session);
+            await web3.deploy('GuardiansRegistration', [contractRegistry.address, registryAdmin, ZERO_ADDR, []], null, session);
 
         const generalFeesWallet = options.generalFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.generalFeesWalletAddress, session)
             :
-            await web3.deploy('FeesWallet', [contractRegistry.address, registryManager, erc20.address], null, session);
+            await web3.deploy('FeesWallet', [contractRegistry.address, registryAdmin, erc20.address], null, session);
 
         const certifiedFeesWallet = options.certifiedFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.certifiedFeesWalletAddress, session)
             :
-            await web3.deploy('FeesWallet', [contractRegistry.address, registryManager, erc20.address], null, session);
+            await web3.deploy('FeesWallet', [contractRegistry.address, registryAdmin, erc20.address], null, session);
 
         await Promise.all([
-            contractRegistry.setContract("staking", staking.address, false, {from: registryManager}),
-            contractRegistry.setContract("rewards", rewards.address, true, {from: registryManager}),
-            contractRegistry.setContract("delegations", delegations.address, true, {from: registryManager}),
-            contractRegistry.setContract("elections", elections.address, true, {from: registryManager}),
-            contractRegistry.setContract("subscriptions", subscriptions.address, true, {from: registryManager}),
-            contractRegistry.setContract("protocol", protocol.address, true, {from: registryManager}),
-            contractRegistry.setContract("certification", certification.address, true, {from: registryManager}),
-            contractRegistry.setContract("guardiansRegistration", guardiansRegistration.address, true, {from: registryManager}),
-            contractRegistry.setContract("committee", committee.address, true, {from: registryManager}),
-            contractRegistry.setContract("stakingRewardsWallet", stakingRewardsWallet.address, false, {from: registryManager}),
-            contractRegistry.setContract("bootstrapRewardsWallet", bootstrapRewardsWallet.address, false, {from: registryManager}),
-            contractRegistry.setContract("generalFeesWallet", generalFeesWallet.address, true, {from: registryManager}),
-            contractRegistry.setContract("certifiedFeesWallet", certifiedFeesWallet.address, true, {from: registryManager}),
-            contractRegistry.setContract("stakingContractHandler", stakingContractHandler.address, true, {from: registryManager}),
+            contractRegistry.setContract("staking", staking.address, false, {from: registryAdmin}),
+            contractRegistry.setContract("rewards", rewards.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("delegations", delegations.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("elections", elections.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("subscriptions", subscriptions.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("protocol", protocol.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("certification", certification.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("guardiansRegistration", guardiansRegistration.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("committee", committee.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("stakingRewardsWallet", stakingRewardsWallet.address, false, {from: registryAdmin}),
+            contractRegistry.setContract("bootstrapRewardsWallet", bootstrapRewardsWallet.address, false, {from: registryAdmin}),
+            contractRegistry.setContract("generalFeesWallet", generalFeesWallet.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("certifiedFeesWallet", certifiedFeesWallet.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("stakingContractHandler", stakingContractHandler.address, true, {from: registryAdmin}),
 
-            contractRegistry.setContract("_bootstrapToken", externalToken.address, false, {from: registryManager}),
-            contractRegistry.setContract("_erc20", erc20.address, false, {from: registryManager}),
+            contractRegistry.setContract("_bootstrapToken", externalToken.address, false, {from: registryAdmin}),
+            contractRegistry.setContract("_erc20", erc20.address, false, {from: registryAdmin}),
         ]);
 
-        await contractRegistry.setManager("migrationManager", migrationManager, {from: registryManager});
-        await contractRegistry.setManager("functionalManager", functionalManager, {from: registryManager});
+        await contractRegistry.setManager("migrationManager", migrationManager, {from: registryAdmin});
+        await contractRegistry.setManager("functionalManager", functionalManager, {from: registryAdmin});
 
         if (!(await protocol.deploymentSubsetExists(DEPLOYMENT_SUBSET_MAIN))) {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
@@ -429,11 +429,11 @@ export class Driver {
         return this.accounts[4];
     }
 
-    get initializationManager(): Participant {
+    get initializationAdmin(): Participant {
         return new Participant("initialization-manager", "initialization-manager-website", "initialization-manager-contact", this.accounts[0], this.accounts[0], this);
     }
 
-    get registryManager(): Participant {
+    get registryAdmin(): Participant {
         return new Participant("registry-manager", "registry-manager-website", "registry-manager-contact", this.accounts[1], this.accounts[1], this);
     }
 
@@ -448,7 +448,7 @@ export class Driver {
     subscribers: any[] = [];
 
     async newSubscriber(tier: string, monthlyRate:number|BN): Promise<MonthlySubscriptionPlanContract> {
-        const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.contractRegistry.address, this.registryManager.address, this.erc20.address, tier, monthlyRate], null, this.session);
+        const subscriber = await this.web3.deploy('MonthlySubscriptionPlan', [this.contractRegistry.address, this.registryAdmin.address, this.erc20.address, tier, monthlyRate], null, this.session);
         await this.subscriptions.addSubscriber(subscriber.address, {from: this.functionalManager.address});
         this.subscribers.push(subscriber);
         return subscriber;

@@ -46,7 +46,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     constructor(
         IContractRegistry _contractRegistry,
-        address _registryManager,
+        address _registryAdmin,
         IERC20 _erc20,
         IERC20 _bootstrapToken,
         uint48 generalCommitteeAnnualBootstrap,
@@ -54,7 +54,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint48 annualRateInPercentMille,
         uint48 annualCap,
         uint32 maxDelegatorsStakingRewardsPercentMille
-    ) ManagedContract(_contractRegistry, _registryManager) public {
+    ) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
@@ -221,7 +221,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint256 nextTxIndex;
         uint split;
     }
-    mapping (address => DistributorBatchState) distributorBatchState;
+    mapping (address => DistributorBatchState) public distributorBatchState;
 
     function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
         return delegatorRewards.mul(100000) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors

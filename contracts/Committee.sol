@@ -217,7 +217,7 @@ contract Committee is ICommittee, ManagedContract {
 		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager, uint8 _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryManager) public {
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint8 _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryAdmin) public {
 		committee.length = MAX_COMMITTEE_ARRAY_SIZE;
 
 		setMaxCommitteeSize(_maxCommitteeSize);

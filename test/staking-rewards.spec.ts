@@ -822,14 +822,14 @@ describe('staking-rewards', async () => {
     expect(r).to.not.have.a.stakingRewardsBalanceMigratedEvent();
     expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
 
-    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.registryManager.address, d.erc20.address, d.bootstrapToken.address,
+    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address, d.bootstrapToken.address,
       defaultDriverOptions.generalCommitteeAnnualBootstrap,
       defaultDriverOptions.certifiedCommitteeAnnualBootstrap,
       defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
       defaultDriverOptions.stakingRewardsAnnualCap,
       defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille
     ], null, d.session);
-    await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryManager.address});
+    await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
     // migrating to the new contract
     r = await d.rewards.migrateStakingRewardsBalance(v1.address);
