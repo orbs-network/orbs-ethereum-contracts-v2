@@ -38,12 +38,13 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     IERC20 public erc20;
 
-    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20) ManagedContract(_contractRegistry, _registryManager) public {
+    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         nextVcid = 1000000;
-        genesisRefTimeDelay = 3 hours;
-        erc20 = _erc20;
+
+        setGenesisRefTimeDelay(_genesisRefTimeDelay);
+        setMinimumInitialVcPayment(_minimumInitialVcPayment);
     }
 
     function setVcConfigRecord(uint256 vcid, string calldata key, string calldata value) external onlyWhenActive {
@@ -121,12 +122,12 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit Payment(vcid, payer, amount, vc.tier, vc.rate);
     }
 
-    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external onlyFunctionalManager onlyWhenActive {
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public onlyFunctionalManager onlyWhenActive {
         genesisRefTimeDelay = newGenesisRefTimeDelay;
         emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
     }
 
-    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) external onlyFunctionalManager {
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public onlyFunctionalManager {
         minimumInitialVcPayment = newMinimumInitialVcPayment;
         emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
     }

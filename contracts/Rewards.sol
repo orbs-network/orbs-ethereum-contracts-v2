@@ -19,7 +19,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
-        uint48 certificationCommitteeAnnualBootstrap;
+        uint48 certifiedCommitteeAnnualBootstrap;
         uint48 annualRateInPercentMille;
         uint48 annualCap;
         uint32 maxDelegatorsStakingRewardsPercentMille;
@@ -44,9 +44,24 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, IERC20 _bootstrapToken) ManagedContract(_contractRegistry, _registryManager) public {
+    constructor(
+        IContractRegistry _contractRegistry,
+        address _registryManager,
+        IERC20 _erc20,
+        IERC20 _bootstrapToken,
+        uint48 generalCommitteeAnnualBootstrap,
+        uint48 certifiedCommitteeAnnualBootstrap,
+        uint48 annualRateInPercentMille,
+        uint48 annualCap,
+        uint32 maxDelegatorsStakingRewardsPercentMille
+    ) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
+
+        setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap);
+        setCertifiedCommitteeAnnualBootstrap(certifiedCommitteeAnnualBootstrap);
+        setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
+        setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille);
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
@@ -57,18 +72,38 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalManager onlyWhenActive {
-        settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) public onlyFunctionalManager onlyWhenActive {
+        settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount); // TODO event
     }
 
-    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external onlyFunctionalManager onlyWhenActive {
-        settings.certificationCommitteeAnnualBootstrap = toUint48Granularity(annual_amount);
+    function setCertifiedCommitteeAnnualBootstrap(uint256 annual_amount) public onlyFunctionalManager onlyWhenActive {
+        settings.certifiedCommitteeAnnualBootstrap = toUint48Granularity(annual_amount); // TODO event
     }
 
-    function setMaxDelegatorsStakingRewards(uint32 maxDelegatorsStakingRewardsPercentMille) external onlyFunctionalManager onlyWhenActive {
+    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public onlyFunctionalManager onlyWhenActive {
         require(maxDelegatorsStakingRewardsPercentMille <= 100000, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
         settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
         emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
+    }
+
+    function getGeneralCommitteeAnnualBootstrap() external view returns (uint256) {
+        return uint256(settings.generalCommitteeAnnualBootstrap);
+    }
+
+    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256) {
+        return uint256(settings.certifiedCommitteeAnnualBootstrap);
+    }
+
+    function getMaxDelegatorsStakingRewardsPercentMille() public view returns (uint256) {
+        return uint256(settings.maxDelegatorsStakingRewardsPercentMille);
+    }
+
+    function getAnnualStakingRewardsRate() external view returns (uint256) {
+        return uint256(settings.annualRateInPercentMille);
+    }
+
+    function getAnnualStakingRewardsCap() external view returns (uint256) {
+        return uint256(settings.annualCap);
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
@@ -127,7 +162,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalGuardianBootstrap, uint256 certifiedGuardianBootstrap){
         uint256 duration = now.sub(lastAssignedAt);
         generalGuardianBootstrap = toUint256Granularity(uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
-        certifiedGuardianBootstrap = generalGuardianBootstrap + toUint256Granularity(uint48(_settings.certificationCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        certifiedGuardianBootstrap = generalGuardianBootstrap + toUint256Granularity(uint48(_settings.certifiedCommitteeAnnualBootstrap.mul(duration).div(365 days)));
     }
 
     function withdrawBootstrapFunds(address guardian) external {
@@ -139,11 +174,13 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external onlyFunctionalManager onlyWhenActive {
+    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) public onlyFunctionalManager onlyWhenActive {
         Settings memory _settings = settings;
         _settings.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
         _settings.annualCap = toUint48Granularity(annual_cap);
         settings = _settings;
+
+        // TODO event
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {

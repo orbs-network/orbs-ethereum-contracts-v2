@@ -36,4 +36,6 @@ interface IProtocolWallet {
 
     /// @dev sets the address of the new contract
     function setClient(address client) external; /* onlyFunctionalManager */
+
+    function getMaxAnnualRate() external view returns (uint256);
 }

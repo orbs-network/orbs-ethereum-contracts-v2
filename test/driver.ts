@@ -34,7 +34,7 @@ export type DriverOptions = {
     voteOutThreshold: number;
 
     generalCommitteeAnnualBootstrap: number;
-    certificationCommitteeAnnualBootstrap: number;
+    certifiedCommitteeAnnualBootstrap: number;
     stakingRewardsAnnualRateInPercentMille: number;
     stakingRewardsAnnualCap: number;
     maxDelegatorsStakingRewardsPercentMille: number;
@@ -46,6 +46,7 @@ export type DriverOptions = {
     subscriptionRate: number;
 
     genesisRefTimeDelay?: number;
+    minimumInitialVcPayment: number;
 
     web3Provider : () => Web3;
 
@@ -79,10 +80,12 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     voteOutThreshold : 80,
 
     generalCommitteeAnnualBootstrap: 0,
-    certificationCommitteeAnnualBootstrap: 0,
+    certifiedCommitteeAnnualBootstrap: 0,
     stakingRewardsAnnualRateInPercentMille: 0,
     stakingRewardsAnnualCap: 0,
     maxDelegatorsStakingRewardsPercentMille: 100000,
+
+    minimumInitialVcPayment: 0,
 
     stakingRewardsWalletRate: bn(2).pow(bn(94)).sub(bn(1)),
     bootstrapRewardsWalletRate: bn(2).pow(bn(94)).sub(bn(1)),
@@ -106,7 +109,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
 
     // Rewards
     generalCommitteeAnnualBootstrap: bn(12).mul(bn(10).pow(bn(18))),
-    certificationCommitteeAnnualBootstrap: bn(6).mul(bn(10).pow(bn(18))),
+    certifiedCommitteeAnnualBootstrap: bn(6).mul(bn(10).pow(bn(18))),
     stakingRewardsAnnualRateInPercentMille: 12000,
     stakingRewardsAnnualCap: bn(12000).mul(bn(10).pow(bn(18))),
     maxDelegatorsStakingRewardsPercentMille: 66667,
@@ -122,6 +125,8 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     orbsTokenAddress: "0xff56Cc6b1E6dEd347aA0B7676C85AB0B3D08B0FA",
     bootstrapTokenAddress: "0x6b175474e89094c44da98b954eedeac495271d0f",
     stakingContractAddress: "0x01D59Af68E2dcb44e04C50e05F62E7043F2656C3",
+
+    minimumInitialVcPayment: 0,
 
     web3Provider: defaultWeb3Provider,
 };
@@ -178,7 +183,7 @@ export class Driver {
             minSelfStakePercentMille, voteOutThreshold, voteUnreadyTimeout, voteUnreadyThreshold,
             maxTimeBetweenRewardAssignments,
             generalCommitteeAnnualBootstrap,
-            certificationCommitteeAnnualBootstrap,
+            certifiedCommitteeAnnualBootstrap,
             stakingRewardsAnnualRateInPercentMille,
             stakingRewardsAnnualCap,
             maxDelegatorsStakingRewardsPercentMille,
@@ -189,7 +194,8 @@ export class Driver {
             subscriptionTier,
             subscriptionRate,
 
-            genesisRefTimeDelay
+            genesisRefTimeDelay,
+            minimumInitialVcPayment
         } = Object.assign({}, defaultDriverOptions, options);
 
         const initManager = accounts[0];
@@ -230,7 +236,13 @@ export class Driver {
         const rewards = options.rewardsAddress ?
             await web3.getExisting('Rewards', options.rewardsAddress, session)
             :
-            await web3.deploy('Rewards', [contractRegistry.address, registryManager, erc20.address, externalToken.address], null, session);
+            await web3.deploy('Rewards', [contractRegistry.address, registryManager, erc20.address, externalToken.address,
+                generalCommitteeAnnualBootstrap,
+                certifiedCommitteeAnnualBootstrap,
+                stakingRewardsAnnualRateInPercentMille,
+                stakingRewardsAnnualCap,
+                maxDelegatorsStakingRewardsPercentMille
+            ], null, session);
 
         const elections = options.electionsAddress ?
             await web3.getExisting('Elections', options.electionsAddress, session)
@@ -240,7 +252,7 @@ export class Driver {
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
             :
-            await web3.deploy('Subscriptions', [contractRegistry.address, registryManager, erc20.address], null, session);
+            await web3.deploy('Subscriptions', [contractRegistry.address, registryManager, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment], null, session);
 
         const protocol = options.protocolAddress ?
             await web3.getExisting('Protocol', options.protocolAddress, session)
@@ -260,12 +272,12 @@ export class Driver {
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, erc20.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, erc20.address, rewards.address, stakingRewardsWalletRate], null, session);
 
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, externalToken.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, externalToken.address, rewards.address, bootstrapRewardsWalletRate], null, session);
 
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
@@ -306,19 +318,6 @@ export class Driver {
         await contractRegistry.setManager("functionalManager", functionalManager);
 
         await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
-
-        // TODO remove when setting in constructor
-        await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: functionalManager});
-        await rewards.setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap, {from: functionalManager});
-        await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: functionalManager});
-        await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: functionalManager});
-
-        await stakingRewardsWallet.setMaxAnnualRate(stakingRewardsWalletRate);
-        await bootstrapRewardsWallet.setMaxAnnualRate(bootstrapRewardsWalletRate);
-
-        if (genesisRefTimeDelay != null) {
-            await subscriptions.setGenesisRefTimeDelay(genesisRefTimeDelay);
-        }
 
         await Promise.all([
             contractRegistry.initializationComplete(),

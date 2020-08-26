@@ -28,6 +28,10 @@ export interface ElectionsContract extends OwnedContract {
     number|BN /* banningPercentageThreshold */
   ]>;
 
+  getVoteUnreadyTimeoutSeconds(): Promise<number>;
+  getMinSelfStakePercentMille(): Promise<number>;
+  getVoteUnreadyPercentageThreshold(): Promise<number>;
+  getVoteOutPercentageThreshold(): Promise<number>;
 }
 
 export interface StakeChangeEvent {

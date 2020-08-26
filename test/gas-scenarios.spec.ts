@@ -41,7 +41,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
-    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.rewards.setCertifiedCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
     tlog("Bootstrap pools topped up");
 
     let committee: Participant[] = [];

@@ -2,7 +2,7 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {Driver} from "./driver";
+import {defaultDriverOptions, Driver} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));
@@ -11,6 +11,7 @@ chai.use(require('./matchers'));
 const expect = chai.expect;
 
 import {bn, evmIncreaseTime, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
+import {inspect} from "util";
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
@@ -200,6 +201,11 @@ describe('protocol-contract', async () => {
     r = await d.stakingRewardsWallet.withdraw(1, {from: client.address});
     expect(r).to.have.a.transferEvent();
   });
+
+  it('gets maxAnnualRate', async () => {
+    const d = await Driver.new();
+    expect(await d.stakingRewardsWallet.getMaxAnnualRate()).to.bignumber.eq(defaultDriverOptions.stakingRewardsWalletRate);
+  })
 
 });
 

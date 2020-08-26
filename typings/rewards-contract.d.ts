@@ -60,7 +60,7 @@ export interface RewardsContract extends OwnedContract {
     // staking rewards
     distributeStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
-    setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
+    setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;
     migrateStakingRewardsBalance(guardian: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -68,7 +68,7 @@ export interface RewardsContract extends OwnedContract {
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-    setCertificationCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setCertifiedCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     withdrawBootstrapFunds(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getBootstrapBalance(address: string): Promise<string>;
@@ -82,4 +82,9 @@ export interface RewardsContract extends OwnedContract {
     emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+
+    getCertifiedCommitteeAnnualBootstrap(): Promise<string>;
+    getMaxDelegatorsStakingRewardsPercentMille(): Promise<string>;
+    getAnnualStakingRewardsRate(): Promise<string>;
+    getAnnualStakingRewardsCap(): Promise<string>;
 }

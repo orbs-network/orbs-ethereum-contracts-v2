@@ -64,6 +64,14 @@ interface IRewards {
     /// @return The timestamp of the last reward assignment.
     function getLastRewardAssignmentTime() external view returns (uint256 time);
 
+    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256);
+
+    function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint256);
+
+    function getAnnualStakingRewardsRate() external view returns (uint256);
+
+    function getAnnualStakingRewardsCap() external view returns (uint256);
+
     /*
      * Reward-governor methods
      */
@@ -72,7 +80,7 @@ interface IRewards {
     function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
 
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
-    function setCertificationCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
+    function setCertifiedCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
 
     event StakingRewardsBalanceMigrated(address guardian, uint256 amount, address toRewardsContract);
 

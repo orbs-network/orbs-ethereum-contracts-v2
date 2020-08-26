@@ -11,10 +11,7 @@ import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 import {
-    bootstrapRewardsAssignedEvents,
-    gasReportEvents,
     stakingRewardsAssignedEvents,
-    feesAssignedEvents
 } from "./event-parsing";
 
 
@@ -42,7 +39,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
-    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.rewards.setCertifiedCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
@@ -147,5 +144,13 @@ describe('rewards', async () => {
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
         expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
     });
+
+    it('gets settings', async () => {
+        const d = await Driver.new();
+        expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(defaultDriverOptions.certifiedCommitteeAnnualBootstrap.toString());
+        expect(await d.rewards.getMaxDelegatorsStakingRewardsPercentMille()).to.eq(defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsRate()).to.eq(defaultDriverOptions.stakingRewardsAnnualRateInPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(defaultDriverOptions.stakingRewardsAnnualCap.toString());
+    })
 
 });

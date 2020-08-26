@@ -12,8 +12,8 @@ contract ProtocolWallet is IProtocolWallet, ManagedContract {
     IERC20 public token;
     address public client;
 
-    uint lastWithdrawal;
-    uint annualRate;
+    uint public lastWithdrawal;
+    uint public maxAnnualRate;
 
     modifier onlyClient() {
         require(msg.sender == client, "caller is not the wallet client");
@@ -21,10 +21,12 @@ contract ProtocolWallet is IProtocolWallet, ManagedContract {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client) ManagedContract(_contractRegistry, _registryManager) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client, uint256 _maxAnnualRate) ManagedContract(_contractRegistry, _registryManager) public {
         token = _token;
         client = _client;
         lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?
+
+        setMaxAnnualRate(_maxAnnualRate);
     }
 
     /// @dev Returns the address of the underlying staked token.
@@ -49,7 +51,7 @@ contract ProtocolWallet is IProtocolWallet, ManagedContract {
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external onlyClient {
         uint duration = now - lastWithdrawal;
-        uint maxAmount = duration.mul(annualRate).div(365 * 24 * 60 * 60);
+        uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
         require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
         lastWithdrawal = now;
@@ -60,9 +62,13 @@ contract ProtocolWallet is IProtocolWallet, ManagedContract {
 
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.
-    function setMaxAnnualRate(uint256 _annualRate) external onlyMigrationManager {
-        annualRate = _annualRate;
+    function setMaxAnnualRate(uint256 _annualRate) public onlyMigrationManager {
+        maxAnnualRate = _annualRate;
         emit MaxAnnualRateSet(_annualRate);
+    }
+
+    function getMaxAnnualRate() external view returns (uint256) {
+        return maxAnnualRate;
     }
 
     /// @dev Sets a new transfer rate for the Orbs pool.

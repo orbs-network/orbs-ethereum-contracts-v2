@@ -30,7 +30,7 @@ contract Elections is IElections, ManagedContract {
 		uint8 voteUnreadyPercentageThreshold;
 		uint8 voteOutPercentageThreshold;
 	}
-	Settings settings;
+	Settings public settings;
 
 	modifier onlyDelegationsContract() {
 		require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
@@ -45,16 +45,10 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	constructor(IContractRegistry _contractRegistry, address _registryManager, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) ManagedContract(_contractRegistry, _registryManager) public {
-		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be at most 100000");
-		require(voteUnreadyPercentageThreshold >= 0 && voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must be between 0 and 100");
-		require(voteOutPercentageThreshold >= 0 && voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must be between 0 and 100");
-
-		settings = Settings({
-			minSelfStakePercentMille: minSelfStakePercentMille,
-			voteUnreadyPercentageThreshold: voteUnreadyPercentageThreshold,
-			voteUnreadyTimeoutSeconds: voteUnreadyTimeoutSeconds,
-			voteOutPercentageThreshold: voteOutPercentageThreshold
-		});
+		setMinSelfStakePercentMille(minSelfStakePercentMille);
+		setVoteOutPercentageThreshold(voteOutPercentageThreshold);
+		setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold);
+		setVoteUnreadyTimeoutSeconds(voteUnreadyTimeoutSeconds);
 	}
 
 	/// @dev Called by: guardian registration contract
@@ -270,27 +264,43 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.addMember(addr, getCommitteeEffectiveStake(addr, _settings), certificationContract.isGuardianCertified(addr));
 	}
 
-	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) public onlyFunctionalManager /* todo onlyWhenActive */ {
 		emit VoteUnreadyTimeoutSecondsChanged(voteUnreadyTimeoutSeconds, settings.voteUnreadyTimeoutSeconds);
 		settings.voteUnreadyTimeoutSeconds = voteUnreadyTimeoutSeconds;
 	}
 
-	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be 100000 at most");
 		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
 		settings.minSelfStakePercentMille = minSelfStakePercentMille;
 	}
 
-	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) external onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) public onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
 		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
 		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
 	}
 
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) public onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must not be larger than 100");
 		emit VoteUnreadyPercentageThresholdChanged(voteUnreadyPercentageThreshold, settings.voteUnreadyPercentageThreshold);
 		settings.voteUnreadyPercentageThreshold = voteUnreadyPercentageThreshold;
+	}
+
+	function getVoteUnreadyTimeoutSeconds() external view returns (uint32) {
+		return settings.voteUnreadyTimeoutSeconds;
+	}
+
+	function getMinSelfStakePercentMille() external view returns (uint32) {
+		return settings.minSelfStakePercentMille;
+	}
+
+	function getVoteOutPercentageThreshold() external view returns (uint8) {
+		return settings.voteOutPercentageThreshold;
+	}
+
+	function getVoteUnreadyPercentageThreshold() external view returns (uint8) {
+		return settings.voteUnreadyPercentageThreshold;
 	}
 
 	function getSettings() external view returns (

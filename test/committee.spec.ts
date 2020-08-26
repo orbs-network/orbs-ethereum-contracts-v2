@@ -330,8 +330,8 @@ describe('committee', async () => {
             oldValue: maxTimeBetweenRewardAssignments.toString()
         });
 
-        await expectRejected(d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.committee.setMaxCommittee(maxCommitteeSize.sub(bn(1)), {from: d.registryManager.address});
+        await expectRejected(d.committee.setMaxCommitteeSize(maxCommitteeSize.sub(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.committee.setMaxCommitteeSize(maxCommitteeSize.sub(bn(1)), {from: d.registryManager.address});
         expect(r).to.have.a.maxCommitteeSizeChangedEvent({
             newValue: maxCommitteeSize.sub(bn(1)).toString(),
             oldValue: maxCommitteeSize.toString()
@@ -347,14 +347,17 @@ describe('committee', async () => {
             maxTimeBetweenRewardAssignments.add(bn(1)).toString(),
             maxCommitteeSize.sub(bn(1)).toString(),
         ]);
+
+        expect(await d.committee.getMaxCommitteeSize()).to.bignumber.eq(maxCommitteeSize.sub(bn(1)))
+        expect(await d.committee.getMaxTimeBetweenRewardAssignments()).to.bignumber.eq(maxTimeBetweenRewardAssignments.add(bn(1)))
     });
 
     it("validates 0 < maxCommitteeSize <= 32", async () => {
        const d = await Driver.new();
 
-       await d.committee.setMaxCommittee(32, {from: d.functionalManager.address});
-       await expectRejected(d.committee.setMaxCommittee(33, {from: d.functionalManager.address}), /maxCommitteeSize must be 32 at most/);
-       await expectRejected(d.committee.setMaxCommittee(0, {from: d.functionalManager.address}), /maxCommitteeSize must be larger than 0/);
+       await d.committee.setMaxCommitteeSize(32, {from: d.functionalManager.address});
+       await expectRejected(d.committee.setMaxCommitteeSize(33, {from: d.functionalManager.address}), /maxCommitteeSize must be 32 at most/);
+       await expectRejected(d.committee.setMaxCommitteeSize(0, {from: d.functionalManager.address}), /maxCommitteeSize must be larger than 0/);
     });
 
     it("allows only elections to notify committee on changes", async () => {
