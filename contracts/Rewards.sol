@@ -276,7 +276,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, Lockable {
     }
 
     function migrateStakingRewardsBalance(address guardian) external {
-        IRewards currentRewardsContract = getRewardsContract();
+        IRewards currentRewardsContract = IRewards(getRewardsContract());
         if (currentRewardsContract == this) {
             return;
         }
@@ -315,14 +315,14 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, Lockable {
     IProtocolWallet stakingRewardsWallet;
     IProtocolWallet bootstrapRewardsWallet;
     function refreshContracts() external {
-        committeeContract = getCommitteeContract();
-        delegationsContract = getDelegationsContract();
-        guardianRegistrationContract = getGuardiansRegistrationContract();
-        stakingContract = getStakingContract();
-        generalFeesWallet = getGeneralFeesWallet();
-        certifiedFeesWallet = getCertifiedFeesWallet();
-        stakingRewardsWallet = getStakingRewardsWallet();
-        bootstrapRewardsWallet = getBootstrapRewardsWallet();
+        committeeContract = ICommittee(getCommitteeContract());
+        delegationsContract = IDelegations(getDelegationsContract());
+        guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
+        stakingContract = IStakingContract(getStakingContract());
+        generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
+        certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
+        stakingRewardsWallet = IProtocolWallet(getStakingRewardsWallet());
+        bootstrapRewardsWallet = IProtocolWallet(getBootstrapRewardsWallet());
     }
 
 }

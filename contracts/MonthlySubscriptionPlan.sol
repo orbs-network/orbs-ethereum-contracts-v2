@@ -24,7 +24,7 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor {
     function createVC(string calldata name, uint256 amount, bool isCertified, string calldata deploymentSubset) external {
         require(amount > 0, "must include funds");
 
-        ISubscriptions subs = getSubscriptionsContract();
+        ISubscriptions subs = ISubscriptions(getSubscriptionsContract());
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees");
         require(erc20.approve(address(subs), amount), "failed to transfer subscription fees");
         subs.createVC(name, tier, monthlyRate, amount, msg.sender, isCertified, deploymentSubset);
@@ -33,7 +33,7 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor {
     function extendSubscription(uint256 vcid, uint256 amount) external {
         require(amount > 0, "must include funds");
 
-        ISubscriptions subs = getSubscriptionsContract();
+        ISubscriptions subs = ISubscriptions(getSubscriptionsContract());
 
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from vc payer to subscriber");
         require(erc20.approve(address(subs), amount), "failed to approve subscription fees to subscriptions by subscriber");

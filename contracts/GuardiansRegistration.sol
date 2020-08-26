@@ -208,7 +208,7 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 
 	IElections electionsContract;
 	function refreshContracts() external {
-		electionsContract = getElectionsContract();
+		electionsContract = IElections(getElectionsContract());
 	}
 
 }

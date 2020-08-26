@@ -3,6 +3,7 @@ pragma solidity 0.5.16;
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
+import "./interfaces/IElections.sol";
 
 contract Certification is ICertification, Lockable {
 
@@ -26,7 +27,7 @@ contract Certification is ICertification, Lockable {
 
     IElections electionsContract;
     function refreshContracts() external {
-        electionsContract = getElectionsContract();
+        electionsContract = IElections(getElectionsContract());
     }
 
 }
