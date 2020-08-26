@@ -65,20 +65,20 @@ describe('contract-registry-high-level-flows', async () => {
     const d = await Driver.new();
     const subscriber = await d.newSubscriber("tier", 1);
 
-    const newAddr = d.newParticipant().address;
-    await expectRejected(d.elections.setContractRegistry(newAddr, {from: d.functionalManager.address}), /sender is not an admin/);
-    await expectRejected(d.rewards.setContractRegistry(newAddr, {from: d.functionalManager.address}), /sender is not an admin/);
-    await expectRejected(d.subscriptions.setContractRegistry(newAddr, {from: d.functionalManager.address}), /sender is not an admin/);
-    await expectRejected(subscriber.setContractRegistry(newAddr, {from: d.functionalManager.address}), /sender is not an admin/);
+    const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryManager.address]);
+    await expectRejected(d.elections.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.rewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.subscriptions.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(subscriber.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
 
-    let r = await d.elections.setContractRegistry(newAddr, {from: d.registryManager.address});
-    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
-    r = await d.rewards.setContractRegistry(newAddr, {from: d.registryManager.address});
-    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
-    r = await d.subscriptions.setContractRegistry(newAddr, {from: d.registryManager.address});
-    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
-    r = await subscriber.setContractRegistry(newAddr, {from: d.registryManager.address});
-    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newAddr});
+    let r = await d.elections.setContractRegistry(newRegistry.address, {from: d.registryManager.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
+    r = await d.rewards.setContractRegistry(newRegistry.address, {from: d.registryManager.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
+    r = await d.subscriptions.setContractRegistry(newRegistry.address, {from: d.registryManager.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
+    r = await subscriber.setContractRegistry(newRegistry.address, {from: d.registryManager.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
   });
 
   it('sets a manager only by registry manager', async () => {
