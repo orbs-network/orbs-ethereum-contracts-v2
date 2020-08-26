@@ -33,21 +33,24 @@ describe('testkit', async () => {
   it('should instantiate a new driver object using existing tokens and staking contracts', async () => {
     const dd = await Driver.new();
 
-    const stakingContractAddress = dd.newParticipant().address;
-    const orbsTokenAddress =  dd.newParticipant().address;
-    const bootstrapTokenAddress =  dd.newParticipant().address;
+    const stakingContractAddress = dd.staking.address;
+    const orbsTokenAddress =  dd.erc20.address;
+    const bootstrapTokenAddress =  dd.bootstrapToken.address;
 
-    const contractRegistryAddress = dd.newParticipant().address;
-    const delegationsAddress = dd.newParticipant().address;
-    const rewardsAddress = dd.newParticipant().address;
-    const electionsAddress = dd.newParticipant().address;
-    const subscriptionsAddress = dd.newParticipant().address;
-    const protocolAddress = dd.newParticipant().address;
-    const certificationAddress = dd.newParticipant().address;
-    const committeeAddress = dd.newParticipant().address;
-    const stakingRewardsWalletAddress = dd.newParticipant().address;
-    const bootstrapRewardsWalletAddress = dd.newParticipant().address;
-    const guardiansRegistrationAddress = dd.newParticipant().address;
+    const contractRegistryAddress = dd.contractRegistry.address;
+    const delegationsAddress = dd.delegations.address;
+    const rewardsAddress = dd.rewards.address;
+    const electionsAddress = dd.elections.address;
+    const subscriptionsAddress = dd.subscriptions.address;
+    const protocolAddress = dd.protocol.address;
+    const certificationAddress = dd.certification.address;
+    const committeeAddress = dd.committee.address;
+    const stakingRewardsWalletAddress = dd.stakingRewardsWallet.address;
+    const bootstrapRewardsWalletAddress = dd.bootstrapRewardsWallet.address;
+    const generalFeesWalletAddress = dd.generalFeesWallet.address;
+    const certifiedFeesWalletAddress = dd.certifiedFeesWallet.address;
+    const guardiansRegistrationAddress = dd.guardiansRegistration.address;
+    const stakingContractHandlerAddress = dd.stakingContractHandler.address;
 
     const d = await Driver.new({
       stakingContractAddress,
@@ -64,6 +67,9 @@ describe('testkit', async () => {
       stakingRewardsWalletAddress,
       bootstrapRewardsWalletAddress,
       guardiansRegistrationAddress,
+      stakingContractHandlerAddress,
+      certifiedFeesWalletAddress,
+      generalFeesWalletAddress
     });
 
     expect(d.staking.address).to.equal(stakingContractAddress);
@@ -80,7 +86,6 @@ describe('testkit', async () => {
     expect(d.stakingRewardsWallet.address).to.equal(stakingRewardsWalletAddress);
     expect(d.bootstrapRewardsWallet.address).to.equal(bootstrapRewardsWalletAddress);
     expect(d.guardiansRegistration.address).to.equal(guardiansRegistrationAddress);
-
   });
 
 

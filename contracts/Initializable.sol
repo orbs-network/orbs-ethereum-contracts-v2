@@ -19,4 +19,9 @@ contract Initializable {
         _initializationManager = address(0);
         emit InitializationComplete();
     }
+
+    function isInitializationComplete() external view returns (bool) {
+        return _initializationManager == address(0);
+    }
+
 }

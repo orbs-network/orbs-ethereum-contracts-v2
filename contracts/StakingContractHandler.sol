@@ -5,12 +5,13 @@ import "./spec_interfaces/IStakingContractHandler.sol";
 import "./IStakeChangeNotifier.sol";
 import "./IStakingContract.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier, Lockable {
+contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier, ManagedContract {
 
     uint constant NOTIFICATION_GAS_LIMIT = 5000000;
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) public Lockable(_contractRegistry, _registryManager) {}
+    constructor(IContractRegistry _contractRegistry, address _registryManager) public ManagedContract(_contractRegistry, _registryManager) {}
 
     modifier onlyStakingContract() {
         require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
