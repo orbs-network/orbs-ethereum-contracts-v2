@@ -14,8 +14,9 @@ import "./spec_interfaces/IDelegation.sol";
 import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
+import "./ManagedContract.sol";
 
-contract Delegations is IDelegations, IStakeChangeNotifier, Lockable {
+contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
 	using SafeMath for uint96;
 
@@ -35,7 +36,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, Lockable {
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
+	constructor(IContractRegistry _contractRegistry, address _registryManager) ManagedContract(_contractRegistry, _registryManager) public {}
 
 	function getTotalDelegatedStake() external view returns (uint256) {
 		return totalDelegatedStake;

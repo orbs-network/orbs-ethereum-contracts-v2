@@ -8,9 +8,10 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
 import "./interfaces/IElections.sol";
+import "./ManagedContract.sol";
 
 /// @title Elections contract interface
-contract Committee is ICommittee, Lockable {
+contract Committee is ICommittee, ManagedContract {
 	using BytesLib for bytes;
 
 	uint constant MAX_COMMITTEE_ARRAY_SIZE = 32; // Cannot be greater than 32 (number of bytes in bytes32)
@@ -216,7 +217,7 @@ contract Committee is ICommittee, Lockable {
 		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager, uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) Lockable(_contractRegistry, _registryManager) public {
+	constructor(IContractRegistry _contractRegistry, address _registryManager, uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryManager) public {
 		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(_maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		settings = Settings({

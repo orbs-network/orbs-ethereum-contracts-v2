@@ -4,8 +4,9 @@ import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract GuardiansRegistration is IGuardiansRegistration, Lockable {
+contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
 	modifier onlyRegisteredGuardian {
 		require(isRegistered(msg.sender), "Guardian is not registered");
@@ -27,7 +28,7 @@ contract GuardiansRegistration is IGuardiansRegistration, Lockable {
 	mapping (bytes4 => address) public ipToGuardian;
 	mapping (address => mapping(string => string)) public guardianMetadata;
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) Lockable(_contractRegistry, _registryManager) public {
+	constructor(IContractRegistry _contractRegistry, address _registryManager, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) ManagedContract(_contractRegistry, _registryManager) public {
 		require(previousContract != IGuardiansRegistration(0) || guardiansToMigrate.length == 0, "A guardian address list was provided for migration without the previous contract");
 
 		for (uint i = 0; i < guardiansToMigrate.length; i++) {

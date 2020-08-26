@@ -4,12 +4,13 @@ import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 import "./interfaces/IElections.sol";
+import "./ManagedContract.sol";
 
-contract Certification is ICertification, Lockable {
+contract Certification is ICertification, ManagedContract {
 
     mapping (address => bool) guardianCertification;
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryManager) ManagedContract(_contractRegistry, _registryManager) public {}
 
     /*
      * External methods

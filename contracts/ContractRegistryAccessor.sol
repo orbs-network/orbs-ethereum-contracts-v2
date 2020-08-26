@@ -2,33 +2,26 @@ pragma solidity 0.5.16;
 
 import "./spec_interfaces/IContractRegistry.sol";
 import "./WithClaimableRegistryManagement.sol";
+import "./Initializable.sol";
 
-contract ContractRegistryAccessor is WithClaimableRegistryManagement {
+contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializable {
+
+    IContractRegistry contractRegistry;
+
+    modifier onlyAdmin {
+        require(isAdmin(), "sender is not an admin (registryManger or initializationManager)");
+
+        _;
+    }
 
     function isManager(string memory role) internal view returns (bool) {
         IContractRegistry _contractRegistry = contractRegistry;
-        return msg.sender == registryManager() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
+        return isAdmin() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
     }
 
-    modifier onlyMigrationManager {
-        require(isManager("migrationManager"), "sender is not the migration manager");
-
-        _;
+    function isAdmin() internal view returns (bool) {
+        return msg.sender == registryManager() || msg.sender == initializationManager();
     }
-
-    modifier onlyFunctionalManager {
-        require(isManager("functionalManager"), "sender is not the functional manager");
-
-        _;
-    }
-
-    modifier onlyEmergencyManager {
-        require(isManager("emergencyManager"), "sender is not the emergency manager");
-
-        _;
-    }
-
-    IContractRegistry contractRegistry;
 
     constructor(IContractRegistry _contractRegistry, address _registryManager) public {
         require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
@@ -38,7 +31,7 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement {
 
     event ContractRegistryAddressUpdated(address addr);
 
-    function setContractRegistry(IContractRegistry _contractRegistry) public onlyRegistryManager {
+    function setContractRegistry(IContractRegistry _contractRegistry) public onlyAdmin {
         contractRegistry = _contractRegistry;
         emit ContractRegistryAddressUpdated(address(_contractRegistry));
     }

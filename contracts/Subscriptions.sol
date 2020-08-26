@@ -6,8 +6,9 @@ import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract Subscriptions is ISubscriptions, Lockable {
+contract Subscriptions is ISubscriptions, ManagedContract {
     using SafeMath for uint256;
 
     enum CommitteeType {
@@ -37,7 +38,7 @@ contract Subscriptions is ISubscriptions, Lockable {
 
     IERC20 public erc20;
 
-    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20) Lockable(_contractRegistry, _registryManager) public {
+    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         nextVcid = 1000000;

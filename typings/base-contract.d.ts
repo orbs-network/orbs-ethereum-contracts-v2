@@ -18,4 +18,6 @@ export interface OwnedContract extends Contract {
     refreshContracts(): Promise<TransactionReceipt>;
 
     setContractRegistry(address: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+
+    initializationComplete(): Promise<TransactionReceipt>;
 }

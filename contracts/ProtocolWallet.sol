@@ -4,8 +4,9 @@ import "./spec_interfaces/IProtocolWallet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract ProtocolWallet is IProtocolWallet, Lockable {
+contract ProtocolWallet is IProtocolWallet, ManagedContract {
     using SafeMath for uint256;
 
     IERC20 public token;
@@ -20,7 +21,7 @@ contract ProtocolWallet is IProtocolWallet, Lockable {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client) Lockable(_contractRegistry, _registryManager) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token, address _client) ManagedContract(_contractRegistry, _registryManager) public {
         token = _token;
         client = _client;
         lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?

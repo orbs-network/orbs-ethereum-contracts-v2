@@ -11,8 +11,9 @@ import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, Lockable {
+contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract {
     using SafeMath for uint256;
     using SafeMath for uint48;
 
@@ -43,7 +44,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, Lockable {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, IERC20 _bootstrapToken) Lockable(_contractRegistry, _registryManager) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, IERC20 _bootstrapToken) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
 

@@ -245,6 +245,7 @@ declare global {
       stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);
       migratedStakeEvent(data?: Partial<MigratedStakeEvent>);
       managerChangedEvent(data?: Partial<ManagerChangedEvent>);
+      initializationCompleteEvent(data?: {});
 
       withinContract(contract: Contract): Assertion;
     }

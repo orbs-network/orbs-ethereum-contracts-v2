@@ -3,8 +3,9 @@ pragma solidity 0.5.16;
 import "./spec_interfaces/IProtocol.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
+import "./ManagedContract.sol";
 
-contract Protocol is IProtocol, Lockable {
+contract Protocol is IProtocol, ManagedContract {
 
     struct DeploymentSubset {
         bool exists;
@@ -15,7 +16,7 @@ contract Protocol is IProtocol, Lockable {
 
     mapping (string => DeploymentSubset) deploymentSubsets;
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) Lockable(_contractRegistry, _registryManager) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryManager) ManagedContract(_contractRegistry, _registryManager) public {}
 
     function deploymentSubsetExists(string calldata deploymentSubset) external view returns (bool) {
         return deploymentSubsets[deploymentSubset].exists;
