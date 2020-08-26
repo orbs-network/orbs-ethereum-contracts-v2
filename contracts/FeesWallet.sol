@@ -9,10 +9,11 @@ import "./spec_interfaces/IMigratableFeesWallet.sol";
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./interfaces/IRewards.sol";
+import "./Lockable.sol";
 
 
 /// @title Fees Wallet contract interface, manages the fee buckets
-contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
+contract FeesWallet is IFeesWallet, Lockable {
     using SafeMath for uint256;
 
     event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total);
@@ -32,7 +33,7 @@ contract FeesWallet is IFeesWallet, ContractRegistryAccessor {
         _;
     }
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token) ContractRegistryAccessor(_contractRegistry, _registryManager) public {
+    constructor(IContractRegistry _contractRegistry, address _registryManager, IERC20 _token) Lockable(_contractRegistry, _registryManager) public {
         token = _token;
         lastCollectedAt = now;
     }

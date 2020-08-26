@@ -19,4 +19,8 @@ interface IContractRegistry {
 
 	function getManager(string calldata role) external view returns (address);
 
+	function lockContracts() external /* onlyRegistryManager */;
+
+	function unlockContracts() external /* onlyRegistryManager */;
+
 }

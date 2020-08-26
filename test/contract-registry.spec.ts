@@ -60,11 +60,6 @@ describe('contract-registry-high-level-flows', async () => {
 
   });
 
-  // it('reverts when getting a non existent entry', async () => {
-  //   const d = await Driver.new();
-  //   await expectRejected(d.contractRegistry.getContract("nonexistent"), /the contract id is not registered/);
-  // });
-
   it('allows only the registry manager to update the address of the contract registry', async () => { // TODO - consider splitting and moving this
     const d = await Driver.new();
     const subscriber = await d.newSubscriber("tier", 1);
@@ -150,6 +145,26 @@ describe('contract-registry-high-level-flows', async () => {
     });
     expect(await d.contractRegistry.getManager("role2")).to.eq(m2);
 
+  });
+
+  it('locks and unlocks all managed contracts, only by registryManager', async () => {
+    const d = await Driver.new();
+
+    const managedContracts = await d.contractRegistry.getManagedContracts();
+
+    await expectRejected(d.contractRegistry.lockContracts({from: d.migrationManager.address}), /caller is not the registryManager/);
+    await d.contractRegistry.lockContracts({from: d.registryManager.address});
+    for (const contractAddr of managedContracts) {
+      const contract = d.web3.getExisting("Lockable" as any, contractAddr);
+      expect(await contract.isLocked()).to.be.true;
+    }
+
+    await expectRejected(d.contractRegistry.unlockContracts({from: d.migrationManager.address}), /caller is not the registryManager/);
+    await d.contractRegistry.unlockContracts({from: d.registryManager.address});
+    for (const contractAddr of managedContracts) {
+      const contract = d.web3.getExisting("Lockable" as any, contractAddr);
+      expect(await contract.isLocked()).to.be.false;
+    }
   });
 
 });
