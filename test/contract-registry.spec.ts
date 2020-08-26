@@ -235,6 +235,8 @@ describe('contract-registry-high-level-flows', async () => {
 
     const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryAdmin.address]);
     let r = await d.contractRegistry.setNewContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
+    expect(r).to.have.a.contractRegistryUpdatedEvent({newContractRegistry: newRegistry.address})
+
     const managedContracts = await d.contractRegistry.getManagedContracts();
     for (const managedAddr of managedContracts) {
       const contract = d.web3.getExisting('ManagedContract' as any, managedAddr);

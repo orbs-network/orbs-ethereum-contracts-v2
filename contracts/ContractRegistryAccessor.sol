@@ -32,7 +32,7 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
     event ContractRegistryAddressUpdated(address addr);
 
     function setContractRegistry(IContractRegistry newContractRegistry) public onlyAdmin {
-        require(newContractRegistry.getPreviousContractRegistry() == contractRegistry, "new contract registry must provide the previous contract registry");
+        require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
         contractRegistry = newContractRegistry;
         emit ContractRegistryAddressUpdated(address(newContractRegistry));
     }
