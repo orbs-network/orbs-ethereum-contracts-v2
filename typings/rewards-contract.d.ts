@@ -54,6 +54,20 @@ export interface StakingRewardsMigrationAcceptedEvent {
     amount: number|BN;
 }
 
+export interface AnnualStakingRewardsRateChangedEvent {
+    annualRateInPercentMille: number|BN;
+    annualCap: number|BN;
+}
+
+export interface GeneralCommitteeAnnualBootstrapChangedEvent {
+    generalCommitteeAnnualBootstrap: number|BN;
+}
+
+export interface CertifiedCommitteeAnnualBootstrapChangedEvent {
+    certifiedCommitteeAnnualBootstrap: number|BN;
+}
+
+
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>;
 

@@ -72,12 +72,14 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) public onlyFunctionalManager onlyWhenActive {
-        settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annual_amount); // TODO event
+    function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) public onlyFunctionalManager onlyWhenActive {
+        settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annualAmount);
+        emit GeneralCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
-    function setCertifiedCommitteeAnnualBootstrap(uint256 annual_amount) public onlyFunctionalManager onlyWhenActive {
-        settings.certifiedCommitteeAnnualBootstrap = toUint48Granularity(annual_amount); // TODO event
+    function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) public onlyFunctionalManager onlyWhenActive {
+        settings.certifiedCommitteeAnnualBootstrap = toUint48Granularity(annualAmount);
+        emit CertifiedCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
     function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public onlyFunctionalManager onlyWhenActive {
@@ -174,13 +176,13 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) public onlyFunctionalManager onlyWhenActive {
+    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) public onlyFunctionalManager onlyWhenActive {
         Settings memory _settings = settings;
-        _settings.annualRateInPercentMille = uint48(annual_rate_in_percent_mille);
-        _settings.annualCap = toUint48Granularity(annual_cap);
+        _settings.annualRateInPercentMille = uint48(annualRateInPercentMille);
+        _settings.annualCap = toUint48Granularity(annualCap);
         settings = _settings;
 
-        // TODO event
+        emit AnnualStakingRewardsRateChanged(annualRateInPercentMille, annualCap);
     }
 
     function getStakingRewardBalance(address addr) external view returns (uint256) {

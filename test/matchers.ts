@@ -31,8 +31,9 @@ import { MigratedStakeEvent, StakedEvent, UnstakedEvent } from "../typings/staki
 import {ContractAddressUpdatedEvent, ManagerChangedEvent} from "../typings/contract-registry-contract";
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
-  BootstrapRewardsWithdrawnEvent,
-  FeesWithdrawnEvent, MaxDelegatorsStakingRewardsChangedEvent,
+  AnnualStakingRewardsRateChangedEvent,
+  BootstrapRewardsWithdrawnEvent, CertifiedCommitteeAnnualBootstrapChangedEvent,
+  FeesWithdrawnEvent, GeneralCommitteeAnnualBootstrapChangedEvent, MaxDelegatorsStakingRewardsChangedEvent,
   StakingRewardAssignedEvent, StakingRewardsBalanceMigratedEvent,
   StakingRewardsDistributedEvent, StakingRewardsMigrationAcceptedEvent
 } from "../typings/rewards-contract";
@@ -246,6 +247,9 @@ declare global {
       migratedStakeEvent(data?: Partial<MigratedStakeEvent>);
       managerChangedEvent(data?: Partial<ManagerChangedEvent>);
       initializationCompleteEvent(data?: {});
+      annualStakingRewardsRateChangedEvent(data?: Partial<AnnualStakingRewardsRateChangedEvent>);
+      generalCommitteeAnnualBootstrapChangedEvent(data?: Partial<GeneralCommitteeAnnualBootstrapChangedEvent>);
+      certifiedCommitteeAnnualBootstrapChangedEvent(data?: Partial<CertifiedCommitteeAnnualBootstrapChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

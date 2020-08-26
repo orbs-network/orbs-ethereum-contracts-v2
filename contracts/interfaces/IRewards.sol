@@ -14,6 +14,7 @@ interface IRewards {
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
     event StakingRewardsAssigned(address[] assignees, uint256[] amounts);
     event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
+    event AnnualStakingRewardsRateChanged(uint256 annualRateInPercentMille, uint256 annualCap);
 
     /// @return Returns the currently unclaimed orbs token reward balance of the given address.
     function getStakingRewardBalance(address addr) external view returns (uint256 balance);
@@ -28,7 +29,7 @@ interface IRewards {
     */
 
     /// @dev Assigns rewards and sets a new monthly rate for the pro-rata pool.
-    function setAnnualStakingRewardsRate(uint256 annual_rate_in_percent_mille, uint256 annual_cap) external /* onlyFunctionalManager */;
+    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
 
 
     // fees
@@ -50,6 +51,8 @@ interface IRewards {
 
     event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
     event BootstrapRewardsWithdrawn(address guardian, uint256 amount);
+    event GeneralCommitteeAnnualBootstrapChanged(uint256 generalCommitteeAnnualBootstrap);
+    event CertifiedCommitteeAnnualBootstrapChanged(uint256 certifiedCommitteeAnnualBootstrap);
 
     /*
      *   External methods

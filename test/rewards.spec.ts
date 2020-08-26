@@ -34,7 +34,11 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const poolAmount = fromTokenUnits(1000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
+    let r = await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
+    expect(r).to.have.a.annualStakingRewardsRateChangedEvent({
+        annualRateInPercentMille: bn(12000),
+        annualCap: poolAmount
+    })
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
@@ -52,7 +56,6 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const monthlyRate = fromTokenUnits(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
     const appOwner = d.newParticipant();
-
 
     for (let i = 0; i < numVCs; i++) {
         await createVC(d, false, subs, monthlyRate, appOwner);

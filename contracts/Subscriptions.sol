@@ -41,6 +41,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
+        erc20 = _erc20;
         nextVcid = 1000000;
 
         setGenesisRefTimeDelay(_genesisRefTimeDelay);

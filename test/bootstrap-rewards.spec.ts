@@ -30,11 +30,13 @@ describe('bootstrap-rewards-level-flows', async () => {
     const g = d.functionalManager;
 
     const annualAmountGeneral = fromTokenUnits(10000000);
-    const annualAmountCertification = fromTokenUnits(20000000);
-    const poolAmount = annualAmountGeneral.add(annualAmountCertification).mul(bn(6*12));
+    const annualAmountCertified = fromTokenUnits(20000000);
+    const poolAmount = annualAmountGeneral.add(annualAmountCertified).mul(bn(6*12));
 
-    await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
-    await d.rewards.setCertifiedCommitteeAnnualBootstrap(annualAmountCertification, {from: g.address});
+    let r = await d.rewards.setGeneralCommitteeAnnualBootstrap(annualAmountGeneral, {from: g.address});
+    expect(r).to.have.a.generalCommitteeAnnualBootstrapChangedEvent({generalCommitteeAnnualBootstrap: annualAmountGeneral});
+    r = await d.rewards.setCertifiedCommitteeAnnualBootstrap(annualAmountCertified, {from: g.address});
+    expect(r).to.have.a.certifiedCommitteeAnnualBootstrapChangedEvent({certifiedCommitteeAnnualBootstrap: annualAmountCertified});
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
@@ -66,7 +68,7 @@ describe('bootstrap-rewards-level-flows', async () => {
     const calcRewards = (annualRate) => fromTokenUnits(toTokenUnits(annualRate).mul(bn(elapsedTime)).div(bn(YEAR_IN_SECONDS)));
 
     const expectedGeneralCommitteeRewards = calcRewards(annualAmountGeneral);
-    const expectedCertifiedCommitteeRewards = expectedGeneralCommitteeRewards.add(calcRewards(annualAmountCertification));
+    const expectedCertifiedCommitteeRewards = expectedGeneralCommitteeRewards.add(calcRewards(annualAmountCertified));
 
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
       generalGuardianAmount: expectedGeneralCommitteeRewards.toString(),
