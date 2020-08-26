@@ -30,3 +30,7 @@ export interface ManagerChangedEvent {
   role: string,
   newManager: string
 }
+
+export interface ContractRegistryUpdatedEvent {
+  newContractRegistry: string
+}

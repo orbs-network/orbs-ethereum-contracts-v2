@@ -4,6 +4,7 @@ interface IContractRegistry {
 
 	event ContractAddressUpdated(string contractName, address addr, bool managedContract);
 	event ManagerChanged(string role, address newManager);
+	event ContractRegistryUpdated(address newContractRegistry);
 
 	/// @dev updates the contracts address and emits a corresponding event
 	/// managedContract indicates whether the contract is managed by the registry and notified on changes
@@ -25,6 +26,6 @@ interface IContractRegistry {
 
 	function setNewContractRegistry(IContractRegistry newRegistry) external /* onlyAdmin */;
 
-	function getPreviousContractRegistry() external view returns (IContractRegistry);
+	function getPreviousContractRegistry() external view returns (address);
 
 }
