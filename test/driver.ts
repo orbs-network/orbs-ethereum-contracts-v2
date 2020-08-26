@@ -53,7 +53,7 @@ export type DriverOptions = {
     orbsTokenAddress?: string;
     bootstrapTokenAddress?: string;
     stakingContractAddress?: string;
-    stakingContractHandlerContractAddress?: string;
+    stakingContractHandlerAddress?: string;
 
     contractRegistryAddress?: string;
     delegationsAddress?: string;
@@ -217,8 +217,8 @@ export class Driver {
             :
             await web3.deploy('TestingERC20', [], null, session);
 
-        const stakingContractHandler = options.stakingContractHandlerContractAddress ?
-            await web3.getExisting('StakingContractHandler', options.stakingContractHandlerContractAddress, session)
+        const stakingContractHandler = options.stakingContractHandlerAddress ?
+            await web3.getExisting('StakingContractHandler', options.stakingContractHandlerAddress, session)
             :
             await web3.deploy('StakingContractHandler', [contractRegistry.address, registryManager], null, session);
 
@@ -283,29 +283,31 @@ export class Driver {
             await web3.deploy('FeesWallet', [contractRegistry.address, registryManager, erc20.address], null, session);
 
         await Promise.all([
-            contractRegistry.setContract("staking", staking.address, false),
-            contractRegistry.setContract("rewards", rewards.address, true),
-            contractRegistry.setContract("delegations", delegations.address, true),
-            contractRegistry.setContract("elections", elections.address, true),
-            contractRegistry.setContract("subscriptions", subscriptions.address, true),
-            contractRegistry.setContract("protocol", protocol.address, true),
-            contractRegistry.setContract("certification", certification.address, true),
-            contractRegistry.setContract("guardiansRegistration", guardiansRegistration.address, true),
-            contractRegistry.setContract("committee", committee.address, true),
-            contractRegistry.setContract("stakingRewardsWallet", stakingRewardsWallet.address, false),
-            contractRegistry.setContract("bootstrapRewardsWallet", bootstrapRewardsWallet.address, false),
-            contractRegistry.setContract("generalFeesWallet", generalFeesWallet.address, true),
-            contractRegistry.setContract("certifiedFeesWallet", certifiedFeesWallet.address, true),
-            contractRegistry.setContract("stakingContractHandler", stakingContractHandler.address, true),
+            contractRegistry.setContract("staking", staking.address, false, {from: registryManager}),
+            contractRegistry.setContract("rewards", rewards.address, true, {from: registryManager}),
+            contractRegistry.setContract("delegations", delegations.address, true, {from: registryManager}),
+            contractRegistry.setContract("elections", elections.address, true, {from: registryManager}),
+            contractRegistry.setContract("subscriptions", subscriptions.address, true, {from: registryManager}),
+            contractRegistry.setContract("protocol", protocol.address, true, {from: registryManager}),
+            contractRegistry.setContract("certification", certification.address, true, {from: registryManager}),
+            contractRegistry.setContract("guardiansRegistration", guardiansRegistration.address, true, {from: registryManager}),
+            contractRegistry.setContract("committee", committee.address, true, {from: registryManager}),
+            contractRegistry.setContract("stakingRewardsWallet", stakingRewardsWallet.address, false, {from: registryManager}),
+            contractRegistry.setContract("bootstrapRewardsWallet", bootstrapRewardsWallet.address, false, {from: registryManager}),
+            contractRegistry.setContract("generalFeesWallet", generalFeesWallet.address, true, {from: registryManager}),
+            contractRegistry.setContract("certifiedFeesWallet", certifiedFeesWallet.address, true, {from: registryManager}),
+            contractRegistry.setContract("stakingContractHandler", stakingContractHandler.address, true, {from: registryManager}),
 
-            contractRegistry.setContract("_bootstrapToken", externalToken.address, false),
-            contractRegistry.setContract("_erc20", erc20.address, false),
+            contractRegistry.setContract("_bootstrapToken", externalToken.address, false, {from: registryManager}),
+            contractRegistry.setContract("_erc20", erc20.address, false, {from: registryManager}),
         ]);
 
-        await contractRegistry.setManager("migrationManager", migrationManager);
-        await contractRegistry.setManager("functionalManager", functionalManager);
+        await contractRegistry.setManager("migrationManager", migrationManager, {from: registryManager});
+        await contractRegistry.setManager("functionalManager", functionalManager, {from: registryManager});
 
-        await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
+        if (!(await protocol.deploymentSubsetExists(DEPLOYMENT_SUBSET_MAIN))) {
+            await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
+        }
 
         // TODO remove when setting in constructor
         await rewards.setMaxDelegatorsStakingRewards(maxDelegatorsStakingRewardsPercentMille, {from: functionalManager});
@@ -313,27 +315,32 @@ export class Driver {
         await rewards.setCertificationCommitteeAnnualBootstrap(certificationCommitteeAnnualBootstrap, {from: functionalManager});
         await rewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRateInPercentMille, stakingRewardsAnnualCap, {from: functionalManager});
 
-        await stakingRewardsWallet.setMaxAnnualRate(stakingRewardsWalletRate);
-        await bootstrapRewardsWallet.setMaxAnnualRate(bootstrapRewardsWalletRate);
+        await stakingRewardsWallet.setMaxAnnualRate(stakingRewardsWalletRate, {from: migrationManager});
+        await bootstrapRewardsWallet.setMaxAnnualRate(bootstrapRewardsWalletRate, {from: migrationManager});
 
         if (genesisRefTimeDelay != null) {
-            await subscriptions.setGenesisRefTimeDelay(genesisRefTimeDelay);
+            await subscriptions.setGenesisRefTimeDelay(genesisRefTimeDelay, {from: functionalManager});
         }
 
-        await Promise.all([
-            contractRegistry.initializationComplete(),
-            rewards.initializationComplete(),
-            delegations.initializationComplete(),
-            elections.initializationComplete(),
-            subscriptions.initializationComplete(),
-            protocol.initializationComplete(),
-            certification.initializationComplete(),
-            guardiansRegistration.initializationComplete(),
-            committee.initializationComplete(),
-            generalFeesWallet.initializationComplete(),
-            certifiedFeesWallet.initializationComplete(),
-            stakingContractHandler.initializationComplete()
-        ]);
+        const contracts = [
+            contractRegistry,
+            rewards,
+            delegations,
+            elections,
+            subscriptions,
+            protocol,
+            certification,
+            guardiansRegistration,
+            committee,
+            generalFeesWallet,
+            certifiedFeesWallet,
+            stakingContractHandler
+        ]
+        for (const contract of contracts) {
+            if (!(await contract.isInitializationComplete())) {
+                await contract.initializationComplete();
+            }
+        }
 
         const d = new Driver(web3, session,
             accounts,

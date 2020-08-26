@@ -16,10 +16,10 @@ describe('protocol-contract-lockdown', async () => {
 
   // functional owner
 
-  it('allows only the migration owner and the contract registry to lock and unlock the contract', async () => {
+  it('allows the registry manager to lock and unlock the contract', async () => {
     const d = await Driver.new();
 
-    const contractRegistry = d.newParticipant();
+    const contractRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryManager.address]);
     await d.protocol.setContractRegistry(contractRegistry.address, {from: d.registryManager.address});
 
     await expectRejected(d.protocol.lock({from: d.functionalManager.address}), /caller is not a lock owner/);
@@ -27,14 +27,6 @@ describe('protocol-contract-lockdown', async () => {
     expect(r).to.have.a.lockedEvent();
     r = await d.protocol.unlock({from: d.registryManager.address});
     expect(r).to.have.a.unlockedEvent();
-
-    await d.protocol.lock({from: d.registryManager.address});
-
-    await expectRejected(d.protocol.unlock({from: d.functionalManager.address}), /caller is not a lock owner/);
-    r = await d.protocol.unlock({from: contractRegistry.address});
-    expect(r).to.have.a.unlockedEvent();
-    r = await d.protocol.lock({from: contractRegistry.address});
-    expect(r).to.have.a.lockedEvent();
   });
 
   it('rejects calls to createNewDeploymentSubset and setProtocolVersion when locked', async () => {
