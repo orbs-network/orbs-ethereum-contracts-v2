@@ -260,12 +260,12 @@ export class Driver {
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, erc20.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [erc20.address, rewards.address], null, session);
 
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [contractRegistry.address, registryManager, externalToken.address, rewards.address], null, session);
+            await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address], null, session);
 
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
@@ -304,6 +304,13 @@ export class Driver {
 
         await contractRegistry.setManager("migrationManager", migrationManager, {from: registryManager});
         await contractRegistry.setManager("functionalManager", functionalManager, {from: registryManager});
+
+        for (const wallet of [stakingRewardsWallet, bootstrapRewardsWallet]) {
+            await wallet.transferMigrationOwnership(migrationManager);
+            await wallet.claimMigrationOwnership({from: migrationManager});
+            await wallet.transferFunctionalOwnership(functionalManager);
+            await wallet.claimFunctionalOwnership({from: functionalManager});
+        }
 
         if (!(await protocol.deploymentSubsetExists(DEPLOYMENT_SUBSET_MAIN))) {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
