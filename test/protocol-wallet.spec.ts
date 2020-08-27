@@ -68,7 +68,7 @@ describe('protocol-contract', async () => {
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
     const client = d.newParticipant();
-    await expectRejected(d.stakingRewardsWallet.setClient(client.address, {from: d.migrationManager.address}), /sender is not the functional manager/);
+    await expectRejected(d.stakingRewardsWallet.setClient(client.address, {from: d.migrationManager.address}), /caller is not the functionalOwner/);
     let r = await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
     expect(r).to.have.a.clientSetEvent({client: client.address});
 
@@ -92,7 +92,7 @@ describe('protocol-contract', async () => {
     const client = d.newParticipant();
     await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
 
-    await expectRejected(d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.functionalManager.address}), /sender is not the migration manager/);
+    await expectRejected(d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.functionalManager.address}), /caller is not the migrationOwner/);
     let r = await d.stakingRewardsWallet.setMaxAnnualRate(amount, {from: d.migrationManager.address});
     expect(r).to.have.a.maxAnnualRateSetEvent({ maxAnnualRate: amount });
 
@@ -174,7 +174,7 @@ describe('protocol-contract', async () => {
     await p.assignAndApproveOrbs(amount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
-    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
+    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalManager.address}), /caller is not the migrationOwner/);
     let r = await d.stakingRewardsWallet.emergencyWithdraw({from: d.migrationManager.address});
     expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
 
