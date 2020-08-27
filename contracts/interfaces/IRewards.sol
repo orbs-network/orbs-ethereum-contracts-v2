@@ -75,6 +75,14 @@ interface IRewards {
 
     function getAnnualStakingRewardsCap() external view returns (uint256);
 
+    function getSettings() external view returns (
+        uint generalCommitteeAnnualBootstrap,
+        uint certifiedCommitteeAnnualBootstrap,
+        uint annualStakingRewardsRate,
+        uint annualStakingRewardsCap,
+        uint32 maxDelegatorsStakingRewardsPercentMille
+    );
+
     /*
      * Reward-governor methods
      */

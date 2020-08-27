@@ -149,11 +149,26 @@ describe('rewards', async () => {
     });
 
     it('gets settings', async () => {
-        const d = await Driver.new();
-        expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(defaultDriverOptions.certifiedCommitteeAnnualBootstrap.toString());
-        expect(await d.rewards.getMaxDelegatorsStakingRewardsPercentMille()).to.eq(defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsRate()).to.eq(defaultDriverOptions.stakingRewardsAnnualRateInPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(defaultDriverOptions.stakingRewardsAnnualCap.toString());
+        const opts = {
+            generalCommitteeAnnualBootstrap: fromTokenUnits(10),
+            certifiedCommitteeAnnualBootstrap: fromTokenUnits(20),
+            maxDelegatorsStakingRewardsPercentMille: 3,
+            stakingRewardsAnnualRateInPercentMille: 4,
+            stakingRewardsAnnualCap: fromTokenUnits(50)
+        };
+        const d = await Driver.new(opts as any);
+
+        expect(await d.rewards.getGeneralCommitteeAnnualBootstrap()).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
+        expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
+        expect(await d.rewards.getMaxDelegatorsStakingRewardsPercentMille()).to.eq(opts.maxDelegatorsStakingRewardsPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsRate()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(opts.stakingRewardsAnnualCap.toString());
+
+        expect((await d.rewards.getSettings()).generalCommitteeAnnualBootstrap).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
+        expect((await d.rewards.getSettings()).certifiedCommitteeAnnualBootstrap).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
+        expect((await d.rewards.getSettings()).maxDelegatorsStakingRewardsPercentMille).to.eq(opts.maxDelegatorsStakingRewardsPercentMille.toString());
+        expect((await d.rewards.getSettings()).annualStakingRewardsRate).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
+        expect((await d.rewards.getSettings()).annualStakingRewardsCap).to.eq(opts.stakingRewardsAnnualCap.toString());
     })
 
 });

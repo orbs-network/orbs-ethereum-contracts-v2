@@ -76,4 +76,5 @@ export interface SubscriptionsContract extends OwnedContract {
     string /* deploymentSubset */,
     boolean /* isCertified */
   ]>;
+  getSettings(): Promise<any>;
 }

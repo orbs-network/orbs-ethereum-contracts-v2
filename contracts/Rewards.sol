@@ -49,10 +49,10 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         address _registryManager,
         IERC20 _erc20,
         IERC20 _bootstrapToken,
-        uint48 generalCommitteeAnnualBootstrap,
-        uint48 certifiedCommitteeAnnualBootstrap,
-        uint48 annualRateInPercentMille,
-        uint48 annualCap,
+        uint generalCommitteeAnnualBootstrap,
+        uint certifiedCommitteeAnnualBootstrap,
+        uint annualRateInPercentMille,
+        uint annualCap,
         uint32 maxDelegatorsStakingRewardsPercentMille
     ) ManagedContract(_contractRegistry, _registryManager) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
@@ -89,15 +89,15 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function getGeneralCommitteeAnnualBootstrap() external view returns (uint256) {
-        return uint256(settings.generalCommitteeAnnualBootstrap);
+        return toUint256Granularity(settings.generalCommitteeAnnualBootstrap);
     }
 
     function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256) {
-        return uint256(settings.certifiedCommitteeAnnualBootstrap);
+        return toUint256Granularity(settings.certifiedCommitteeAnnualBootstrap);
     }
 
     function getMaxDelegatorsStakingRewardsPercentMille() public view returns (uint256) {
-        return uint256(settings.maxDelegatorsStakingRewardsPercentMille);
+        return settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
     function getAnnualStakingRewardsRate() external view returns (uint256) {
@@ -105,7 +105,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function getAnnualStakingRewardsCap() external view returns (uint256) {
-        return uint256(settings.annualCap);
+        return toUint256Granularity(settings.annualCap);
     }
 
     function getBootstrapBalance(address addr) external view returns (uint256) {
@@ -363,6 +363,21 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
         stakingRewardsWallet = IProtocolWallet(getStakingRewardsWallet());
         bootstrapRewardsWallet = IProtocolWallet(getBootstrapRewardsWallet());
+    }
+
+    function getSettings() external view returns (
+        uint generalCommitteeAnnualBootstrap,
+        uint certifiedCommitteeAnnualBootstrap,
+        uint annualStakingRewardsRate,
+        uint annualStakingRewardsCap,
+        uint32 maxDelegatorsStakingRewardsPercentMille
+    ) {
+        Settings memory _settings = settings;
+        generalCommitteeAnnualBootstrap = toUint256Granularity(_settings.generalCommitteeAnnualBootstrap);
+        certifiedCommitteeAnnualBootstrap = toUint256Granularity(_settings.certifiedCommitteeAnnualBootstrap);
+        annualStakingRewardsRate = uint(_settings.annualRateInPercentMille);
+        annualStakingRewardsCap = toUint256Granularity(_settings.annualCap);
+        maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
 }

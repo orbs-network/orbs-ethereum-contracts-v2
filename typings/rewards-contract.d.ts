@@ -97,8 +97,11 @@ export interface RewardsContract extends OwnedContract {
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
+    getGeneralCommitteeAnnualBootstrap(): Promise<string>;
     getCertifiedCommitteeAnnualBootstrap(): Promise<string>;
     getMaxDelegatorsStakingRewardsPercentMille(): Promise<string>;
     getAnnualStakingRewardsRate(): Promise<string>;
     getAnnualStakingRewardsCap(): Promise<string>;
+
+    getSettings(): Promise<any>;
 }
