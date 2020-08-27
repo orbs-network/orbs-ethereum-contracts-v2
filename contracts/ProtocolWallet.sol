@@ -23,7 +23,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         _;
     }
 
-    constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) ManagedContract(_contractRegistry, _registryManager) public {
+    constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
         client = _client;
         lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?
