@@ -318,10 +318,14 @@ export class Driver {
         await contractRegistry.setManager("functionalManager", functionalManager, {from: registryAdmin});
 
         for (const wallet of [stakingRewardsWallet, bootstrapRewardsWallet]) {
-            await wallet.transferMigrationOwnership(migrationManager);
-            await wallet.claimMigrationOwnership({from: migrationManager});
-            await wallet.transferFunctionalOwnership(functionalManager);
-            await wallet.claimFunctionalOwnership({from: functionalManager});
+            if ((await wallet.migrationOwner()) != migrationManager) {
+                await wallet.transferMigrationOwnership(migrationManager);
+                await wallet.claimMigrationOwnership({from: migrationManager});
+            }
+            if ((await wallet.functionalOwner()) != functionalManager) {
+                await wallet.transferFunctionalOwnership(functionalManager);
+                await wallet.claimFunctionalOwnership({from: functionalManager});
+            }
         }
 
         if (!(await protocol.deploymentSubsetExists(DEPLOYMENT_SUBSET_MAIN))) {
