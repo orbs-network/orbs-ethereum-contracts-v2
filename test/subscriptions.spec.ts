@@ -357,6 +357,9 @@ describe('subscriptions-high-level-flows', async () => {
 
     expect(await d.subscriptions.getGenesisRefTimeDelay()).to.eq("123");
     expect(await d.subscriptions.getMinimumInitialVcPayment()).to.eq("456");
+
+    expect((await d.subscriptions.getSettings()).genesisRefTimeDelay).to.eq("123");
+    expect((await d.subscriptions.getSettings()).minimumInitialVcPayment).to.eq("456");
   });
 
 });

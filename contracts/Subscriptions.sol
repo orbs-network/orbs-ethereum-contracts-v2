@@ -33,8 +33,12 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     mapping (uint => VirtualChain) public virtualChains;
 
     uint public nextVcid;
-    uint public genesisRefTimeDelay;
-    uint256 public minimumInitialVcPayment;
+
+    struct Settings {
+        uint genesisRefTimeDelay;
+        uint256 minimumInitialVcPayment;
+    }
+    Settings settings;
 
     IERC20 public erc20;
 
@@ -76,13 +80,13 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
-        require(amount >= minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
+        require(amount >= settings.minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
 
         uint vcid = nextVcid++;
         VirtualChain memory vc = VirtualChain({
             name: name,
             expiresAt: block.timestamp,
-            genRefTime: now + genesisRefTimeDelay,
+            genRefTime: now + settings.genesisRefTimeDelay,
             owner: owner,
             tier: tier,
             rate: rate,
@@ -124,21 +128,21 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public onlyFunctionalManager onlyWhenActive {
-        genesisRefTimeDelay = newGenesisRefTimeDelay;
+        settings.genesisRefTimeDelay = newGenesisRefTimeDelay;
         emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
     }
 
     function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public onlyFunctionalManager {
-        minimumInitialVcPayment = newMinimumInitialVcPayment;
+        settings.minimumInitialVcPayment = newMinimumInitialVcPayment;
         emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
     }
 
     function getGenesisRefTimeDelay() external view returns (uint) {
-        return genesisRefTimeDelay;
+        return settings.genesisRefTimeDelay;
     }
 
     function getMinimumInitialVcPayment() external view returns (uint) {
-        return minimumInitialVcPayment;
+        return settings.minimumInitialVcPayment;
     }
 
     function getVcData(uint256 vcId) external view returns (
@@ -169,6 +173,15 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
         certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
         protocolContract = IProtocol(getProtocolContract());
+    }
+
+    function getSettings() external view returns(
+        uint genesisRefTimeDelay,
+        uint256 minimumInitialVcPayment
+    ) {
+        Settings memory _settings = settings;
+        genesisRefTimeDelay = _settings.genesisRefTimeDelay;
+        minimumInitialVcPayment = _settings.minimumInitialVcPayment;
     }
 
 }
