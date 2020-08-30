@@ -100,7 +100,7 @@ export interface RewardsContract extends OwnedContract {
     getGeneralCommitteeAnnualBootstrap(): Promise<string>;
     getCertifiedCommitteeAnnualBootstrap(): Promise<string>;
     getMaxDelegatorsStakingRewardsPercentMille(): Promise<string>;
-    getAnnualStakingRewardsRate(): Promise<string>;
+    getAnnualStakingRewardsRatePercentMille(): Promise<string>;
     getAnnualStakingRewardsCap(): Promise<string>;
 
     getSettings(): Promise<any>;

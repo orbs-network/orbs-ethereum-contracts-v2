@@ -161,13 +161,13 @@ describe('rewards', async () => {
         expect(await d.rewards.getGeneralCommitteeAnnualBootstrap()).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
         expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
         expect(await d.rewards.getMaxDelegatorsStakingRewardsPercentMille()).to.eq(opts.maxDelegatorsStakingRewardsPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsRate()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsRatePercentMille()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
         expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(opts.stakingRewardsAnnualCap.toString());
 
         expect((await d.rewards.getSettings()).generalCommitteeAnnualBootstrap).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).certifiedCommitteeAnnualBootstrap).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).maxDelegatorsStakingRewardsPercentMille).to.eq(opts.maxDelegatorsStakingRewardsPercentMille.toString());
-        expect((await d.rewards.getSettings()).annualStakingRewardsRate).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
+        expect((await d.rewards.getSettings()).annualStakingRewardsRatePercentMille).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
         expect((await d.rewards.getSettings()).annualStakingRewardsCap).to.eq(opts.stakingRewardsAnnualCap.toString());
     })
 
