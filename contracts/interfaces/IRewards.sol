@@ -6,9 +6,6 @@ import "../spec_interfaces/IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IRewards {
 
-    function assignRewards() external;
-    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata certification) external /* onlyCommitteeContract */;
-
     /*
      * Staking
      */
@@ -88,6 +85,12 @@ interface IRewards {
     /*
      * General
      */
+
+    /// @dev assignsRewards based to the current committee, may called by any client.
+    function assignRewards() external;
+    
+    /// @dev assignsRewards the current committee, called by the committee contract.
+    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata certification) external /* onlyCommitteeContract */;
 
     /// @dev Returns the timestamp of the last reward assignment.
     function getLastRewardAssignmentTime() external view returns (uint256 time);
