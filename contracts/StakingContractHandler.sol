@@ -11,7 +11,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
 
     uint constant NOTIFICATION_GAS_LIMIT = 5000000;
 
-    bool public notifyDelegations;
+    bool public notifyDelegations = true;
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) public ManagedContract(_contractRegistry, _registryAdmin) {}
 
