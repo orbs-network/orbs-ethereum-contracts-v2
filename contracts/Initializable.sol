@@ -2,7 +2,7 @@ pragma solidity 0.5.16;
 
 contract Initializable {
 
-    address public _initializationManager;
+    address private _initializationManager;
 
     event InitializationComplete();
 
@@ -20,7 +20,7 @@ contract Initializable {
         emit InitializationComplete();
     }
 
-    function isInitializationComplete() external view returns (bool) {
+    function isInitializationComplete() public view returns (bool) {
         return _initializationManager == address(0);
     }
 

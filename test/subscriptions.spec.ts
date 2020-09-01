@@ -1,7 +1,7 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver, ZERO_ADDR} from "./driver";
+import {defaultDriverOptions, Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
 import {bn, expectRejected} from "./helpers";
@@ -350,6 +350,16 @@ describe('subscriptions-high-level-flows', async () => {
       false /* isCertified */
     ])
 
+  });
+
+  it("gets settings", async () => {
+    const d = await Driver.new({genesisRefTimeDelay: 123, minimumInitialVcPayment: 456});
+
+    expect(await d.subscriptions.getGenesisRefTimeDelay()).to.eq("123");
+    expect(await d.subscriptions.getMinimumInitialVcPayment()).to.eq("456");
+
+    expect((await d.subscriptions.getSettings()).genesisRefTimeDelay).to.eq("123");
+    expect((await d.subscriptions.getSettings()).minimumInitialVcPayment).to.eq("456");
   });
 
 });

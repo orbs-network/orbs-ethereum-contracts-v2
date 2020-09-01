@@ -11,10 +11,7 @@ import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 import {
-    bootstrapRewardsAssignedEvents,
-    gasReportEvents,
     stakingRewardsAssignedEvents,
-    feesAssignedEvents
 } from "./event-parsing";
 
 
@@ -37,12 +34,16 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const poolAmount = fromTokenUnits(1000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
+    let r = await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
+    expect(r).to.have.a.annualStakingRewardsRateChangedEvent({
+        annualRateInPercentMille: bn(12000),
+        annualCap: poolAmount
+    })
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
-    await d.rewards.setCertificationCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.rewards.setCertifiedCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
@@ -55,7 +56,6 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const monthlyRate = fromTokenUnits(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
     const appOwner = d.newParticipant();
-
 
     for (let i = 0; i < numVCs; i++) {
         await createVC(d, false, subs, monthlyRate, appOwner);
@@ -147,5 +147,28 @@ describe('rewards', async () => {
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
         expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
     });
+
+    it('gets settings', async () => {
+        const opts = {
+            generalCommitteeAnnualBootstrap: fromTokenUnits(10),
+            certifiedCommitteeAnnualBootstrap: fromTokenUnits(20),
+            maxDelegatorsStakingRewardsPercentMille: 3,
+            stakingRewardsAnnualRateInPercentMille: 4,
+            stakingRewardsAnnualCap: fromTokenUnits(50)
+        };
+        const d = await Driver.new(opts as any);
+
+        expect(await d.rewards.getGeneralCommitteeAnnualBootstrap()).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
+        expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
+        expect(await d.rewards.getMaxDelegatorsStakingRewardsPercentMille()).to.eq(opts.maxDelegatorsStakingRewardsPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsRate()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
+        expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(opts.stakingRewardsAnnualCap.toString());
+
+        expect((await d.rewards.getSettings()).generalCommitteeAnnualBootstrap).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
+        expect((await d.rewards.getSettings()).certifiedCommitteeAnnualBootstrap).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
+        expect((await d.rewards.getSettings()).maxDelegatorsStakingRewardsPercentMille).to.eq(opts.maxDelegatorsStakingRewardsPercentMille.toString());
+        expect((await d.rewards.getSettings()).annualStakingRewardsRate).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
+        expect((await d.rewards.getSettings()).annualStakingRewardsCap).to.eq(opts.stakingRewardsAnnualCap.toString());
+    })
 
 });

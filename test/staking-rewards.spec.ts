@@ -1,7 +1,7 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {Driver} from "./driver";
+import {defaultDriverOptions, Driver} from "./driver";
 import chai from "chai";
 import {bn, bnSum, contractId, evmIncreaseTime, evmMine, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
 import {committeeSnapshotEvents} from "./event-parsing";
@@ -667,7 +667,7 @@ describe('staking-rewards', async () => {
 
     await d.rewards.assignRewards();
 
-    let r = await d.rewards.setMaxDelegatorsStakingRewards(66666, {from: d.functionalManager.address});
+    let r = await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalManager.address});
     expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({maxDelegatorsStakingRewardsPercentMille: bn(66666)});
 
     await expectRejected(d.rewards.distributeStakingRewards(
@@ -822,7 +822,13 @@ describe('staking-rewards', async () => {
     expect(r).to.not.have.a.stakingRewardsBalanceMigratedEvent();
     expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
 
-    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.registryManager.address, d.erc20.address, d.bootstrapToken.address], null, d.session);
+    const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.registryManager.address, d.erc20.address, d.bootstrapToken.address,
+      defaultDriverOptions.generalCommitteeAnnualBootstrap,
+      defaultDriverOptions.certifiedCommitteeAnnualBootstrap,
+      defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
+      defaultDriverOptions.stakingRewardsAnnualCap,
+      defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille
+    ], null, d.session);
     await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryManager.address});
 
     // migrating to the new contract

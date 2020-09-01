@@ -70,6 +70,12 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager onlyWhenActive */;
 	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
 	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
+
+	function getVoteUnreadyTimeoutSeconds() external view returns (uint32);
+	function getMinSelfStakePercentMille() external view returns (uint32);
+	function getVoteOutPercentageThreshold() external view returns (uint8);
+	function getVoteUnreadyPercentageThreshold() external view returns (uint8);
+
 	function getSettings() external view returns (
 		uint32 voteUnreadyTimeoutSeconds,
 		uint32 minSelfStakePercentMille,

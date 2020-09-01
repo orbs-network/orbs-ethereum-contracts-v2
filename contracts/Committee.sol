@@ -45,7 +45,7 @@ contract Committee is ICommittee, ManagedContract {
 		uint32 maxTimeBetweenRewardAssignments;
 		uint8 maxCommitteeSize;
 	}
-	Settings settings;
+	Settings public settings;
 
 	modifier onlyElectionsContract() {
 		require(msg.sender == address(electionsContract), "caller is not the elections");
@@ -217,15 +217,11 @@ contract Committee is ICommittee, ManagedContract {
 		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager, uint _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryManager) public {
-		require(_maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
-		require(_maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
-		settings = Settings({
-			maxCommitteeSize: uint8(_maxCommitteeSize),
-			maxTimeBetweenRewardAssignments: maxTimeBetweenRewardAssignments
-		});
-
+	constructor(IContractRegistry _contractRegistry, address _registryManager, uint8 _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryManager) public {
 		committee.length = MAX_COMMITTEE_ARRAY_SIZE;
+
+		setMaxCommitteeSize(_maxCommitteeSize);
+		setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments);
 	}
 
 	/*
@@ -325,12 +321,16 @@ contract Committee is ICommittee, ManagedContract {
 	 * Governance
 	 */
 
-	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) public onlyFunctionalManager /* todo onlyWhenActive */ {
 		emit MaxTimeBetweenRewardAssignmentsChanged(maxTimeBetweenRewardAssignments, settings.maxTimeBetweenRewardAssignments);
 		settings.maxTimeBetweenRewardAssignments = maxTimeBetweenRewardAssignments;
 	}
 
-	function setMaxCommittee(uint8 maxCommitteeSize) external onlyFunctionalManager /* todo onlyWhenActive */ {
+	function getMaxTimeBetweenRewardAssignments() external view returns (uint32) {
+		return settings.maxTimeBetweenRewardAssignments;
+	}
+
+	function setMaxCommitteeSize(uint8 maxCommitteeSize) public onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		Settings memory _settings = settings;
@@ -349,6 +349,10 @@ contract Committee is ICommittee, ManagedContract {
 		}
 		committeeInfo = info;
 		committeeSortBytes = sortBytes.toBytes32(0);
+	}
+
+	function getMaxCommitteeSize() external view returns (uint8) {
+		return settings.maxCommitteeSize;
 	}
 
 	/*

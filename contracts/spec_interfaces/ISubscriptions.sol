@@ -49,6 +49,11 @@ interface ISubscriptions {
         bool isCertified
     );
 
+    function getSettings() external view returns(
+        uint genesisRefTimeDelay,
+        uint256 minimumInitialVcPayment
+    );
+
     /*
      *   Governance methods
      */

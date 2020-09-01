@@ -785,16 +785,16 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         const current = await d.elections.getSettings();
-        const voteOutTimeoutSeconds  = bn(current[0]);
+        const voteUnreadyTimeoutSeconds  = bn(current[0]);
         const minSelfStakePercentMille  = bn(current[1]);
-        const voteOutPercentageThreshold  = bn(current[2]);
-        const banningPercentageThreshold  = bn(current[3]);
+        const voteUnreadyPercentageThreshold  = bn(current[2]);
+        const voteOutPercentageThreshold  = bn(current[3]);
 
-        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds.add(bn(1)), {from: d.functionalManager.address});
+        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteUnreadyTimeoutSeconds.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteUnreadyTimeoutSeconds.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.voteUnreadyTimeoutSecondsChangedEvent({
-            newValue: voteOutTimeoutSeconds.add(bn(1)).toString(),
-            oldValue: voteOutTimeoutSeconds.toString()
+            newValue: voteUnreadyTimeoutSeconds.add(bn(1)).toString(),
+            oldValue: voteUnreadyTimeoutSeconds.toString()
         });
 
         await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
@@ -804,27 +804,32 @@ describe('elections-high-level-flows', async () => {
             oldValue: minSelfStakePercentMille.toString()
         });
 
-        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.elections.setVoteOutPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
+        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteUnreadyPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setVoteOutPercentageThreshold(voteUnreadyPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
+            newValue: voteUnreadyPercentageThreshold.add(bn(1)).toString(),
+            oldValue: voteUnreadyPercentageThreshold.toString()
+        });
+
+        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setVoteUnreadyPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
+        expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
             newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
             oldValue: voteOutPercentageThreshold.toString()
         });
 
-        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.elections.setVoteUnreadyPercentageThreshold(banningPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
-        expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
-            newValue: banningPercentageThreshold.add(bn(1)).toString(),
-            oldValue: banningPercentageThreshold.toString()
-        });
-
         const afterUpdate = await d.elections.getSettings();
         expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3]]).to.deep.eq([
-            voteOutTimeoutSeconds.add(bn(1)).toString(),
+            voteUnreadyTimeoutSeconds.add(bn(1)).toString(),
             minSelfStakePercentMille.add(bn(1)).toString(),
-            voteOutPercentageThreshold.add(bn(1)).toString(),
-            banningPercentageThreshold.add(bn(1)).toString()
+            voteUnreadyPercentageThreshold.add(bn(1)).toString(),
+            voteOutPercentageThreshold.add(bn(1)).toString()
         ]);
+
+        expect(await d.elections.getVoteUnreadyTimeoutSeconds()).to.bignumber.eq(voteUnreadyTimeoutSeconds.add(bn(1)));
+        expect(await d.elections.getMinSelfStakePercentMille()).to.bignumber.eq(minSelfStakePercentMille.add(bn(1)));
+        expect(await d.elections.getVoteUnreadyPercentageThreshold()).to.bignumber.eq(voteUnreadyPercentageThreshold.add(bn(1)));
+        expect(await d.elections.getVoteOutPercentageThreshold()).to.bignumber.eq(voteOutPercentageThreshold.add(bn(1)));
     })
 
 });

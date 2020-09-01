@@ -2,7 +2,7 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY} from "./driver";
+import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY, defaultDriverOptions} from "./driver";
 import chai from "chai";
 
 chai.use(require('chai-bn')(BN));

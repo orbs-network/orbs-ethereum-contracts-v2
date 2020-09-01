@@ -39,7 +39,10 @@ interface ICommittee {
 	 */
 
 	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) external /* onlyFunctionalManager onlyWhenActive */;
-	function setMaxCommittee(uint8 maxCommitteeSize) external /* onlyFunctionalManager onlyWhenActive */;
+	function setMaxCommitteeSize(uint8 maxCommitteeSize) external /* onlyFunctionalManager onlyWhenActive */;
+
+	function getMaxTimeBetweenRewardAssignments() external view returns (uint32);
+	function getMaxCommitteeSize() external view returns (uint8);
 
 	event MaxTimeBetweenRewardAssignmentsChanged(uint32 newValue, uint32 oldValue);
 	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);

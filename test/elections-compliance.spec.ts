@@ -24,24 +24,24 @@ describe('elections-certification', async () => {
         const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold});
 
         const generalCommittee: Participant[] = [];
-        const certificationCommittee: Participant[] = [];
+        const certifiedCommittee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
             const {v} = await d.newGuardian(100, i % 2 == 0, false, true);
             generalCommittee.push(v);
             if (i % 2 == 0) {
-                certificationCommittee.push(v);
+                certifiedCommittee.push(v);
             }
         }
 
         let r;
-        for (const v of certificationCommittee.slice(1)) {
-            r = await d.elections.voteUnready(certificationCommittee[0].address, {from: v.orbsAddress});
+        for (const v of certifiedCommittee.slice(1)) {
+            r = await d.elections.voteUnready(certifiedCommittee[0].address, {from: v.orbsAddress});
         }
         expect(r).to.have.a.guardianVotedUnreadyEvent({
-            guardian: certificationCommittee[0].address
+            guardian: certifiedCommittee[0].address
         });
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: generalCommittee.filter(v => v != certificationCommittee[0]).map(v => v.address)
+            addrs: generalCommittee.filter(v => v != certifiedCommittee[0]).map(v => v.address)
         });
     });
 
@@ -52,21 +52,21 @@ describe('elections-certification', async () => {
         const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold});
 
         const generalCommittee: Participant[] = [];
-        const certificationCommittee: Participant[] = [];
+        const certifiedCommittee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
             const {v} = await d.newGuardian(i == maxCommitteeSize - 1 ? 100 : 1, i % 2 == 0, false, true);
             if (i % 2 == 0) {
-                certificationCommittee.push(v);
+                certifiedCommittee.push(v);
             }
             generalCommittee.push(v);
         }
 
         let r;
         for (const v of generalCommittee.filter((v, i) => i % 2 == 1)) {
-            r = await d.elections.voteUnready(certificationCommittee[0].address, {from: v.orbsAddress});
+            r = await d.elections.voteUnready(certifiedCommittee[0].address, {from: v.orbsAddress});
         }
         expect(r).to.have.a.guardianVotedUnreadyEvent({
-            guardian: certificationCommittee[0].address
+            guardian: certifiedCommittee[0].address
         });
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.slice(1).map(v => v.address)
@@ -80,16 +80,16 @@ describe('elections-certification', async () => {
         const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold});
 
         const generalCommittee: Participant[] = [];
-        const certificationCommittee: Participant[] = [];
+        const certifiedCommittee: Participant[] = [];
         for (let i = 0; i < maxCommitteeSize; i++) {
             const {v} = await d.newGuardian(100, i % 2 == 0, false, true);
             if (i % 2 == 0) {
-                certificationCommittee.push(v);
+                certifiedCommittee.push(v);
             }
             generalCommittee.push(v);
         }
 
-        for (const v of certificationCommittee) {
+        for (const v of certifiedCommittee) {
             let r = await d.elections.voteUnready(generalCommittee[1].address, {from: v.orbsAddress});
             expect(r).to.not.have.a.guardianVotedUnreadyEvent();
             expect(r).to.not.have.a.committeeSnapshotEvent();
