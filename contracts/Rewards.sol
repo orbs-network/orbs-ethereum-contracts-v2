@@ -20,8 +20,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
         uint48 certifiedCommitteeAnnualBootstrap;
-        uint48 annualRateInPercentMille;
         uint48 annualCap;
+        uint32 annualRateInPercentMille;
         uint32 maxDelegatorsStakingRewardsPercentMille;
     }
     Settings settings;
@@ -96,12 +96,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         return toUint256Granularity(settings.certifiedCommitteeAnnualBootstrap);
     }
 
-    function getMaxDelegatorsStakingRewardsPercentMille() public view returns (uint256) {
+    function getMaxDelegatorsStakingRewardsPercentMille() public view returns (uint32) {
         return settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
-    function getAnnualStakingRewardsRate() external view returns (uint256) {
-        return uint256(settings.annualRateInPercentMille);
+    function getAnnualStakingRewardsRatePercentMille() external view returns (uint32) {
+        return settings.annualRateInPercentMille;
     }
 
     function getAnnualStakingRewardsCap() external view returns (uint256) {
@@ -178,7 +178,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) public onlyFunctionalManager onlyWhenActive {
         Settings memory _settings = settings;
-        _settings.annualRateInPercentMille = uint48(annualRateInPercentMille);
+        _settings.annualRateInPercentMille = uint32(annualRateInPercentMille);
         _settings.annualCap = toUint48Granularity(annualCap);
         settings = _settings;
 
@@ -340,11 +340,30 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
 
-    function emergencyWithdraw() external onlyMigrationManager {
+    function emergencyWithdraw() external onlyMigrationManager { // TODO change to onlyEmergencyManager
         emit EmergencyWithdrawal(msg.sender);
         require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
     }
+
+    function getSettings() external view returns (
+        uint generalCommitteeAnnualBootstrap,
+        uint certifiedCommitteeAnnualBootstrap,
+        uint annualStakingRewardsCap,
+        uint32 annualStakingRewardsRatePercentMille,
+        uint32 maxDelegatorsStakingRewardsPercentMille
+    ) {
+        Settings memory _settings = settings;
+        generalCommitteeAnnualBootstrap = toUint256Granularity(_settings.generalCommitteeAnnualBootstrap);
+        certifiedCommitteeAnnualBootstrap = toUint256Granularity(_settings.certifiedCommitteeAnnualBootstrap);
+        annualStakingRewardsCap = toUint256Granularity(_settings.annualCap);
+        annualStakingRewardsRatePercentMille = _settings.annualRateInPercentMille;
+        maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
+    }
+
+    /*
+     * Contracts topology / registry interface
+     */
 
     ICommittee committeeContract;
     IDelegations delegationsContract;
@@ -364,20 +383,4 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         stakingRewardsWallet = IProtocolWallet(getStakingRewardsWallet());
         bootstrapRewardsWallet = IProtocolWallet(getBootstrapRewardsWallet());
     }
-
-    function getSettings() external view returns (
-        uint generalCommitteeAnnualBootstrap,
-        uint certifiedCommitteeAnnualBootstrap,
-        uint annualStakingRewardsRate,
-        uint annualStakingRewardsCap,
-        uint32 maxDelegatorsStakingRewardsPercentMille
-    ) {
-        Settings memory _settings = settings;
-        generalCommitteeAnnualBootstrap = toUint256Granularity(_settings.generalCommitteeAnnualBootstrap);
-        certifiedCommitteeAnnualBootstrap = toUint256Granularity(_settings.certifiedCommitteeAnnualBootstrap);
-        annualStakingRewardsRate = uint(_settings.annualRateInPercentMille);
-        annualStakingRewardsCap = toUint256Granularity(_settings.annualCap);
-        maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
-    }
-
 }
