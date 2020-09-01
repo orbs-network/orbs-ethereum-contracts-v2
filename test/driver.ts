@@ -425,7 +425,9 @@ export class Driver {
     static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
         const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[2] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
-        await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[2]});
+        if (delegationsAddr != ZERO_ADDR) {
+            await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[2]});
+        }
         return staking;
     }
 
