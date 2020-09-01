@@ -29,10 +29,10 @@ describe('protocol-contract', async () => {
   it('allows only the registry manager to set contract registry', async () => {
     const d = await Driver.new();
 
-    const newAddr = d.newParticipant().address;
+    const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryManager.address]);
 
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.functionalManager.address}), /sender is not an admin/);
-    await d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address});
+    await expectRejected(d.protocol.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await d.protocol.setContractRegistry(newRegistry.address, {from: d.registryManager.address});
   });
 
   it('only current registry manager can transfer registry ownership', async () => {
@@ -50,16 +50,18 @@ describe('protocol-contract', async () => {
     const newManager = d.newParticipant();
     await d.protocol.transferRegistryManagement(newManager.address, {from: d.registryManager.address});
 
-    const newAddr = d.newParticipant().address;
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: newManager.address}), /sender is not an admin/);
-    await d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address});
+    const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryManager.address]);
+    await expectRejected(d.protocol.setContractRegistry(newRegistry.address, {from: newManager.address}), /sender is not an admin/);
+    await d.protocol.setContractRegistry(newRegistry.address, {from: d.registryManager.address});
 
     const notNewOwner = d.newParticipant();
     await expectRejected(d.protocol.claimRegistryManagement({from: notNewOwner.address}), /Caller is not the pending registryManager/);
 
     await d.protocol.claimRegistryManagement({from: newManager.address});
-    await expectRejected(d.protocol.setContractRegistry(newAddr, {from: d.registryManager.address}), /sender is not an admin/);
-    await d.protocol.setContractRegistry(newAddr, {from: newManager.address});
+
+    const newRegistry2 = await d.web3.deploy('ContractRegistry', [newRegistry.address, d.registryManager.address]);
+    await expectRejected(d.protocol.setContractRegistry(newRegistry2.address, {from: d.registryManager.address}), /sender is not an admin/);
+    await d.protocol.setContractRegistry(newRegistry2.address, {from: newManager.address});
   });
 
 

@@ -14,6 +14,10 @@ export interface ContractRegistryContract extends OwnedContract {
 
   lockContracts(params?: TransactionConfig): Promise<TransactionReceipt>;
   unlockContracts(params?: TransactionConfig): Promise<TransactionReceipt>;
+
+  getPreviousContractRegistry(): Promise<string>;
+
+  setNewContractRegistry(newRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 }
 
 export interface ContractAddressUpdatedEvent {
@@ -25,4 +29,8 @@ export interface ContractAddressUpdatedEvent {
 export interface ManagerChangedEvent {
   role: string,
   newManager: string
+}
+
+export interface ContractRegistryUpdatedEvent {
+  newContractRegistry: string
 }

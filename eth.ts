@@ -108,7 +108,9 @@ export class Web3Driver{
         session = session || this.defaultSession;
         const abi = compiledContracts[contractName].abi;
         const web3Contract = new this.web3.eth.Contract(abi, contractAddress);
-        this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName});
+        if (this.contracts.get(web3Contract.options.address) == null) {
+            this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName});
+        }
         return new Contract(this, session, abi, web3Contract.options.address) as Contracts[N];
     }
 
