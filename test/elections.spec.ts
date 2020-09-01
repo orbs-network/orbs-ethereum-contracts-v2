@@ -226,7 +226,7 @@ describe('elections-high-level-flows', async () => {
             // Part of the committee votes out, threshold is not yet reached
             const votedOutGuardian = committee[committeeSize - 1];
             for (const v of committee.slice(0, thresholdCrossingIndex)) {
-                const r = await d.elections.voteUnready(votedOutGuardian.address, {from: v.orbsAddress});
+                const r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF,{from: v.orbsAddress});
                 expect(r).to.have.a.voteUnreadyCastedEvent({
                     voter: v.address,
                     subject: votedOutGuardian.address
@@ -235,7 +235,7 @@ describe('elections-high-level-flows', async () => {
                 expect(r).to.not.have.a.committeeSnapshotEvent();
             }
 
-            r = await d.elections.voteUnready(votedOutGuardian.address, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
+            r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
             expect(r).to.have.a.voteUnreadyCastedEvent({
                 voter: committee[thresholdCrossingIndex].address,
                 subject: votedOutGuardian.address
@@ -279,16 +279,19 @@ describe('elections-high-level-flows', async () => {
             addrs: committee.map(v => v.address)
         });
 
-        r = await d.elections.voteUnready(committee[1].address, {from: committee[0].orbsAddress});
+        const WEEK = 7*24*60*60;
+        let expiration = bn((await d.web3.txTimestamp(r)) + WEEK);
+        r = await d.elections.voteUnready(committee[1].address, expiration, {from: committee[0].orbsAddress});
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address,
+            expiration
         });
 
         // ...*.* TiMe wArP *.*.....
-        await evmIncreaseTime(d.web3, defaultDriverOptions.voteUnreadyTimeout);
+        await evmIncreaseTime(d.web3, WEEK);
 
-        r = await d.elections.voteUnready(committee[1].address, {from: committee[1].orbsAddress}); // this should have crossed the vote-out threshold, but the previous vote had timed out
+        r = await d.elections.voteUnready(committee[1].address, 0xFFFFFFFF, {from: committee[1].orbsAddress}); // this should have crossed the vote-out threshold, but the previous vote had timed out
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[1].address,
             subject: committee[1].address,
@@ -296,11 +299,13 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.guardianVotedUnreadyEvent();
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
+        expiration = bn((await d.web3.txTimestamp(r)) + WEEK);
         // recast the stale vote-out, threshold should be reached
-        r = await d.elections.voteUnready(committee[1].address, {from: committee[0].orbsAddress});
+        r = await d.elections.voteUnready(committee[1].address, expiration, {from: committee[0].orbsAddress});
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address,
+            expiration
         });
         expect(r).to.have.a.guardianVotedUnreadyEvent({
             guardian: committee[1].address
@@ -785,20 +790,12 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         const current = await d.elections.getSettings();
-        const voteUnreadyTimeoutSeconds  = bn(current[0]);
-        const minSelfStakePercentMille  = bn(current[1]);
-        const voteUnreadyPercentageThreshold  = bn(current[2]);
-        const voteOutPercentageThreshold  = bn(current[3]);
-
-        await expectRejected(d.elections.setVoteUnreadyTimeoutSeconds(voteUnreadyTimeoutSeconds.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        let r = await d.elections.setVoteUnreadyTimeoutSeconds(voteUnreadyTimeoutSeconds.add(bn(1)), {from: d.functionalManager.address});
-        expect(r).to.have.a.voteUnreadyTimeoutSecondsChangedEvent({
-            newValue: voteUnreadyTimeoutSeconds.add(bn(1)).toString(),
-            oldValue: voteUnreadyTimeoutSeconds.toString()
-        });
+        const minSelfStakePercentMille  = bn(current[0]);
+        const voteUnreadyPercentageThreshold  = bn(current[1]);
+        const voteOutPercentageThreshold  = bn(current[2]);
 
         await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalManager.address});
+        let r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalManager.address});
         expect(r).to.have.a.minSelfStakePercentMilleChangedEvent({
             newValue: minSelfStakePercentMille.add(bn(1)).toString(),
             oldValue: minSelfStakePercentMille.toString()
@@ -819,14 +816,12 @@ describe('elections-high-level-flows', async () => {
         });
 
         const afterUpdate = await d.elections.getSettings();
-        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2], afterUpdate[3]]).to.deep.eq([
-            voteUnreadyTimeoutSeconds.add(bn(1)).toString(),
+        expect([afterUpdate[0], afterUpdate[1], afterUpdate[2]]).to.deep.eq([
             minSelfStakePercentMille.add(bn(1)).toString(),
             voteUnreadyPercentageThreshold.add(bn(1)).toString(),
             voteOutPercentageThreshold.add(bn(1)).toString()
         ]);
 
-        expect(await d.elections.getVoteUnreadyTimeoutSeconds()).to.bignumber.eq(voteUnreadyTimeoutSeconds.add(bn(1)));
         expect(await d.elections.getMinSelfStakePercentMille()).to.bignumber.eq(minSelfStakePercentMille.add(bn(1)));
         expect(await d.elections.getVoteUnreadyPercentageThreshold()).to.bignumber.eq(voteUnreadyPercentageThreshold.add(bn(1)));
         expect(await d.elections.getVoteOutPercentageThreshold()).to.bignumber.eq(voteOutPercentageThreshold.add(bn(1)));

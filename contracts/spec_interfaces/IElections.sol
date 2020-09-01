@@ -10,7 +10,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	event GuardianVotedIn(address guardian);
 
     // Function calls
-    event VoteUnreadyCasted(address voter, address subject);
+    event VoteUnreadyCasted(address voter, address subject, uint expiration);
     event VoteOutCasted(address voter, address[] subjects);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 

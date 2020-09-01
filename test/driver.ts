@@ -30,7 +30,6 @@ export type DriverOptions = {
     minSelfStakePercentMille: number;
     maxTimeBetweenRewardAssignments: number;
     voteUnreadyThreshold: number;
-    voteUnreadyTimeout: number;
     voteOutThreshold: number;
 
     generalCommitteeAnnualBootstrap: number;
@@ -76,7 +75,6 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     minSelfStakePercentMille : 0,
     maxTimeBetweenRewardAssignments: 0,
     voteUnreadyThreshold : 80,
-    voteUnreadyTimeout : 24 * 60 * 60,
     voteOutThreshold : 80,
 
     generalCommitteeAnnualBootstrap: 0,
@@ -104,7 +102,6 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     // Elections
     minSelfStakePercentMille : 8000,
     voteUnreadyThreshold : 70,
-    voteUnreadyTimeout : 7 * 24 * 60 * 60,
     voteOutThreshold : 70,
 
     // Rewards
@@ -180,7 +177,7 @@ export class Driver {
     private static async withFreshContracts(web3, accounts, session, options: Partial<DriverOptions> = {}) {
         const {
             maxCommitteeSize,
-            minSelfStakePercentMille, voteOutThreshold, voteUnreadyTimeout, voteUnreadyThreshold,
+            minSelfStakePercentMille, voteOutThreshold, voteUnreadyThreshold,
             maxTimeBetweenRewardAssignments,
             generalCommitteeAnnualBootstrap,
             certifiedCommitteeAnnualBootstrap,
@@ -247,7 +244,7 @@ export class Driver {
         const elections = options.electionsAddress ?
             await web3.getExisting('Elections', options.electionsAddress, session)
             :
-            await web3.deploy("Elections", [contractRegistry.address, registryAdmin, minSelfStakePercentMille, voteUnreadyThreshold, voteUnreadyTimeout, voteOutThreshold], null, session);
+            await web3.deploy("Elections", [contractRegistry.address, registryAdmin, minSelfStakePercentMille, voteUnreadyThreshold, voteOutThreshold], null, session);
 
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
