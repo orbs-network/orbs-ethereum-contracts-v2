@@ -15,14 +15,14 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 	mapping (string => address) managers;
 
 	modifier onlyAdmin {
-		require(msg.sender == registryManager() || msg.sender == initializationManager(), "sender is not an admin (registryManager or initializationManager when initialization in progress)");
+		require(msg.sender == registryAdmin() || msg.sender == initializationAdmin(), "sender is not an admin (registryAdmin or initializationAdmin when initialization in progress)");
 
 		_;
 	}
 
-	constructor (address _previousContractRegistry, address registryManager) public {
+	constructor (address _previousContractRegistry, address registryAdmin) public {
 		previousContractRegistry = _previousContractRegistry;
-		_transferRegistryManagement(registryManager);
+		_transferRegistryManagement(registryAdmin);
 	}
 
 	function getPreviousContractRegistry() external view returns (address) {

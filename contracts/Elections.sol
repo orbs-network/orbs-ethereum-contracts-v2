@@ -44,7 +44,7 @@ contract Elections is IElections, ManagedContract {
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryManager, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) ManagedContract(_contractRegistry, _registryManager) public {
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
 		setMinSelfStakePercentMille(minSelfStakePercentMille);
 		setVoteOutPercentageThreshold(voteOutPercentageThreshold);
 		setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold);

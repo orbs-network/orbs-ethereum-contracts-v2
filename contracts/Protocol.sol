@@ -16,7 +16,7 @@ contract Protocol is IProtocol, ManagedContract {
 
     mapping (string => DeploymentSubset) deploymentSubsets;
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) ManagedContract(_contractRegistry, _registryManager) public {}
+    constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
 
     function deploymentSubsetExists(string calldata deploymentSubset) external view returns (bool) {
         return deploymentSubsets[deploymentSubset].exists;

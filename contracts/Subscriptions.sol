@@ -42,7 +42,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     IERC20 public erc20;
 
-    constructor (IContractRegistry _contractRegistry, address _registryManager, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment) ManagedContract(_contractRegistry, _registryManager) public {
+    constructor (IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         erc20 = _erc20;
