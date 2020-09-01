@@ -6,6 +6,12 @@ contract Initializable {
 
     event InitializationComplete();
 
+    modifier onlyInitializationAdmin() {
+        require(msg.sender == initializationAdmin(), "sender is not the initialization admin");
+
+        _;
+    }
+
     constructor() public{
         _initializationAdmin = msg.sender;
     }

@@ -1,7 +1,7 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {defaultDriverOptions, Driver, ZERO_ADDR} from "./driver";
+import {defaultDriverOptions, DEPLOYMENT_SUBSET_CANARY, DEPLOYMENT_SUBSET_MAIN, Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
 import {bn, expectRejected} from "./helpers";
@@ -360,6 +360,42 @@ describe('subscriptions-high-level-flows', async () => {
 
     expect((await d.subscriptions.getSettings()).genesisRefTimeDelay).to.eq("123");
     expect((await d.subscriptions.getSettings()).minimumInitialVcPayment).to.eq("456");
+  });
+
+  it("imports VCs from previous contract", async () => {
+    const d = await Driver.new();
+
+    const owner = d.newParticipant();
+
+    const amount = 10;
+    const subs = await d.newSubscriber("tier", 1);
+    await owner.assignAndApproveOrbs(amount, subs.address);
+    let r = await subs.createVC("vc-name", amount, true, "main", {from: owner.address});
+
+    const event = subscriptionChangedEvents(r)[0];
+    const vcData = await d.subscriptions.getVcData(event.vcid);
+
+    const newSubscriptions: any = await d.web3.deploy('Subscriptions', [
+      d.contractRegistry.address,
+      d.registryAdmin.address,
+      d.erc20.address,
+      3*60*60, 1, [event.vcid], d.subscriptions.address]
+    );
+
+    expect(await newSubscriptions.getCreationTx()).to.have.a.subscriptionChangedEvent({
+      vcid: event.vcid,
+      name: "vc-name",
+      tier: "tier",
+      rate: bn(1),
+      expiresAt: bn(vcData[3]),
+      genRefTime: bn(vcData[4]),
+      owner: owner.address,
+      deploymentSubset: "main",
+      isCertified: true
+    });
+
+    expect(await newSubscriptions.nextVcId()).to.bignumber.eq(bn(event.vcid).add(bn(1)));
+
   });
 
 });

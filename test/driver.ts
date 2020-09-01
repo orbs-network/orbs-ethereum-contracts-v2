@@ -249,7 +249,7 @@ export class Driver {
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
             :
-            await web3.deploy('Subscriptions', [contractRegistry.address, registryAdmin, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment], null, session);
+            await web3.deploy('Subscriptions', [contractRegistry.address, registryAdmin, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment, [], ZERO_ADDR], null, session);
 
         const protocol = options.protocolAddress ?
             await web3.getExisting('Protocol', options.protocolAddress, session)

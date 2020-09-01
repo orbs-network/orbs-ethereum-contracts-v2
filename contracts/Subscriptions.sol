@@ -25,14 +25,14 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         address owner;
         string deploymentSubset;
         bool isCertified;
-
-        mapping (string => string) configRecords;
     }
+
+    mapping (uint => mapping(string => string)) configRecords;
 
     mapping (address => bool) public authorizedSubscribers;
     mapping (uint => VirtualChain) public virtualChains;
 
-    uint public nextVcid;
+    uint public nextVcId;
 
     struct Settings {
         uint genesisRefTimeDelay;
@@ -42,24 +42,57 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     IERC20 public erc20;
 
-    constructor (IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment) ManagedContract(_contractRegistry, _registryAdmin) public {
+    constructor (IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment, uint[] memory vcIds, ISubscriptions previousSubscriptionsContract) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         erc20 = _erc20;
-        nextVcid = 1000000;
+        uint _nextVcId = 1000000;
 
         setGenesisRefTimeDelay(_genesisRefTimeDelay);
         setMinimumInitialVcPayment(_minimumInitialVcPayment);
+
+        for (uint i = 0; i < vcIds.length; i++) {
+            importSubscription(vcIds[i], previousSubscriptionsContract);
+            if (vcIds[i] >= _nextVcId) {
+                _nextVcId = vcIds[i] + 1;
+            }
+        }
+
+        nextVcId = _nextVcId;
     }
 
-    function setVcConfigRecord(uint256 vcid, string calldata key, string calldata value) external onlyWhenActive {
-        require(msg.sender == virtualChains[vcid].owner, "only vc owner can set a vc config record");
-        virtualChains[vcid].configRecords[key] = value;
-        emit VcConfigRecordChanged(vcid, key, value);
+    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) public onlyInitializationAdmin {
+        (string memory name,
+        string memory tier,
+        uint256 rate,
+        uint expiresAt,
+        uint256 genRefTime,
+        address owner,
+        string memory deploymentSubset,
+        bool isCertified) = previousSubscriptionsContract.getVcData(vcId);
+
+        virtualChains[vcId] = VirtualChain({
+            name: name,
+            tier: tier,
+            rate: rate,
+            expiresAt: expiresAt,
+            genRefTime: genRefTime,
+            owner: owner,
+            deploymentSubset: deploymentSubset,
+            isCertified: isCertified
+        });
+
+        emit SubscriptionChanged(vcId, owner, name, genRefTime, tier, rate, expiresAt, isCertified, deploymentSubset);
     }
 
-    function getVcConfigRecord(uint256 vcid, string calldata key) external view returns (string memory) {
-        return virtualChains[vcid].configRecords[key];
+    function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external onlyWhenActive {
+        require(msg.sender == virtualChains[vcId].owner, "only vc owner can set a vc config record");
+        configRecords[vcId][key] = value;
+        emit VcConfigRecordChanged(vcId, key, value);
+    }
+
+    function getVcConfigRecord(uint256 vcId, string calldata key) external view returns (string memory) {
+        return configRecords[vcId][key];
     }
 
     function addSubscriber(address addr) external onlyFunctionalManager onlyWhenActive {
@@ -82,7 +115,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
         require(amount >= settings.minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
 
-        uint vcid = nextVcid++;
+        uint vcId = nextVcId++;
         VirtualChain memory vc = VirtualChain({
             name: name,
             expiresAt: block.timestamp,
@@ -93,27 +126,27 @@ contract Subscriptions is ISubscriptions, ManagedContract {
             deploymentSubset: deploymentSubset,
             isCertified: isCertified
         });
-        virtualChains[vcid] = vc;
+        virtualChains[vcId] = vc;
 
-        emit VcCreated(vcid, owner);
+        emit VcCreated(vcId, owner);
 
-        _extendSubscription(vcid, amount, owner);
-        return (vcid, vc.genRefTime);
+        _extendSubscription(vcId, amount, owner);
+        return (vcId, vc.genRefTime);
     }
 
-    function extendSubscription(uint256 vcid, uint256 amount, address payer) external onlyWhenActive {
-        _extendSubscription(vcid, amount, payer);
+    function extendSubscription(uint256 vcId, uint256 amount, address payer) external onlyWhenActive {
+        _extendSubscription(vcId, amount, payer);
     }
 
-    function setVcOwner(uint256 vcid, address owner) external onlyWhenActive {
-        require(msg.sender == virtualChains[vcid].owner, "only the vc owner can transfer ownership");
+    function setVcOwner(uint256 vcId, address owner) external onlyWhenActive {
+        require(msg.sender == virtualChains[vcId].owner, "only the vc owner can transfer ownership");
 
-        virtualChains[vcid].owner = owner;
-        emit VcOwnerChanged(vcid, msg.sender, owner);
+        virtualChains[vcId].owner = owner;
+        emit VcOwnerChanged(vcId, msg.sender, owner);
     }
 
-    function _extendSubscription(uint256 vcid, uint256 amount, address payer) private {
-        VirtualChain storage vc = virtualChains[vcid];
+    function _extendSubscription(uint256 vcId, uint256 amount, address payer) private {
+        VirtualChain storage vc = virtualChains[vcId];
 
         IFeesWallet feesWallet = vc.isCertified ? certifiedFeesWallet : generalFeesWallet;
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
@@ -123,8 +156,8 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
         vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
 
-        emit SubscriptionChanged(vcid, vc.name, vc.genRefTime, vc.expiresAt, vc.tier, vc.deploymentSubset);
-        emit Payment(vcid, payer, amount, vc.tier, vc.rate);
+        emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.rate, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
+        emit Payment(vcId, payer, amount, vc.tier, vc.rate);
     }
 
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public onlyFunctionalManager onlyWhenActive {
