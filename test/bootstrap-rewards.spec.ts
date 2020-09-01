@@ -72,8 +72,7 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
       generalGuardianAmount: expectedGeneralCommitteeRewards.toString(),
-      certifiedGuardianAmount: expectedCertificationCommitteeRewards.toString(),
-      duration: elapsedTime.toString()
+      certifiedGuardianAmount: expectedCertificationCommitteeRewards.toString()
     });
 
     const tokenBalances:BN[] = [];

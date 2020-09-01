@@ -48,7 +48,7 @@ interface IRewards {
 
     // bootstrap
 
-    event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount, uint256 duration);
+    event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
     event BootstrapRewardsWithdrawn(address guardian, uint256 amount);
 
     /*

@@ -116,11 +116,10 @@ contract Rewards is IRewards, ContractRegistryAccessor, ERC20AccessorWithTokenGr
         getStakingRewardsWallet().withdraw(toUint256Granularity(totals.stakingRewardsTotalBalance));
         getBootstrapRewardsWallet().withdraw(toUint256Granularity(totals.bootstrapRewardsTotalBalance));
 
-        uint duration = now.sub(lastAssignedAt);
         lastAssignedAt = now;
 
         emit StakingRewardsAssigned(committee, stakingRewards);
-        emit BootstrapRewardsAssigned(generalGuardianBootstrap, certifiedGuardianBootstrap, duration);
+        emit BootstrapRewardsAssigned(generalGuardianBootstrap, certifiedGuardianBootstrap);
         emit FeesAssigned(generalGuardianFee, certifiedGuardianFee);
     }
 
