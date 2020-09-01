@@ -21,5 +21,5 @@ export interface OwnedContract extends Contract {
 
     initializationComplete(): Promise<TransactionReceipt>;
 
-    registryManager(): Promise<string>;
+    registryAdmin(): Promise<string>;
 }

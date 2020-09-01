@@ -34,7 +34,7 @@ describe("staking-contract-handler", async () => {
         await expectRejected(revertingNotifier.stakeChangeBatch([ZERO_ADDR], [0], [false], [0]), /RevertingStakeChangeNotifier: stakeChangeBatch reverted/);
         await expectRejected(revertingNotifier.stakeMigration(ZERO_ADDR, 0), /RevertingStakeChangeNotifier: stakeMigration reverted/);
 
-        await d.contractRegistry.setContract("delegations", revertingNotifier.address, false, {from: d.registryManager.address});
+        await d.contractRegistry.setContract("delegations", revertingNotifier.address, false, {from: d.registryAdmin.address});
 
         const p = d.newParticipant();
         let r = await p.stake(100);
@@ -54,9 +54,9 @@ describe("staking-contract-handler", async () => {
         expect(r).to.have.a.stakeChangeBatchNotificationFailedEvent({stakeOwners: [p2.address]});
 
         // Stake migration - both staking contracts will notify, requires a complex setup
-        const newRegistry = await d.web3.deploy('ContractRegistry', [ZERO_ADDR, d.registryManager.address], null, d.session);
+        const newRegistry = await d.web3.deploy('ContractRegistry', [ZERO_ADDR, d.registryAdmin.address], null, d.session);
 
-        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryManager.address], null, d.session);
+        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryAdmin.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
 
         const newStaking = await d.newStakingContract(newHandler.address, d.erc20.address);
@@ -78,7 +78,7 @@ describe("staking-contract-handler", async () => {
         const d = await Driver.new();
 
         const gasConsumingNotifier = await d.web3.deploy('GasConsumingStakeChangeNotifier' as any, [], null, d.session);
-        await d.contractRegistry.setContract("delegations", gasConsumingNotifier.address, false, {from: d.registryManager.address});
+        await d.contractRegistry.setContract("delegations", gasConsumingNotifier.address, false, {from: d.registryAdmin.address});
 
         // make sure it consumes too much gas
         expect((await gasConsumingNotifier.stakeChange(ZERO_ADDR, 0, false, 0)).gasUsed).to.be.greaterThan(5000000);
@@ -105,9 +105,9 @@ describe("staking-contract-handler", async () => {
         expect(r.gasUsed).to.be.greaterThan(5000000);
 
         // Stake migration - both staking contracts will notify, requires a complex setup
-        const newRegistry = await d.web3.deploy('ContractRegistry', [ZERO_ADDR, d.registryManager.address], null, d.session);
+        const newRegistry = await d.web3.deploy('ContractRegistry', [ZERO_ADDR, d.registryAdmin.address], null, d.session);
 
-        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryManager.address], null, d.session);
+        const newHandler = await d.web3.deploy('StakingContractHandler', [newRegistry.address, d.registryAdmin.address], null, d.session);
         await newRegistry.setContract("stakingContractHandler", newHandler.address, true);
 
         const newStaking = await d.newStakingContract(newHandler.address, d.erc20.address);

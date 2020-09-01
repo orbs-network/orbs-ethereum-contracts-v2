@@ -118,7 +118,7 @@ describe('fees-wallet-contract', async () => {
     await assigner.assignAndApproveOrbs(300000000, d.generalFeesWallet.address);
 
     const collector = d.newParticipant();
-    await d.contractRegistry.setContract("rewards", collector.address, false,{from: d.registryManager.address});
+    await d.contractRegistry.setContract("rewards", collector.address, false,{from: d.registryAdmin.address});
 
     const startTime = await d.web3.txTimestamp(await d.generalFeesWallet.collectFees({from: collector.address}));
 
@@ -163,7 +163,7 @@ describe('fees-wallet-contract', async () => {
     await d.generalFeesWallet.fillFeeBuckets(30, 10, now, {from: assigner.address});
     await expectRejected(d.generalFeesWallet.collectFees({from: assigner.address}), /caller is not the rewards contract/);
 
-    await d.contractRegistry.setContract("rewards", assigner.address, false, {from: d.registryManager.address});
+    await d.contractRegistry.setContract("rewards", assigner.address, false, {from: d.registryAdmin.address});
     await d.generalFeesWallet.collectFees({from: assigner.address});
   });
 
@@ -195,7 +195,7 @@ describe('fees-wallet-contract', async () => {
     let r = await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
     const buckets = feesAddedToBucketEvents(r);
 
-    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.registryManager.address, d.erc20.address], null, d.session);
+    const newFeesWallet = await d.web3.deploy('FeesWallet', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address], null, d.session);
 
     for (const bucket of buckets) {
       await expectRejected(d.generalFeesWallet.migrateBucket(newFeesWallet.address, bn(bucket.bucketId), {from: d.functionalManager.address}), /sender is not the migration manager/);

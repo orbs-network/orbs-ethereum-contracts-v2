@@ -11,7 +11,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
 
     uint constant NOTIFICATION_GAS_LIMIT = 5000000;
 
-    constructor(IContractRegistry _contractRegistry, address _registryManager) public ManagedContract(_contractRegistry, _registryManager) {}
+    constructor(IContractRegistry _contractRegistry, address _registryAdmin) public ManagedContract(_contractRegistry, _registryAdmin) {}
 
     modifier onlyStakingContract() {
         require(msg.sender == address(getStakingContract()), "caller is not the staking contract");

@@ -29,22 +29,22 @@ describe('initializable', async () => {
     it('should allow the initializer to act as all roles until init complete', async () => {
         const d = await Driver.new();
 
-        const managed = await d.web3.deploy('ManagedContractTest' as any, [d.contractRegistry.address, d.registryManager.address]);
+        const managed = await d.web3.deploy('ManagedContractTest' as any, [d.contractRegistry.address, d.registryAdmin.address]);
 
-        await managed.adminOp({from: d.initializationManager.address});
-        await managed.adminOp({from: d.registryManager.address});
-        await managed.migrationManagerOp({from: d.initializationManager.address});
-        await managed.migrationManagerOp({from: d.registryManager.address});
-        await managed.nonExistentManagerOp({from: d.initializationManager.address});
+        await managed.adminOp({from: d.initializationAdmin.address});
+        await managed.adminOp({from: d.registryAdmin.address});
+        await managed.migrationManagerOp({from: d.initializationAdmin.address});
+        await managed.migrationManagerOp({from: d.registryAdmin.address});
+        await managed.nonExistentManagerOp({from: d.initializationAdmin.address});
 
         let r = await managed.initializationComplete();
         expect(r).to.have.a.initializationCompleteEvent();
 
-        await expectRejected(managed.adminOp({from: d.initializationManager.address}), /sender is not an admin/);
-        await managed.adminOp({from: d.registryManager.address});
-        await expectRejected(managed.migrationManagerOp({from: d.initializationManager.address}), /sender is not the migration manager/);
-        await managed.migrationManagerOp({from: d.registryManager.address});
-        await expectRejected(managed.nonExistentManagerOp({from: d.initializationManager.address}), /sender is not the manager/);
+        await expectRejected(managed.adminOp({from: d.initializationAdmin.address}), /sender is not an admin/);
+        await managed.adminOp({from: d.registryAdmin.address});
+        await expectRejected(managed.migrationManagerOp({from: d.initializationAdmin.address}), /sender is not the migration manager/);
+        await managed.migrationManagerOp({from: d.registryAdmin.address});
+        await expectRejected(managed.nonExistentManagerOp({from: d.initializationAdmin.address}), /sender is not the manager/);
     });
 
 });

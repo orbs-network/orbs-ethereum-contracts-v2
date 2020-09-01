@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/GSN/Context.sol";
  * This allows the new owner to accept the transfer.
  */
 contract WithClaimableRegistryManagement is Context {
-    address private _registryManager;
+    address private _registryAdmin;
     address pendingRegistryManager;
 
     event RegistryManagementTransferred(address indexed previousRegistryManager, address indexed newRegistryManager);
@@ -19,62 +19,62 @@ contract WithClaimableRegistryManagement is Context {
      */
     constructor () internal {
         address msgSender = _msgSender();
-        _registryManager = msgSender;
+        _registryAdmin = msgSender;
         emit RegistryManagementTransferred(address(0), msgSender);
     }
 
     /**
-     * @dev Returns the address of the current registryManager.
+     * @dev Returns the address of the current registryAdmin.
      */
-    function registryManager() public view returns (address) {
-        return _registryManager;
+    function registryAdmin() public view returns (address) {
+        return _registryAdmin;
     }
 
     /**
-     * @dev Throws if called by any account other than the registryManager.
+     * @dev Throws if called by any account other than the registryAdmin.
      */
     modifier onlyRegistryManager() {
-        require(isRegistryManager(), "WithClaimableRegistryManagement: caller is not the registryManager");
+        require(isRegistryManager(), "WithClaimableRegistryManagement: caller is not the registryAdmin");
         _;
     }
 
     /**
-     * @dev Returns true if the caller is the current registryManager.
+     * @dev Returns true if the caller is the current registryAdmin.
      */
     function isRegistryManager() public view returns (bool) {
-        return _msgSender() == _registryManager;
+        return _msgSender() == _registryAdmin;
     }
 
     /**
-     * @dev Leaves the contract without registryManager. It will not be possible to call
-     * `onlyManager` functions anymore. Can only be called by the current registryManager.
+     * @dev Leaves the contract without registryAdmin. It will not be possible to call
+     * `onlyManager` functions anymore. Can only be called by the current registryAdmin.
      *
-     * NOTE: Renouncing registryManagement will leave the contract without an registryManager,
-     * thereby removing any functionality that is only available to the registryManager.
+     * NOTE: Renouncing registryManagement will leave the contract without an registryAdmin,
+     * thereby removing any functionality that is only available to the registryAdmin.
      */
     function renounceRegistryManagement() public onlyRegistryManager {
-        emit RegistryManagementTransferred(_registryManager, address(0));
-        _registryManager = address(0);
+        emit RegistryManagementTransferred(_registryAdmin, address(0));
+        _registryAdmin = address(0);
     }
 
     /**
      * @dev Transfers registryManagement of the contract to a new account (`newManager`).
      */
     function _transferRegistryManagement(address newRegistryManager) internal {
-        require(newRegistryManager != address(0), "RegistryManager: new registryManager is the zero address");
-        emit RegistryManagementTransferred(_registryManager, newRegistryManager);
-        _registryManager = newRegistryManager;
+        require(newRegistryManager != address(0), "RegistryManager: new registryAdmin is the zero address");
+        emit RegistryManagementTransferred(_registryAdmin, newRegistryManager);
+        _registryAdmin = newRegistryManager;
     }
 
     /**
      * @dev Modifier throws if called by any account other than the pendingManager.
      */
     modifier onlyPendingRegistryManager() {
-        require(msg.sender == pendingRegistryManager, "Caller is not the pending registryManager");
+        require(msg.sender == pendingRegistryManager, "Caller is not the pending registryAdmin");
         _;
     }
     /**
-     * @dev Allows the current registryManager to set the pendingManager address.
+     * @dev Allows the current registryAdmin to set the pendingManager address.
      * @param newRegistryManager The address to transfer registryManagement to.
      */
     function transferRegistryManagement(address newRegistryManager) public onlyRegistryManager {
