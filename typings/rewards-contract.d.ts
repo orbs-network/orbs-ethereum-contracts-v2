@@ -6,7 +6,6 @@ import {OwnedContract} from "./base-contract";
 export interface BootstrapRewardsAssignedEvent {
     generalGuardianAmount: string|BN,
     certifiedGuardianAmount: string|BN,
-    duration: string|BN
 }
 
 export interface FeesAssignedEvent {
