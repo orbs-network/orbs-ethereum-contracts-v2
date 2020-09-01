@@ -18,10 +18,4 @@ contract ManagedContract is Lockable {
         _;
     }
 
-    modifier onlyEmergencyManager {
-        require(isManager("emergencyManager"), "sender is not the emergency manager");
-
-        _;
-    }
-
 }

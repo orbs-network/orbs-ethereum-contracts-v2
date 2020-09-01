@@ -340,7 +340,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
 
-    function emergencyWithdraw() external onlyMigrationManager { // TODO change to onlyEmergencyManager
+    function emergencyWithdraw() external onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
         require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");

@@ -10,7 +10,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	event GuardianVotedOut(address guardian);
 
 	// Function calls
-	event VoteUnreadyCasted(address voter, address subject);
+	event VoteUnreadyCasted(address voter, address subject, uint256 expiration);
 	event VoteOutCasted(address voter, address subject);
 	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
 
@@ -27,7 +27,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	 */
 
 	/// @dev Called by a guardian as part of the automatic vote-out flow
-	function voteUnready(address subject_addr) external;
+	function voteUnready(address subject_addr, uint expiration) external;
 
 	/// @dev casts a voteOut vote by the sender to the given address
 	function voteOut(address subjectAddr) external;
@@ -66,18 +66,15 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// @dev Updates the address of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
-	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) external /* onlyFunctionalManager onlyWhenActive */;
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager onlyWhenActive */;
 	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
 	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
 
-	function getVoteUnreadyTimeoutSeconds() external view returns (uint32);
 	function getMinSelfStakePercentMille() external view returns (uint32);
 	function getVoteOutPercentageThreshold() external view returns (uint8);
 	function getVoteUnreadyPercentageThreshold() external view returns (uint8);
 
 	function getSettings() external view returns (
-		uint32 voteUnreadyTimeoutSeconds,
 		uint32 minSelfStakePercentMille,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold

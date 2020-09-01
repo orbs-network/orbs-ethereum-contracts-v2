@@ -8,7 +8,7 @@ export interface ElectionsContract extends OwnedContract {
   getTopology(): Promise<TransactionReceipt>;
   readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
   readyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
-  voteUnready(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  voteUnready(subjectAddr: string, expiration: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGuardianOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGuardianIp(ip: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -22,7 +22,6 @@ export interface ElectionsContract extends OwnedContract {
   setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   getSettings(params?: TransactionConfig): Promise<[
-    number|BN /* voteOutTimeoutSeconds */,
     number|BN /* minSelfStakePercentMille */,
     number|BN /* voteOutPercentageThreshold */,
     number|BN /* banningPercentageThreshold */
@@ -44,6 +43,7 @@ export interface StakeChangeEvent {
 export interface VoteUnreadyCastedEvent {
   voter: string;
   subject: string;
+  expiration: number|BN;
 }
 
 export interface GuardianVotedUnreadyEvent {

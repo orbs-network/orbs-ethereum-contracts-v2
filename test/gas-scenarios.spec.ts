@@ -233,7 +233,7 @@ describe('gas usage scenarios', async () => {
         const {d, committee} = await fullCommittee();
 
         d.resetGasRecording();
-        let r = await d.elections.voteUnready(committee[1].address, {from: committee[0].orbsAddress});
+        let r = await d.elections.voteUnready(committee[1].address, 0xFFFFFFFF,{from: committee[0].orbsAddress});
         expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
@@ -247,13 +247,13 @@ describe('gas usage scenarios', async () => {
 
         const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThreshold / 100));
         await Promise.all(
-            voters.map(v => d.elections.voteUnready(committee[0].address, {from: v.orbsAddress}))
+            voters.map(v => d.elections.voteUnready(committee[0].address, 0xFFFFFFFF,{from: v.orbsAddress}))
         );
 
         d.resetGasRecording();
 
         const thresholdVoter = committee[voters.length];
-        let r = await d.elections.voteUnready(committee[0].address, {from: thresholdVoter.orbsAddress});
+        let r = await d.elections.voteUnready(committee[0].address, 0xFFFFFFFF, {from: thresholdVoter.orbsAddress});
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: thresholdVoter.address,
             subject: committee[0].address

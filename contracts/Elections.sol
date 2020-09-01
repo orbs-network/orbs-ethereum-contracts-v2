@@ -25,7 +25,6 @@ contract Elections is IElections, ManagedContract {
 	mapping (address => bool) votedOutGuardians;
 
 	struct Settings {
-		uint32 voteUnreadyTimeoutSeconds;
 		uint32 minSelfStakePercentMille;
 		uint8 voteUnreadyPercentageThreshold;
 		uint8 voteOutPercentageThreshold;
@@ -44,11 +43,10 @@ contract Elections is IElections, ManagedContract {
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint32 voteUnreadyTimeoutSeconds, uint8 voteOutPercentageThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint8 voteOutPercentageThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
 		setMinSelfStakePercentMille(minSelfStakePercentMille);
 		setVoteOutPercentageThreshold(voteOutPercentageThreshold);
 		setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold);
-		setVoteUnreadyTimeoutSeconds(voteUnreadyTimeoutSeconds);
 	}
 
 	/// @dev Called by: guardian registration contract
@@ -118,9 +116,9 @@ contract Elections is IElections, ManagedContract {
 				totalCertifiedStake = totalCertifiedStake.add(memberStake);
 			}
 
-			uint256 votedAt = votedUnreadyVotes[member][votee];
-			if (votedAt != 0) {
-				if (now.sub(votedAt) < _settings.voteUnreadyTimeoutSeconds) {
+			uint256 expiration = votedUnreadyVotes[member][votee];
+			if (expiration != 0) {
+				if (now < expiration) {
 					// Vote is valid
 					totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
 					if (certification[i]) {
@@ -137,10 +135,11 @@ contract Elections is IElections, ManagedContract {
 			|| (isVoteeCertified && totalCertifiedStake > 0 && totalCertifiedVoteUnreadyStake.mul(100).div(totalCertifiedStake) >= _settings.voteUnreadyPercentageThreshold);
 	}
 
-	function voteUnready(address subjectAddr) external onlyWhenActive {
+	function voteUnready(address subjectAddr, uint voteExpiration) external onlyWhenActive {
+		require(voteExpiration >= now, "vote expiration time must not be in the past");
 		address sender = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
-		votedUnreadyVotes[sender][subjectAddr] = now;
-		emit VoteUnreadyCasted(sender, subjectAddr);
+		votedUnreadyVotes[sender][subjectAddr] = voteExpiration;
+		emit VoteUnreadyCasted(sender, subjectAddr, voteExpiration);
 
 		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory certification) = committeeContract.getCommittee();
 
@@ -264,31 +263,22 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.addMember(addr, getCommitteeEffectiveStake(addr, _settings), certificationContract.isGuardianCertified(addr));
 	}
 
-	function setVoteUnreadyTimeoutSeconds(uint32 voteUnreadyTimeoutSeconds) public onlyFunctionalManager /* todo onlyWhenActive */ {
-		emit VoteUnreadyTimeoutSecondsChanged(voteUnreadyTimeoutSeconds, settings.voteUnreadyTimeoutSeconds);
-		settings.voteUnreadyTimeoutSeconds = voteUnreadyTimeoutSeconds;
-	}
-
-	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public onlyFunctionalManager {
 		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be 100000 at most");
 		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
 		settings.minSelfStakePercentMille = minSelfStakePercentMille;
 	}
 
-	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) public onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) public onlyFunctionalManager {
 		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
 		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
 		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
 	}
 
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) public onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) public onlyFunctionalManager {
 		require(voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must not be larger than 100");
 		emit VoteUnreadyPercentageThresholdChanged(voteUnreadyPercentageThreshold, settings.voteUnreadyPercentageThreshold);
 		settings.voteUnreadyPercentageThreshold = voteUnreadyPercentageThreshold;
-	}
-
-	function getVoteUnreadyTimeoutSeconds() external view returns (uint32) {
-		return settings.voteUnreadyTimeoutSeconds;
 	}
 
 	function getMinSelfStakePercentMille() external view returns (uint32) {
@@ -304,13 +294,11 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function getSettings() external view returns (
-		uint32 voteUnreadyTimeoutSeconds,
 		uint32 minSelfStakePercentMille,
 		uint8 voteUnreadyPercentageThreshold,
 		uint8 voteOutPercentageThreshold
 	) {
 		Settings memory _settings = settings;
-		voteUnreadyTimeoutSeconds = _settings.voteUnreadyTimeoutSeconds;
 		minSelfStakePercentMille = _settings.minSelfStakePercentMille;
 		voteUnreadyPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
 		voteOutPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
