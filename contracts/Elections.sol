@@ -136,6 +136,7 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function voteUnready(address subjectAddr, uint voteExpiration) external onlyWhenActive {
+		require(voteExpiration >= now, "vote expiration time must not be in the past");
 		address sender = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
 		votedUnreadyVotes[sender][subjectAddr] = voteExpiration;
 		emit VoteUnreadyCasted(sender, subjectAddr, voteExpiration);
