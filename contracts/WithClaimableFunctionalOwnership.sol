@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/GSN/Context.sol";
  */
 contract WithClaimableFunctionalOwnership is Context{
     address private _functionalOwner;
-    address pendingFunctionalOwner;
+    address private _pendingFunctionalOwner;
 
     event FunctionalOwnershipTransferred(address indexed previousFunctionalOwner, address indexed newFunctionalOwner);
 
@@ -70,7 +70,7 @@ contract WithClaimableFunctionalOwnership is Context{
      * @dev Modifier throws if called by any account other than the pendingOwner.
      */
     modifier onlyPendingFunctionalOwner() {
-        require(msg.sender == pendingFunctionalOwner, "Caller is not the pending functionalOwner");
+        require(msg.sender == _pendingFunctionalOwner, "Caller is not the pending functionalOwner");
         _;
     }
     /**
@@ -78,13 +78,20 @@ contract WithClaimableFunctionalOwnership is Context{
      * @param newFunctionalOwner The address to transfer functionalOwnership to.
      */
     function transferFunctionalOwnership(address newFunctionalOwner) public onlyFunctionalOwner {
-        pendingFunctionalOwner = newFunctionalOwner;
+        _pendingFunctionalOwner = newFunctionalOwner;
     }
     /**
-     * @dev Allows the pendingFunctionalOwner address to finalize the transfer.
+     * @dev Allows the _pendingFunctionalOwner address to finalize the transfer.
      */
     function claimFunctionalOwnership() external onlyPendingFunctionalOwner {
-        _transferFunctionalOwnership(pendingFunctionalOwner);
-        pendingFunctionalOwner = address(0);
+        _transferFunctionalOwnership(_pendingFunctionalOwner);
+        _pendingFunctionalOwner = address(0);
+    }
+
+    /**
+     * @dev Returns the current _pendingFunctionalOwner
+    */
+    function pendingFunctionalOwner() public returns (address) {
+       return _pendingFunctionalOwner;  
     }
 }

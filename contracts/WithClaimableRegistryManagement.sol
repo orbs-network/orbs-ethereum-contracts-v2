@@ -10,12 +10,12 @@ import "@openzeppelin/contracts/GSN/Context.sol";
  */
 contract WithClaimableRegistryManagement is Context {
     address private _registryAdmin;
-    address pendingRegistryManager;
+    address private _pendingRegistryAdmin;
 
-    event RegistryManagementTransferred(address indexed previousRegistryManager, address indexed newRegistryManager);
+    event RegistryManagementTransferred(address indexed previousRegistryAdmin, address indexed newRegistryAdmin);
 
     /**
-     * @dev Initializes the contract setting the deployer as the initial registryRegistryManager.
+     * @dev Initializes the contract setting the deployer as the initial registryRegistryAdmin.
      */
     constructor () internal {
         address msgSender = _msgSender();
@@ -33,15 +33,15 @@ contract WithClaimableRegistryManagement is Context {
     /**
      * @dev Throws if called by any account other than the registryAdmin.
      */
-    modifier onlyRegistryManager() {
-        require(isRegistryManager(), "WithClaimableRegistryManagement: caller is not the registryAdmin");
+    modifier onlyRegistryAdmin() {
+        require(isRegistryAdmin(), "WithClaimableRegistryManagement: caller is not the registryAdmin");
         _;
     }
 
     /**
      * @dev Returns true if the caller is the current registryAdmin.
      */
-    function isRegistryManager() public view returns (bool) {
+    function isRegistryAdmin() public view returns (bool) {
         return _msgSender() == _registryAdmin;
     }
 
@@ -52,7 +52,7 @@ contract WithClaimableRegistryManagement is Context {
      * NOTE: Renouncing registryManagement will leave the contract without an registryAdmin,
      * thereby removing any functionality that is only available to the registryAdmin.
      */
-    function renounceRegistryManagement() public onlyRegistryManager {
+    function renounceRegistryManagement() public onlyRegistryAdmin {
         emit RegistryManagementTransferred(_registryAdmin, address(0));
         _registryAdmin = address(0);
     }
@@ -60,32 +60,39 @@ contract WithClaimableRegistryManagement is Context {
     /**
      * @dev Transfers registryManagement of the contract to a new account (`newManager`).
      */
-    function _transferRegistryManagement(address newRegistryManager) internal {
-        require(newRegistryManager != address(0), "RegistryManager: new registryAdmin is the zero address");
-        emit RegistryManagementTransferred(_registryAdmin, newRegistryManager);
-        _registryAdmin = newRegistryManager;
+    function _transferRegistryManagement(address newRegistryAdmin) internal {
+        require(newRegistryAdmin != address(0), "RegistryAdmin: new registryAdmin is the zero address");
+        emit RegistryManagementTransferred(_registryAdmin, newRegistryAdmin);
+        _registryAdmin = newRegistryAdmin;
     }
 
     /**
      * @dev Modifier throws if called by any account other than the pendingManager.
      */
-    modifier onlyPendingRegistryManager() {
-        require(msg.sender == pendingRegistryManager, "Caller is not the pending registryAdmin");
+    modifier onlyPendingRegistryAdmin() {
+        require(msg.sender == _pendingRegistryAdmin, "Caller is not the pending registryAdmin");
         _;
     }
     /**
      * @dev Allows the current registryAdmin to set the pendingManager address.
-     * @param newRegistryManager The address to transfer registryManagement to.
+     * @param newRegistryAdmin The address to transfer registryManagement to.
      */
-    function transferRegistryManagement(address newRegistryManager) public onlyRegistryManager {
-        pendingRegistryManager = newRegistryManager;
+    function transferRegistryManagement(address newRegistryAdmin) public onlyRegistryAdmin {
+        _pendingRegistryAdmin = newRegistryAdmin;
     }
 
     /**
-     * @dev Allows the pendingRegistryManager address to finalize the transfer.
+     * @dev Allows the _pendingRegistryAdmin address to finalize the transfer.
      */
-    function claimRegistryManagement() external onlyPendingRegistryManager {
-        _transferRegistryManagement(pendingRegistryManager);
-        pendingRegistryManager = address(0);
+    function claimRegistryManagement() external onlyPendingRegistryAdmin {
+        _transferRegistryManagement(_pendingRegistryAdmin);
+        _pendingRegistryAdmin = address(0);
+    }
+
+    /**
+     * @dev Returns the current pendingRegistryAdmin
+    */
+    function pendingRegistryAdmin() public returns (address) {
+       return _pendingRegistryAdmin;  
     }
 }

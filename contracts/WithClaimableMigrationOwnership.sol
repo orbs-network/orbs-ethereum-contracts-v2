@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/GSN/Context.sol";
  */
 contract WithClaimableMigrationOwnership is Context{
     address private _migrationOwner;
-    address pendingMigrationOwner;
+    address private _pendingMigrationOwner;
 
     event MigrationOwnershipTransferred(address indexed previousMigrationOwner, address indexed newMigrationOwner);
 
@@ -70,7 +70,7 @@ contract WithClaimableMigrationOwnership is Context{
      * @dev Modifier throws if called by any account other than the pendingOwner.
      */
     modifier onlyPendingMigrationOwner() {
-        require(msg.sender == pendingMigrationOwner, "Caller is not the pending migrationOwner");
+        require(msg.sender == _pendingMigrationOwner, "Caller is not the pending migrationOwner");
         _;
     }
     /**
@@ -78,13 +78,20 @@ contract WithClaimableMigrationOwnership is Context{
      * @param newMigrationOwner The address to transfer migrationOwnership to.
      */
     function transferMigrationOwnership(address newMigrationOwner) public onlyMigrationOwner {
-        pendingMigrationOwner = newMigrationOwner;
+        _pendingMigrationOwner = newMigrationOwner;
     }
     /**
-     * @dev Allows the pendingMigrationOwner address to finalize the transfer.
+     * @dev Allows the _pendingMigrationOwner address to finalize the transfer.
      */
     function claimMigrationOwnership() external onlyPendingMigrationOwner {
-        _transferMigrationOwnership(pendingMigrationOwner);
-        pendingMigrationOwner = address(0);
+        _transferMigrationOwnership(_pendingMigrationOwner);
+        _pendingMigrationOwner = address(0);
+    }
+
+    /**
+     * @dev Returns the current _pendingMigrationOwner
+    */
+    function pendingMigrationOwner() public returns (address) {
+       return _pendingMigrationOwner;  
     }
 }
