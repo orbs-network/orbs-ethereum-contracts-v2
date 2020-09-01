@@ -22,7 +22,7 @@ async function sleep(ms): Promise<void> {
 
 describe('bootstrap-rewards-level-flows', async () => {
 
-  it.only('should distribute bootstrap rewards to guardians in committee', async () => {
+  it('should distribute bootstrap rewards to guardians in committee', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
 
     /* top up bootstrap reward  pool */
