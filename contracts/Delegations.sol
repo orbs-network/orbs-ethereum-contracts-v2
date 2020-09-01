@@ -25,8 +25,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		address delegation;
 		uint96 stake;
 	}
-	mapping (address => StakeOwnerData) stakeOwnersData;
-	mapping (address => uint256) uncappedStakes;
+	mapping (address => StakeOwnerData) public stakeOwnersData;
+	mapping (address => uint256) public uncappedStakes;
 
 	uint256 totalDelegatedStake;
 

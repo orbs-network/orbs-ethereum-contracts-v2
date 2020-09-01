@@ -75,8 +75,13 @@ import {
 
 } from "../typings/fees-wallet-contract";
 import {
+  NotifyDelegationsChanged,
   StakeChangeBatchNotificationFailedEvent,
-  StakeChangeNotificationFailedEvent, StakeMigrationNotificationFailedEvent
+  StakeChangeBatchNotificationSkippedEvent,
+  StakeChangeNotificationFailedEvent,
+  StakeChangeNotificationSkippedEvent,
+  StakeMigrationNotificationFailedEvent,
+  StakeMigrationNotificationSkippedEvent
 } from "../typings/stake-change-handler-contract";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
@@ -248,6 +253,9 @@ declare global {
       stakeChangeNotificationFailedEvent(data?: Partial<StakeChangeNotificationFailedEvent>);
       stakeChangeBatchNotificationFailedEvent(data?: Partial<StakeChangeBatchNotificationFailedEvent>);
       stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);
+      stakeChangeNotificationSkippedEvent(data?: Partial<StakeChangeNotificationSkippedEvent>);
+      stakeChangeBatchNotificationSkippedEvent(data?: Partial<StakeChangeBatchNotificationSkippedEvent>);
+      stakeMigrationNotificationSkippedEvent(data?: Partial<StakeMigrationNotificationSkippedEvent>);
       migratedStakeEvent(data?: Partial<MigratedStakeEvent>);
       managerChangedEvent(data?: Partial<ManagerChangedEvent>);
       initializationCompleteEvent(data?: {});
@@ -255,6 +263,7 @@ declare global {
       generalCommitteeAnnualBootstrapChangedEvent(data?: Partial<GeneralCommitteeAnnualBootstrapChangedEvent>);
       certifiedCommitteeAnnualBootstrapChangedEvent(data?: Partial<CertifiedCommitteeAnnualBootstrapChangedEvent>);
       contractRegistryUpdatedEvent(data?: Partial<ContractRegistryUpdatedEvent>);
+      notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChanged>);
 
       withinContract(contract: Contract): Assertion;
     }

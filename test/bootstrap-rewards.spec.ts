@@ -50,7 +50,9 @@ describe('bootstrap-rewards-level-flows', async () => {
     const {v: v2} = await d.newGuardian(initStakeLarger, false, false, true);
     const {v: v3} = await d.newGuardian(initStakeLesser, true, false, true);
     const {v: v4, r: firstAssignTxRes} = await d.newGuardian(initStakeLesser, false, false, true);
+
     const startTime = await d.web3.txTimestamp(firstAssignTxRes);
+    expect(await d.rewards.getLastRewardAssignmentTime()).to.bignumber.eq(bn(startTime));
     const committee: Participant[] = [v1, v2, v3, v4];
 
     const initialBalance:BN[] = [];
