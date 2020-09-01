@@ -22,7 +22,7 @@ async function sleep(ms): Promise<void> {
 
 describe('bootstrap-rewards-level-flows', async () => {
 
-  it('should distribute bootstrap rewards to guardians in committee', async () => {
+  it.only('should distribute bootstrap rewards to guardians in committee', async () => {
     const d = await Driver.new({maxCommitteeSize: 4});
 
     /* top up bootstrap reward  pool */
@@ -48,7 +48,9 @@ describe('bootstrap-rewards-level-flows', async () => {
     const {v: v2} = await d.newGuardian(initStakeLarger, false, false, true);
     const {v: v3} = await d.newGuardian(initStakeLesser, true, false, true);
     const {v: v4, r: firstAssignTxRes} = await d.newGuardian(initStakeLesser, false, false, true);
+
     const startTime = await d.web3.txTimestamp(firstAssignTxRes);
+    expect(await d.rewards.getLastRewardAssignmentTime()).to.bignumber.eq(bn(startTime));
     const committee: Participant[] = [v1, v2, v3, v4];
 
     const initialBalance:BN[] = [];
@@ -70,7 +72,8 @@ describe('bootstrap-rewards-level-flows', async () => {
 
     expect(assignRewardsTxRes).to.have.a.bootstrapRewardsAssignedEvent({
       generalGuardianAmount: expectedGeneralCommitteeRewards.toString(),
-      certifiedGuardianAmount: expectedCertificationCommitteeRewards.toString()
+      certifiedGuardianAmount: expectedCertificationCommitteeRewards.toString(),
+      duration: elapsedTime.toString()
     });
 
     const tokenBalances:BN[] = [];
