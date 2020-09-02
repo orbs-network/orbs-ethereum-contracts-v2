@@ -34,7 +34,7 @@ describe("staking-contract-handler", async () => {
         await expectRejected(revertingNotifier.stakeChangeBatch([ZERO_ADDR], [0], [false], [0]), /RevertingStakeChangeNotifier: stakeChangeBatch reverted/);
         await expectRejected(revertingNotifier.stakeMigration(ZERO_ADDR, 0), /RevertingStakeChangeNotifier: stakeMigration reverted/);
 
-        await d.contractRegistry.setContract("delegations", revertingNotifier.address, false, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", revertingNotifier.address, false, {from: d.registryAdmin.address});
 
         const p = d.newParticipant();
         let r = await p.stake(100);
@@ -63,7 +63,7 @@ describe("staking-contract-handler", async () => {
         await newRegistry.setContract("staking", newStaking.address, false);
 
         const newRevertingNotifier = await d.web3.deploy('RevertingStakeChangeNotifier' as any, [], null, d.session);
-        await newRegistry.setContract("delegations", newRevertingNotifier.address, false);
+        await newRegistry.setContract("delegation", newRevertingNotifier.address, false);
 
         await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
         r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});
@@ -78,7 +78,7 @@ describe("staking-contract-handler", async () => {
         const d = await Driver.new();
 
         const gasConsumingNotifier = await d.web3.deploy('GasConsumingStakeChangeNotifier' as any, [], null, d.session);
-        await d.contractRegistry.setContract("delegations", gasConsumingNotifier.address, false, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", gasConsumingNotifier.address, false, {from: d.registryAdmin.address});
 
         // make sure it consumes too much gas
         expect((await gasConsumingNotifier.stakeChange(ZERO_ADDR, 0, false, 0)).gasUsed).to.be.greaterThan(5000000);
@@ -114,7 +114,7 @@ describe("staking-contract-handler", async () => {
         await newRegistry.setContract("staking", newStaking.address, false);
 
         const newRevertingNotifier = await d.web3.deploy('GasConsumingStakeChangeNotifier' as any, [], null, d.session);
-        await newRegistry.setContract("delegations", newRevertingNotifier.address, false);
+        await newRegistry.setContract("delegation", newRevertingNotifier.address, false);
 
         await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
         r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});

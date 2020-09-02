@@ -255,7 +255,7 @@ describe('delegations-contract', async () => {
 
        const otherDelegationContract = await d.web3.deploy("Delegation", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
 
-       await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.registryAdmin.address});
+       await d.contractRegistry.setContract("delegation", otherDelegationContract.address, true, {from: d.registryAdmin.address});
 
        const v1 = d.newParticipant();
        await v1.stake(100);
@@ -263,7 +263,7 @@ describe('delegations-contract', async () => {
        const v2 = d.newParticipant();
        await v2.stake(100);
 
-        await d.contractRegistry.setContract("delegations", d.delegation.address, true, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", d.delegation.address, true, {from: d.registryAdmin.address});
 
        // Non-batched
 
@@ -306,7 +306,7 @@ describe('delegations-contract', async () => {
 
        const otherDelegationContract = await d.web3.deploy("Delegation", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
 
-       await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.registryAdmin.address});
+       await d.contractRegistry.setContract("delegation", otherDelegationContract.address, true, {from: d.registryAdmin.address});
 
        const d1 = d.newParticipant();
        await d1.stake(100);
@@ -314,7 +314,7 @@ describe('delegations-contract', async () => {
        const d2 = d.newParticipant();
        await d2.stake(200);
 
-       await d.contractRegistry.setContract("delegations", d.delegation.address, true, {from: d.registryAdmin.address});
+       await d.contractRegistry.setContract("delegation", d.delegation.address, true, {from: d.registryAdmin.address});
 
         const {v: v1} = await d.newGuardian(100, false, false, true);
         const {v: v2} = await d.newGuardian(100, false, false, true);
@@ -366,7 +366,7 @@ describe('delegations-contract', async () => {
 
        const otherDelegationContract = await d.web3.deploy("Delegation", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
 
-       await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.registryAdmin.address});
+       await d.contractRegistry.setContract("delegation", otherDelegationContract.address, true, {from: d.registryAdmin.address});
 
        const d1 = d.newParticipant();
        await d1.stake(100);
@@ -374,7 +374,7 @@ describe('delegations-contract', async () => {
        const d2 = d.newParticipant();
        await d2.stake(200);
 
-       await d.contractRegistry.setContract("delegations", d.delegation.address, true, {from: d.registryAdmin.address});
+       await d.contractRegistry.setContract("delegation", d.delegation.address, true, {from: d.registryAdmin.address});
 
        const {v: v1} = await d.newGuardian(100, false, false, true);
        const {v: v2} = await d.newGuardian(100, false, false, true);
@@ -445,11 +445,11 @@ describe('delegations-contract', async () => {
 
         const otherDelegationContract = await d.web3.deploy("Delegation", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
 
-        await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", otherDelegationContract.address, true, {from: d.registryAdmin.address});
 
         await d1.stake(100);
 
-        await d.contractRegistry.setContract("delegations", d.delegation.address, true, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", d.delegation.address, true, {from: d.registryAdmin.address});
 
         let r = await d.delegation.refreshStake(d1.address);
         expect(r).to.have.a.delegatedStakeChangedEvent({
@@ -479,12 +479,12 @@ describe('delegations-contract', async () => {
 
         const otherDelegationContract = await d.web3.deploy("Delegation", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
 
-        await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", otherDelegationContract.address, true, {from: d.registryAdmin.address});
 
         r = await d1.stake(200);
         expect(r).to.not.have.withinContract(d.delegation).a.delegatedStakeChangedEvent();
 
-        await d.contractRegistry.setContract("delegations", d.delegation.address, true, {from: d.registryAdmin.address});
+        await d.contractRegistry.setContract("delegation", d.delegation.address, true, {from: d.registryAdmin.address});
 
         r = await d1.stake(300);
         expect(r).to.have.a.delegatedStakeChangedEvent({
