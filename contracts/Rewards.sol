@@ -12,10 +12,11 @@ import "./Erc20AccessorWithTokenGranularity.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./Lockable.sol";
 import "./ManagedContract.sol";
+import "./SafeMath48.sol";
 
 contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract {
     using SafeMath for uint256;
-    using SafeMath for uint48;
+    using SafeMath48 for uint48;
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
@@ -140,13 +141,13 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         for (uint i = 0; i < committee.length; i++) {
             balance = balances[committee[i]];
 
-            balance.bootstrapRewards += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap);
-            balance.fees += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
-            balance.stakingRewards += toUint48Granularity(stakingRewards[i]);
+            balance.bootstrapRewards = balance.bootstrapRewards.add(toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap));
+            balance.fees = balance.fees.add(toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee));
+            balance.stakingRewards = balance.stakingRewards.add(toUint48Granularity(stakingRewards[i]));
 
-            totals.bootstrapRewardsTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap);
-            totals.feesTotalBalance += toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee);
-            totals.stakingRewardsTotalBalance += toUint48Granularity(stakingRewards[i]);
+            totals.bootstrapRewardsTotalBalance = totals.bootstrapRewardsTotalBalance.add(toUint48Granularity(certification[i] ? certifiedGuardianBootstrap : generalGuardianBootstrap));
+            totals.feesTotalBalance = totals.feesTotalBalance.add(toUint48Granularity(certification[i] ? certifiedGuardianFee : generalGuardianFee));
+            totals.stakingRewardsTotalBalance = totals.stakingRewardsTotalBalance.add(toUint48Granularity(stakingRewards[i]));
 
             balances[committee[i]] = balance;
         }
@@ -162,9 +163,9 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function collectBootstrapRewards(Settings memory _settings) private view returns (uint256 generalGuardianBootstrap, uint256 certifiedGuardianBootstrap){
-        uint256 duration = now.sub(lastAssignedAt);
-        generalGuardianBootstrap = toUint256Granularity(uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days)));
-        certifiedGuardianBootstrap = generalGuardianBootstrap + toUint256Granularity(uint48(_settings.certifiedCommitteeAnnualBootstrap.mul(duration).div(365 days)));
+        uint duration = now.sub(lastAssignedAt);
+        generalGuardianBootstrap = toUint256Granularity(uint48(uint(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days)));
+        certifiedGuardianBootstrap = generalGuardianBootstrap.add(toUint256Granularity(uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days))));
     }
 
     function withdrawBootstrapFunds(address guardian) external {
@@ -288,7 +289,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint certificationFeePoolAmount = certifiedFeesWallet.collectFees();
 
         generalGuardianFee = divideFees(committee, certification, generalFeePoolAmount, false);
-        certifiedGuardianFee = generalGuardianFee + divideFees(committee, certification, certificationFeePoolAmount, true);
+        certifiedGuardianFee = generalGuardianFee.add(divideFees(committee, certification, certificationFeePoolAmount, true));
     }
 
     function getFeeBalance(address addr) external view returns (uint256) {
@@ -334,7 +335,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint48 amount48 = toUint48Granularity(amount);
         require(transferFrom(erc20, msg.sender, address(this), amount48), "acceptStakingMigration: transfer failed");
 
-        uint48 balance = balances[guardian].stakingRewards + amount48;
+        uint48 balance = balances[guardian].stakingRewards.add(amount48);
         balances[guardian].stakingRewards = balance;
 
         emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
