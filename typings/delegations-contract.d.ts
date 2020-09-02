@@ -19,6 +19,7 @@ export interface DelegationsContract extends OwnedContract {
   getOwnStake(address: string): Promise<BN>;
   getSelfDelegatedStake(address: string): Promise<BN>;
   getTotalDelegatedStake(): Promise<BN>;
+  uncappedStakes(address: string): Promise<BN>;
 }
 
 export interface DelegatedEvent {

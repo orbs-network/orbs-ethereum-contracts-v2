@@ -324,6 +324,8 @@ describe('delegations-contract', async () => {
             const {v: v1} = await d.newGuardian(100, false, false, true);
             const {v: v2} = await d.newGuardian(100, false, false, true);
 
+            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(200));
+
             let r = await d.delegations.importDelegations([d1.address], v1.address, notifyElections, {from: d.migrationManager.address});
             notifyElections ?
                 expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address, v2.address]}) :
@@ -341,6 +343,8 @@ describe('delegations-contract', async () => {
                 delegators: [d1.address],
                 delegatorTotalStakes: [bn(100)]
             });
+
+            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(300));
 
             r = await d.delegations.importDelegations([d2.address, d3.address], v2.address, notifyElections, {from: d.migrationManager.address});
             notifyElections ?
@@ -360,6 +364,8 @@ describe('delegations-contract', async () => {
                 delegators: [d2.address, d3.address],
                 delegatorTotalStakes: [bn(200), bn(300)]
             });
+
+            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(800));
 
             // import a delegation when already delegated should fail
 
@@ -381,6 +387,44 @@ describe('delegations-contract', async () => {
 
     it('imports a delegation for a delegator with an existing stake (without elections notification)', importDelegationsTestGenerator(false));
     it('imports a delegation for a delegator with an existing stake (with    elections notification)', importDelegationsTestGenerator(true));
+
+    it('tracks uncappedStakes and totalDelegateStakes correctly on importDelegations', async () => {
+        const d = await Driver.new();
+
+        // setup a throwaway contract to prevent staking notifications from reaching the real Delegations contract
+        const notificationsSwallower = await d.web3.deploy("Delegations", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
+        await d.contractRegistry.setContract("delegations", notificationsSwallower.address, true, {from: d.registryAdmin.address});
+
+        const d1 = d.newParticipant();
+        await d1.stake(100);
+
+        const d2 = d.newParticipant();
+        await d2.stake(200);
+
+        const d3 = d.newParticipant();
+        await d3.stake(300);
+
+        // restore the real Delegations contract
+        await d.contractRegistry.setContract("delegations", d.delegations.address, true, {from: d.registryAdmin.address});
+
+        await d.delegations.importDelegations([d1.address], d2.address, false, {from: d.migrationManager.address});
+        expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedStakes(d1.address)).to.be.bignumber.equal(bn(0));
+        expect(await d.delegations.uncappedStakes(d2.address)).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedStakes(d3.address)).to.be.bignumber.equal(bn(0));
+
+        await d.delegations.importDelegations([d3.address], d1.address, false, {from: d.migrationManager.address});
+        expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedStakes(d1.address)).to.be.bignumber.equal(bn(300));
+        expect(await d.delegations.uncappedStakes(d2.address)).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedStakes(d3.address)).to.be.bignumber.equal(bn(0));
+
+        await d.delegations.importDelegations([d2.address], d3.address, false, {from: d.migrationManager.address});
+        expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(0));
+        expect(await d.delegations.uncappedStakes(d1.address)).to.be.bignumber.equal(bn(300));
+        expect(await d.delegations.uncappedStakes(d2.address)).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedStakes(d3.address)).to.be.bignumber.equal(bn(200));
+    });
 
     it('ensures only the migration owner can import a delegation and finalize imports', async () => {
        const d = await Driver.new();

@@ -143,7 +143,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 			require(data.delegation == address(0), "import allowed only for uninitialized accounts. existing delegation detected");
 			require(data.stake == 0 , "import allowed only for uninitialized accounts. existing stake detected");
 
-			if (to != from[i]) {
+			if (to != from[i]) { // from[i] stops being self delegating. any uncappedStakes it has now stops being counted towards totalDelegatedStake
 				newTotalDelegatedStake = newTotalDelegatedStake.sub(uncappedStakes[from[i]]);
 			}
 
