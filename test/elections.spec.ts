@@ -526,7 +526,7 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         async function expectTotalGovernanceStakeToBe(n) {
-            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(n));
+            expect(await d.delegation.getTotalDelegatedStake()).to.be.bignumber.equal(bn(n));
         }
 
         const stakeOfA = 11;
@@ -573,7 +573,7 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new();
 
         async function expectTotalGovernanceStakeToBe(n) {
-            expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(n));
+            expect(await d.delegation.getTotalDelegatedStake()).to.be.bignumber.equal(bn(n));
         }
 
         const stakeOfA = 11;
@@ -604,7 +604,7 @@ describe('elections-high-level-flows', async () => {
         let totalRewardsForGovernanceStake = 0;
         for (let i = 0; i < rewards.length; i++) {
             await rewards[i].p.delegate(rewards[i].d);
-            if (await d.delegations.getDelegation(rewards[i].d.address) == rewards[i].d.address) {
+            if (await d.delegation.getDelegation(rewards[i].d.address) == rewards[i].d.address) {
                 totalRewardsForGovernanceStake += rewards[i].amount
             }
         }
@@ -860,11 +860,11 @@ export async function voteOutScenario_setupDelegatorsAndGuardians(driver: Driver
         totalStake += newStake;
 
         await delegator.stake(newStake);
-        expect(await driver.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(totalStake));
+        expect(await driver.delegation.getTotalDelegatedStake()).to.be.bignumber.equal(bn(totalStake));
 
         const v = driver.newParticipant();
         await delegator.delegate(v);
-        expect(await driver.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(totalStake));
+        expect(await driver.delegation.getTotalDelegatedStake()).to.be.bignumber.equal(bn(totalStake));
 
         delegatees.push(v);
         delegators.push(delegator);

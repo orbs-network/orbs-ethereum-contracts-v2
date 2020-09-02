@@ -5,7 +5,7 @@ chai.use(require('chai-bn')(BN));
 export const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
 import { ElectionsContract } from "../typings/elections-contract";
-import { DelegationsContract } from "../typings/delegations-contract";
+import { DelegationContract } from "../typings/delegation-contract";
 import { ERC20Contract } from "../typings/erc20-contract";
 import { StakingContract } from "../typings/staking-contract";
 import { MonthlySubscriptionPlanContract } from "../typings/monthly-subscription-plan-contract";
@@ -56,7 +56,7 @@ export type DriverOptions = {
     stakingContractHandlerAddress?: string;
 
     contractRegistryAddress?: string;
-    delegationsAddress?: string;
+    delegationAddress?: string;
     rewardsAddress?: string;
     electionsAddress?: string;
     subscriptionsAddress?: string;
@@ -144,7 +144,7 @@ export class Driver {
         public erc20: Contracts["TestingERC20"],
         public bootstrapToken: Contracts["TestingERC20"],
         public staking: Contracts["StakingContract"],
-        public delegations: Contracts["Delegations"],
+        public delegation: Contracts["Delegation"],
         public subscriptions: Contracts["Subscriptions"],
         public rewards: Contracts["Rewards"],
         public protocol: Contracts["Protocol"],
@@ -205,10 +205,10 @@ export class Driver {
             :
             await web3.deploy('ContractRegistry', [ZERO_ADDR, registryAdmin], null, session);
 
-        const delegations = options.delegationsAddress ?
-            await web3.getExisting('Delegations', options.delegationsAddress, session)
+        const delegation = options.delegationAddress ?
+            await web3.getExisting('Delegation', options.delegationAddress, session)
             :
-            await web3.deploy("Delegations", [contractRegistry.address, registryAdmin], null, session);
+            await web3.deploy("Delegation", [contractRegistry.address, registryAdmin], null, session);
 
         const externalToken = options.bootstrapTokenAddress ?
             await web3.getExisting('TestingERC20', options.bootstrapTokenAddress, session)
@@ -294,7 +294,7 @@ export class Driver {
         await Promise.all([
             contractRegistry.setContract("staking", staking.address, false, {from: registryAdmin}),
             contractRegistry.setContract("rewards", rewards.address, true, {from: registryAdmin}),
-            contractRegistry.setContract("delegations", delegations.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("delegation", delegation.address, true, {from: registryAdmin}),
             contractRegistry.setContract("elections", elections.address, true, {from: registryAdmin}),
             contractRegistry.setContract("subscriptions", subscriptions.address, true, {from: registryAdmin}),
             contractRegistry.setContract("protocol", protocol.address, true, {from: registryAdmin}),
@@ -332,7 +332,7 @@ export class Driver {
         const contracts = [
             contractRegistry,
             rewards,
-            delegations,
+            delegation,
             elections,
             subscriptions,
             protocol,
@@ -355,7 +355,7 @@ export class Driver {
             erc20,
             externalToken,
             staking,
-            delegations,
+            delegation,
             subscriptions,
             rewards,
             protocol,
@@ -382,7 +382,7 @@ export class Driver {
         const rewards = await web3.getExisting('Rewards', await contractRegistry.getContract('rewards'), session);
         const externalToken = await web3.getExisting('TestingERC20', await contractRegistry.getContract('_bootstrapToken'), session);
         const erc20 = await web3.getExisting('TestingERC20', await contractRegistry.getContract('_erc20'), session);
-        const delegations = await web3.getExisting('Delegations', await contractRegistry.getContract('delegations'), session);
+        const delegation = await web3.getExisting('Delegation', await contractRegistry.getContract('delegation'), session);
         const elections = await web3.getExisting('Elections', await contractRegistry.getContract('elections'), session);
         const staking = await web3.getExisting('StakingContract', await contractRegistry.getContract('staking'), session);
         const subscriptions = await web3.getExisting('Subscriptions', await contractRegistry.getContract('subscriptions'), session);
@@ -402,7 +402,7 @@ export class Driver {
             erc20,
             externalToken,
             staking,
-            delegations,
+            delegation,
             subscriptions,
             rewards,
             protocol,
@@ -418,15 +418,15 @@ export class Driver {
         );
     }
 
-    async newStakingContract(delegationsAddr: string, erc20Addr: string): Promise<StakingContract> {
-        return await Driver.newStakingContract(this.web3, delegationsAddr, erc20Addr, this.session);
+    async newStakingContract(delegationAddr: string, erc20Addr: string): Promise<StakingContract> {
+        return await Driver.newStakingContract(this.web3, delegationAddr, erc20Addr, this.session);
     }
 
-    static async newStakingContract(web3: Web3Driver, delegationsAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
+    static async newStakingContract(web3: Web3Driver, delegationAddr: string, erc20Addr: string, session?: Web3Session): Promise<StakingContract> {
         const accounts = await web3.eth.getAccounts();
         const staking = await web3.deploy("StakingContract", [1 /* _cooldownPeriodInSec */, accounts[2] /* _migrationManager */, "0x0000000000000000000000000000000000000001" /* _emergencyManager */, erc20Addr /* _token */], null, session);
-        if (delegationsAddr != ZERO_ADDR) {
-            await staking.setStakeChangeNotifier(delegationsAddr, {from: accounts[2]});
+        if (delegationAddr != ZERO_ADDR) {
+            await staking.setStakeChangeNotifier(delegationAddr, {from: accounts[2]});
         }
         return staking;
     }
@@ -554,7 +554,7 @@ export class Participant {
     }
 
     async delegate(to: Participant) {
-        return this.driver.delegations.delegate(to.address, {from: this.address});
+        return this.driver.delegation.delegate(to.address, {from: this.address});
     }
 
     async registerAsGuardian() {

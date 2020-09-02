@@ -386,7 +386,7 @@ describe('gas usage scenarios', async () => {
         await Promise.all(delegations.map(d => d[0].stake(100)));
 
         d.resetGasRecording();
-        let r = await d.delegations.importDelegations(
+        let r = await d.delegation.importDelegations(
             delegations.map(d => d[0].address),
             delegations.map(d => d[1].address),
             false

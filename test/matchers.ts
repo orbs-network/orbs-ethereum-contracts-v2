@@ -51,7 +51,7 @@ import {
 import {
     DelegatedEvent,
     DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
-} from "../typings/delegations-contract";
+} from "../typings/delegation-contract";
 import {
   CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,

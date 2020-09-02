@@ -21,7 +21,7 @@ describe('testkit', async () => {
     expect(firstDriver.erc20.address).to.equal(secondDriver.erc20.address);
     expect(firstDriver.bootstrapToken.address).to.equal(secondDriver.bootstrapToken.address);
     expect(firstDriver.staking.address).to.equal(secondDriver.staking.address);
-    expect(firstDriver.delegations.address).to.equal(secondDriver.delegations.address);
+    expect(firstDriver.delegation.address).to.equal(secondDriver.delegation.address);
     expect(firstDriver.subscriptions.address).to.equal(secondDriver.subscriptions.address);
     expect(firstDriver.rewards.address).to.equal(secondDriver.rewards.address);
     expect(firstDriver.protocol.address).to.equal(secondDriver.protocol.address);
@@ -38,7 +38,7 @@ describe('testkit', async () => {
     const bootstrapTokenAddress =  dd.bootstrapToken.address;
 
     const contractRegistryAddress = dd.contractRegistry.address;
-    const delegationsAddress = dd.delegations.address;
+    const delegationsAddress = dd.delegation.address;
     const rewardsAddress = dd.rewards.address;
     const electionsAddress = dd.elections.address;
     const subscriptionsAddress = dd.subscriptions.address;
@@ -57,7 +57,7 @@ describe('testkit', async () => {
       orbsTokenAddress,
       bootstrapTokenAddress,
       contractRegistryAddress,
-      delegationsAddress,
+      delegationAddress: delegationsAddress,
       rewardsAddress,
       electionsAddress,
       subscriptionsAddress,
@@ -76,7 +76,7 @@ describe('testkit', async () => {
     expect(d.erc20.address).to.equal(orbsTokenAddress);
     expect(d.bootstrapToken.address).to.equal(bootstrapTokenAddress);
     expect(d.contractRegistry.address).to.equal(contractRegistryAddress);
-    expect(d.delegations.address).to.equal(delegationsAddress);
+    expect(d.delegation.address).to.equal(delegationsAddress);
     expect(d.rewards.address).to.equal(rewardsAddress);
     expect(d.elections.address).to.equal(electionsAddress);
     expect(d.subscriptions.address).to.equal(subscriptionsAddress);

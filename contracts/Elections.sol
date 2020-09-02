@@ -305,13 +305,13 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	ICommittee committeeContract;
-	IDelegations delegationsContract;
+	IDelegation delegationsContract;
 	IGuardiansRegistration guardianRegistrationContract;
 	IStakingContract stakingContract;
 	ICertification certificationContract;
 	function refreshContracts() external {
 		committeeContract = ICommittee(getCommitteeContract());
-		delegationsContract = IDelegations(getDelegationsContract());
+		delegationsContract = IDelegation(getDelegationsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
 		stakingContract = IStakingContract(getStakingContract());
 		certificationContract = ICertification(getCertificationContract());

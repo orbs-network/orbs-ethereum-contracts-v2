@@ -3,7 +3,7 @@ pragma solidity 0.5.16;
 import "./IContractRegistry.sol";
 
 /// @title Elections contract interface
-interface IDelegations /* is IStakeChangeNotifier */ {
+interface IDelegation /* is IStakeChangeNotifier */ {
 
     // Delegation state change events
 	event DelegatedStakeChanged(address indexed addr, uint256 selfDelegatedStake, uint256 delegatedStake, address[] delegators, uint256[] delegatorTotalStakes);

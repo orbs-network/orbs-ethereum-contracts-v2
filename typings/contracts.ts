@@ -8,7 +8,7 @@ import { MonthlySubscriptionPlanContract } from "./monthly-subscription-plan-con
 import { GuardiansRegistrationContract } from "./guardian-registration-contract";
 import { CommitteeContract } from "./committee-contract";
 import { CertificationContract } from "./certification-contract";
-import { DelegationsContract } from "./delegations-contract";
+import { DelegationContract } from "./delegation-contract";
 import {RewardsContract} from "./rewards-contract";
 import {ProtocolWalletContract} from "./protocol-wallet-contract";
 import {FeesWalletContract} from "./fees-wallet-contract";
@@ -32,7 +32,7 @@ export type Contracts = {
     Certification: CertificationContract;
     GuardiansRegistration: GuardiansRegistrationContract;
     Committee: CommitteeContract;
-    Delegations: DelegationsContract;
+    Delegation: DelegationContract;
     ProtocolWallet: ProtocolWalletContract;
     FeesWallet: FeesWalletContract;
     StakingContractHandler: StakingContractHandlerContract;

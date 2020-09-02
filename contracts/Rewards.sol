@@ -366,7 +366,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
      */
 
     ICommittee committeeContract;
-    IDelegations delegationsContract;
+    IDelegation delegationsContract;
     IGuardiansRegistration guardianRegistrationContract;
     IStakingContract stakingContract;
     IFeesWallet generalFeesWallet;
@@ -375,7 +375,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     IProtocolWallet bootstrapRewardsWallet;
     function refreshContracts() external {
         committeeContract = ICommittee(getCommitteeContract());
-        delegationsContract = IDelegations(getDelegationsContract());
+        delegationsContract = IDelegation(getDelegationsContract());
         guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
         stakingContract = IStakingContract(getStakingContract());
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());

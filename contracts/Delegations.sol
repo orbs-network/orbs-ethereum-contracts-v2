@@ -16,7 +16,7 @@ import "./Lockable.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
 import "./ManagedContract.sol";
 
-contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
+contract Delegation is IDelegation, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
 	using SafeMath for uint96;
 
@@ -242,7 +242,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 				.sub(curStakeOwnerData.stake)
 				.add(updatedStakes[i]);
 
-				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
+				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegation::updatedStakes value too big (>96 bits)");
 				stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
 			}
 
@@ -265,7 +265,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 		uncappedStakes[stakeOwnerDataBefore.delegation] = newUncappedStake;
 
-		require(uint256(uint96(_updatedStake)) == _updatedStake, "Delegations::updatedStakes value too big (>96 bits)");
+		require(uint256(uint96(_updatedStake)) == _updatedStake, "Delegation::updatedStakes value too big (>96 bits)");
 		stakeOwnersData[_stakeOwner].stake = uint96(_updatedStake);
 
 		uint256 _totalDelegatedStake = totalDelegatedStake;

@@ -20,7 +20,7 @@ async function main() {
 
         // PreDeployedContracts
         contractRegistryAddress: "0x10bFdCc77E998Eb849a18c79b880F8b9BE06Ad83",
-        delegationsAddress: "0xBb5B5E9333e155cad6fe299B18dED3F4107EF294",
+        delegationAddress: "0xBb5B5E9333e155cad6fe299B18dED3F4107EF294",
         rewardsAddress: "0x16De66Ca1135a997f17679c0CdF09d49223F5B20",
     });
     // const d = await Driver.new();
@@ -35,7 +35,7 @@ async function main() {
     console.log("erc20", d.erc20.address);
     console.log("externalToken", d.bootstrapToken.address);
     console.log("staking", d.staking.address);
-    console.log("delegations", d.delegations.address);
+    console.log("delegations", d.delegation.address);
     console.log("subscriptions", d.subscriptions.address);
     console.log("rewards", d.rewards.address);
     console.log("protocol", d.protocol.address);
@@ -52,7 +52,7 @@ async function main() {
     await printGetters("erc20", d.erc20);
     await printGetters("externalToken", d.bootstrapToken);
     await printGetters("staking", d.staking);
-    await printGetters("delegations", d.delegations);
+    await printGetters("delegations", d.delegation);
     await printGetters("subscriptions", d.subscriptions);
     await printGetters("rewards", d.rewards);
     await printGetters("protocol", d.protocol);

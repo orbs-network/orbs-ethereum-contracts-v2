@@ -20,7 +20,7 @@ const subscriptions = compiledContracts["Subscriptions"];
 const rewards = compiledContracts["Rewards"];
 const protocol = compiledContracts["Protocol"];
 const contractRegistry = compiledContracts["ContractRegistry"];
-const delegations = compiledContracts["Delegations"];
+const delegation = compiledContracts["Delegation"];
 const feesWallet = compiledContracts["FeesWallet"];
 
 export function parseLogs(txResult, contract, eventSignature, contractAddress?: string) {
@@ -42,8 +42,8 @@ export const guardianDataUpdatedEvents = (txResult, contractAddress?: string) =>
 export const guardianMetadataChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, guardiansRegistration, "GuardianMetadataChanged(address,string,string,string)", contractAddress);
 export const stakedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, staking, "Staked(address,uint256,uint256)", contractAddress);
 export const unstakedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, staking, "Unstaked(address,uint256,uint256)", contractAddress);
-export const delegatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "Delegated(address,address)", contractAddress);
-export const delegatedStakeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegations, "DelegatedStakeChanged(address,uint256,uint256,address[],uint256[])", contractAddress);
+export const delegatedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegation, "Delegated(address,address)", contractAddress);
+export const delegatedStakeChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, delegation, "DelegatedStakeChanged(address,uint256,uint256,address[],uint256[])", contractAddress);
 export const subscriptionChangedEvents = (txResult, contractAddress?: string): SubscriptionChangedEvent[] => parseLogs(txResult, subscriptions, "SubscriptionChanged(uint256,address,string,uint256,string,uint256,uint256,bool,string)", contractAddress);
 export const paymentEvents = (txResult, contractAddress?: string) => parseLogs(txResult, subscriptions, "Payment(uint256,address,uint256,string,uint256)", contractAddress);
 export const feesAddedToBucketEvents = (txResult, contractAddress?: string): FeesAddedToBucketEvent[] => parseLogs(txResult, feesWallet, "FeesAddedToBucket(uint256,uint256,uint256)", contractAddress);

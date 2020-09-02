@@ -231,7 +231,7 @@ describe('contract-registry-high-level-flows', async () => {
     await expectRejected(d.contractRegistry.setNewContractRegistry(invalidNewRegistry.address, {from: d.contractsNonOwnerAddress}), /sender is not an admin/);
     await expectRejected(d.contractRegistry.setNewContractRegistry(invalidNewRegistry.address, {from: d.registryAdmin.address}), /must provide the previous contract registry/);
 
-    expect(await testManaged.delegations()).to.eq(d.delegations.address);
+    expect(await testManaged.delegations()).to.eq(d.delegation.address);
 
     const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryAdmin.address]);
     let r = await d.contractRegistry.setNewContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
@@ -245,10 +245,10 @@ describe('contract-registry-high-level-flows', async () => {
 
     expect(await testManaged.delegations()).to.eq(ZERO_ADDR);
 
-    await newRegistry.setContract('delegations', d.delegations.address, true, {from: d.registryAdmin.address});
+    await newRegistry.setContract('delegations', d.delegation.address, true, {from: d.registryAdmin.address});
     await newRegistry.setContract('ManagedContractTest', testManaged.address, true, {from: d.registryAdmin.address});
 
-    expect(await testManaged.delegations()).to.eq(d.delegations.address);
+    expect(await testManaged.delegations()).to.eq(d.delegation.address);
   });
 
 });

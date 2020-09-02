@@ -54,7 +54,7 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
     }
 
     function getDelegationsContract() internal view returns (address) {
-        return contractRegistry.getContract("delegations");
+        return contractRegistry.getContract("delegation");
     }
 
     function getGuardiansRegistrationContract() internal view returns (address) {
