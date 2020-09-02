@@ -278,7 +278,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         approve(erc20, address(_stakingContract), totalAmount_uint48);
         _stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
 
-        delegationsContract.refreshStakeNotification(vars.guardianAddr);
+        delegationContract.refreshStakeNotification(vars.guardianAddr);
 
         emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
     }
@@ -366,7 +366,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
      */
 
     ICommittee committeeContract;
-    IDelegation delegationsContract;
+    IDelegation delegationContract;
     IGuardiansRegistration guardianRegistrationContract;
     IStakingContract stakingContract;
     IFeesWallet generalFeesWallet;
@@ -375,7 +375,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     IProtocolWallet bootstrapRewardsWallet;
     function refreshContracts() external {
         committeeContract = ICommittee(getCommitteeContract());
-        delegationsContract = IDelegation(getDelegationsContract());
+        delegationContract = IDelegation(getDelegationContract());
         guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
         stakingContract = IStakingContract(getStakingContract());
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());

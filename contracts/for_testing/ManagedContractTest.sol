@@ -12,7 +12,7 @@ contract ManagedContractTest is ManagedContract {
     address public delegations;
     function refreshContracts() external {
         refreshContractsCount++;
-        delegations = getDelegationsContract();
+        delegations = getDelegationContract();
     }
 
     function adminOp() external view onlyAdmin {}

@@ -32,7 +32,7 @@ contract Elections is IElections, ManagedContract {
 	Settings public settings;
 
 	modifier onlyDelegationsContract() {
-		require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
+		require(msg.sender == address(delegationContract), "caller is not the delegations contract");
 
 		_;
 	}
@@ -158,7 +158,7 @@ contract Elections is IElections, ManagedContract {
 		address prevSubject = voteOutVotes[msg.sender];
 		voteOutVotes[msg.sender] = subject;
 
-		uint256 voterStake = delegationsContract.getDelegatedStakes(msg.sender);
+		uint256 voterStake = delegationContract.getDelegatedStakes(msg.sender);
 
 		if (prevSubject == address(0)) {
 			votersStake[msg.sender] = voterStake;
@@ -168,7 +168,7 @@ contract Elections is IElections, ManagedContract {
 			delete votersStake[msg.sender];
 		}
 
-		uint totalStake = delegationsContract.getTotalDelegatedStake();
+		uint totalStake = delegationContract.getTotalDelegatedStake();
 
 		if (prevSubject != address(0) && prevSubject != subject) {
 			_applyVoteOutVotesFor(prevSubject, 0, voterStake, totalStake, _settings);
@@ -252,7 +252,7 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
-		return getCommitteeEffectiveStake(stakingContract.getStakeBalanceOf(v), delegationsContract.getDelegatedStakes(v), _settings);
+		return getCommitteeEffectiveStake(stakingContract.getStakeBalanceOf(v), delegationContract.getDelegatedStakes(v), _settings);
 	}
 
 	function removeMemberFromCommittees(address addr) private {
@@ -305,13 +305,13 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	ICommittee committeeContract;
-	IDelegation delegationsContract;
+	IDelegation delegationContract;
 	IGuardiansRegistration guardianRegistrationContract;
 	IStakingContract stakingContract;
 	ICertification certificationContract;
 	function refreshContracts() external {
 		committeeContract = ICommittee(getCommitteeContract());
-		delegationsContract = IDelegation(getDelegationsContract());
+		delegationContract = IDelegation(getDelegationContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
 		stakingContract = IStakingContract(getStakingContract());
 		certificationContract = ICertification(getCertificationContract());

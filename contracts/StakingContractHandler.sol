@@ -27,7 +27,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        IStakeChangeNotifier notifier = delegationsContract;
+        IStakeChangeNotifier notifier = delegationContract;
         (bool success,) = address(notifier).call.gas(NOTIFICATION_GAS_LIMIT)(abi.encodeWithSelector(
                             notifier.stakeChange.selector, _stakeOwner, _amount, _sign, _updatedStake));
         if (!success) {
@@ -46,7 +46,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        IStakeChangeNotifier notifier = delegationsContract;
+        IStakeChangeNotifier notifier = delegationContract;
         (bool success,) = address(notifier).call.gas(NOTIFICATION_GAS_LIMIT)(abi.encodeWithSelector(
                 notifier.stakeChangeBatch.selector, _stakeOwners, _amounts, _signs, _updatedStakes));
         if (!success) {
@@ -63,7 +63,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        IStakeChangeNotifier notifier = delegationsContract;
+        IStakeChangeNotifier notifier = delegationContract;
         (bool success,) = address(notifier).call.gas(NOTIFICATION_GAS_LIMIT)(abi.encodeWithSelector(
                 notifier.stakeMigration.selector, _stakeOwner, _amount));
         if (!success) {
@@ -84,10 +84,10 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
         return stakingContract.getTotalStakedTokens();
     }
 
-    IStakeChangeNotifier delegationsContract;
+    IStakeChangeNotifier delegationContract;
     IStakingContract stakingContract;
     function refreshContracts() external {
-        delegationsContract = IStakeChangeNotifier(getDelegationsContract());
+        delegationContract = IStakeChangeNotifier(getDelegationContract());
         stakingContract = IStakingContract(getStakingContract());
     }
 
