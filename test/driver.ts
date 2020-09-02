@@ -29,8 +29,8 @@ export type DriverOptions = {
     maxCommitteeSize: number;
     minSelfStakePercentMille: number;
     maxTimeBetweenRewardAssignments: number;
-    voteUnreadyThreshold: number;
-    voteOutThreshold: number;
+    voteUnreadyThresholdPercentMille: number;
+    voteOutThresholdPercentMille: number;
 
     generalCommitteeAnnualBootstrap: number;
     certifiedCommitteeAnnualBootstrap: number;
@@ -74,8 +74,8 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
     minSelfStakePercentMille : 0,
     maxTimeBetweenRewardAssignments: 0,
-    voteUnreadyThreshold : 80,
-    voteOutThreshold : 80,
+    voteUnreadyThresholdPercentMille : 80 * 1000,
+    voteOutThresholdPercentMille : 80 * 1000,
 
     generalCommitteeAnnualBootstrap: 0,
     certifiedCommitteeAnnualBootstrap: 0,
@@ -101,8 +101,8 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
 
     // Elections
     minSelfStakePercentMille : 8000,
-    voteUnreadyThreshold : 70,
-    voteOutThreshold : 70,
+    voteUnreadyThresholdPercentMille : 70 * 1000,
+    voteOutThresholdPercentMille : 70 * 1000,
 
     // Rewards
     generalCommitteeAnnualBootstrap: bn(12).mul(bn(10).pow(bn(18))),
@@ -177,7 +177,7 @@ export class Driver {
     private static async withFreshContracts(web3, accounts, session, options: Partial<DriverOptions> = {}) {
         const {
             maxCommitteeSize,
-            minSelfStakePercentMille, voteOutThreshold, voteUnreadyThreshold,
+            minSelfStakePercentMille, voteOutThresholdPercentMille, voteUnreadyThresholdPercentMille,
             maxTimeBetweenRewardAssignments,
             generalCommitteeAnnualBootstrap,
             certifiedCommitteeAnnualBootstrap,
@@ -244,7 +244,7 @@ export class Driver {
         const elections = options.electionsAddress ?
             await web3.getExisting('Elections', options.electionsAddress, session)
             :
-            await web3.deploy("Elections", [contractRegistry.address, registryAdmin, minSelfStakePercentMille, voteUnreadyThreshold, voteOutThreshold], null, session);
+            await web3.deploy("Elections", [contractRegistry.address, registryAdmin, minSelfStakePercentMille, voteUnreadyThresholdPercentMille, voteOutThresholdPercentMille], null, session);
 
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)

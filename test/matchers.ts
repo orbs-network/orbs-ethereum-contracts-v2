@@ -24,8 +24,8 @@ import {
   GuardianVotedOutEvent,
   VoteOutTimeoutSecondsChangedEvent,
   MinSelfStakePercentMilleChangedEvent,
-  VoteUnreadyPercentageThresholdChangedEvent,
-  VoteOutPercentageThresholdChangedEvent,
+  VoteUnreadyPercentMilleThresholdChangedEvent,
+  VoteOutPercentMilleThresholdChangedEvent,
 } from "../typings/elections-contract";
 import { MigratedStakeEvent, StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {
@@ -225,8 +225,8 @@ declare global {
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
       voteUnreadyTimeoutSecondsChangedEvent(data?: Partial<VoteOutTimeoutSecondsChangedEvent>);
       minSelfStakePercentMilleChangedEvent(data?: Partial<MinSelfStakePercentMilleChangedEvent>);
-      voteOutPercentageThresholdChangedEvent(data?: Partial<VoteUnreadyPercentageThresholdChangedEvent>);
-      voteUnreadyPercentageThresholdChangedEvent(data?: Partial<VoteOutPercentageThresholdChangedEvent>);
+      voteOutPercentMilleThresholdChangedEvent(data?: Partial<VoteUnreadyPercentMilleThresholdChangedEvent>);
+      voteUnreadyPercentMilleThresholdChangedEvent(data?: Partial<VoteOutPercentMilleThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
       maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)

@@ -245,7 +245,7 @@ describe('gas usage scenarios', async () => {
     it("Auto-voteout is cast, threshold is reached and top committee member leaves", async () => {
         const {d, committee} = await fullCommittee(true);
 
-        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThreshold / 100));
+        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThresholdPercentMille / (100 * 1000)));
         await Promise.all(
             voters.map(v => d.elections.voteUnready(committee[0].address, 0xFFFFFFFF,{from: v.orbsAddress}))
         );
@@ -285,7 +285,7 @@ describe('gas usage scenarios', async () => {
     it("Manual-voteout is cast, threshold is reached and top committee member leaves", async () => {
         const {d, committee} = await fullCommittee(true);
 
-        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThreshold / 100));
+        const voters = committee.slice(0, Math.floor(MAX_COMMITTEE * defaultDriverOptions.voteUnreadyThresholdPercentMille / (100 * 1000)));
         await Promise.all(
             voters.map(v => d.elections.voteOut(committee[0].address, {from: v.address}))
         );

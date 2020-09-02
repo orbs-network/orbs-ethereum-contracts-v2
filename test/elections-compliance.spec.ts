@@ -18,10 +18,10 @@ const expect = chai.expect;
 describe('elections-certification', async () => {
 
     it('votes out a certified committee member when certified threshold is reached', async () => {
-        const voteUnreadyThreshold = 80;
+        const voteUnreadyThresholdPercentMille = 80 * 1000;
         const maxCommitteeSize = 10;
 
-        const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold});
+        const d = await Driver.new({maxCommitteeSize, voteUnreadyThresholdPercentMille});
 
         const generalCommittee: Participant[] = [];
         const certifiedCommittee: Participant[] = [];
@@ -46,10 +46,10 @@ describe('elections-certification', async () => {
     });
 
     it('votes out a certification committee member from both committees when threshold is reached in general committee but not in certification committee', async () => {
-        const voteUnreadyThreshold = 80;
+        const voteUnreadyThresholdPercentMille = 80 * 1000;
         const maxCommitteeSize = 10;
 
-        const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold});
+        const d = await Driver.new({maxCommitteeSize, voteUnreadyThresholdPercentMille});
 
         const generalCommittee: Participant[] = [];
         const certifiedCommittee: Participant[] = [];
@@ -74,10 +74,10 @@ describe('elections-certification', async () => {
     });
 
     it('certification committee cannot vote out a general committee member', async () => {
-        const voteUnreadyThreshold = 80;
+        const voteUnreadyThresholdPercentMille = 80 * 1000;
         const maxCommitteeSize = 10;
 
-        const d = await Driver.new({maxCommitteeSize, voteUnreadyThreshold});
+        const d = await Driver.new({maxCommitteeSize, voteUnreadyThresholdPercentMille});
 
         const generalCommittee: Participant[] = [];
         const certifiedCommittee: Participant[] = [];

@@ -24,10 +24,12 @@ contract Elections is IElections, ManagedContract {
 	mapping (address => uint256) accumulatedStakesForVoteOut; // addr => total stake
 	mapping (address => bool) votedOutGuardians;
 
+	uint32 constant PERCENT_MILLIE_BASE = 100000;
+
 	struct Settings {
 		uint32 minSelfStakePercentMille;
-		uint8 voteUnreadyPercentageThreshold;
-		uint8 voteOutPercentageThreshold;
+		uint32 voteUnreadyPercentMilleThreshold;
+		uint32 voteOutPercentMilleThreshold;
 	}
 	Settings public settings;
 
@@ -43,10 +45,10 @@ contract Elections is IElections, ManagedContract {
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint8 voteUnreadyPercentageThreshold, uint8 voteOutPercentageThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint32 voteUnreadyPercentMilleThreshold, uint32 voteOutPercentMilleThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
 		setMinSelfStakePercentMille(minSelfStakePercentMille);
-		setVoteOutPercentageThreshold(voteOutPercentageThreshold);
-		setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold);
+		setVoteOutPercentMilleThreshold(voteOutPercentMilleThreshold);
+		setVoteUnreadyPercentMilleThreshold(voteUnreadyPercentMilleThreshold);
 	}
 
 	/// @dev Called by: guardian registration contract
@@ -131,8 +133,8 @@ contract Elections is IElections, ManagedContract {
 			}
 		}
 
-		return (totalCommitteeStake > 0 && totalVoteUnreadyStake.mul(100).div(totalCommitteeStake) >= _settings.voteUnreadyPercentageThreshold)
-			|| (isVoteeCertified && totalCertifiedStake > 0 && totalCertifiedVoteUnreadyStake.mul(100).div(totalCertifiedStake) >= _settings.voteUnreadyPercentageThreshold);
+		return (totalCommitteeStake > 0 && totalVoteUnreadyStake.mul(PERCENT_MILLIE_BASE).div(totalCommitteeStake) >= _settings.voteUnreadyPercentMilleThreshold)
+			|| (isVoteeCertified && totalCertifiedStake > 0 && totalCertifiedVoteUnreadyStake.mul(PERCENT_MILLIE_BASE).div(totalCertifiedStake) >= _settings.voteUnreadyPercentMilleThreshold);
 	}
 
 	function voteUnready(address subjectAddr, uint voteExpiration) external onlyWhenActive {
@@ -212,7 +214,7 @@ contract Elections is IElections, ManagedContract {
 			sub(voteOutStakeRemoved).
 			add(voteOutStakeAdded);
 
-		bool shouldBeVotedOut = totalGovernanceStake > 0 && accumulated.mul(100).div(totalGovernanceStake) >= _settings.voteOutPercentageThreshold;
+		bool shouldBeVotedOut = totalGovernanceStake > 0 && accumulated.mul(PERCENT_MILLIE_BASE).div(totalGovernanceStake) >= _settings.voteOutPercentMilleThreshold;
 		if (shouldBeVotedOut) {
 			votedOutGuardians[subjectAddr] = true;
 			emit GuardianVotedOut(subjectAddr);
@@ -244,11 +246,11 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
-		if (selfStake.mul(100000) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
+		if (selfStake.mul(PERCENT_MILLIE_BASE) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
 			return delegatedStake;
 		}
 
-		return selfStake.mul(100000).div(_settings.minSelfStakePercentMille); // never overflows or divides by zero
+		return selfStake.mul(PERCENT_MILLIE_BASE).div(_settings.minSelfStakePercentMille); // never overflows or divides by zero
 	}
 
 	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
@@ -264,44 +266,44 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public onlyFunctionalManager {
-		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be 100000 at most");
+		require(minSelfStakePercentMille <= PERCENT_MILLIE_BASE, "minSelfStakePercentMille must be 100000 at most");
 		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
 		settings.minSelfStakePercentMille = minSelfStakePercentMille;
 	}
 
-	function setVoteOutPercentageThreshold(uint8 voteOutPercentageThreshold) public onlyFunctionalManager {
-		require(voteOutPercentageThreshold <= 100, "voteOutPercentageThreshold must not be larger than 100");
-		emit VoteOutPercentageThresholdChanged(voteOutPercentageThreshold, settings.voteOutPercentageThreshold);
-		settings.voteOutPercentageThreshold = voteOutPercentageThreshold;
+	function setVoteOutPercentMilleThreshold(uint32 voteOutPercentMilleThreshold) public onlyFunctionalManager {
+		require(voteOutPercentMilleThreshold <= PERCENT_MILLIE_BASE, "voteOutPercentMilleThreshold must not be larger than 100000");
+		emit VoteOutPercentMilleThresholdChanged(voteOutPercentMilleThreshold, settings.voteOutPercentMilleThreshold);
+		settings.voteOutPercentMilleThreshold = voteOutPercentMilleThreshold;
 	}
 
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) public onlyFunctionalManager {
-		require(voteUnreadyPercentageThreshold <= 100, "voteUnreadyPercentageThreshold must not be larger than 100");
-		emit VoteUnreadyPercentageThresholdChanged(voteUnreadyPercentageThreshold, settings.voteUnreadyPercentageThreshold);
-		settings.voteUnreadyPercentageThreshold = voteUnreadyPercentageThreshold;
+	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) public onlyFunctionalManager {
+		require(voteUnreadyPercentMilleThreshold <= PERCENT_MILLIE_BASE, "voteUnreadyPercentMilleThreshold must not be larger than 100000");
+		emit VoteUnreadyPercentMilleThresholdChanged(voteUnreadyPercentMilleThreshold, settings.voteUnreadyPercentMilleThreshold);
+		settings.voteUnreadyPercentMilleThreshold = voteUnreadyPercentMilleThreshold;
 	}
 
 	function getMinSelfStakePercentMille() external view returns (uint32) {
 		return settings.minSelfStakePercentMille;
 	}
 
-	function getVoteOutPercentageThreshold() external view returns (uint8) {
-		return settings.voteOutPercentageThreshold;
+	function getVoteOutPercentMilleThreshold() external view returns (uint32) {
+		return settings.voteOutPercentMilleThreshold;
 	}
 
-	function getVoteUnreadyPercentageThreshold() external view returns (uint8) {
-		return settings.voteUnreadyPercentageThreshold;
+	function getVoteUnreadyPercentMilleThreshold() external view returns (uint32) {
+		return settings.voteUnreadyPercentMilleThreshold;
 	}
 
 	function getSettings() external view returns (
 		uint32 minSelfStakePercentMille,
-		uint8 voteUnreadyPercentageThreshold,
-		uint8 voteOutPercentageThreshold
+		uint32 voteUnreadyPercentMilleThreshold,
+		uint32 voteOutPercentMilleThreshold
 	) {
 		Settings memory _settings = settings;
 		minSelfStakePercentMille = _settings.minSelfStakePercentMille;
-		voteUnreadyPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
-		voteOutPercentageThreshold = _settings.voteUnreadyPercentageThreshold;
+		voteUnreadyPercentMilleThreshold = _settings.voteUnreadyPercentMilleThreshold;
+		voteOutPercentMilleThreshold = _settings.voteOutPercentMilleThreshold;
 	}
 
 	ICommittee committeeContract;

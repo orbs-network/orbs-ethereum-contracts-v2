@@ -19,8 +19,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	// Governance
 	event VoteUnreadyTimeoutSecondsChanged(uint32 newValue, uint32 oldValue);
 	event MinSelfStakePercentMilleChanged(uint32 newValue, uint32 oldValue);
-	event VoteOutPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
-	event VoteUnreadyPercentageThresholdChanged(uint8 newValue, uint8 oldValue);
+	event VoteOutPercentMilleThresholdChanged(uint32 newValue, uint32 oldValue);
+	event VoteUnreadyPercentMilleThresholdChanged(uint32 newValue, uint32 oldValue);
 
 	/*
 	 * External methods
@@ -67,17 +67,17 @@ interface IElections /* is IStakeChangeNotifier */ {
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager onlyWhenActive */;
-	function setVoteOutPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
-	function setVoteUnreadyPercentageThreshold(uint8 voteUnreadyPercentageThreshold) external /* onlyFunctionalManager onlyWhenActive */;
+	function setVoteOutPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager onlyWhenActive */;
+	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager onlyWhenActive */;
 
 	function getMinSelfStakePercentMille() external view returns (uint32);
-	function getVoteOutPercentageThreshold() external view returns (uint8);
-	function getVoteUnreadyPercentageThreshold() external view returns (uint8);
+	function getVoteOutPercentMilleThreshold() external view returns (uint32);
+	function getVoteUnreadyPercentMilleThreshold() external view returns (uint32);
 
 	function getSettings() external view returns (
 		uint32 minSelfStakePercentMille,
-		uint8 voteUnreadyPercentageThreshold,
-		uint8 voteOutPercentageThreshold
+		uint32 voteUnreadyPercentMilleThreshold,
+		uint32 voteOutPercentMilleThreshold
 	);
 }
 

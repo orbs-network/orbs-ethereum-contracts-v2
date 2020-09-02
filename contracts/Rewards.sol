@@ -36,6 +36,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
     mapping(address => Balance) balances;
 
+	uint32 constant PERCENT_MILLIE_BASE = 100000;
+
     uint256 lastAssignedAt;
 
     modifier onlyCommitteeContract() {
@@ -83,7 +85,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public onlyFunctionalManager onlyWhenActive {
-        require(maxDelegatorsStakingRewardsPercentMille <= 100000, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
+        require(maxDelegatorsStakingRewardsPercentMille <= PERCENT_MILLIE_BASE, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
         settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
         emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
     }
@@ -206,10 +208,10 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         if (totalWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
             uint256 duration = now.sub(lastAssignedAt);
 
-            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(100000).div(totalWeight));
+            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(PERCENT_MILLIE_BASE).div(totalWeight));
             uint48 curAmount;
             for (uint i = 0; i < committee.length; i++) {
-                curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(36500000 days));
+                curAmount = toUint48Granularity(weights[i].mul(annualRateInPercentMille).mul(duration).div(uint(PERCENT_MILLIE_BASE).mul(365 days)));
                 assignedRewards[i] = toUint256Granularity(curAmount);
             }
         }
@@ -224,7 +226,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     mapping (address => DistributorBatchState) public distributorBatchState;
 
     function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
-        return delegatorRewards.mul(100000) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors
+        return delegatorRewards.mul(PERCENT_MILLIE_BASE) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors
     }
 
     struct distributeStakingRewardsVars {
