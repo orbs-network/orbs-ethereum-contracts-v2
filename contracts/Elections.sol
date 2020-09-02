@@ -259,10 +259,6 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.removeMember(addr);
 	}
 
-	function addMemberToCommittees(address addr, Settings memory _settings) private {
-		committeeContract.addMember(addr, getCommitteeEffectiveStake(addr, _settings), certificationContract.isGuardianCertified(addr));
-	}
-
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public onlyFunctionalManager {
 		require(minSelfStakePercentMille <= 100000, "minSelfStakePercentMille must be 100000 at most");
 		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
