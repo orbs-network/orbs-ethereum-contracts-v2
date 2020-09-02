@@ -440,19 +440,19 @@ export class Driver {
     }
 
     get initializationAdmin(): Participant {
-        return new Participant("initialization-manager", "initialization-manager-website", "initialization-manager-contact", this.accounts[0], this.accounts[0], this);
+        return new Participant("initialization-manager", "initialization-manager-website", this.accounts[0], this.accounts[0], this);
     }
 
     get registryAdmin(): Participant {
-        return new Participant("registry-manager", "registry-manager-website", "registry-manager-contact", this.accounts[1], this.accounts[1], this);
+        return new Participant("registry-manager", "registry-manager-website", this.accounts[1], this.accounts[1], this);
     }
 
     get migrationManager(): Participant {
-        return new Participant("migration-owner", "migration-owner-website", "migration-owner-contact", this.accounts[2], this.accounts[2], this);
+        return new Participant("migration-owner", "migration-owner-website", this.accounts[2], this.accounts[2], this);
     }
 
     get functionalManager(): Participant {
-        return new Participant("functional-owner", "functional-owner-website", "functional-owner-contact", this.accounts[3], this.accounts[3], this);
+        return new Participant("functional-owner", "functional-owner-website", this.accounts[3], this.accounts[3], this);
     }
 
     subscribers: any[] = [];
@@ -470,7 +470,6 @@ export class Driver {
         const v = new Participant(
             name,
             `${name}-website`,
-            `${name}-contact`,
             this.accounts[RESERVED_ACCOUNTS + this.participants.length*2],
             this.accounts[RESERVED_ACCOUNTS + this.participants.length*2+1],
             this);
@@ -517,7 +516,6 @@ export class Participant {
 
     constructor(public name: string,
                 public website: string,
-                public contact: string,
                 public address: string,
                 public orbsAddress: string,
                 driver: Driver) {
@@ -558,7 +556,7 @@ export class Participant {
     }
 
     async registerAsGuardian() {
-        return await this.driver.guardiansRegistration.registerGuardian(this.ip, this.orbsAddress, this.name, this.website, this.contact, {from: this.address});
+        return await this.driver.guardiansRegistration.registerGuardian(this.ip, this.orbsAddress, this.name, this.website, {from: this.address});
     }
 
     async readyForCommittee() {

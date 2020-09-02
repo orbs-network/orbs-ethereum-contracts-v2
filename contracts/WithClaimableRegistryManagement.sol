@@ -92,7 +92,7 @@ contract WithClaimableRegistryManagement is Context {
     /**
      * @dev Returns the current pendingRegistryAdmin
     */
-    function pendingRegistryAdmin() public returns (address) {
+    function pendingRegistryAdmin() public view returns (address) {
        return _pendingRegistryAdmin;  
     }
 }

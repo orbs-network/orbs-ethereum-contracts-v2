@@ -91,7 +91,7 @@ contract WithClaimableFunctionalOwnership is Context{
     /**
      * @dev Returns the current _pendingFunctionalOwner
     */
-    function pendingFunctionalOwner() public returns (address) {
+    function pendingFunctionalOwner() public view returns (address) {
        return _pendingFunctionalOwner;  
     }
 }

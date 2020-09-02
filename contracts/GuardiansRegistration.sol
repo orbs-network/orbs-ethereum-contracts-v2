@@ -19,7 +19,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		bytes4 ip;
 		string name;
 		string website;
-		string contact;
 		uint256 registrationTime;
 		uint256 lastUpdateTime;
 	}
@@ -38,20 +37,19 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	}
 
 	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
-		(bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
+		(bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
 		guardians[guardianAddress] = Guardian({
 			orbsAddr: orbsAddr,
 			ip: ip,
 			name: name,
 			website: website,
-			contact: contact,
 			registrationTime: registrationTime,
 			lastUpdateTime: lastUpdateTime
 		});
 		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
 		ipToGuardian[ip] = guardianAddress;
 
-		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website, contact);
+		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website);
 	}
 
 	string constant REWARDS_FREQUENCY_SEC_METADATA_KEY = "REWARDS_FREQUENCY_SEC";
@@ -67,26 +65,26 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
      */
 
     /// @dev Called by a participant who wishes to register as a guardian
-	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyWhenActive {
+	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerGuardian: Guardian is already registered");
 
 		guardians[msg.sender].registrationTime = now;
 		emit GuardianRegistered(msg.sender);
 
-		_updateGuardian(msg.sender, ip, orbsAddr, name, website, contact);
+		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
 
 		electionsContract.guardianRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its properties
-	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external onlyRegisteredGuardian onlyWhenActive {
-		_updateGuardian(msg.sender, ip, orbsAddr, name, website, contact);
+	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external onlyRegisteredGuardian onlyWhenActive {
+		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
 	}
 
 	function updateGuardianIp(bytes4 ip) external onlyWhenActive {
 		address guardianAddr = resolveGuardianAddress(msg.sender);
 		Guardian memory data = guardians[guardianAddr];
-		_updateGuardian(guardianAddr, ip, data.orbsAddr, data.name, data.website, data.contact);
+		_updateGuardian(guardianAddr, ip, data.orbsAddr, data.name, data.website);
 	}
 
     /// @dev Called by a guardian to update additional guardian metadata properties.
@@ -113,16 +111,16 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		delete guardians[msg.sender];
 
 		electionsContract.guardianUnregistered(msg.sender);
-		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website, guardian.contact);
+		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website);
 		emit GuardianUnregistered(msg.sender);
 	}
 
     /// @dev Returns a guardian's data
     /// Used also by the Election contract
-	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time) {
+	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registration_time, uint last_update_time) {
 		require(isRegistered(addr), "getGuardianData: Guardian is not registered");
 		Guardian memory v = guardians[addr];
-		return (v.ip, v.orbsAddr, v.name, v.website, v.contact, v.registrationTime, v.lastUpdateTime);
+		return (v.ip, v.orbsAddr, v.name, v.website, v.registrationTime, v.lastUpdateTime);
 	}
 
 	function getGuardiansOrbsAddress(address[] calldata addrs) external view returns (address[] memory orbsAddrs) {
@@ -184,7 +182,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	 * Private methods
 	 */
 
-	function _updateGuardian(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact) private {
+	function _updateGuardian(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
 		require(orbsAddr != guardianAddr, "orbs address must be different than the guardian address");
 		require(bytes(name).length != 0, "name must be given");
@@ -201,10 +199,9 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		guardians[guardianAddr].ip = ip;
 		guardians[guardianAddr].name = name;
 		guardians[guardianAddr].website = website;
-		guardians[guardianAddr].contact = contact;
 		guardians[guardianAddr].lastUpdateTime = now;
 
-        emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website, contact);
+        emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website);
     }
 
 	IElections electionsContract;
