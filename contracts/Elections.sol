@@ -94,47 +94,58 @@ contract Elections is IElections, ManagedContract {
 		}
 	}
 
-	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address votee) private returns (bool) {
-		Settings memory _settings = settings;
-
-		uint256 totalCommitteeStake = 0;
-		uint256 totalVoteUnreadyStake = 0;
-		uint256 totalCertifiedStake = 0;
-		uint256 totalCertifiedVoteUnreadyStake = 0;
-
-		address member;
-		uint256 memberStake;
-		bool isVoteeCertified;
+		function getSubjectCommitteeStatus(address[] memory committee, bool[] memory certification, address addr) private pure returns (bool inCommittee, bool inCertifiedCommittee) {
 		for (uint i = 0; i < committee.length; i++) {
-			member = committee[i];
-			memberStake = weights[i];
-
-			if (member == votee && certification[i]) {
-				isVoteeCertified = true;
-			}
-
-			totalCommitteeStake = totalCommitteeStake.add(memberStake);
-			if (certification[i]) {
-				totalCertifiedStake = totalCertifiedStake.add(memberStake);
-			}
-
-			uint256 expiration = votedUnreadyVotes[member][votee];
-			if (expiration != 0) {
-				if (now < expiration) {
-					// Vote is valid
-					totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
-					if (certification[i]) {
-						totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
-					}
-				} else {
-					// Vote is stale, delete from state
-					votedUnreadyVotes[member][votee] = 0;
+			if (addr == committee[i]) {
+				inCommittee = true;
+				if (certification[i]) {
+					inCertifiedCommittee = true;
 				}
 			}
 		}
+	}
 
-		return (totalCommitteeStake > 0 && totalVoteUnreadyStake.mul(PERCENT_MILLIE_BASE).div(totalCommitteeStake) >= _settings.voteUnreadyPercentMilleThreshold)
-			|| (isVoteeCertified && totalCertifiedStake > 0 && totalCertifiedVoteUnreadyStake.mul(PERCENT_MILLIE_BASE).div(totalCertifiedStake) >= _settings.voteUnreadyPercentMilleThreshold);
+	function calcVoteUnreadyWeights(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes) private pure returns 
+		(uint votedStake, uint committeeStake, uint certifiedVotedStake, uint certifiedCommitteeStake) {
+		for (uint i = 0; i < committee.length; i++) {
+			uint256 memberStake = weights[i];
+			bool memberCertified = certification[i];
+			bool voted = votes[i];
+
+			if (voted) {
+				votedStake = votedStake.add(memberStake);
+			}
+			committeeStake = committeeStake.add(memberStake);
+
+			if (memberCertified) {
+				if (voted) {
+					certifiedVotedStake = certifiedVotedStake.add(memberStake);
+				}
+				certifiedCommitteeStake = certifiedCommitteeStake.add(memberStake);
+			}
+		}
+	}
+
+	function isCommitteeVoteUnreadyThresholdReached(address[] memory committee, uint256[] memory weights, bool[] memory certification, address subjectAddr) private returns (bool) {
+		Settings memory _settings = settings;
+		bool[] memory votes = new bool[](committee.length);
+		
+		(bool isSubjectInCommittee, bool isSubjectInCertifiedCommittee) = getSubjectCommitteeStatus(committee, certification, subjectAddr);
+
+		for (uint i = 0; i < committee.length; i++) {
+			address memberAddr = committee[i];
+			if (now < votedUnreadyVotes[memberAddr][subjectAddr]) {
+				votes[i] = true;
+			} else {
+				votedUnreadyVotes[memberAddr][subjectAddr] = 0;
+			}
+		}
+
+		(uint votedStake, uint committeeStake, uint certifiedVotedStake, uint certifiedCommitteeStake) = 
+			calcVoteUnreadyWeights(committee, weights, certification, votes);
+		
+		return (isSubjectInCommittee && votedStake.mul(PERCENT_MILLIE_BASE).div(committeeStake) >= _settings.voteUnreadyPercentMilleThreshold)
+			|| (isSubjectInCertifiedCommittee && certifiedVotedStake.mul(PERCENT_MILLIE_BASE).div(certifiedCommitteeStake) >= _settings.voteUnreadyPercentMilleThreshold);
 	}
 
 	function voteUnready(address subjectAddr, uint voteExpiration) external onlyWhenActive {
@@ -294,6 +305,30 @@ contract Elections is IElections, ManagedContract {
 	function getVoteUnreadyPercentMilleThreshold() external view returns (uint32) {
 		return settings.voteUnreadyPercentMilleThreshold;
 	}
+
+	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake) {
+		votedStake = accumulatedStakesForVoteOut[subjectAddr];
+		totalDelegatedStake = delegationsContract.getTotalDelegatedStake();
+	}
+
+	function getVoteUnreadyStatus(address subjectAddr) external view returns 
+		(uint votedStake, uint committeeStake, bool subjectInCommittee, uint certifiedVotedStake, uint certifiedCommitteeStake, bool subjectInCertifiedCommittee) {
+		(address[] memory committee, uint256[] memory weights, bool[] memory certification) = committeeContract.getCommittee();		
+
+		bool[] memory votes = new bool[](committee.length);
+		for (uint i = 0; i < committee.length; i++) {
+			address memberAddr = committee[i];
+			if (now < votedUnreadyVotes[memberAddr][subjectAddr]) {
+				votes[i] = true;
+			}
+		}
+
+		(subjectInCommittee, subjectInCertifiedCommittee) = getSubjectCommitteeStatus(committee, certification, subjectAddr);
+
+		(votedStake, committeeStake, certifiedVotedStake, certifiedCommitteeStake) = 
+			calcVoteUnreadyWeights(committee, weights, certification, votes);
+	}
+
 
 	function getSettings() external view returns (
 		uint32 minSelfStakePercentMille,
