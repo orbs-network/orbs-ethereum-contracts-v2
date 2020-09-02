@@ -245,7 +245,7 @@ describe('contract-registry-high-level-flows', async () => {
 
     expect(await testManaged.delegations()).to.eq(ZERO_ADDR);
 
-    await newRegistry.setContract('delegations', d.delegation.address, true, {from: d.registryAdmin.address});
+    await newRegistry.setContract('delegation', d.delegation.address, true, {from: d.registryAdmin.address});
     await newRegistry.setContract('ManagedContractTest', testManaged.address, true, {from: d.registryAdmin.address});
 
     expect(await testManaged.delegations()).to.eq(d.delegation.address);
