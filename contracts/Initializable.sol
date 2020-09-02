@@ -20,8 +20,7 @@ contract Initializable {
         return _initializationAdmin;
     }
 
-    function initializationComplete() external {
-        require(msg.sender == initializationAdmin(), "caller is not the initialization manager");
+    function initializationComplete() external onlyInitializationAdmin {
         _initializationAdmin = address(0);
         emit InitializationComplete();
     }
