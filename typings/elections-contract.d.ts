@@ -18,19 +18,19 @@ export interface ElectionsContract extends OwnedContract {
 
   setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMinSelfStakePercentMille(minSelfStakePercentMille: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setVoteOutPercentageThreshold(voteOutPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  setVoteUnreadyPercentageThreshold(voteUnreadyPercentageThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteOutPercentMilleThreshold(voteOutPercentMilleThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+  setVoteUnreadyPercentMilleThreshold(voteUnreadyPercentMilleThreshold: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
   getSettings(params?: TransactionConfig): Promise<[
     number|BN /* minSelfStakePercentMille */,
-    number|BN /* voteOutPercentageThreshold */,
-    number|BN /* banningPercentageThreshold */
+    number|BN /* voteOutPercentMilleThreshold */,
+    number|BN /* banningPercentMilleThreshold */
   ]>;
 
   getVoteUnreadyTimeoutSeconds(): Promise<number>;
   getMinSelfStakePercentMille(): Promise<number>;
-  getVoteUnreadyPercentageThreshold(): Promise<number>;
-  getVoteOutPercentageThreshold(): Promise<number>;
+  getVoteUnreadyPercentMilleThreshold(): Promise<number>;
+  getVoteOutPercentMilleThreshold(): Promise<number>;
 }
 
 export interface StakeChangeEvent {
@@ -69,12 +69,12 @@ export interface  MinSelfStakePercentMilleChangedEvent {
   oldValue: string|BN,
 }
 
-export interface  VoteUnreadyPercentageThresholdChangedEvent {
+export interface  VoteUnreadyPercentMilleThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }
 
-export interface VoteOutPercentageThresholdChangedEvent {
+export interface VoteOutPercentMilleThresholdChangedEvent {
   newValue: string|BN,
   oldValue: string|BN,
 }

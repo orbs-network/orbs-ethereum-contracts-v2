@@ -192,13 +192,13 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('VoteUnready: votes out a committee member', async () => {
-        assert(defaultDriverOptions.voteUnreadyThreshold < 98); // so each committee member will hold a positive stake
-        assert(Math.floor(defaultDriverOptions.voteUnreadyThreshold / 2) >= 98 - defaultDriverOptions.voteUnreadyThreshold); // so the committee list will be ordered by stake
+        assert(defaultDriverOptions.voteUnreadyThresholdPercentMille < (98 * 1000)); // so each committee member will hold a positive stake
+        assert(Math.floor(defaultDriverOptions.voteUnreadyThresholdPercentMille / 2) >= (98 * 1000) - defaultDriverOptions.voteUnreadyThresholdPercentMille); // so the committee list will be ordered by stake
 
         const stakesPercentage = [
-            Math.ceil(defaultDriverOptions.voteUnreadyThreshold / 2),
-            Math.floor(defaultDriverOptions.voteUnreadyThreshold / 2),
-            98 - defaultDriverOptions.voteUnreadyThreshold,
+            Math.ceil(defaultDriverOptions.voteUnreadyThresholdPercentMille / 1000 / 2),
+            Math.floor(defaultDriverOptions.voteUnreadyThresholdPercentMille / 1000 / 2),
+            98 - defaultDriverOptions.voteUnreadyThresholdPercentMille / 1000,
             1,
             1
         ];
@@ -261,7 +261,7 @@ describe('elections-high-level-flows', async () => {
     });
 
     it('VoteUnready: discards stale votes', async () => {
-        assert(defaultDriverOptions.voteUnreadyThreshold > 50); // so one out of two equal committee members does not cross the threshold
+        assert(defaultDriverOptions.voteUnreadyThresholdPercentMille > (50 * 1000)); // so one out of two equal committee members does not cross the threshold
 
         const committeeSize = 2;
         const d = await Driver.new({maxCommitteeSize: committeeSize});
@@ -793,8 +793,8 @@ describe('elections-high-level-flows', async () => {
 
         const current = await d.elections.getSettings();
         const minSelfStakePercentMille = bn(current[0]);
-        const voteUnreadyPercentageThreshold = bn(current[1]);
-        const voteOutPercentageThreshold = bn(current[2]);
+        const voteUnreadyPercentMilleThreshold = bn(current[1]);
+        const voteOutPercentMilleThreshold = bn(current[2]);
 
         await expectRejected(d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
         let r = await d.elections.setMinSelfStakePercentMille(minSelfStakePercentMille.add(bn(1)), {from: d.functionalManager.address});
@@ -803,30 +803,30 @@ describe('elections-high-level-flows', async () => {
             oldValue: minSelfStakePercentMille.toString()
         });
 
-        await expectRejected(d.elections.setVoteOutPercentageThreshold(voteUnreadyPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.elections.setVoteOutPercentageThreshold(voteUnreadyPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
-        expect(r).to.have.a.voteOutPercentageThresholdChangedEvent({
-            newValue: voteUnreadyPercentageThreshold.add(bn(1)).toString(),
-            oldValue: voteUnreadyPercentageThreshold.toString()
+        await expectRejected(d.elections.setVoteOutPercentMilleThreshold(voteUnreadyPercentMilleThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setVoteOutPercentMilleThreshold(voteUnreadyPercentMilleThreshold.add(bn(1)), {from: d.functionalManager.address});
+        expect(r).to.have.a.voteOutPercentMilleThresholdChangedEvent({
+            newValue: voteUnreadyPercentMilleThreshold.add(bn(1)).toString(),
+            oldValue: voteUnreadyPercentMilleThreshold.toString()
         });
 
-        await expectRejected(d.elections.setVoteUnreadyPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
-        r = await d.elections.setVoteUnreadyPercentageThreshold(voteOutPercentageThreshold.add(bn(1)), {from: d.functionalManager.address});
-        expect(r).to.have.a.voteUnreadyPercentageThresholdChangedEvent({
-            newValue: voteOutPercentageThreshold.add(bn(1)).toString(),
-            oldValue: voteOutPercentageThreshold.toString()
+        await expectRejected(d.elections.setVoteUnreadyPercentMilleThreshold(voteOutPercentMilleThreshold.add(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
+        r = await d.elections.setVoteUnreadyPercentMilleThreshold(voteOutPercentMilleThreshold.add(bn(1)), {from: d.functionalManager.address});
+        expect(r).to.have.a.voteUnreadyPercentMilleThresholdChangedEvent({
+            newValue: voteOutPercentMilleThreshold.add(bn(1)).toString(),
+            oldValue: voteOutPercentMilleThreshold.toString()
         });
 
         const afterUpdate = await d.elections.getSettings();
         expect([afterUpdate[0], afterUpdate[1], afterUpdate[2]]).to.deep.eq([
             minSelfStakePercentMille.add(bn(1)).toString(),
-            voteUnreadyPercentageThreshold.add(bn(1)).toString(),
-            voteOutPercentageThreshold.add(bn(1)).toString()
+            voteUnreadyPercentMilleThreshold.add(bn(1)).toString(),
+            voteOutPercentMilleThreshold.add(bn(1)).toString()
         ]);
 
         expect(await d.elections.getMinSelfStakePercentMille()).to.bignumber.eq(minSelfStakePercentMille.add(bn(1)));
-        expect(await d.elections.getVoteUnreadyPercentageThreshold()).to.bignumber.eq(voteUnreadyPercentageThreshold.add(bn(1)));
-        expect(await d.elections.getVoteOutPercentageThreshold()).to.bignumber.eq(voteOutPercentageThreshold.add(bn(1)));
+        expect(await d.elections.getVoteUnreadyPercentMilleThreshold()).to.bignumber.eq(voteUnreadyPercentMilleThreshold.add(bn(1)));
+        expect(await d.elections.getVoteOutPercentMilleThreshold()).to.bignumber.eq(voteOutPercentMilleThreshold.add(bn(1)));
     })
 
     it("reverts if casting a vote-unready with expiration in the past", async () => {
@@ -838,14 +838,14 @@ describe('elections-high-level-flows', async () => {
 });
 
 export async function voteOutScenario_setupDelegatorsAndGuardians(driver: Driver) {
-    assert(defaultDriverOptions.voteOutThreshold < 98); // so each committee member will hold a positive stake
-    assert(Math.floor(defaultDriverOptions.voteOutThreshold / 2) >= 98 - defaultDriverOptions.voteOutThreshold); // so the committee list will be ordered by stake
+    assert(defaultDriverOptions.voteOutThresholdPercentMille < (98 * 1000)); // so each committee member will hold a positive stake
+    assert(Math.floor(defaultDriverOptions.voteOutThresholdPercentMille / 2) >= (98 * 1000) - defaultDriverOptions.voteOutThresholdPercentMille); // so the committee list will be ordered by stake
 
     // -------------- SETUP ---------------
     const stakesPercentage = [
-        Math.ceil(defaultDriverOptions.voteOutThreshold / 2),
-        Math.floor(defaultDriverOptions.voteOutThreshold / 2),
-        98 - defaultDriverOptions.voteOutThreshold,
+        Math.ceil(defaultDriverOptions.voteOutThresholdPercentMille / 1000 / 2),
+        Math.floor(defaultDriverOptions.voteOutThresholdPercentMille / 1000 / 2),
+        98 - defaultDriverOptions.voteOutThresholdPercentMille / 1000,
         1,
     ];
     const thresholdCrossingIndex = 1;
