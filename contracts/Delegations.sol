@@ -196,7 +196,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		emit DelegatedStakeChanged(
 			commonDelegate,
 			delegateStatus.selfDelegatedStake,
-			uncappedStakes[commonDelegate],
+			delegateStatus.delegatedStake,
 			delegatorsSlice,
 			delegatorTotalStakesSlice
 		);
