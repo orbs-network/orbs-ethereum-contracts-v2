@@ -29,10 +29,10 @@ interface IDelegations /* is IStakeChangeNotifier */ {
     /// @dev Updates the address calldata of the contract registry
 	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool _refreshStakeNotification) external /* onlyMigrationManager onlyDuringDelegationImport */;
+	function importDelegations(address[] calldata from, address to, bool _refreshStakeNotification) external /* onlyMigrationManager onlyDuringDelegationImport */;
 	function finalizeDelegationImport() external /* onlyMigrationManager onlyDuringDelegationImport */;
 
-	event DelegationsImported(address[] from, address[] to, bool notifiedElections);
+	event DelegationsImported(address[] from, address to, bool notifiedElections);
 	event DelegationImportFinalized();
 
 	/*

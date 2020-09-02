@@ -131,15 +131,66 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		_;
 	}
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool refreshStakeNotification) external onlyMigrationManager onlyDuringDelegationImport {
-		require(from.length == to.length, "from and to arrays must be of same length");
+	function importDelegations(address[] calldata from, address to, bool refreshStakeNotification) external onlyMigrationManager onlyDuringDelegationImport {
 
+		uint256 uncappedStakesDelta = 0;
+		StakeOwnerData memory data;
+		uint256 newTotalDelegatedStake = totalDelegatedStake;
+		uint256[] memory delegatorsStakes = new uint256[](from.length);
 		for (uint i = 0; i < from.length; i++) {
-			_stakeChange(from[i], stakingContractHandler.getStakeBalanceOf(from[i]), refreshStakeNotification);
-			delegateFrom(from[i], to[i], refreshStakeNotification);
+
+			data = stakeOwnersData[from[i]];
+			require(data.delegation == address(0), "import allowed only for uninitialized accounts. existing delegation detected");
+			require(data.stake == 0 , "import allowed only for uninitialized accounts. existing stake detected");
+
+			if (to != from[i]) {
+				newTotalDelegatedStake = newTotalDelegatedStake.sub(uncappedStakes[from[i]]);
+			}
+
+			// update state
+			data.delegation = to;
+			data.stake = uint96(stakingContractHandler.getStakeBalanceOf(from[i]));
+			stakeOwnersData[from[i]] = data;
+
+			uncappedStakesDelta = uncappedStakesDelta.add(data.stake);
+
+			// store individual stake for event
+			delegatorsStakes[i] = data.stake;
 		}
 
+		// update totals
+		uncappedStakes[to] = uncappedStakes[to].add(uncappedStakesDelta);
+
+		if (stakeOwnersData[to].delegation == address(0) || stakeOwnersData[to].delegation == to) {
+			newTotalDelegatedStake = newTotalDelegatedStake.add(uncappedStakesDelta);
+		}
+		totalDelegatedStake = newTotalDelegatedStake;
+
+		// emit events
 		emit DelegationsImported(from, to, refreshStakeNotification);
+
+		for (uint i = 0; i < from.length; i++) {
+			emit Delegated(from[i], to);
+		}
+
+		DelegateStatus memory delegateStatus = getDelegateStatus(to);
+		emit DelegatedStakeChanged(
+			to,
+			delegateStatus.selfDelegatedStake,
+			delegateStatus.delegatedStake,
+			from,
+			delegatorsStakes
+		);
+
+		// notify Elections
+		if (refreshStakeNotification) {
+			electionsContract.delegatedStakeChange(
+				to,
+				delegateStatus.selfDelegatedStake,
+				delegateStatus.delegatedStake,
+				newTotalDelegatedStake
+			);
+		}
 	}
 
 	function finalizeDelegationImport() external onlyMigrationManager onlyDuringDelegationImport {
