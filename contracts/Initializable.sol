@@ -6,6 +6,12 @@ contract Initializable {
 
     event InitializationComplete();
 
+    modifier onlyInitializationAdmin() {
+        require(msg.sender == initializationAdmin(), "sender is not the initialization admin");
+
+        _;
+    }
+
     constructor() public{
         _initializationAdmin = msg.sender;
     }
@@ -14,8 +20,7 @@ contract Initializable {
         return _initializationAdmin;
     }
 
-    function initializationComplete() external {
-        require(msg.sender == initializationAdmin(), "caller is not the initialization manager");
+    function initializationComplete() external onlyInitializationAdmin {
         _initializationAdmin = address(0);
         emit InitializationComplete();
     }
