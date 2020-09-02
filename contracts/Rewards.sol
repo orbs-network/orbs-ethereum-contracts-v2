@@ -36,6 +36,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
     mapping(address => Balance) balances;
 
+	uint32 constant PERCENT_MILLIE_BASE = 100000;
+
     uint256 lastAssignedAt;
 
     modifier onlyCommitteeContract() {
