@@ -94,7 +94,7 @@ contract Elections is IElections, ManagedContract {
 		}
 	}
 
-		function getSubjectCommitteeStatus(address[] memory committee, bool[] memory certification, address addr) private pure returns (bool inCommittee, bool inCertifiedCommittee) {
+	function getSubjectCommitteeStatus(address[] memory committee, bool[] memory certification, address addr) private pure returns (bool inCommittee, bool inCertifiedCommittee) {
 		for (uint i = 0; i < committee.length; i++) {
 			if (addr == committee[i]) {
 				inCommittee = true;
