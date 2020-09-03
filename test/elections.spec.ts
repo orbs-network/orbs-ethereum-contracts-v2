@@ -18,7 +18,7 @@ import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
 
 const baseStake = 100;
 
-describe.only('elections-high-level-flows', async () => {
+describe('elections-high-level-flows', async () => {
 
     it('emits events on readyForCommittee and readyToSync', async () => {
         const d = await Driver.new();
