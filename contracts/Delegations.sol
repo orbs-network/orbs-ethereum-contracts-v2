@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -38,7 +40,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
 
-	function getTotalDelegatedStake() external view returns (uint256) {
+	function getTotalDelegatedStake() external override view returns (uint256) {
 		return totalDelegatedStake;
 	}
 
@@ -119,7 +121,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		}
 	}
 
-	function delegate(address to) external onlyWhenActive {
+	function delegate(address to) external override onlyWhenActive {
 		delegateFrom(msg.sender, to, true);
 	}
 
@@ -131,7 +133,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		_;
 	}
 
-	function importDelegations(address[] calldata from, address[] calldata to, bool refreshStakeNotification) external onlyMigrationManager onlyDuringDelegationImport {
+	function importDelegations(address[] calldata from, address[] calldata to, bool refreshStakeNotification) external override onlyMigrationManager onlyDuringDelegationImport {
 		require(from.length == to.length, "from and to arrays must be of same length");
 
 		for (uint i = 0; i < from.length; i++) {
@@ -142,12 +144,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		emit DelegationsImported(from, to, refreshStakeNotification);
 	}
 
-	function finalizeDelegationImport() external onlyMigrationManager onlyDuringDelegationImport {
+	function finalizeDelegationImport() external override onlyMigrationManager onlyDuringDelegationImport {
 		delegationImportFinalized = true;
 		emit DelegationImportFinalized();
 	}
 
-	function refreshStakeNotification(address addr) external onlyWhenActive {
+	function refreshStakeNotification(address addr) external override onlyWhenActive {
 		StakeOwnerData memory stakeOwnerData = getStakeOwnerData(addr);
 		DelegateStatus memory delegateStatus = getDelegateStatus(stakeOwnerData.delegation);
 		electionsContract.delegatedStakeChange(
@@ -158,11 +160,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		);
 	}
 
-	function refreshStake(address addr) external onlyWhenActive {
+	function refreshStake(address addr) external override onlyWhenActive {
 		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr), true);
 	}
 
-	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external onlyStakingContractHandler onlyWhenActive {
+	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external override onlyStakingContractHandler onlyWhenActive {
 		_stakeChange(_stakeOwner, _updatedStake, true);
 	}
 
@@ -203,7 +205,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	}
 
 	// TODO add tests to equivalence of batched and non batched notifications
-	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external onlyStakingContractHandler onlyWhenActive {
+	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external override onlyStakingContractHandler onlyWhenActive {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
 		require(batchLength == _signs.length, "_stakeOwners, _signs - array length mismatch");
@@ -212,7 +214,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		_processStakeChangeBatch(_stakeOwners, _updatedStakes);
 	}
 
-	function getDelegation(address addr) public view returns (address) {
+	function getDelegation(address addr) public override view returns (address) {
 		return getStakeOwnerData(addr).delegation;
 	}
 
@@ -222,7 +224,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		return data;
 	}
 
-	function stakeMigration(address _stakeOwner, uint256 _amount) external onlyStakingContractHandler onlyWhenActive {}
+	function stakeMigration(address _stakeOwner, uint256 _amount) external override onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
 		uint i = 0;
@@ -290,11 +292,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		}
 	}
 
-	function getDelegatedStakes(address addr) external view returns (uint256) {
+	function getDelegatedStakes(address addr) external override view returns (uint256) {
 		return _isSelfDelegating(addr) ? uncappedStakes[addr] : 0;
 	}
 
-	function getSelfDelegatedStake(address addr) public view returns (uint256) {
+	function getSelfDelegatedStake(address addr) public override view returns (uint256) {
 		return _isSelfDelegating(addr) ? stakingContractHandler.getStakeBalanceOf(addr) : 0;
 	}
 
@@ -304,7 +306,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	IElections electionsContract;
 	IStakingContractHandler stakingContractHandler;
-	function refreshContracts() external {
+	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 		stakingContractHandler = IStakingContractHandler(getStakingContractHandler());
 	}

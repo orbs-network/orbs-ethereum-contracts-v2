@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./interfaces/IElections.sol";
@@ -65,7 +67,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
      */
 
     /// @dev Called by a participant who wishes to register as a guardian
-	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external onlyWhenActive {
+	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external override onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerGuardian: Guardian is already registered");
 
 		guardians[msg.sender].registrationTime = now;
@@ -77,18 +79,18 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	}
 
     /// @dev Called by a participant who wishes to update its properties
-	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external onlyRegisteredGuardian onlyWhenActive {
+	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external override onlyRegisteredGuardian onlyWhenActive {
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
 	}
 
-	function updateGuardianIp(bytes4 ip) external onlyWhenActive {
+	function updateGuardianIp(bytes4 ip) external override onlyWhenActive {
 		address guardianAddr = resolveGuardianAddress(msg.sender);
 		Guardian memory data = guardians[guardianAddr];
 		_updateGuardian(guardianAddr, ip, data.orbsAddr, data.name, data.website);
 	}
 
     /// @dev Called by a guardian to update additional guardian metadata properties.
-    function setMetadata(string calldata key, string calldata value) external onlyRegisteredGuardian onlyWhenActive {
+    function setMetadata(string calldata key, string calldata value) external override onlyRegisteredGuardian onlyWhenActive {
 		_setMetadata(msg.sender, key, value);
 	}
 
@@ -98,13 +100,13 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		emit GuardianMetadataChanged(guardian, key, value, oldValue);
 	}
 
-	function getMetadata(address addr, string calldata key) external view returns (string memory) {
+	function getMetadata(address addr, string calldata key) external override view returns (string memory) {
 		require(isRegistered(addr), "getMetadata: Guardian is not registered");
 		return guardianMetadata[addr][key];
 	}
 
 	/// @dev Called by a participant who wishes to unregister
-	function unregisterGuardian() external onlyRegisteredGuardian onlyWhenActive {
+	function unregisterGuardian() external override onlyRegisteredGuardian onlyWhenActive {
 		delete orbsAddressToGuardianAddress[guardians[msg.sender].orbsAddr];
 		delete ipToGuardian[guardians[msg.sender].ip];
 		Guardian memory guardian = guardians[msg.sender];
@@ -117,36 +119,36 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
     /// @dev Returns a guardian's data
     /// Used also by the Election contract
-	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registration_time, uint last_update_time) {
+	function getGuardianData(address addr) external override view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registration_time, uint last_update_time) {
 		require(isRegistered(addr), "getGuardianData: Guardian is not registered");
 		Guardian memory v = guardians[addr];
 		return (v.ip, v.orbsAddr, v.name, v.website, v.registrationTime, v.lastUpdateTime);
 	}
 
-	function getGuardiansOrbsAddress(address[] calldata addrs) external view returns (address[] memory orbsAddrs) {
+	function getGuardiansOrbsAddress(address[] calldata addrs) external override view returns (address[] memory orbsAddrs) {
 		orbsAddrs = new address[](addrs.length);
 		for (uint i = 0; i < addrs.length; i++) {
 			orbsAddrs[i] = guardians[addrs[i]].orbsAddr;
 		}
 	}
 
-	function getGuardianIp(address addr) external view returns (bytes4 ip) {
+	function getGuardianIp(address addr) external override view returns (bytes4 ip) {
 		require(isRegistered(addr), "getGuardianIp: Guardian is not registered");
 		return guardians[addr].ip;
 	}
 
-	function getGuardianIps(address[] calldata addrs) external view returns (bytes4[] memory ips) {
+	function getGuardianIps(address[] calldata addrs) external override view returns (bytes4[] memory ips) {
 		ips = new bytes4[](addrs.length);
 		for (uint i = 0; i < addrs.length; i++) {
 			ips[i] = guardians[addrs[i]].ip;
 		}
 	}
 
-	function isRegistered(address addr) public view returns (bool) {
+	function isRegistered(address addr) public override view returns (bool) {
 		return guardians[addr].registrationTime != 0;
 	}
 
-	function resolveGuardianAddress(address ethereumOrOrbsAddress) public view returns (address ethereumAddress) {
+	function resolveGuardianAddress(address ethereumOrOrbsAddress) public override view returns (address ethereumAddress) {
 		if (isRegistered(ethereumOrOrbsAddress)) {
 			ethereumAddress = ethereumOrOrbsAddress;
 		} else {
@@ -162,7 +164,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
     /// @dev Translates a list guardians Ethereum addresses to Orbs addresses
     /// Used by the Election conract
-	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddrs) {
+	function getOrbsAddresses(address[] calldata ethereumAddrs) external override view returns (address[] memory orbsAddrs) {
 		orbsAddrs = new address[](ethereumAddrs.length);
 		for (uint i = 0; i < ethereumAddrs.length; i++) {
 			orbsAddrs[i] = guardians[ethereumAddrs[i]].orbsAddr;
@@ -171,7 +173,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
 	/// @dev Translates a list guardians Orbs addresses to Ethereum addresses
 	/// Used by the Election contract
-	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddrs) {
+	function getEthereumAddresses(address[] calldata orbsAddrs) external override view returns (address[] memory ethereumAddrs) {
 		ethereumAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {
 			ethereumAddrs[i] = orbsAddressToGuardianAddress[orbsAddrs[i]];
@@ -205,7 +207,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
     }
 
 	IElections electionsContract;
-	function refreshContracts() external {
+	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 	}
 

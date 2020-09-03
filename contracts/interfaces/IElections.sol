@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "../spec_interfaces/IContractRegistry.sol";
 import "../IStakeChangeNotifier.sol";
@@ -63,9 +65,6 @@ interface IElections /* is IStakeChangeNotifier */ {
      * Governance
 	 */
 
-	/// @dev Updates the address of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
-
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager onlyWhenActive */;
 	function setVoteOutPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager onlyWhenActive */;
 	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager onlyWhenActive */;
@@ -80,7 +79,9 @@ interface IElections /* is IStakeChangeNotifier */ {
 		uint32 voteOutPercentMilleThreshold
 	);
 
+	function getAccumulatedStakesForVoteOut(address addr) external view returns (uint256);
 	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake);
+	function getVoteOutVote(address addr) external view returns (address);
 	function getVoteUnreadyStatus(address subjectAddr) external view returns
 		(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee);
 	function getEffectiveStake(address addr) external view returns (uint effectiveStake);

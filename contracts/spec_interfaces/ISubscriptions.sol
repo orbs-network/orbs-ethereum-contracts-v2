@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./IContractRegistry.sol";
 
@@ -61,13 +63,16 @@ interface ISubscriptions {
     /// @dev Called by the owner to authorize a subscriber (plan)
     function addSubscriber(address addr) external /* onlyFunctionalManager */;
 
+    /// @dev Called by the owner to unauthorize a subscriber (plan)
+    function removeSubscriber(address addr) external /* onlyFunctionalManager */;
+
     /// @dev Called by the owner to set the genesis ref time delay
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalManager */;
 
     /// @dev Called by the owner to set the minimum initial vc payment
     function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalManager */;
 
-    /// @dev Updates the address of the contract registry
-    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
+    function getMinimumInitialVcPayment() external view returns (uint);
+
 
 }

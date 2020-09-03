@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "../spec_interfaces/IContractRegistry.sol";
 import "../spec_interfaces/IMigratableFeesWallet.sol";
@@ -30,9 +32,6 @@ interface IFeesWallet {
     /*
      * General governance
      */
-
-    /// @dev Updates the address of the contract registry.
-    function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
     /// @dev migrates the fees of bucket starting at startTimestamp.
     /// bucketStartTime must be a bucket's start time.
