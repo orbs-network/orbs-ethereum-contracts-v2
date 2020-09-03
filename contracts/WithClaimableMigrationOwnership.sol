@@ -91,7 +91,7 @@ contract WithClaimableMigrationOwnership is Context{
     /**
      * @dev Returns the current _pendingMigrationOwner
     */
-    function pendingMigrationOwner() public returns (address) {
+    function pendingMigrationOwner() public view returns (address) {
        return _pendingMigrationOwner;  
     }
 }
