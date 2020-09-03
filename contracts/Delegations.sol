@@ -132,6 +132,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	}
 
 	function importDelegations(address[] calldata from, address to, bool refreshStakeNotification) external onlyMigrationManager onlyDuringDelegationImport {
+		require(to != address(0), "to must be a non zero address");
+		require(from.length > 0, "from array must contain at least one address");
 
 		uint256 uncappedStakesDelta = 0;
 		StakeOwnerData memory data;
