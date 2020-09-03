@@ -7,7 +7,7 @@ export interface DelegationsContract extends OwnedContract {
   stakeChange(stakeOwner: string, amount: number, sign: boolean, updatedStake: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   stakeChangeBatch(stakeOwners: string[], amounts: number[], signs: boolean[], updatedStakes: number[], params?: TransactionConfig) : Promise<TransactionReceipt>;
   delegate(to: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-  importDelegations(from: string[], to: string[], notify: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
+  importDelegations(from: string[], to: string, notify: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
   finalizeDelegationImport(params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   refreshStake(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -19,6 +19,7 @@ export interface DelegationsContract extends OwnedContract {
   getOwnStake(address: string): Promise<BN>;
   getSelfDelegatedStake(address: string): Promise<BN>;
   getTotalDelegatedStake(): Promise<BN>;
+  uncappedStakes(address: string): Promise<BN>;
 }
 
 export interface DelegatedEvent {
@@ -36,7 +37,7 @@ export interface DelegatedStakeChangedEvent {
 
 export interface DelegationsImportedEvent {
   from: string[];
-  to: string[];
+  to: string;
   notified: boolean;
 }
 
