@@ -80,8 +80,9 @@ interface IElections /* is IStakeChangeNotifier */ {
 		uint32 voteOutPercentMilleThreshold
 	);
 
-	function getVoteOutStatus(address subjectAddr) external view returns (uint votedWeight, uint totalWeight);
+	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake);
 	function getVoteUnreadyStatus(address subjectAddr) external view returns 
 		(uint votedStake, uint committeeStake, bool subjectInCommittee, uint certifiedVotedStake, uint certifiedCommitteeStake, bool subjectInCertifiedCommittee);
+	function getEffectiveStake(address addr) external view returns (uint effectiveStake);
 }
 

@@ -18,7 +18,7 @@ import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
 
 const baseStake = 100;
 
-describe('elections-high-level-flows', async () => {
+describe.only('elections-high-level-flows', async () => {
 
     it('emits events on readyForCommittee and readyToSync', async () => {
         const d = await Driver.new();
@@ -225,6 +225,7 @@ describe('elections-high-level-flows', async () => {
         for (let i = 0; i < 2; i++) {
             // Part of the committee votes out, threshold is not yet reached
             const votedOutGuardian = committee[committeeSize - 1];
+            let totalVotes = 0;
             for (const v of committee.slice(0, thresholdCrossingIndex)) {
                 const r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: v.orbsAddress});
                 expect(r).to.have.a.voteUnreadyCastedEvent({
@@ -233,7 +234,16 @@ describe('elections-high-level-flows', async () => {
                 });
                 expect(r).to.not.have.a.guardianVotedUnreadyEvent();
                 expect(r).to.not.have.a.committeeSnapshotEvent();
+                totalVotes += await d.elections.getEffectiveStake(v.address);
             }
+            const status = await d.elections.getVoteUnreadyStatus(votedOutGuardian.address);
+            expect(status[0]).to.be.bignumber.equal(bn(totalVotes));
+            expect(status[1]).to.be.bignumber.equal(bn(baseStake * 100));
+            expect(status[2]).to.be.equal(true);
+            expect(status[3]).to.be.bignumber.equal(bn(0));
+            expect(status[4]).to.be.bignumber.equal(bn(0));
+            expect(status[5]).to.be.equal(false);
+
 
             r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
             expect(r).to.have.a.voteUnreadyCastedEvent({

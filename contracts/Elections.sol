@@ -256,6 +256,11 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.memberWeightChange(addr, effectiveStake);
 	}
 
+	function getEffectiveStake(address addr) external view returns (uint effectiveStake) {
+		Settings memory _settings = settings;
+		return getCommitteeEffectiveStake(addr, _settings); 
+	}
+
 	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
 		if (selfStake.mul(PERCENT_MILLIE_BASE) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
 			return delegatedStake;

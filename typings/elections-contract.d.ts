@@ -31,6 +31,22 @@ export interface ElectionsContract extends OwnedContract {
   getMinSelfStakePercentMille(): Promise<number>;
   getVoteUnreadyPercentMilleThreshold(): Promise<number>;
   getVoteOutPercentMilleThreshold(): Promise<number>;
+
+  getVoteOutStatus(subjectAddr: string): Promise<[
+    number|BN /* votedStake */,
+    number|BN /* totalDelegatedStake */
+  ]>;
+
+  getVoteUnreadyStatus(subjectAddr: string): Promise<[
+    number|BN /* votedStake */,
+    number|BN /* committeeStake */,
+    boolean   /* subjectInCommittee */,
+    number|BN /* certifiedVotedStake */,
+    number|BN /* certifiedCommitteeStake */,
+    boolean   /* subjectInCertifiedCommittee*/
+  ]>;
+
+  getEffectiveStake(addr: string): Promise<number>;
 }
 
 export interface StakeChangeEvent {
