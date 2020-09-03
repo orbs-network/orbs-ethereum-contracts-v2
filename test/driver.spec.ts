@@ -57,7 +57,7 @@ describe('testkit', async () => {
       orbsTokenAddress,
       bootstrapTokenAddress,
       contractRegistryAddress,
-      delegationAddress: delegationAddress,
+      delegationAddress,
       rewardsAddress,
       electionsAddress,
       subscriptionsAddress,
