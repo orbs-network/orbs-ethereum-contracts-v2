@@ -245,6 +245,10 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.memberWeightChange(addr, effectiveStake);
 	}
 
+	function getEffectiveStake(address addr) external view returns (uint effectiveStake) {
+		return getCommitteeEffectiveStake(addr, settings);
+	}
+
 	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
 		if (selfStake.mul(PERCENT_MILLIE_BASE) >= delegatedStake.mul(_settings.minSelfStakePercentMille)) {
 			return delegatedStake;
@@ -289,6 +293,37 @@ contract Elections is IElections, ManagedContract {
 
 	function getVoteUnreadyPercentMilleThreshold() external view returns (uint32) {
 		return settings.voteUnreadyPercentMilleThreshold;
+	}
+
+	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake) {
+		votedStake = accumulatedStakesForVoteOut[subjectAddr];
+		totalDelegatedStake = delegationsContract.getTotalDelegatedStake();
+	}
+
+	function getSubjectCommitteeStatus(address[] memory committee, bool[] memory certification, address addr) private pure returns (bool inCommittee, bool inCertifiedCommittee) {
+		for (uint i = 0; i < committee.length; i++) {
+			if (addr == committee[i]) {
+				inCommittee = true;
+				if (certification[i]) {
+					inCertifiedCommittee = true;
+				}
+			}
+		}
+	}
+
+	function getVoteUnreadyStatus(address subjectAddr) external view returns 
+		(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee) {
+		(committee, weights, certification) = committeeContract.getCommittee();
+
+		votes = new bool[](committee.length);
+		for (uint i = 0; i < committee.length; i++) {
+			address memberAddr = committee[i];
+			if (now < votedUnreadyVotes[memberAddr][subjectAddr]) {
+				votes[i] = true;
+			}
+		}
+
+		(subjectInCommittee, subjectInCertifiedCommittee) = getSubjectCommitteeStatus(committee, certification, subjectAddr);
 	}
 
 	function getSettings() external view returns (
