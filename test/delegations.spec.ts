@@ -305,9 +305,7 @@ describe('delegations-contract', async () => {
         return async () => {
             const d = await Driver.new();
 
-            // setup a throwaway contract to prevent staking notifications from reaching the real Delegations contract
-            const notificationsSwallower = await d.web3.deploy("Delegations", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
-            await d.contractRegistry.setContract("delegations", notificationsSwallower.address, true, {from: d.registryAdmin.address});
+            await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
 
             const d1 = d.newParticipant();
             await d1.stake(100);
@@ -318,8 +316,7 @@ describe('delegations-contract', async () => {
             const d3 = d.newParticipant();
             await d3.stake(300);
 
-            // restore the real Delegations contract
-            await d.contractRegistry.setContract("delegations", d.delegations.address, true, {from: d.registryAdmin.address});
+            await d.stakingContractHandler.setNotifyDelegations(true, {from: d.migrationManager.address});
 
             const {v: v1} = await d.newGuardian(100, false, false, true);
             const {v: v2} = await d.newGuardian(100, false, false, true);
@@ -391,9 +388,7 @@ describe('delegations-contract', async () => {
     it('tracks uncappedStakes and totalDelegateStakes correctly on importDelegations', async () => {
         const d = await Driver.new();
 
-        // setup a throwaway contract to prevent staking notifications from reaching the real Delegations contract
-        const notificationsSwallower = await d.web3.deploy("Delegations", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
-        await d.contractRegistry.setContract("delegations", notificationsSwallower.address, true, {from: d.registryAdmin.address});
+        await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
 
         const d1 = d.newParticipant();
         await d1.stake(100);
@@ -404,8 +399,7 @@ describe('delegations-contract', async () => {
         const d3 = d.newParticipant();
         await d3.stake(300);
 
-        // restore the real Delegations contract
-        await d.contractRegistry.setContract("delegations", d.delegations.address, true, {from: d.registryAdmin.address});
+        await d.stakingContractHandler.setNotifyDelegations(true, {from: d.migrationManager.address});
 
         await d.delegations.importDelegations([d1.address], d2.address, false, {from: d.migrationManager.address});
         expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(100));

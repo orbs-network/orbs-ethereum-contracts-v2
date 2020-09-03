@@ -163,7 +163,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		// update totals
 		uncappedStakes[to] = uncappedStakes[to].add(uncappedStakesDelta);
 
-		if (stakeOwnersData[to].delegation == address(0) || stakeOwnersData[to].delegation == to) {
+		DelegateStatus memory delegateStatus = getDelegateStatus(to);
+		if (delegateStatus.isSelfDelegating) {
 			newTotalDelegatedStake = newTotalDelegatedStake.add(uncappedStakesDelta);
 		}
 		totalDelegatedStake = newTotalDelegatedStake;
@@ -175,7 +176,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 			emit Delegated(from[i], to);
 		}
 
-		DelegateStatus memory delegateStatus = getDelegateStatus(to);
 		emit DelegatedStakeChanged(
 			to,
 			delegateStatus.selfDelegatedStake,
