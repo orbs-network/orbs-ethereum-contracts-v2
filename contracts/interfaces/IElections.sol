@@ -81,8 +81,8 @@ interface IElections /* is IStakeChangeNotifier */ {
 	);
 
 	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake);
-	function getVoteUnreadyStatus(address subjectAddr) external view returns 
-		(uint votedStake, uint committeeStake, bool subjectInCommittee, uint certifiedVotedStake, uint certifiedCommitteeStake, bool subjectInCertifiedCommittee);
+	function getVoteUnreadyStatus(address subjectAddr) external view returns
+		(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee);
 	function getEffectiveStake(address addr) external view returns (uint effectiveStake);
 }
 

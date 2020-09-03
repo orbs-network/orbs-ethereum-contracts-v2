@@ -209,12 +209,20 @@ describe('elections-high-level-flows', async () => {
 
         let r;
         const committee: Participant[] = [];
+        const committeeData: any = {};
+
         for (const p of stakesPercentage) {
             const v = d.newParticipant();
             await v.registerAsGuardian();
             await v.readyForCommittee();
             r = await v.stake(baseStake * p);
             committee.push(v);
+
+            committeeData[v.address] = {
+                v,
+                stake: bn(baseStake*p),
+                voted: false
+            }
         }
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: committee.map(v => v.address)
@@ -224,8 +232,11 @@ describe('elections-high-level-flows', async () => {
         // votes are discarded and must be recast to vote-out a guardian again.
         for (let i = 0; i < 2; i++) {
             // Part of the committee votes out, threshold is not yet reached
+            for (const v of committee) {
+                committeeData[v.address].voted = false;
+            }
+
             const votedOutGuardian = committee[committeeSize - 1];
-            let totalVotes = 0;
             for (const v of committee.slice(0, thresholdCrossingIndex)) {
                 const r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: v.orbsAddress});
                 expect(r).to.have.a.voteUnreadyCastedEvent({
@@ -234,16 +245,19 @@ describe('elections-high-level-flows', async () => {
                 });
                 expect(r).to.not.have.a.guardianVotedUnreadyEvent();
                 expect(r).to.not.have.a.committeeSnapshotEvent();
-                totalVotes += await d.elections.getEffectiveStake(v.address);
+                committeeData[v.address].voted = true;
             }
-            const status = await d.elections.getVoteUnreadyStatus(votedOutGuardian.address);
-            expect(status[0]).to.be.bignumber.equal(bn(totalVotes));
-            expect(status[1]).to.be.bignumber.equal(bn(baseStake * 100));
-            expect(status[2]).to.be.equal(true);
-            expect(status[3]).to.be.bignumber.equal(bn(0));
-            expect(status[4]).to.be.bignumber.equal(bn(0));
-            expect(status[5]).to.be.equal(false);
 
+            const status = await d.elections.getVoteUnreadyStatus(votedOutGuardian.address);
+            expect(status.committee.length).to.eq(committee.length);
+            for (let i = 0; i < status.committee.length; i++) {
+                const data = committeeData[status.committee[i]];
+                expect(status.weights[i]).to.bignumber.eq(data.stake);
+                expect(status.votes[i]).to.eq(data.voted);
+                expect(status.certification[i]).to.be.false;
+                expect(status.subjectInCommittee).to.be.true;
+                expect(status.subjectInCertifiedCommittee).to.be.false;
+            }
 
             r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
             expect(r).to.have.a.voteUnreadyCastedEvent({

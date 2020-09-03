@@ -9,6 +9,7 @@ import {
     Participant
 } from "./driver";
 import chai from "chai";
+import {bn} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
@@ -25,11 +26,17 @@ describe('elections-certification', async () => {
 
         const generalCommittee: Participant[] = [];
         const certifiedCommittee: Participant[] = [];
+        const committeeData: any = {};
         for (let i = 0; i < maxCommitteeSize; i++) {
             const {v} = await d.newGuardian(100, i % 2 == 0, false, true);
             generalCommittee.push(v);
             if (i % 2 == 0) {
                 certifiedCommittee.push(v);
+            }
+            committeeData[v.address] = {
+                v,
+                stake: bn(100),
+                certified: i % 2 == 0
             }
         }
 
@@ -43,6 +50,18 @@ describe('elections-certification', async () => {
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: generalCommittee.filter(v => v != certifiedCommittee[0]).map(v => v.address)
         });
+
+        const status = await d.elections.getVoteUnreadyStatus(certifiedCommittee[0].address);
+        expect(status.committee.length).to.eq(generalCommittee.length - 1);
+        for (let i = 0; i < status.committee.length; i++) {
+            const data = committeeData[status.committee[i]];
+            expect(status.weights[i]).to.bignumber.eq(data.stake);
+            expect(status.votes[i]).to.be.false;
+            expect(status.certification[i]).to.eq(data.certified);
+            expect(status.subjectInCommittee).to.be.false;
+            expect(status.subjectInCertifiedCommittee).to.be.false;
+        }
+
     });
 
     it('votes out a certification committee member from both committees when threshold is reached in general committee but not in certification committee', async () => {

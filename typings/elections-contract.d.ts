@@ -37,14 +37,14 @@ export interface ElectionsContract extends OwnedContract {
     number|BN /* totalDelegatedStake */
   ]>;
 
-  getVoteUnreadyStatus(subjectAddr: string): Promise<[
-    number|BN /* votedStake */,
-    number|BN /* committeeStake */,
-    boolean   /* subjectInCommittee */,
-    number|BN /* certifiedVotedStake */,
-    number|BN /* certifiedCommitteeStake */,
-    boolean   /* subjectInCertifiedCommittee*/
-  ]>;
+  getVoteUnreadyStatus(subjectAddr: string): Promise<{
+    committee: string[],
+    weights: string[],
+    votes: boolean[],
+    certification: boolean[],
+    subjectInCommittee: boolean,
+    subjectInCertifiedCommittee: boolean
+  }>;
 
   getEffectiveStake(addr: string): Promise<number>;
 }
