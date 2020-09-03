@@ -23,8 +23,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
     , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
@@ -35,8 +34,7 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
     const registrationTime = await d.web3.txTimestamp(r);
     const firstUpdateTime = await d.web3.txTimestamp(r);
@@ -47,7 +45,6 @@ describe('guardian-registration', async () => {
       orbsAddr: v.orbsAddress,
       name: v.name,
       website: v.website,
-      contact: v.contact,
       registration_time: registrationTime.toString(),
       last_update_time: firstUpdateTime.toString()
     });
@@ -59,8 +56,7 @@ describe('guardian-registration', async () => {
         _v.ip,
         _v.orbsAddress,
         _v.name,
-        _v.website,
-        _v.contact
+        _v.website
     , {from: v.address});
     expect(r).to.have.a.guardianDataUpdatedEvent({
       addr: v.address,
@@ -68,8 +64,7 @@ describe('guardian-registration', async () => {
       ip: _v.ip,
       orbsAddr: _v.orbsAddress,
       name: _v.name,
-      website: _v.website,
-      contact: _v.contact
+      website: _v.website
     });
     const secondUpdateTime = await d.web3.txTimestamp(r);
 
@@ -79,7 +74,6 @@ describe('guardian-registration', async () => {
       orbsAddr: _v.orbsAddress,
       name: _v.name,
       website: _v.website,
-      contact: _v.contact,
       registration_time: registrationTime.toString(),
       last_update_time: secondUpdateTime.toString()
     });
@@ -94,8 +88,7 @@ describe('guardian-registration', async () => {
       ip: _v.ip,
       orbsAddr: _v.orbsAddress,
       name: _v.name,
-      website: _v.website,
-      contact: _v.contact
+      website: _v.website
     });
   });
 
@@ -107,8 +100,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
     , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
@@ -119,16 +111,14 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
 
     await expectRejected(d.guardiansRegistration.registerGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
     , {from: v.address}), /already registered/);
   });
 
@@ -149,16 +139,14 @@ describe('guardian-registration', async () => {
         ZERO_ADDR,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address}), /orbs address must be non zero/);
+         {from: v.address}), /orbs address must be non zero/);
 
     let r = await d.guardiansRegistration.registerGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address});
+         {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
     });
@@ -168,16 +156,14 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
 
     await expectRejected(d.guardiansRegistration.updateGuardian(
         v.ip,
         ZERO_ADDR,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address}), /orbs address must be non zero/);
 
   });
@@ -191,16 +177,14 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         "",
-        v.website,
-        v.contact
+        v.website
         , {from: v.address}), /name must be given/);
 
     let r = await d.guardiansRegistration.registerGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
@@ -211,61 +195,15 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
 
     await expectRejected(d.guardiansRegistration.updateGuardian(
         v.ip,
         v.orbsAddress,
         "",
-        v.website,
-        v.contact
+        v.website
         , {from: v.address}), /name must be given/);
-  });
-
-  it("allow registration or update with empty contact field", async () => {
-    const d = await Driver.new();
-
-    const v = d.newParticipant();
-
-    let r = await d.guardiansRegistration.registerGuardian(
-        v.ip,
-        v.orbsAddress,
-        v.name,
-        v.website,
-        "",
-        {from: v.address});
-    expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
-    });
-
-    expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
-      isRegistered: true,
-      ip: v.ip,
-      orbsAddr: v.orbsAddress,
-      name: v.name,
-      website: v.website,
-      contact: ""
-    });
-
-    let r1 = await d.guardiansRegistration.updateGuardian(
-      v.ip,
-      v.orbsAddress,
-      v.name,
-      v.website,
-      "",
-      {from: v.address});
-
-    expect(r1).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
-      ip: v.ip,
-      orbsAddr: v.orbsAddress,
-      name: v.name,
-      website: v.website,
-      contact: ""
-    });
   });
 
   it('does not allow registering using an IP of an existing guardian', async () => {
@@ -277,8 +215,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     const v2 = d.newParticipant();
@@ -288,7 +225,6 @@ describe('guardian-registration', async () => {
         v2.orbsAddress,
         v2.name,
         v2.website,
-        v2.contact,
         {from: v2.address}), /ip is already in use/);
   });
 
@@ -301,8 +237,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     const v2 = d.newParticipant();
@@ -311,8 +246,7 @@ describe('guardian-registration', async () => {
         v2.ip,
         v2.orbsAddress,
         v2.name,
-        v2.website,
-        v2.contact
+        v2.website
         , {from: v2.address});
 
     await expectRejected(d.guardiansRegistration.updateGuardian(
@@ -320,7 +254,6 @@ describe('guardian-registration', async () => {
         v2.orbsAddress,
         v2.name,
         v2.website,
-        v2.contact,
         {from: v2.address}), /ip is already in use/);
   });
 
@@ -333,8 +266,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     await d.guardiansRegistration.unregisterGuardian({from: v.address});
@@ -345,8 +277,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v2.orbsAddress,
         v2.name,
-        v2.website,
-        v2.contact
+        v2.website
         , {from: v2.address});
   });
 
@@ -359,8 +290,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     const v2 = d.newParticipant();
@@ -369,8 +299,7 @@ describe('guardian-registration', async () => {
         v2.ip,
         v2.orbsAddress,
         v2.name,
-        v2.website,
-        v2.contact
+        v2.website
         , {from: v2.address});
 
     await d.guardiansRegistration.unregisterGuardian({from: v.address});
@@ -379,8 +308,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v2.orbsAddress,
         v2.name,
-        v2.website,
-        v2.contact
+        v2.website
     , {from: v2.address});
 
   });
@@ -394,8 +322,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     const v2 = d.newParticipant();
@@ -405,7 +332,6 @@ describe('guardian-registration', async () => {
         v.orbsAddress,
         v2.name,
         v2.website,
-        v2.contact,
         {from: v2.address}), /orbs address is already in use/);
   });
 
@@ -419,8 +345,7 @@ describe('guardian-registration', async () => {
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address});
+         {from: v.address});
 
     const v2 = d.newParticipant();
 
@@ -429,15 +354,13 @@ describe('guardian-registration', async () => {
         v2.orbsAddress,
         v2.name,
         v2.website,
-        v2.contact
-        , {from: v2.address});
+         {from: v2.address});
 
     await expectRejected(d.guardiansRegistration.updateGuardian(
         v2.ip,
         v.orbsAddress,
         v2.name,
         v2.website,
-        v2.contact,
         {from: v2.address}), /orbs address is already in use/);
   });
 
@@ -451,23 +374,20 @@ describe('guardian-registration', async () => {
         v.address,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address}), /orbs address must be different than the guardian address/);
+         {from: v.address}), /orbs address must be different than the guardian address/);
 
     await d.guardiansRegistration.registerGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address});
+         {from: v.address});
 
     await expectRejected(d.guardiansRegistration.updateGuardian(
         v.ip,
         v.address,
         v.name,
         v.website,
-        v.contact,
         {from: v.address}), /orbs address must be different than the guardian address/);
   });
 
@@ -481,8 +401,7 @@ describe('guardian-registration', async () => {
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address});
+        {from: v.address});
 
     await d.guardiansRegistration.unregisterGuardian({from: v.address});
 
@@ -493,8 +412,7 @@ describe('guardian-registration', async () => {
         v.orbsAddress,
         v2.name,
         v2.website,
-        v2.contact
-        , {from: v2.address});
+         {from: v2.address});
   });
 
   it('allows a registered guardian to set an orbs address of a previously existing guardian that unregistered', async () => {
@@ -507,8 +425,7 @@ describe('guardian-registration', async () => {
         v.orbsAddress,
         v.name,
         v.website,
-        v.contact
-        , {from: v.address});
+        {from: v.address});
 
     const v2 = d.newParticipant();
 
@@ -516,8 +433,7 @@ describe('guardian-registration', async () => {
         v2.ip,
         v2.orbsAddress,
         v2.name,
-        v2.website,
-        v2.contact
+        v2.website
         , {from: v2.address});
 
     await d.guardiansRegistration.unregisterGuardian({from: v.address});
@@ -526,8 +442,7 @@ describe('guardian-registration', async () => {
         v2.ip,
         v.orbsAddress,
         v2.name,
-        v2.website,
-        v2.contact
+        v2.website
     , {from: v2.address});
 
   });
@@ -541,8 +456,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
     , {from: v.address}), /not registered/);
 
   });
@@ -556,16 +470,14 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     await d.guardiansRegistration.updateGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
     , {from: v.address});
 
   });
@@ -579,16 +491,14 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     await expectRejected(d.guardiansRegistration.updateGuardian(
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
     , {from: v.orbsAddress}), /not registered/);
   });
 
@@ -601,8 +511,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     let r = await d.guardiansRegistration.updateGuardianIp(
@@ -632,8 +541,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
@@ -644,8 +552,7 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
     const key = 'key_' + Date.now().toString();
 
@@ -701,8 +608,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
@@ -713,8 +619,7 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
 
     expect(await d.guardiansRegistration.getOrbsAddresses([v.address])).to.deep.equal([v.orbsAddress])
@@ -728,8 +633,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
       addr: v.address
@@ -740,8 +644,7 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website,
-      contact: v.contact
+      website: v.website
     });
 
     expect(await d.guardiansRegistration.getOrbsAddresses([v.address])).to.deep.equal([v.orbsAddress])
@@ -755,8 +658,7 @@ describe('guardian-registration', async () => {
         v.ip,
         v.orbsAddress,
         v.name,
-        v.website,
-        v.contact
+        v.website
         , {from: v.address});
 
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
@@ -768,8 +670,7 @@ describe('guardian-registration', async () => {
         v.address,
         v2.name,
         v2.website,
-        v2.contact
-        , {from: v2.address});
+        {from: v2.address});
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
   });
 
@@ -799,7 +700,6 @@ describe('guardian-registration', async () => {
       orbsAddr: v1.orbsAddress,
       name: v1.name,
       website: v1.website,
-      contact: v1.contact,
       isRegistered: true
     });
     expect(creationTx).to.have.a.guardianMetadataChangedEvent({key: "REWARDS_FREQUENCY_SEC", newValue: "123", oldValue: ""});
@@ -808,7 +708,6 @@ describe('guardian-registration', async () => {
       orbsAddr: v2.orbsAddress,
       name: v2.name,
       website: v2.website,
-      contact: v2.contact,
       isRegistered: true
     });
     d.guardiansRegistration = null as any;
@@ -819,7 +718,6 @@ describe('guardian-registration', async () => {
     expect(v1Data.orbsAddr.toString()).to.eq(v1.orbsAddress);
     expect(v1Data.name.toString()).to.eq(v1.name);
     expect(v1Data.website.toString()).to.eq(v1.website);
-    expect(v1Data.contact.toString()).to.eq(v1.contact);
     expect(v1Data.registration_time.toString()).to.eq(v1RegistrationTime.toString());
     expect(v1Data.last_update_time.toString()).to.eq(v1LastUpdateTime.toString());
     expect(await newContract.getMetadata(v1.address, "REWARDS_FREQUENCY_SEC")).to.eq("123");
@@ -830,13 +728,12 @@ describe('guardian-registration', async () => {
     expect(v2Data.orbsAddr.toString()).to.eq(v2.orbsAddress);
     expect(v2Data.name.toString()).to.eq(v2.name);
     expect(v2Data.website.toString()).to.eq(v2.website);
-    expect(v2Data.contact.toString()).to.eq(v2.contact);
     expect(v2Data.registration_time.toString()).to.eq(v2RegistrationTime.toString());
     expect(v2Data.last_update_time.toString()).to.eq(v2LastUpdateTime.toString());
 
     expect(await newContract.resolveGuardianAddress(v1.orbsAddress)).to.eq(v1.address);
     await expectRejected(newContract.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
-    await expectRejected(newContract.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, v2.contact, {from: v2.address}), /orbs address is already in use/);
+    await expectRejected(newContract.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, {from: v2.address}), /orbs address is already in use/);
   });
 
 

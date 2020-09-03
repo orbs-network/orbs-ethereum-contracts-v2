@@ -6,7 +6,7 @@ import "./IContractRegistry.sol";
 interface IGuardiansRegistration {
 	event GuardianRegistered(address addr);
 	event GuardianUnregistered(address addr);
-	event GuardianDataUpdated(address addr, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website, string contact);
+	event GuardianDataUpdated(address addr, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website);
 	event GuardianMetadataChanged(address addr, string key, string newValue, string oldValue);
 
 	/*
@@ -14,10 +14,10 @@ interface IGuardiansRegistration {
      */
 
     /// @dev Called by a participant who wishes to register as a guardian
-	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external;
+	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external;
 
     /// @dev Called by a participant who wishes to update its propertires
-	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website, string calldata contact) external;
+	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external;
 
 	/// @dev Called by a participant who wishes to update its IP address (can be call by both main and Orbs addresses)
 	function updateGuardianIp(bytes4 ip) external /* onlyWhenActive */;
@@ -33,7 +33,7 @@ interface IGuardiansRegistration {
 
     /// @dev Returns a guardian's data
     /// Used also by the Election contract
-	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registration_time, uint last_update_time);
+	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registration_time, uint last_update_time);
 
 	/// @dev Returns the Orbs addresses of a list of guardians
 	/// Used also by the committee contract
