@@ -42,7 +42,6 @@
     "ganache-core": "^2.10.2",
     "lodash": "^4.17.20",
     "node-fetch": "^2.6.0",
-    "node-jq": "^1.11.2",
     "solidity-bytes-utils": "0.0.8",
     "truffle-hdwallet-provider": "1.0.3",
     "ts-retry-promise": "^0.2.0",
