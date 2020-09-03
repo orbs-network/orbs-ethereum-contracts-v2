@@ -38,7 +38,7 @@ describe('testkit', async () => {
     const bootstrapTokenAddress =  dd.bootstrapToken.address;
 
     const contractRegistryAddress = dd.contractRegistry.address;
-    const delegationsAddress = dd.delegation.address;
+    const delegationAddress = dd.delegation.address;
     const rewardsAddress = dd.rewards.address;
     const electionsAddress = dd.elections.address;
     const subscriptionsAddress = dd.subscriptions.address;
@@ -57,7 +57,7 @@ describe('testkit', async () => {
       orbsTokenAddress,
       bootstrapTokenAddress,
       contractRegistryAddress,
-      delegationAddress: delegationsAddress,
+      delegationAddress: delegationAddress,
       rewardsAddress,
       electionsAddress,
       subscriptionsAddress,
@@ -76,7 +76,7 @@ describe('testkit', async () => {
     expect(d.erc20.address).to.equal(orbsTokenAddress);
     expect(d.bootstrapToken.address).to.equal(bootstrapTokenAddress);
     expect(d.contractRegistry.address).to.equal(contractRegistryAddress);
-    expect(d.delegation.address).to.equal(delegationsAddress);
+    expect(d.delegation.address).to.equal(delegationAddress);
     expect(d.rewards.address).to.equal(rewardsAddress);
     expect(d.elections.address).to.equal(electionsAddress);
     expect(d.subscriptions.address).to.equal(subscriptionsAddress);

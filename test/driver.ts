@@ -128,7 +128,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     web3Provider: defaultWeb3Provider,
 };
 
-export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet' | 'stakingContractHandler';
+export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegation' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet' | 'stakingContractHandler';
 
 export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
