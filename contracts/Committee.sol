@@ -2,12 +2,12 @@ pragma solidity 0.5.16;
 
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
+import "./spec_interfaces/IElections.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "./ContractRegistryAccessor.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
-import "./interfaces/IElections.sol";
 import "./ManagedContract.sol";
 
 /// @title Elections contract interface

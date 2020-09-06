@@ -1,14 +1,6 @@
 pragma solidity 0.5.16;
 
-import "./spec_interfaces/IContractRegistry.sol";
-import "./spec_interfaces/IProtocol.sol";
-import "./spec_interfaces/ICommittee.sol";
-import "./interfaces/IElections.sol";
-import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./spec_interfaces/ICertification.sol";
-import "./spec_interfaces/ISubscriptions.sol";
-import "./spec_interfaces/IDelegation.sol";
-import "./interfaces/IRewards.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ERC20AccessorWithTokenGranularity {
 

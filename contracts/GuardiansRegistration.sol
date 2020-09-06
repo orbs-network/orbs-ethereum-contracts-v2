@@ -1,7 +1,7 @@
 pragma solidity 0.5.16;
 
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./interfaces/IElections.sol";
+import "./spec_interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 import "./ManagedContract.sol";
