@@ -10,7 +10,7 @@ import "./spec_interfaces/IProtocolWallet.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Erc20AccessorWithTokenGranularity.sol";
 import "./Lockable.sol";

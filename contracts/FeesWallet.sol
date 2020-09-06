@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IMigratableFeesWallet.sol";
-import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
+import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 import "./ManagedContract.sol";
 

@@ -1,7 +1,7 @@
 pragma solidity 0.5.16;
 
+import "./IContractRegistry.sol";
 import "../IStakingContract.sol";
-import "../spec_interfaces/IContractRegistry.sol";
 
 /// @title Rewards contract interface
 interface IRewards {
@@ -118,6 +118,6 @@ interface IRewards {
     /// @dev accepts guardian's balance migration from a previous rewards contarct.
     function acceptStakingRewardsMigration(address guardian, uint256 amount) external;
 
-    /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
-    function emergencyWithdraw() external /* onlyMigrationManager */; // TODO change to EmergencyManager.
+    /// @dev emergency withdrawal of the rewards contract balances, may be called only by the MigrationManager. 
+    function emergencyWithdraw() external /* onlyMigrationManager */;
 }
