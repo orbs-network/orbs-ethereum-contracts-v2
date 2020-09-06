@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "../IStakeChangeNotifier.sol";
 
@@ -14,15 +16,15 @@ contract GasConsumingStakeChangeNotifier is IStakeChangeNotifier {
         }
     }
 
-    function stakeChange(address, uint256, bool, uint256) external {
+    function stakeChange(address, uint256, bool, uint256) external override {
         consumeGas();
     }
 
-    function stakeChangeBatch(address[] calldata, uint256[] calldata, bool[] calldata, uint256[] calldata) external {
+    function stakeChangeBatch(address[] calldata, uint256[] calldata, bool[] calldata, uint256[] calldata) external override {
         consumeGas();
     }
 
-    function stakeMigration(address, uint256) external {
+    function stakeMigration(address, uint256) external override {
         consumeGas();
     }
 }

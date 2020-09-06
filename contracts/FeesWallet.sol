@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -41,7 +43,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     /// @dev collect fees from the buckets since the last call and transfers the amount back.
     /// Called by: only Rewards contract.
-    function collectFees() external onlyRewardsContract returns (uint256 collectedFees)  {
+    function collectFees() external override onlyRewardsContract returns (uint256 collectedFees)  {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
@@ -83,7 +85,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     /// @dev Called by: subscriptions contract.
     /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract).
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external {
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external override {
         uint256 bucket = _bucketTime(fromTimestamp);
         require(bucket >= _bucketTime(now), "FeeWallet::cannot fill bucket from the past");
 
@@ -114,7 +116,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     /// @dev Called by the old FeesWallet contract.
     /// Part of the IMigratableFeesWallet interface.
-    function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external {
+    function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external override {
         require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
         fillFeeBucket(bucketStartTime, amount);
         require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet on bucket migration");
@@ -127,7 +129,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     /// @dev migrates the fees of bucket starting at startTimestamp.
     /// bucketStartTime must be a bucket's start time.
     /// Calls acceptBucketMigration in the destination contract.
-    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external onlyMigrationManager {
+    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external override onlyMigrationManager {
         require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
 
         uint bucketAmount = buckets[bucketStartTime];
@@ -145,7 +147,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
      */
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external onlyMigrationManager {
+    function emergencyWithdraw() external override onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
         require(token.transfer(msg.sender, token.balanceOf(address(this))), "IFeesWallet::emergencyWithdraw - transfer failed (fee token)");
     }
@@ -155,7 +157,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     IRewards rewardsContract;
-    function refreshContracts() external {
+    function refreshContracts() external override {
         rewardsContract = IRewards(getRewardsContract());
     }
 

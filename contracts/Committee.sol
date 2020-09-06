@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
@@ -20,7 +22,7 @@ contract Committee is ICommittee, ManagedContract {
 		address addr;
 		uint96 weight;
 	}
-	CommitteeMember[] public committee;
+	CommitteeMember[MAX_COMMITTEE_ARRAY_SIZE] public committee;
 
 	struct MemberData {
 		uint96 weight;
@@ -218,8 +220,6 @@ contract Committee is ICommittee, ManagedContract {
 	}
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint8 _maxCommitteeSize, uint32 maxTimeBetweenRewardAssignments) ManagedContract(_contractRegistry, _registryAdmin) public {
-		committee.length = MAX_COMMITTEE_ARRAY_SIZE;
-
 		setMaxCommitteeSize(_maxCommitteeSize);
 		setMaxTimeBetweenRewardAssignments(maxTimeBetweenRewardAssignments);
 	}
@@ -231,7 +231,7 @@ contract Committee is ICommittee, ManagedContract {
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change for sorting to a relevant committee member.
 	/// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberWeightChange(address addr, uint256 weight) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint96(weight)) == weight, "weight is out of range");
 
 		MemberData memory data = membersData[addr];
@@ -245,7 +245,7 @@ contract Committee is ICommittee, ManagedContract {
 		return updateOnMemberChange(addr, data);
 	}
 
-	function memberCertificationChange(address addr, bool isCertified) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberCertificationChange(address addr, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberData memory data = membersData[addr];
 		if (!data.isMember) {
 			return false;
@@ -255,7 +255,7 @@ contract Committee is ICommittee, ManagedContract {
 		return updateOnMemberChange(addr, data);
 	}
 
-	function addMember(address addr, uint256 weight, bool isCertified) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint96(weight)) == weight, "weight is out of range");
 
 		if (membersData[addr].isMember) {
@@ -273,7 +273,7 @@ contract Committee is ICommittee, ManagedContract {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberData memory data = membersData[addr];
 
 		if (!membersData[addr].isMember) {
@@ -286,13 +286,13 @@ contract Committee is ICommittee, ManagedContract {
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
+	function getCommittee() external override view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
 		return _getCommittee();
 	}
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
-	function _getCommittee() public view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
+	function _getCommittee() private view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint bitmap = uint(_committeeInfo.committeeBitmap);
 		uint committeeSize = _committeeInfo.committeeSize;
@@ -321,16 +321,16 @@ contract Committee is ICommittee, ManagedContract {
 	 * Governance
 	 */
 
-	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) public onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setMaxTimeBetweenRewardAssignments(uint32 maxTimeBetweenRewardAssignments) public override onlyFunctionalManager /* todo onlyWhenActive */ {
 		emit MaxTimeBetweenRewardAssignmentsChanged(maxTimeBetweenRewardAssignments, settings.maxTimeBetweenRewardAssignments);
 		settings.maxTimeBetweenRewardAssignments = maxTimeBetweenRewardAssignments;
 	}
 
-	function getMaxTimeBetweenRewardAssignments() external view returns (uint32) {
+	function getMaxTimeBetweenRewardAssignments() external override view returns (uint32) {
 		return settings.maxTimeBetweenRewardAssignments;
 	}
 
-	function setMaxCommitteeSize(uint8 maxCommitteeSize) public onlyFunctionalManager /* todo onlyWhenActive */ {
+	function setMaxCommitteeSize(uint8 maxCommitteeSize) public override onlyFunctionalManager /* todo onlyWhenActive */ {
 		require(maxCommitteeSize > 0, "maxCommitteeSize must be larger than 0");
 		require(maxCommitteeSize <= MAX_COMMITTEE_ARRAY_SIZE, "maxCommitteeSize must be 32 at most");
 		Settings memory _settings = settings;
@@ -351,7 +351,7 @@ contract Committee is ICommittee, ManagedContract {
 		committeeSortBytes = sortBytes.toBytes32(0);
 	}
 
-	function getMaxCommitteeSize() external view returns (uint8) {
+	function getMaxCommitteeSize() external override view returns (uint8) {
 		return settings.maxCommitteeSize;
 	}
 
@@ -361,12 +361,12 @@ contract Committee is ICommittee, ManagedContract {
 
 	/// @dev returns the current committee
 	/// used also by the rewards and fees contracts
-	function getCommitteeInfo() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory certification, bytes4[] memory ips) {
+	function getCommitteeInfo() external override view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory certification, bytes4[] memory ips) {
 		(addrs, weights, certification) = _getCommittee();
 		return (addrs, weights, _loadOrbsAddresses(addrs), certification, _loadIps(addrs));
 	}
 
-	function getSettings() external view returns (uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize) {
+	function getSettings() external override view returns (uint32 maxTimeBetweenRewardAssignments, uint8 maxCommitteeSize) {
 		Settings memory _settings = settings;
 		maxTimeBetweenRewardAssignments = _settings.maxTimeBetweenRewardAssignments;
 		maxCommitteeSize = _settings.maxCommitteeSize;
@@ -395,7 +395,7 @@ contract Committee is ICommittee, ManagedContract {
 	IElections electionsContract;
 	IRewards rewardsContract;
 	IGuardiansRegistration guardianRegistrationContract;
-	function refreshContracts() external {
+	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 		rewardsContract = IRewards(getRewardsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());

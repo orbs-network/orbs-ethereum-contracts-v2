@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 /// @title An interface for notifying of stake change events (e.g., stake, unstake, partial unstake, restate, etc.).
 interface IStakeChangeNotifier {

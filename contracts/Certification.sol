@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
@@ -16,18 +18,18 @@ contract Certification is ICertification, ManagedContract {
      * External methods
      */
 
-    function isGuardianCertified(address addr) external view returns (bool isCertified) {
+    function isGuardianCertified(address addr) external override view returns (bool isCertified) {
         return guardianCertification[addr];
     }
 
-    function setGuardianCertification(address addr, bool isCertified) external onlyFunctionalManager onlyWhenActive {
+    function setGuardianCertification(address addr, bool isCertified) external override onlyFunctionalManager onlyWhenActive {
         guardianCertification[addr] = isCertified;
         emit GuardianCertificationUpdate(addr, isCertified);
         electionsContract.guardianCertificationChanged(addr, isCertified);
     }
 
     IElections electionsContract;
-    function refreshContracts() external {
+    function refreshContracts() external override {
         electionsContract = IElections(getElectionsContract());
     }
 

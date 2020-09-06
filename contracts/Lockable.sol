@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/ILockable.sol";
@@ -15,17 +17,17 @@ contract Lockable is ILockable, ContractRegistryAccessor {
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) ContractRegistryAccessor(_contractRegistry, _registryAdmin) public {}
 
-    function lock() external onlyLockOwner {
+    function lock() external override onlyLockOwner {
         locked = true;
         emit Locked();
     }
 
-    function unlock() external onlyLockOwner {
+    function unlock() external override onlyLockOwner {
         locked = false;
         emit Unlocked();
     }
 
-    function isLocked() external view returns (bool) {
+    function isLocked() external override view returns (bool) {
         return locked;
     }
 

@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -53,18 +55,18 @@ contract Elections is IElections, ManagedContract {
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was registered
-	function guardianRegistered(address addr) external {}
+	function guardianRegistered(address addr) external override {}
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was unregistered
-	function guardianUnregistered(address addr) external onlyGuardiansRegistrationContract {
+	function guardianUnregistered(address addr) external override onlyGuardiansRegistrationContract {
 		emit GuardianStatusUpdated(addr, false, false);
 		committeeContract.removeMember(addr);
 	}
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
-	function guardianCertificationChanged(address addr, bool isCertified) external {
+	function guardianCertificationChanged(address addr, bool isCertified) external override {
 		committeeContract.memberCertificationChange(addr, isCertified);
 	}
 
@@ -72,7 +74,7 @@ contract Elections is IElections, ManagedContract {
 		require(!isVotedOut(addr), "caller is voted-out");
 	}
 
-	function readyForCommittee() external {
+	function readyForCommittee() external override {
 		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
@@ -80,7 +82,7 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), certificationContract.isGuardianCertified(guardianAddr));
 	}
 
-	function readyToSync() external {
+	function readyToSync() external override {
 		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
@@ -137,7 +139,7 @@ contract Elections is IElections, ManagedContract {
 			|| (isVoteeCertified && totalCertifiedStake > 0 && totalCertifiedVoteUnreadyStake.mul(PERCENT_MILLIE_BASE).div(totalCertifiedStake) >= _settings.voteUnreadyPercentMilleThreshold);
 	}
 
-	function voteUnready(address subjectAddr, uint voteExpiration) external onlyWhenActive {
+	function voteUnready(address subjectAddr, uint voteExpiration) external override onlyWhenActive {
 		require(voteExpiration >= now, "vote expiration time must not be in the past");
 		address sender = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
 		votedUnreadyVotes[sender][subjectAddr] = voteExpiration;
@@ -154,7 +156,7 @@ contract Elections is IElections, ManagedContract {
 		}
 	}
 
-	function voteOut(address subject) external onlyWhenActive {
+	function voteOut(address subject) external override onlyWhenActive {
 		Settings memory _settings = settings;
 
 		address prevSubject = voteOutVotes[msg.sender];
@@ -187,11 +189,11 @@ contract Elections is IElections, ManagedContract {
 		return selfDelegating ? totalDelegatedStake : 0;
 	}
 
-	function getVoteOutVote(address addr) external view returns (address) {
+	function getVoteOutVote(address addr) external override view returns (address) {
 		return voteOutVotes[addr];
 	}
 
-	function getAccumulatedStakesForVoteOut(address addr) external view returns (uint256) {
+	function getAccumulatedStakesForVoteOut(address addr) external override view returns (uint256) {
 		return accumulatedStakesForVoteOut[addr];
 	}
 
@@ -232,7 +234,7 @@ contract Elections is IElections, ManagedContract {
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
 		_applyDelegatedStake(addr, selfStake, delegatedStake, _settings);
 		_applyStakesToVoteOutBy(addr, delegatedStake, totalDelegatedStake, _settings);
@@ -245,7 +247,7 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.memberWeightChange(addr, effectiveStake);
 	}
 
-	function getEffectiveStake(address addr) external view returns (uint effectiveStake) {
+	function getEffectiveStake(address addr) external override view returns (uint effectiveStake) {
 		return getCommitteeEffectiveStake(addr, settings);
 	}
 
@@ -265,37 +267,37 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.removeMember(addr);
 	}
 
-	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public onlyFunctionalManager {
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public override onlyFunctionalManager {
 		require(minSelfStakePercentMille <= PERCENT_MILLIE_BASE, "minSelfStakePercentMille must be 100000 at most");
 		emit MinSelfStakePercentMilleChanged(minSelfStakePercentMille, settings.minSelfStakePercentMille);
 		settings.minSelfStakePercentMille = minSelfStakePercentMille;
 	}
 
-	function setVoteOutPercentMilleThreshold(uint32 voteOutPercentMilleThreshold) public onlyFunctionalManager {
+	function setVoteOutPercentMilleThreshold(uint32 voteOutPercentMilleThreshold) public override onlyFunctionalManager {
 		require(voteOutPercentMilleThreshold <= PERCENT_MILLIE_BASE, "voteOutPercentMilleThreshold must not be larger than 100000");
 		emit VoteOutPercentMilleThresholdChanged(voteOutPercentMilleThreshold, settings.voteOutPercentMilleThreshold);
 		settings.voteOutPercentMilleThreshold = voteOutPercentMilleThreshold;
 	}
 
-	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) public onlyFunctionalManager {
+	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) public override onlyFunctionalManager {
 		require(voteUnreadyPercentMilleThreshold <= PERCENT_MILLIE_BASE, "voteUnreadyPercentMilleThreshold must not be larger than 100000");
 		emit VoteUnreadyPercentMilleThresholdChanged(voteUnreadyPercentMilleThreshold, settings.voteUnreadyPercentMilleThreshold);
 		settings.voteUnreadyPercentMilleThreshold = voteUnreadyPercentMilleThreshold;
 	}
 
-	function getMinSelfStakePercentMille() external view returns (uint32) {
+	function getMinSelfStakePercentMille() external override view returns (uint32) {
 		return settings.minSelfStakePercentMille;
 	}
 
-	function getVoteOutPercentMilleThreshold() external view returns (uint32) {
+	function getVoteOutPercentMilleThreshold() external override view returns (uint32) {
 		return settings.voteOutPercentMilleThreshold;
 	}
 
-	function getVoteUnreadyPercentMilleThreshold() external view returns (uint32) {
+	function getVoteUnreadyPercentMilleThreshold() external override view returns (uint32) {
 		return settings.voteUnreadyPercentMilleThreshold;
 	}
 
-	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake) {
+	function getVoteOutStatus(address subjectAddr) external override view returns (uint votedStake, uint totalDelegatedStake) {
 		votedStake = accumulatedStakesForVoteOut[subjectAddr];
 		totalDelegatedStake = delegationsContract.getTotalDelegatedStake();
 	}
@@ -311,7 +313,7 @@ contract Elections is IElections, ManagedContract {
 		}
 	}
 
-	function getVoteUnreadyStatus(address subjectAddr) external view returns 
+	function getVoteUnreadyStatus(address subjectAddr) external override view returns
 		(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee) {
 		(committee, weights, certification) = committeeContract.getCommittee();
 
@@ -326,7 +328,7 @@ contract Elections is IElections, ManagedContract {
 		(subjectInCommittee, subjectInCertifiedCommittee) = getSubjectCommitteeStatus(committee, certification, subjectAddr);
 	}
 
-	function getSettings() external view returns (
+	function getSettings() external override view returns (
 		uint32 minSelfStakePercentMille,
 		uint32 voteUnreadyPercentMilleThreshold,
 		uint32 voteOutPercentMilleThreshold
@@ -342,7 +344,7 @@ contract Elections is IElections, ManagedContract {
 	IGuardiansRegistration guardianRegistrationContract;
 	IStakingContract stakingContract;
 	ICertification certificationContract;
-	function refreshContracts() external {
+	function refreshContracts() external override {
 		committeeContract = ICommittee(getCommitteeContract());
 		delegationsContract = IDelegations(getDelegationsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());

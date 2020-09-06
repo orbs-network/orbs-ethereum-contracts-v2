@@ -1,8 +1,10 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 import "../spec_interfaces/IContractRegistry.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-pragma solidity 0.5.16;
+pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @title Protocol Wallet interface
 interface IProtocolWallet {
@@ -17,7 +19,7 @@ interface IProtocolWallet {
     function getToken() external view returns (IERC20);
 
     /// @dev Returns the address of the underlying staked token.
-    /// @return IERC20 The address of the token.
+    /// @return balance uint256 the balance
     function getBalance() external view returns (uint256 balance);
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
@@ -38,4 +40,6 @@ interface IProtocolWallet {
     function setClient(address client) external; /* onlyFunctionalManager */
 
     function getMaxAnnualRate() external view returns (uint256);
+
+    function resetOutstandingTokens() external /* onlyMigrationOwner */;
 }

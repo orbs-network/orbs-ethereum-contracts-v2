@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./spec_interfaces/ISubscriptions.sol";
@@ -85,24 +87,24 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit SubscriptionChanged(vcId, owner, name, genRefTime, tier, rate, expiresAt, isCertified, deploymentSubset);
     }
 
-    function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external onlyWhenActive {
+    function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external override onlyWhenActive {
         require(msg.sender == virtualChains[vcId].owner, "only vc owner can set a vc config record");
         configRecords[vcId][key] = value;
         emit VcConfigRecordChanged(vcId, key, value);
     }
 
-    function getVcConfigRecord(uint256 vcId, string calldata key) external view returns (string memory) {
+    function getVcConfigRecord(uint256 vcId, string calldata key) external override view returns (string memory) {
         return configRecords[vcId][key];
     }
 
-    function addSubscriber(address addr) external onlyFunctionalManager onlyWhenActive {
+    function addSubscriber(address addr) external override onlyFunctionalManager onlyWhenActive {
         // todo: emit event
         authorizedSubscribers[addr] = true;
 
         emit SubscriberAdded(addr);
     }
 
-    function removeSubscriber(address addr) external onlyFunctionalManager onlyWhenActive {
+    function removeSubscriber(address addr) external override onlyFunctionalManager onlyWhenActive {
         require(authorizedSubscribers[addr], "given add is not an authorized subscriber");
 
         authorizedSubscribers[addr] = false;
@@ -110,7 +112,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit SubscriberRemoved(addr);
     }
 
-    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external onlyWhenActive returns (uint, uint) {
+    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
         require(amount >= settings.minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
@@ -134,11 +136,11 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         return (vcId, vc.genRefTime);
     }
 
-    function extendSubscription(uint256 vcId, uint256 amount, address payer) external onlyWhenActive {
+    function extendSubscription(uint256 vcId, uint256 amount, address payer) external override onlyWhenActive {
         _extendSubscription(vcId, amount, payer);
     }
 
-    function setVcOwner(uint256 vcId, address owner) external onlyWhenActive {
+    function setVcOwner(uint256 vcId, address owner) external override onlyWhenActive {
         require(msg.sender == virtualChains[vcId].owner, "only the vc owner can transfer ownership");
 
         virtualChains[vcId].owner = owner;
@@ -160,25 +162,25 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit Payment(vcId, payer, amount, vc.tier, vc.rate);
     }
 
-    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public onlyFunctionalManager onlyWhenActive {
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public override onlyFunctionalManager onlyWhenActive {
         settings.genesisRefTimeDelay = newGenesisRefTimeDelay;
         emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
     }
 
-    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public onlyFunctionalManager {
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public override onlyFunctionalManager {
         settings.minimumInitialVcPayment = newMinimumInitialVcPayment;
         emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
     }
 
-    function getGenesisRefTimeDelay() external view returns (uint) {
+    function getGenesisRefTimeDelay() external override view returns (uint) {
         return settings.genesisRefTimeDelay;
     }
 
-    function getMinimumInitialVcPayment() external view returns (uint) {
+    function getMinimumInitialVcPayment() external override view returns (uint) {
         return settings.minimumInitialVcPayment;
     }
 
-    function getVcData(uint256 vcId) external view returns (
+    function getVcData(uint256 vcId) external override view returns (
         string memory name,
         string memory tier,
         uint256 rate,
@@ -202,13 +204,13 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     IFeesWallet generalFeesWallet;
     IFeesWallet certifiedFeesWallet;
     IProtocol protocolContract;
-    function refreshContracts() external {
+    function refreshContracts() external override {
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
         certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
         protocolContract = IProtocol(getProtocolContract());
     }
 
-    function getSettings() external view returns(
+    function getSettings() external override view returns(
         uint genesisRefTimeDelay,
         uint256 minimumInitialVcPayment
     ) {

@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -201,7 +203,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @dev Stakes ORBS tokens on behalf of msg.sender. This method assumes that the user has already approved at least
     /// the required amount using ERC20 approve.
     /// @param _amount uint256 The amount of tokens to stake.
-    function stake(uint256 _amount) external onlyWhenAcceptingNewStakes {
+    function stake(uint256 _amount) external override onlyWhenAcceptingNewStakes {
         address stakeOwner = msg.sender;
 
         uint256 totalStakedAmount = stake(stakeOwner, _amount);
@@ -217,7 +219,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @dev Unstakes ORBS tokens from msg.sender. If successful, this will start the cooldown period, after which
     /// msg.sender would be able to withdraw all of his tokens.
     /// @param _amount uint256 The amount of tokens to unstake.
-    function unstake(uint256 _amount) external {
+    function unstake(uint256 _amount) external override {
         require(_amount > 0, "StakingContract::unstake - amount must be greater than 0");
 
         address stakeOwner = msg.sender;
@@ -254,7 +256,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @dev Requests to withdraw all of staked ORBS tokens back to msg.sender. Stake owners can withdraw their ORBS
     /// tokens only after previously unstaking them and after the cooldown period has passed (unless the contract was
     /// requested to release all stakes).
-    function withdraw() external {
+    function withdraw() external override {
         address stakeOwner = msg.sender;
 
         WithdrawResult memory res = withdraw(stakeOwner);
@@ -273,7 +275,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     }
 
     /// @dev Restakes unstaked ORBS tokens (in or after cooldown) for msg.sender.
-    function restake() external onlyWhenAcceptingNewStakes {
+    function restake() external override onlyWhenAcceptingNewStakes {
         address stakeOwner = msg.sender;
         Stake storage stakeData = stakes[stakeOwner];
         uint256 cooldownAmount = stakeData.cooldownAmount;
@@ -300,7 +302,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// the required amount using ERC20 approve.
     /// @param _stakeOwner address The specified stake owner.
     /// @param _amount uint256 The amount of tokens to stake.
-    function acceptMigration(address _stakeOwner, uint256 _amount) external onlyWhenAcceptingNewStakes {
+    function acceptMigration(address _stakeOwner, uint256 _amount) external override onlyWhenAcceptingNewStakes {
         uint256 totalStakedAmount = stake(_stakeOwner, _amount);
 
         emit AcceptedMigration(_stakeOwner, _amount, totalStakedAmount);
@@ -314,7 +316,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @dev Migrates the stake of msg.sender from this staking contract to a new approved staking contract.
     /// @param _newStakingContract IMigratableStakingContract The new staking contract which supports stake migration.
     /// @param _amount uint256 The amount of tokens to migrate.
-    function migrateStakedTokens(IMigratableStakingContract _newStakingContract, uint256 _amount) external
+    function migrateStakedTokens(IMigratableStakingContract _newStakingContract, uint256 _amount) external override
         onlyWhenStakesNotReleased {
         require(isApprovedStakingContract(_newStakingContract),
             "StakingContract::migrateStakedTokens - migration destination wasn't approved");
@@ -353,7 +355,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @param _totalAmount uint256 The total amount of rewards to distributes.
     /// @param _stakeOwners address[] The addresses of the stake owners.
     /// @param _amounts uint256[] The amounts of the rewards.
-    function distributeRewards(uint256 _totalAmount, address[] calldata _stakeOwners, uint256[] calldata _amounts) external
+    function distributeRewards(uint256 _totalAmount, address[] calldata _stakeOwners, uint256[] calldata _amounts) external override
         onlyWhenAcceptingNewStakes {
         require(_totalAmount > 0, "StakingContract::distributeRewards - total amount must be greater than 0");
 
@@ -405,13 +407,13 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @dev Returns the stake of the specified stake owner (excluding unstaked tokens).
     /// @param _stakeOwner address The address to check.
     /// @return uint256 The stake of the stake owner.
-    function getStakeBalanceOf(address _stakeOwner) external view returns (uint256) {
+    function getStakeBalanceOf(address _stakeOwner) external override view returns (uint256) {
         return stakes[_stakeOwner].amount;
     }
 
     /// @dev Returns the total amount staked tokens (excluding unstaked tokens).
     /// @return uint256 The total staked tokens of all stake owners.
-    function getTotalStakedTokens() external view returns (uint256) {
+    function getTotalStakedTokens() external override view returns (uint256) {
         return totalStakedTokens;
     }
 
@@ -419,7 +421,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// @param _stakeOwner address The address to check.
     /// @return cooldownAmount uint256 The total tokens in cooldown.
     /// @return cooldownEndTime uint256 The time when the cooldown period ends (in seconds).
-    function getUnstakeStatus(address _stakeOwner) external view returns (uint256 cooldownAmount,
+    function getUnstakeStatus(address _stakeOwner) external override view returns (uint256 cooldownAmount,
         uint256 cooldownEndTime) {
         Stake memory stakeData = stakes[_stakeOwner];
         cooldownAmount = stakeData.cooldownAmount;
@@ -428,7 +430,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
 
     /// @dev Returns the address of the underlying staked token.
     /// @return IERC20 The address of the token.
-    function getToken() external view returns (IERC20) {
+    function getToken() external override view returns (IERC20) {
         return token;
     }
 

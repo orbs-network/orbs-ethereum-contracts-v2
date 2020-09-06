@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./IContractRegistry.sol";
 
@@ -18,12 +20,5 @@ interface ICertification /* is Ownable */ {
     /// @dev Called by a guardian as part of the automatic vote unready flow
     /// Used by the Election contract
 	function setGuardianCertification(address addr, bool isCertified) external /* Owner only */ ;
-
-	/*
-	 * Governance
-	 */
-
-    /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
 }

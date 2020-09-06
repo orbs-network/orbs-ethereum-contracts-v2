@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./Lockable.sol";
 
@@ -17,5 +19,7 @@ contract ManagedContract is Lockable {
 
         _;
     }
+
+    function refreshContracts() virtual external {}
 
 }

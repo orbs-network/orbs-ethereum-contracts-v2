@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./IContractRegistry.sol";
 
@@ -25,9 +27,6 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/*
 	 * Governance
 	 */
-
-    /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
 	function importDelegations(address[] calldata from, address to, bool _refreshStakeNotification) external /* onlyMigrationManager onlyDuringDelegationImport */;
 	function finalizeDelegationImport() external /* onlyMigrationManager onlyDuringDelegationImport */;

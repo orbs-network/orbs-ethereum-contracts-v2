@@ -129,11 +129,11 @@ module.exports = {
   // Configure your compilers
   compilers: {
     solc: {
-      version: '0.5.16',
+      version: '0.6.12',
       settings: {          // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
           enabled: true,
-          runs: 200
+          runs: 2000
         }
       }
       // version: "0.5.1",    // Fetch exact version from solc-bin (default: truffle's version)

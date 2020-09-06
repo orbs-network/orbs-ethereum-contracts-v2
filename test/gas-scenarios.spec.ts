@@ -382,9 +382,13 @@ describe('gas usage scenarios', async () => {
     it("imports 50 delegations, unregistered guardians", async () => {
         const d = await Driver.new();
 
+        await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
+
         const delegate = d.newParticipant();
         const delegations = _.range(50).map(() => d.newParticipant());
-        await Promise.all(delegations.map(d => d[0].stake(100)));
+        await Promise.all(delegations.map(d => d.stake(100)));
+
+        await d.stakingContractHandler.setNotifyDelegations(true, {from: d.migrationManager.address});
 
         d.resetGasRecording();
         let r = await d.delegations.importDelegations(
@@ -394,7 +398,7 @@ describe('gas usage scenarios', async () => {
         , {from: d.migrationManager.address});
         expect(r).to.have.a.delegationsImportedEvent({
             from: delegations.map(d => d.address),
-            to: delegations.map(delegate.address)
+            to: delegate.address
         });
 
         d.logGasUsageSummary("import 50 delegations, unregistered guardians", [d.migrationManager]);

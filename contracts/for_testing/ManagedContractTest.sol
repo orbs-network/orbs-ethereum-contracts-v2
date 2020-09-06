@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "../ContractRegistryAccessor.sol";
 import "../ManagedContract.sol";
@@ -10,7 +12,7 @@ contract ManagedContractTest is ManagedContract {
     uint public refreshContractsCount;
 
     address public delegations;
-    function refreshContracts() external {
+    function refreshContracts() external override {
         refreshContractsCount++;
         delegations = getDelegationsContract();
     }

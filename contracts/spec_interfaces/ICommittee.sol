@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "./IContractRegistry.sol";
 
@@ -46,9 +48,6 @@ interface ICommittee {
 
 	event MaxTimeBetweenRewardAssignmentsChanged(uint32 newValue, uint32 oldValue);
 	event MaxCommitteeSizeChanged(uint8 newValue, uint8 oldValue);
-
-    /// @dev Updates the address calldata of the contract registry
-	function setContractRegistry(IContractRegistry _contractRegistry) external /* onlyMigrationManager */;
 
     /*
      * Getters

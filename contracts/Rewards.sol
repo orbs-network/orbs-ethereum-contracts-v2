@@ -1,4 +1,6 @@
-pragma solidity 0.5.16;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
@@ -75,52 +77,52 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     // bootstrap rewards
 
-    function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) public onlyFunctionalManager onlyWhenActive {
+    function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) public override onlyFunctionalManager onlyWhenActive {
         settings.generalCommitteeAnnualBootstrap = toUint48Granularity(annualAmount);
         emit GeneralCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
-    function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) public onlyFunctionalManager onlyWhenActive {
+    function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) public override onlyFunctionalManager onlyWhenActive {
         settings.certifiedCommitteeAnnualBootstrap = toUint48Granularity(annualAmount);
         emit CertifiedCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
-    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public onlyFunctionalManager onlyWhenActive {
+    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public override onlyFunctionalManager onlyWhenActive {
         require(maxDelegatorsStakingRewardsPercentMille <= PERCENT_MILLIE_BASE, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
         settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
         emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
     }
 
-    function getGeneralCommitteeAnnualBootstrap() external view returns (uint256) {
+    function getGeneralCommitteeAnnualBootstrap() external override view returns (uint256) {
         return toUint256Granularity(settings.generalCommitteeAnnualBootstrap);
     }
 
-    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256) {
+    function getCertifiedCommitteeAnnualBootstrap() external override view returns (uint256) {
         return toUint256Granularity(settings.certifiedCommitteeAnnualBootstrap);
     }
 
-    function getMaxDelegatorsStakingRewardsPercentMille() public view returns (uint32) {
+    function getMaxDelegatorsStakingRewardsPercentMille() public override view returns (uint32) {
         return settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
-    function getAnnualStakingRewardsRatePercentMille() external view returns (uint32) {
+    function getAnnualStakingRewardsRatePercentMille() external override view returns (uint32) {
         return settings.annualRateInPercentMille;
     }
 
-    function getAnnualStakingRewardsCap() external view returns (uint256) {
+    function getAnnualStakingRewardsCap() external override view returns (uint256) {
         return toUint256Granularity(settings.annualCap);
     }
 
-    function getBootstrapBalance(address addr) external view returns (uint256) {
+    function getBootstrapBalance(address addr) external override view returns (uint256) {
         return toUint256Granularity(balances[addr].bootstrapRewards);
     }
 
-    function assignRewards() public onlyWhenActive {
+    function assignRewards() public override onlyWhenActive {
         (address[] memory committee, uint256[] memory weights, bool[] memory certification) = committeeContract.getCommittee();
         _assignRewardsToCommittee(committee, weights, certification);
     }
 
-    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata certification) external onlyCommitteeContract onlyWhenActive {
+    function assignRewardsToCommittee(address[] calldata committee, uint256[] calldata committeeWeights, bool[] calldata certification) external override onlyCommitteeContract onlyWhenActive {
         _assignRewardsToCommittee(committee, committeeWeights, certification);
     }
 
@@ -170,7 +172,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         certifiedGuardianBootstrap = generalGuardianBootstrap.add(toUint256Granularity(uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days))));
     }
 
-    function withdrawBootstrapFunds(address guardian) external {
+    function withdrawBootstrapFunds(address guardian) external override {
         uint48 amount = balances[guardian].bootstrapRewards;
         balances[guardian].bootstrapRewards = 0;
         emit BootstrapRewardsWithdrawn(guardian, toUint256Granularity(amount));
@@ -179,7 +181,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) public onlyFunctionalManager onlyWhenActive {
+    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) public override onlyFunctionalManager onlyWhenActive {
         Settings memory _settings = settings;
         _settings.annualRateInPercentMille = uint32(annualRateInPercentMille);
         _settings.annualCap = toUint48Granularity(annualCap);
@@ -188,11 +190,11 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit AnnualStakingRewardsRateChanged(annualRateInPercentMille, annualCap);
     }
 
-    function getStakingRewardBalance(address addr) external view returns (uint256) {
+    function getStakingRewardBalance(address addr) external override view returns (uint256) {
         return toUint256Granularity(balances[addr].stakingRewards);
     }
 
-    function getLastRewardAssignmentTime() external view returns (uint256) {
+    function getLastRewardAssignmentTime() external override view returns (uint256) {
         return lastAssignedAt;
     }
 
@@ -235,7 +237,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         address guardianAddr;
         uint256 delegatorsAmount;
     }
-    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external onlyWhenActive {
+    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external override onlyWhenActive {
         require(to.length > 0, "list must contain at least one recipient");
         require(to.length == amounts.length, "expected to and amounts to be of same length");
         uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
@@ -294,7 +296,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         certifiedGuardianFee = generalGuardianFee.add(divideFees(committee, certification, certificationFeePoolAmount, true));
     }
 
-    function getFeeBalance(address addr) external view returns (uint256) {
+    function getFeeBalance(address addr) external override view returns (uint256) {
         return toUint256Granularity(balances[addr].fees);
     }
 
@@ -311,14 +313,14 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         }
     }
 
-    function withdrawFees(address guardian) external {
+    function withdrawFees(address guardian) external override {
         uint48 amount = balances[guardian].fees;
         balances[guardian].fees = 0;
         emit FeesWithdrawn(guardian, toUint256Granularity(amount));
         require(transfer(erc20, guardian, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
-    function migrateStakingRewardsBalance(address guardian) external {
+    function migrateStakingRewardsBalance(address guardian) external override {
         IRewards currentRewardsContract = IRewards(getRewardsContract());
         if (currentRewardsContract == this) {
             return;
@@ -333,7 +335,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit StakingRewardsBalanceMigrated(guardian, toUint256Granularity(balance), address(currentRewardsContract));
     }
 
-    function acceptStakingRewardsMigration(address guardian, uint256 amount) external {
+    function acceptStakingRewardsMigration(address guardian, uint256 amount) external override {
         uint48 amount48 = toUint48Granularity(amount);
         require(transferFrom(erc20, msg.sender, address(this), amount48), "acceptStakingMigration: transfer failed");
 
@@ -343,13 +345,13 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
 
-    function emergencyWithdraw() external onlyMigrationManager {
+    function emergencyWithdraw() external override onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
         require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
     }
 
-    function getSettings() external view returns (
+    function getSettings() external override view returns (
         uint generalCommitteeAnnualBootstrap,
         uint certifiedCommitteeAnnualBootstrap,
         uint annualStakingRewardsCap,
@@ -376,7 +378,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     IFeesWallet certifiedFeesWallet;
     IProtocolWallet stakingRewardsWallet;
     IProtocolWallet bootstrapRewardsWallet;
-    function refreshContracts() external {
+    function refreshContracts() external override {
         committeeContract = ICommittee(getCommitteeContract());
         delegationsContract = IDelegations(getDelegationsContract());
         guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
