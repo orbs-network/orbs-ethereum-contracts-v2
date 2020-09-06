@@ -11,6 +11,7 @@ import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
 import "./interfaces/IElections.sol";
 import "./ManagedContract.sol";
+import "./spec_interfaces/ICertification.sol";
 
 /// @title Elections contract interface
 contract Committee is ICommittee, ManagedContract {
@@ -24,15 +25,18 @@ contract Committee is ICommittee, ManagedContract {
 	}
 	CommitteeMember[MAX_COMMITTEE_ARRAY_SIZE] public committee;
 
-	struct MemberData {
-		uint96 weight;
-		uint8 pos;
+	struct MemberStatus {
 		bool isMember;
-		bool isCertified;
-
 		bool inCommittee;
+		uint8 pos;
 	}
-	mapping (address => MemberData) membersData;
+	mapping (address => MemberStatus) membersStatus;
+
+	struct MemberData {
+		MemberStatus status;
+		uint96 weight;
+		bool isCertified;
+	}
 
 	// Derived properties
 	struct CommitteeInfo {
@@ -65,7 +69,7 @@ contract Committee is ICommittee, ManagedContract {
 	}
 
 	function qualifiesToEnterCommittee(address addr, MemberData memory data, CommitteeInfo memory info, Settings memory _settings) private view returns (bool qualified, uint8 entryPos) {
-		if (!data.isMember || data.weight == 0) {
+		if (!data.status.isMember || data.weight == 0) {
 			return (false, 0);
 		}
 
@@ -81,11 +85,11 @@ contract Committee is ICommittee, ManagedContract {
 		return (true, info.minCommitteeMemberPos);
 	}
 
-	function saveMemberData(address addr, MemberData memory data) private {
-		if (data.isMember) {
-			membersData[addr] = data;
+	function saveMemberStatus(address addr, MemberStatus memory status) private {
+		if (status.isMember) {
+			membersStatus[addr] = status;
 		} else {
-			delete membersData[addr];
+			delete membersStatus[addr];
 		}
 	}
 
@@ -94,10 +98,9 @@ contract Committee is ICommittee, ManagedContract {
 		Settings memory _settings = settings;
 		bytes memory sortBytes = abi.encodePacked(committeeSortBytes);
 
-		if (!data.inCommittee) {
+		if (!data.status.inCommittee) {
 			(bool qualified, uint8 entryPos) = qualifiesToEnterCommittee(addr, data, info, _settings);
 			if (!qualified) {
-				saveMemberData(addr, data);
 				return false;
 			}
 
@@ -105,13 +108,11 @@ contract Committee is ICommittee, ManagedContract {
 			(info, sortBytes) = addToCommittee(addr, data, entryPos, sortBytes, info);
 		}
 
-		(info, sortBytes) = (data.isMember && data.weight > 0) ?
+		(info, sortBytes) = (data.status.isMember && data.weight > 0) ?
 			rankMember(addr, data, sortBytes, info) :
 			removeMemberFromCommittee(data, sortBytes, info);
 
-		emit GuardianCommitteeChange(addr, data.weight, data.isCertified, data.inCommittee);
-
-		saveMemberData(addr, data);
+		emit GuardianCommitteeChange(addr, data.weight, data.isCertified, data.status.inCommittee);
 
 		committeeInfo = info;
 		committeeSortBytes = sortBytes.toBytes32(0);
@@ -126,8 +127,8 @@ contract Committee is ICommittee, ManagedContract {
 			addr: addr,
 			weight: data.weight
 		});
-		data.inCommittee = true;
-		data.pos = entryPos;
+		data.status.inCommittee = true;
+		data.status.pos = entryPos;
 		info.committeeBitmap |= uint32(uint(1) << entryPos);
 		info.committeeSize++;
 
@@ -137,7 +138,7 @@ contract Committee is ICommittee, ManagedContract {
 
 	function removeMemberFromCommittee(MemberData memory data, bytes memory sortBytes, CommitteeInfo memory info) private returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
 		uint rank = 0;
-		while (uint8(sortBytes[rank]) != data.pos) {
+		while (uint8(sortBytes[rank]) != data.status.pos) {
 			rank++;
 		}
 
@@ -150,10 +151,10 @@ contract Committee is ICommittee, ManagedContract {
 		if (info.committeeSize > 0) {
 			info.minCommitteeMemberPos = uint8(sortBytes[info.committeeSize - 1]);
 		}
-		info.committeeBitmap &= ~uint32(uint(1) << data.pos);
+		info.committeeBitmap &= ~uint32(uint(1) << data.status.pos);
 
-		delete committee[data.pos];
-		data.inCommittee = false;
+		delete committee[data.status.pos];
+		data.status.inCommittee = false;
 
 		return (info, sortBytes);
 	}
@@ -163,19 +164,28 @@ contract Committee is ICommittee, ManagedContract {
 			return (info, sortBytes);
 		}
 
-		address addr = committee[pos].addr;
-		MemberData memory data = membersData[addr];
+		CommitteeMember memory cm = committee[pos];
+
+		MemberData memory data = MemberData({
+			status: MemberStatus({
+				pos: pos,
+				inCommittee: true,
+				isMember: true
+			}),
+			weight: cm.weight,
+			isCertified: certificationContract.isGuardianCertified(cm.addr)
+		});
 
 		(newInfo, newSortBytes) = removeMemberFromCommittee(data, sortBytes, info);
 
-		emit GuardianCommitteeChange(addr, data.weight, data.isCertified, false);
+		emit GuardianCommitteeChange(cm.addr, data.weight, data.isCertified, false);
 
-		membersData[addr] = data;
+		membersStatus[cm.addr] = data.status;
 	}
 
 	function rankMember(address addr, MemberData memory data, bytes memory sortBytes, CommitteeInfo memory info) private view returns (CommitteeInfo memory newInfo, bytes memory newSortBytes) {
 		uint rank = 0;
-		while (uint8(sortBytes[rank]) != data.pos) {
+		while (uint8(sortBytes[rank]) != data.status.pos) {
 			rank++;
 		}
 
@@ -228,60 +238,67 @@ contract Committee is ICommittee, ManagedContract {
 	 * Methods restricted to other Orbs contracts
 	 */
 
-	/// @dev Called by: Elections contract
-	/// Notifies a weight change for sorting to a relevant committee member.
-	/// weight = 0 indicates removal of the member from the committee (for example on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberChange(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint96(weight)) == weight, "weight is out of range");
 
-		MemberData memory data = membersData[addr];
-		if (!data.isMember) {
-			return false;
-		}
-		data.weight = uint96(weight);
-		if (data.inCommittee) {
-			committee[data.pos].weight = data.weight;
-		}
-		return updateOnMemberChange(addr, data);
-	}
+		MemberData memory data = MemberData({
+			status: membersStatus[addr],
+			weight: uint96(weight),
+			isCertified: isCertified
+		});
 
-	function memberCertificationChange(address addr, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
-		MemberData memory data = membersData[addr];
-		if (!data.isMember) {
+		if (!data.status.isMember) {
 			return false;
 		}
 
-		data.isCertified = isCertified;
-		return updateOnMemberChange(addr, data);
+		if (data.status.inCommittee) {
+			committee[data.status.pos].weight = data.weight;
+		}
+
+		committeeChanged = updateOnMemberChange(addr, data);
+		if (committeeChanged) {
+			saveMemberStatus(addr, data.status);
+		}
 	}
 
 	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		require(uint256(uint96(weight)) == weight, "weight is out of range");
 
-		if (membersData[addr].isMember) {
+		if (membersStatus[addr].isMember) {
 			return false;
 		}
 
-		return updateOnMemberChange(addr, MemberData({
-			isMember: true,
+		MemberData memory data = MemberData({
+			status: MemberStatus({
+				isMember: true,
+				inCommittee: false,
+				pos: uint8(-1)
+			}),
 			weight: uint96(weight),
-			isCertified: isCertified,
-			inCommittee: false,
-			pos: uint8(-1)
-		}));
+			isCertified: isCertified
+		});
+		committeeChanged = updateOnMemberChange(addr, data);
+		saveMemberStatus(addr, data.status);
 	}
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
 	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
-		MemberData memory data = membersData[addr];
-
-		if (!membersData[addr].isMember) {
+		MemberStatus memory status = membersStatus[addr];
+		if (!status.isMember) {
 			return false;
 		}
 
-		data.isMember = false;
-		return updateOnMemberChange(addr, data);
+		status.isMember = false;
+
+		MemberData memory data = MemberData({
+			status: status,
+			weight: status.inCommittee ? committee[status.pos].weight : uint96(electionsContract.getEffectiveStake(addr)),
+			isCertified: certificationContract.isGuardianCertified(addr)
+		});
+		committeeChanged = updateOnMemberChange(addr, data);
+
+		saveMemberStatus(addr, status);
 	}
 
 	/// @dev Called by: Elections contract
@@ -290,8 +307,6 @@ contract Committee is ICommittee, ManagedContract {
 		return _getCommittee();
 	}
 
-	/// @dev Called by: Elections contract
-	/// Returns the committee members and their weights
 	function _getCommittee() private view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification) {
 		CommitteeInfo memory _committeeInfo = committeeInfo;
 		uint bitmap = uint(_committeeInfo.committeeBitmap);
@@ -299,22 +314,21 @@ contract Committee is ICommittee, ManagedContract {
 
 		addrs = new address[](committeeSize);
 		weights = new uint[](committeeSize);
-		certification = new bool[](committeeSize);
 		uint aInd = 0;
 		uint pInd = 0;
-		MemberData memory md;
+		CommitteeMember memory member;
 		bitmap = uint(_committeeInfo.committeeBitmap);
 		while (bitmap != 0) {
 			if (bitmap & 1 == 1) {
-				addrs[aInd] = committee[pInd].addr;
-				md = membersData[addrs[aInd]];
-				weights[aInd] = md.weight;
-				certification[aInd] = md.isCertified;
+				member = committee[pInd];
+				addrs[aInd] = member.addr;
+				weights[aInd] = member.weight;
 				aInd++;
 			}
 			bitmap >>= 1;
 			pInd++;
 		}
+		certification = certificationContract.getGuardiansCertification(addrs);
 	}
 
 	/*
@@ -384,21 +398,15 @@ contract Committee is ICommittee, ManagedContract {
 		return guardianRegistrationContract.getGuardianIps(addrs);
 	}
 
-	function _loadCertification(address[] memory addrs) private view returns (bool[] memory) {
-		bool[] memory certification = new bool[](addrs.length);
-		for (uint i = 0; i < addrs.length; i++) {
-			certification[i] = membersData[addrs[i]].isCertified;
-		}
-		return certification;
-	}
-
 	IElections electionsContract;
 	IRewards rewardsContract;
 	IGuardiansRegistration guardianRegistrationContract;
+	ICertification certificationContract;
 	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 		rewardsContract = IRewards(getRewardsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
+		certificationContract = ICertification(getCertificationContract());
 	}
 
 }

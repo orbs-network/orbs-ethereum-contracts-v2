@@ -16,13 +16,8 @@ interface ICommittee {
      */
 
 	/// @dev Called by: Elections contract
-	/// Notifies a weight change for sorting to a relevant committee member.
-    /// weight = 0 indicates removal of the member from the committee (for exmaple on unregister, voteUnready, voteOut)
-	function memberWeightChange(address addr, uint256 weight) external returns (bool committeeChanged) /* onlyElectionContract */;
-
-	/// @dev Called by: Elections contract
-	/// Notifies a guardian certification change
-	function memberCertificationChange(address addr, bool isCertified) external returns (bool committeeChanged) /* onlyElectionsContract */;
+	/// Notifies a weight change of certification change of a member
+	function memberChange(address addr, uint256 weight, bool isCertified) external /* onlyElectionsContract onlyWhenActive */ returns (bool committeeChanged);
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready

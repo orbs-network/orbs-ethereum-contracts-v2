@@ -365,21 +365,10 @@ describe('committee', async () => {
 
         const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
         const notElections = d.newParticipant().address;
-        const elections = d.newParticipant().address;
-        await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
-
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}), /caller is not the elections/);
-        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
-
-        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: notElections}), /caller is not the elections/);
-        await d.committee.memberCertificationChange(v.address,true,  {from: elections});
-
+        await expectRejected(d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: notElections}), /caller is not the elections/);
         const v2 = d.newParticipant();
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}), /caller is not the elections/);
-        await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
-
         await expectRejected(d.committee.removeMember(v2.address, {from: notElections}), /caller is not the elections/);
-        await d.committee.removeMember(v2.address, {from: elections});
     });
 
     it("allows committee methods to be called only when active", async () => {
@@ -393,15 +382,13 @@ describe('committee', async () => {
 
         await d.committee.lock({from: d.registryAdmin.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}), /contract is locked for this operation/);
-        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.removeMember(v2.address, {from: elections}), /contract is locked for this operation/);
 
         await d.committee.unlock({from: d.registryAdmin.address});
 
-        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
-        await d.committee.memberCertificationChange(v.address,true,  {from: elections});
+        await d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: elections});
         await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
         await d.committee.removeMember(v2.address, {from: elections});
 
@@ -423,8 +410,8 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}), /weight is out of range/);
-        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), {from: elections});
+        await expectRejected(d.committee.memberChange(v.address, bn(2).pow(bn(96)), true, {from: elections}), /weight is out of range/);
+        await d.committee.memberChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), true, {from: elections});
 
         const v2 = await d.newParticipant();
 
@@ -440,10 +427,7 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
-        let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        r = await d.committee.memberCertificationChange(nonRegistered.address, true, {from: elections});
+        let r = await d.committee.memberChange(nonRegistered.address, fromTokenUnits(1), true,{from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
