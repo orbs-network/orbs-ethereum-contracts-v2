@@ -49,8 +49,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     CommitteeTotalsPerMember committeeTotalsPerMember;
 
     struct StakingRewardsBalance {
+        uint96 lastRewardsPerToken;
         uint48 balance;
-        uint48 lastRewardsPerToken;
     }
     mapping(address => StakingRewardsBalance) stakingRewardsBalances;
 
@@ -99,14 +99,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         StakingRewardsBalance memory balance = stakingRewardsBalances[addr];
 
         if (inCommittee) {
-            balance.balance = balance.balance.add(
-                toUint48Granularity(
-                    totals.stakingRewardsPerToken
-                    .sub(balance.lastRewardsPerToken)
-                    .mul(stake)
-                    .div(TOKEN_BASE)
-                )
-            );
+            uint256 amount = uint256(totals.stakingRewardsPerToken)
+                .sub(uint256(balance.lastRewardsPerToken))
+                .mul(stake)
+                .div(TOKEN_BASE);
+            balance.balance = balance.balance.add(toUint48Granularity(amount));
+            emit StakingRewardsAssigned(addr, amount);
         }
         
         balance.lastRewardsPerToken = totals.stakingRewardsPerToken;
@@ -134,16 +132,18 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
         if (balance.inCommittee) {
             uint96 totalBootstrap = balance.certified ? totals.certifiedBootstrap : totals.generalBootstrap;
-            balance.bootstrapBalance = balance.bootstrapBalance.add(totalBootstrap.sub(balance.lastBootstrapPerMember));
-            balance.lastBootstrapPerMember = isCertified ? totals.certifiedBootstrap : totals.generalBootstrap;
-
+            uint96 bootstrapAmount = totalBootstrap.sub(balance.lastBootstrapPerMember);
+            balance.bootstrapBalance = balance.bootstrapBalance.add(bootstrapAmount);
+            emit BootstrapRewardsAssigned(addr, toUint256Granularity(bootstrapAmount));
+            
             uint96 totalFees = balance.certified ? totals.certifiedFees : totals.generalFees;
-            balance.feeBalance = balance.bootstrapBalance.add(totalFees.sub(balance.lastFeesPerMember));
-            balance.lastFeesPerMember = isCertified ? totals.certifiedFees : totals.generalFees;
+            uint96 feesAmount = totalFees.sub(balance.lastFeesPerMember);           
+            balance.feeBalance = balance.bootstrapBalance.add(feesAmount);
+            emit FeesAssigned(addr, toUint256Granularity(feesAmount));
         }
-
-        balance.inCommittee = inCommittee;
-        balance.certified = certified;
+        
+        balance.lastBootstrapPerMember = isCertified ? totals.certifiedBootstrap : totals.generalBootstrap;
+        balance.lastFeesPerMember = isCertified ? totals.certifiedFees : totals.generalFees;
     }
 
     function updateMemberRewards(address addr, uint256 stake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external onlyCommitteeContract {
