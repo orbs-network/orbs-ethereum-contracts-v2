@@ -22,13 +22,6 @@ contract Certification is ICertification, ManagedContract {
         return guardianCertification[addr];
     }
 
-    function getGuardiansCertification(address[] calldata addrs) external override view returns (bool[] memory certification) {
-        certification = new bool[](addrs.length);
-        for (uint i = 0; i < addrs.length; i++) {
-            certification[i] = guardianCertification[addrs[i]];
-        }
-    }
-
     function setGuardianCertification(address addr, bool isCertified) external override onlyFunctionalManager onlyWhenActive {
         guardianCertification[addr] = isCertified;
         emit GuardianCertificationUpdate(addr, isCertified);

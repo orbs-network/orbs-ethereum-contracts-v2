@@ -15,8 +15,6 @@ interface ICertification /* is Ownable */ {
 
 	function isGuardianCertified(address addr) external view returns (bool isCertified);
 
-	function getGuardiansCertification(address[] calldata addrs) external view returns (bool[] memory certification);
-
 	function setGuardianCertification(address addr, bool isCertified) external /* Owner only */ ;
 
 }
