@@ -65,6 +65,16 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         }
     }
 
+    function withdrawMax() external override onlyClient {
+        uint duration = now - lastWithdrawal;
+        uint amount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
+
+        lastWithdrawal = now;
+        if (amount > 0) {
+            require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
+        }
+    }
+
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.
     function setMaxAnnualRate(uint256 _annualRate) public override onlyMigrationOwner {

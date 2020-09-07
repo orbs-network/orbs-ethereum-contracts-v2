@@ -28,6 +28,7 @@ interface IProtocolWallet {
     /// @dev Withdraw from pool to a the sender's address, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external; /* onlyClient */
+    function withdrawMax() external; /* onlyClient */
 
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.
