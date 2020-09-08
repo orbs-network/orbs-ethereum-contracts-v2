@@ -12,7 +12,7 @@ interface IRewards {
      * Staking
      */
 
-    event StakingRewardsAssigned(address[] assignees, uint256[] amounts);
+    event StakingRewardsAssigned(address indexed guardian, uint256 amount);
     event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
@@ -46,8 +46,8 @@ interface IRewards {
      * Fees
      */
 
-    event FeesAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
-    event FeesWithdrawn(address guardian, uint256 amount);
+    event FeesAssigned(address indexed guardian, uint256 amount);
+    event FeesWithdrawn(address indexed guardian, uint256 amount);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
     function getFeeBalance(address addr) external view returns (uint256 balance);
@@ -59,8 +59,8 @@ interface IRewards {
      * Bootstrap
      */
 
-    event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
-    event BootstrapRewardsWithdrawn(address guardian, uint256 amount);
+    event BootstrapRewardsAssigned(address indexed guardian, uint256 amount);
+    event BootstrapRewardsWithdrawn(address indexed guardian, uint256 amount);
 
     /// @dev Returns the currently unclaimed bootstrap balance of the given address.
     function getBootstrapBalance(address addr) external view returns (uint256 balance);
