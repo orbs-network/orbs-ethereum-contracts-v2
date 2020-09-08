@@ -35,8 +35,6 @@ interface ICommittee {
 
 	function getMemberInfo() external view returns (bool inCommittee, uint stake, bool isCertified);
 
-
-
 	/*
 	 * Governance
 	 */

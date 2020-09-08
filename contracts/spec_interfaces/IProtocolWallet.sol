@@ -22,6 +22,8 @@ interface IProtocolWallet {
     /// @return balance uint256 the balance
     function getBalance() external view returns (uint256 balance);
 
+    function getOutstandingTokens() public view returns (uint);
+
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUp(uint256 amount) external;
 

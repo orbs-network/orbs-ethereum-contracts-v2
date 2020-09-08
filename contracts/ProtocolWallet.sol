@@ -17,8 +17,9 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     IERC20 public token;
     address public client;
 
-    uint public lastWithdrawal;
     uint public maxAnnualRate;
+    uint public outstandingTokens;
+    uint public lastUpdate;
 
     modifier onlyClient() {
         require(msg.sender == client, "caller is not the wallet client");
@@ -29,7 +30,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
         client = _client;
-        lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?
+        lastUpdate = block.timestamp; // TODO init here, or in first call to setMaxAnnualRate?
 
         setMaxAnnualRate(_maxAnnualRate);
     }
@@ -55,24 +56,14 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     /// @dev withdraws from the pool to a spender, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external override onlyClient {
-        uint duration = now - lastWithdrawal;
-        uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
-        require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
+        if (amount == 0) return;
 
-        lastWithdrawal = now;
-        if (amount > 0) {
-            require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
-        }
-    }
+        uint _outstandingTokens = getOutstandingTokens();
+        require(amount <= _outstandingTokens, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
-    function withdrawMax() external override onlyClient {
-        uint duration = now - lastWithdrawal;
-        uint amount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
-
-        lastWithdrawal = now;
-        if (amount > 0) {
-            require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
-        }
+        outstandingTokens = _outstandingTokens.sub(amount);
+        lastUpdate = block.timestamp;
+        require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
     }
 
     /* Governance */
@@ -86,10 +77,16 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         return maxAnnualRate;
     }
 
-    /// @dev Sets a new transfer rate for the Orbs pool.
-    function resetOutstandingTokens() external override onlyMigrationOwner { //TODO add test
-        lastWithdrawal = now;
-        emit OutstandingTokensReset();
+    function setOutstandingTokens(uint _outstandingTokens) external override onlyMigrationOwner { //TODO add test
+        lastUpdate = block.timestamp;
+        outstandingTokens = _outstandingTokens;
+        emit OutstandingTokensReset(_outstandingTokens);
+    }
+
+    function getOutstandingTokens() public view returns (uint) {
+        uint duration = block.timestamp - lastUpdate;
+        uint amount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
+        return outstandingTokens.add(amount);
     }
 
     /// @dev transfer the entire pool's balance to a new wallet.

@@ -8,6 +8,17 @@ import "../spec_interfaces/IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IRewards {
 
+    event RewardDistributionActivated(uint256 startTime);
+    event RewardDistributionDeactivated();
+
+    function deactivate() external /* onlyMigrationManager */;
+
+    function activate(uint startTime) external /* onlyInitializationAdmin */;
+
+    function committeeMemberStakeWillChange(address addr, uint256 stake, uint256 totalCommitteeStake) external /* onlyCommitteeContract */;
+
+    function committeeMembershipWillChange(address addr, uint256 stake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
+
     /*
      * Staking
      */
