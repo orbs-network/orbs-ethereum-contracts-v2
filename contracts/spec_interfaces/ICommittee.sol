@@ -31,6 +31,12 @@ interface ICommittee {
 	/// Returns the committee members and their weights
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification);
 
+	function getCommitteeStats() external view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalStake);
+
+	function getMemberInfo() external view returns (bool inCommittee, uint stake, bool isCertified);
+
+
+
 	/*
 	 * Governance
 	 */
