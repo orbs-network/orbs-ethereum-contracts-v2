@@ -11,11 +11,12 @@ import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
 declare const web3: Web3;
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 const assert = chai.assert;
@@ -86,7 +87,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
@@ -109,7 +110,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.guardianCommitteeChangeEvent({
             addr: committee[committee.length - 1].address
         });
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         // const ge = gasReportEvents(r);
@@ -124,13 +125,13 @@ describe('gas usage scenarios', async () => {
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[0]);
         let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
         d.resetGasRecording();
         r = await delegator.delegate(committee[committee.length - 1]);
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(c => c.address)
         });
 
@@ -144,7 +145,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         d.logGasUsageSummary("New delegator stakes", [delegator]);
     });
@@ -157,7 +158,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
@@ -193,7 +194,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
 
@@ -206,11 +207,11 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.readyToSync();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         d.resetGasRecording();
         r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
 
@@ -222,7 +223,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await committee[0].unregisterAsGuardian();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.slice(1).map(v => v.address)
         });
 
@@ -234,7 +235,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteUnready(committee[1].address, 0xFFFFFFFF,{from: committee[0].orbsAddress});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
@@ -262,7 +263,7 @@ describe('gas usage scenarios', async () => {
             guardian: committee[0].address
         });
 
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.slice(1).map(v => v.address)
         });
 
@@ -274,7 +275,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].address});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
@@ -301,7 +302,7 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.guardianVotedOutEvent({
             guardian: committee[0].address
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.slice(1).map(v => v.address)
         });
 

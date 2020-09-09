@@ -10,8 +10,9 @@ import {
 } from "./driver";
 import chai from "chai";
 import {bn} from "./helpers";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 
@@ -47,7 +48,7 @@ describe('elections-certification', async () => {
         expect(r).to.have.a.guardianVotedUnreadyEvent({
             guardian: certifiedCommittee[0].address
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: generalCommittee.filter(v => v != certifiedCommittee[0]).map(v => v.address)
         });
 
@@ -87,7 +88,7 @@ describe('elections-certification', async () => {
         expect(r).to.have.a.guardianVotedUnreadyEvent({
             guardian: certifiedCommittee[0].address
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: generalCommittee.slice(1).map(v => v.address)
         });
     });
@@ -111,7 +112,7 @@ describe('elections-certification', async () => {
         for (const v of certifiedCommittee) {
             let r = await d.elections.voteUnready(generalCommittee[1].address, 0xFFFFFFFF, {from: v.orbsAddress});
             expect(r).to.not.have.a.guardianVotedUnreadyEvent();
-            expect(r).to.not.have.a.committeeSnapshotEvent();
+            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         }
     });
 

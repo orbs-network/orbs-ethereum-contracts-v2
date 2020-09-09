@@ -83,7 +83,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         emit OutstandingTokensReset(_outstandingTokens);
     }
 
-    function getOutstandingTokens() public view returns (uint) {
+    function getOutstandingTokens() public override view returns (uint) {
         uint duration = block.timestamp - lastUpdate;
         uint amount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
         return outstandingTokens.add(amount);

@@ -4,13 +4,13 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY} from "./driver";
 import chai from "chai";
+import {bn, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
+import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
-
-import {bn, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 
 describe('protocol-contract', async () => {
 

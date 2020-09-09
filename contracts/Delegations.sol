@@ -64,33 +64,42 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		return status;
 	}
 
+	struct DelegateFromVars {
+		DelegateStatus prevDelegateStatusBefore;
+		DelegateStatus newDelegateStatusBefore;
+		DelegateStatus prevDelegateStatusAfter;
+		DelegateStatus newDelegateStatusAfter;
+	}
+
 	function delegateFrom(address from, address to, bool refreshStakeNotification) private {
 		require(to != address(0), "cannot delegate to a zero address");
+
+		DelegateFromVars memory vars;
 
 		StakeOwnerData memory delegatorData = getStakeOwnerData(from);
 		address prevDelegate = delegatorData.delegation;
 
-		DelegateStatus memory prevDelegateStatusBefore = getDelegateStatus(prevDelegate);
-		DelegateStatus memory newDelegateStatusBefore = getDelegateStatus(to);
+		vars.prevDelegateStatusBefore = getDelegateStatus(prevDelegate);
+		vars.newDelegateStatusBefore = getDelegateStatus(to);
 
 		stakeOwnersData[from].delegation = to;
 
 		uint256 delegatorStake = delegatorData.stake;
 
-		uncappedStakes[prevDelegate] = prevDelegateStatusBefore.uncappedStakes.sub(delegatorStake);
-		uncappedStakes[to] = newDelegateStatusBefore.uncappedStakes.add(delegatorStake);
+		uncappedStakes[prevDelegate] = vars.prevDelegateStatusBefore.uncappedStakes.sub(delegatorStake);
+		uncappedStakes[to] = vars.newDelegateStatusBefore.uncappedStakes.add(delegatorStake);
 
-		DelegateStatus memory prevDelegateStatusAfter = getDelegateStatus(prevDelegate);
-		DelegateStatus memory newDelegateStatusAfter = getDelegateStatus(to);
+		vars.prevDelegateStatusAfter = getDelegateStatus(prevDelegate);
+		vars.newDelegateStatusAfter = getDelegateStatus(to);
 
 		uint256 _totalDelegatedStake = totalDelegatedStake.sub(
-			prevDelegateStatusBefore.delegatedStake
+			vars.prevDelegateStatusBefore.delegatedStake
 		).add(
-			prevDelegateStatusAfter.delegatedStake
+			vars.prevDelegateStatusAfter.delegatedStake
 		).sub(
-			newDelegateStatusBefore.delegatedStake
+			vars.newDelegateStatusBefore.delegatedStake
 		).add(
-			newDelegateStatusAfter.delegatedStake
+			vars.newDelegateStatusAfter.delegatedStake
 		);
 
 		totalDelegatedStake = _totalDelegatedStake;
@@ -100,24 +109,28 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 			_electionsContract.delegatedStakeChange(
 				prevDelegate,
-				prevDelegateStatusAfter.selfDelegatedStake,
-				prevDelegateStatusAfter.delegatedStake,
-				_totalDelegatedStake
+				vars.prevDelegateStatusAfter.selfDelegatedStake,
+				vars.prevDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake,
+				from,
+				delegatorData.stake
 			);
 
 			_electionsContract.delegatedStakeChange(
 				to,
-			    newDelegateStatusAfter.selfDelegatedStake,
-				newDelegateStatusAfter.delegatedStake,
-				_totalDelegatedStake
+			    vars.newDelegateStatusAfter.selfDelegatedStake,
+				vars.newDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake,
+				from,
+				delegatorData.stake
 			);
 		}
 
 		emit Delegated(from, to);
 
 		if (delegatorStake != 0 && prevDelegate != to) {
-			emitDelegatedStakeChanged(prevDelegate, from, 0, prevDelegateStatusAfter.selfDelegatedStake, prevDelegateStatusAfter.delegatedStake);
-			emitDelegatedStakeChanged(to, from, delegatorStake, newDelegateStatusAfter.selfDelegatedStake, newDelegateStatusAfter.delegatedStake);
+			emitDelegatedStakeChanged(prevDelegate, from, 0, vars.prevDelegateStatusAfter.selfDelegatedStake, vars.prevDelegateStatusAfter.delegatedStake);
+			emitDelegatedStakeChanged(to, from, delegatorStake, vars.newDelegateStatusAfter.selfDelegatedStake, vars.newDelegateStatusAfter.delegatedStake);
 		}
 	}
 
@@ -192,7 +205,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 				to,
 				delegateStatus.selfDelegatedStake,
 				delegateStatus.delegatedStake,
-				newTotalDelegatedStake
+				newTotalDelegatedStake,
+				to,
+				delegateStatus.selfDelegatedStake
 			);
 		}
 	}
@@ -209,7 +224,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 			stakeOwnerData.delegation,
 			delegateStatus.selfDelegatedStake,
 			delegateStatus.delegatedStake,
-			totalDelegatedStake
+			totalDelegatedStake,
+			addr,
+			stakeOwnerData.stake
 		);
 	}
 
@@ -336,7 +353,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 				stakeOwnerDataBefore.delegation,
 				delegateStatus.selfDelegatedStake,
 				delegateStatus.delegatedStake,
-				_totalDelegatedStake
+				_totalDelegatedStake,
+				_stakeOwner,
+				stakeOwnerDataBefore.stake
 			);
 		}
 

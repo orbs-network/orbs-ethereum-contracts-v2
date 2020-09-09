@@ -17,7 +17,8 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change of certification change of a member
-	function memberChange(address addr, uint256 weight, bool isCertified) external /* onlyElectionsContract onlyWhenActive */ returns (bool committeeChanged);
+	function memberWeightChange(address addr, uint256 weight, address delegator, uint256 prevDelegatorStake) external /* onlyElectionsContract onlyWhenActive */ returns (bool committeeChanged);
+	function memberCertificationChange(address addr, bool isCertified) external /* onlyElectionsContract onlyWhenActive */ returns (bool committeeChanged);
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready
@@ -33,7 +34,7 @@ interface ICommittee {
 
 	function getCommitteeStats() external view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalStake);
 
-	function getMemberInfo() external view returns (bool inCommittee, uint stake, bool isCertified);
+	function getMemberInfo(address addr) external view returns (bool inCommittee, uint stake, bool isCertified);
 
 	/*
 	 * Governance

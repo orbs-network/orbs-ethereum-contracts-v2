@@ -6,8 +6,9 @@ import {
 } from "./driver";
 import chai from "chai";
 import {bn, expectRejected} from './helpers';
+import {chaiEventMatchersPlugin} from "./matchers";
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 

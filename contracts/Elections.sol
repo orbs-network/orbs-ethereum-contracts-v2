@@ -67,7 +67,7 @@ contract Elections is IElections, ManagedContract {
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external override {
-		committeeContract.memberChange(addr, getCommitteeEffectiveStake(addr, settings), isCertified);
+		committeeContract.memberCertificationChange(addr, isCertified);
 	}
 
 	function requireNotVotedOut(address addr) private view {
@@ -234,17 +234,15 @@ contract Elections is IElections, ManagedContract {
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake, address delegator, uint256 prevDelegatorStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
-		_applyDelegatedStake(addr, selfStake, delegatedStake, _settings);
-		_applyStakesToVoteOutBy(addr, delegatedStake, totalDelegatedStake, _settings);
-	}
 
-	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private {
 		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
-		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
+		emit StakeChanged(delegate, selfStake, delegatedStake, effectiveStake);
 
-		committeeContract.memberChange(addr, effectiveStake, certificationContract.isGuardianCertified(addr));
+		committeeContract.memberWeightChange(delegate, effectiveStake, delegator, prevDelegatorStake);
+
+		_applyStakesToVoteOutBy(delegate, delegatedStake, totalDelegatedStake, _settings);
 	}
 
 	function getEffectiveStake(address addr) external override view returns (uint effectiveStake) {

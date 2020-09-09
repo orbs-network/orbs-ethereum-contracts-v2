@@ -4,9 +4,10 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
+import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 

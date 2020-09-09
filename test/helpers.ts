@@ -5,6 +5,7 @@ import { Web3Driver } from "../eth";
 import {Driver} from "./driver";
 import {TransactionReceipt} from "web3-core";
 import chai from "chai";
+import {CommitteeSnapshotEvent} from "../typings/committee-contract";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
     for (let i = 0; i < n; i++) {

@@ -8,9 +8,10 @@ import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {Web3Driver} from "../eth";
 import {bootstrapRewardsAssignedEvents} from "./event-parsing";
+import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 

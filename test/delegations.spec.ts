@@ -5,14 +5,15 @@ import {
     Driver,
 } from "./driver";
 import chai from "chai";
+import {bn, contractId, expectRejected} from "./helpers";
+import {TransactionReceipt} from "web3-core";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
+
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 const assert = chai.assert;
-
-import {bn, contractId, expectRejected} from "./helpers";
-import {TransactionReceipt} from "web3-core";
 
 describe('delegations-contract', async () => {
 
@@ -325,8 +326,8 @@ describe('delegations-contract', async () => {
 
             let r = await d.delegations.importDelegations([d1.address], v1.address, notifyElections, {from: d.migrationManager.address});
             notifyElections ?
-                expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address, v2.address]}) :
-                expect(r).to.not.have.a.committeeSnapshotEvent();
+                await expectCommittee(d,  {addrs: [v1.address, v2.address]}) :
+                expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
             expect(r).to.have.a.delegationsImportedEvent({
                 from: [d1.address],
@@ -345,8 +346,8 @@ describe('delegations-contract', async () => {
 
             r = await d.delegations.importDelegations([d2.address, d3.address], v2.address, notifyElections, {from: d.migrationManager.address});
             notifyElections ?
-                expect(r).to.have.a.committeeSnapshotEvent({addrs: [v2.address, v1.address]}) :
-                expect(r).to.not.have.a.committeeSnapshotEvent();
+                await expectCommittee(d,  {addrs: [v2.address, v1.address]}) :
+                expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
             expect(r).to.have.a.delegationsImportedEvent({
                 from: [d2.address, d3.address],
@@ -374,10 +375,10 @@ describe('delegations-contract', async () => {
 
             if (!notifyElections) { // manual notification refresh:
                 r = await d.delegations.refreshStakeNotification(v1.address);
-                expect(r).to.have.a.committeeSnapshotEvent({addrs: [v1.address, v2.address]});
+                await expectCommittee(d,  {addrs: [v1.address, v2.address]});
 
                 r = await d.delegations.refreshStakeNotification(v2.address);
-                expect(r).to.have.a.committeeSnapshotEvent({addrs: [v2.address, v1.address]});
+                await expectCommittee(d,  {addrs: [v2.address, v1.address]});
             }
         };
     };
@@ -456,7 +457,7 @@ describe('delegations-contract', async () => {
             addr: v.address,
             delegatedStake: bn(200)
         });
-        expect(r).to.have.a.committeeSnapshotEvent({addrs: [v.address]});
+        await expectCommittee(d,  {addrs: [v.address]});
     });
 
     it('properly handles a stake change notifications when previous notifications were not given', async () => {
@@ -502,11 +503,11 @@ describe('delegations-contract', async () => {
         await distributer.assignAndApproveOrbs(bn(200), d.staking.address);
 
         let r = await d.staking.distributeRewards(200, [v.address], [200], {from: distributer.address});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         // Next notification should include the updated stake
         r = await v.stake(300); // total delegated stake of v is now 100 + 200 + 300 = 600
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(600)]
         });
@@ -521,11 +522,11 @@ describe('delegations-contract', async () => {
         await distributer.assignAndApproveOrbs(bn(200), d.staking.address);
 
         let r = await d.staking.distributeRewards(200, [v.address], [200], {from: distributer.address});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         // Next notification should include the updated stake
         r = await d.delegations.refreshStakeNotification(v.address);
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(300)]
         });

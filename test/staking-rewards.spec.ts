@@ -3,11 +3,21 @@ import 'mocha';
 import BN from "bn.js";
 import {defaultDriverOptions, Driver} from "./driver";
 import chai from "chai";
-import {bn, bnSum, contractId, evmIncreaseTime, evmMine, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
+import {
+  bn,
+  bnSum,
+  contractId,
+  evmIncreaseTime,
+  evmMine,
+  expectRejected,
+  fromTokenUnits,
+  toTokenUnits
+} from "./helpers";
 import {committeeSnapshotEvents} from "./event-parsing";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
@@ -783,7 +793,7 @@ describe('staking-rewards', async () => {
         [fromTokenUnits(1), fromTokenUnits(1)],
         {from: v1.address}
     );
-    expect(r).to.have.a.committeeSnapshotEvent({
+    await expectCommittee(d, {
       addrs: [v1.address, v2.address],
       weights: [fromTokenUnits(100000001), fromTokenUnits(100000000)]
     });

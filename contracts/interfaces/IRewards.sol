@@ -15,7 +15,7 @@ interface IRewards {
 
     function activate(uint startTime) external /* onlyInitializationAdmin */;
 
-    function committeeMemberStakeWillChange(address addr, uint256 stake, uint256 totalCommitteeStake) external /* onlyCommitteeContract */;
+    function committeeMemberStakeWillChange(address addr, uint256 stake, uint256 totalCommitteeStake, address delegator, uint256 delegatorStake) external /* onlyCommitteeContract */;
 
     function committeeMembershipWillChange(address addr, uint256 stake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
 
@@ -99,22 +99,14 @@ interface IRewards {
      * General
      */
 
-    /// @dev assignsRewards based to the current committee, may called by any client.
-    function assignRewards() external;
-    
-    /// @dev assignsRewards the current committee, called by the committee contract.
-    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata certification) external /* onlyCommitteeContract */;
-
-    /// @dev Returns the timestamp of the last reward assignment.
-    function getLastRewardAssignmentTime() external view returns (uint256 time);
-
-    /// @dev Returns the contract's settings 
+    /// @dev Returns the contract's settings
     function getSettings() external view returns (
         uint generalCommitteeAnnualBootstrap,
         uint certifiedCommitteeAnnualBootstrap,
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
-        uint32 maxDelegatorsStakingRewardsPercentMille
+        uint32 maxDelegatorsStakingRewardsPercentMille,
+        bool active
     );
 
     /*

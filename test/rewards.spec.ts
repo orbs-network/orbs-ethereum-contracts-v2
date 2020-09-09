@@ -13,12 +13,12 @@ import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits
 import {
     stakingRewardsAssignedEvents,
 } from "./event-parsing";
-
+import {chaiEventMatchersPlugin} from "./matchers";
 
 declare const web3: Web3;
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 const assert = chai.assert;

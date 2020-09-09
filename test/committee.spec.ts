@@ -3,24 +3,23 @@ import 'mocha';
 import * as _ from "lodash";
 import Web3 from "web3";
 declare const web3: Web3;
+import {bn, evmIncreaseTime, expectRejected, fromTokenUnits, minAddress} from "./helpers";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
 import BN from "bn.js";
 import {
     defaultDriverOptions,
-    BANNING_LOCK_TIMEOUT,
     Driver,
-    Participant, ZERO_ADDR
+    Participant,
 } from "./driver";
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 const assert = chai.assert;
 
-import {bn, evmIncreaseTime, expectRejected, fromTokenUnits, minAddress} from "./helpers";
-
-describe('committee', async () => {
+describe.only('committee', async () => {
 
     // Basic tests
 
@@ -31,14 +30,14 @@ describe('committee', async () => {
         const v = await d.newParticipant();
 
         let r = await v.registerAsGuardian();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.stake(stake);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.readyToSync();
         r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(stake)]
         });
@@ -51,13 +50,13 @@ describe('committee', async () => {
         const v = await d.newParticipant();
 
         let r = await v.registerAsGuardian();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.stake(stake);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(stake)]
         });
@@ -76,7 +75,7 @@ describe('committee', async () => {
             await v.registerAsGuardian();
             await v.stake(stake);
             let r = await v.readyForCommittee();
-            expect(r).to.have.a.committeeSnapshotEvent({
+            await expectCommittee(d,  {
                 addrs: committee.map(s => s.address),
                 weights: committee.map(s => bn(stake))
             });
@@ -86,7 +85,7 @@ describe('committee', async () => {
         await v.registerAsGuardian();
         await v.stake(stake - 1);
         let r = await v.readyForCommittee();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
     });
 
     it('evicts a committee member which explicitly became removed', async () => {
@@ -98,14 +97,14 @@ describe('committee', async () => {
         await v.registerAsGuardian();
         await v.stake(stake);
         let r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(stake)]
         });
 
         await d.contractRegistry.setContract("elections", d.contractsOwnerAddress, false,{from: d.registryAdmin.address}); // hack to make subsequent call
         r = await d.committee.removeMember(v.address, {from: d.contractsOwnerAddress});
-        expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
+        await expectCommittee(d,  {addrs: []});
     });
 
     it('evicts a committee member which became not-ready-for-committee because it sent ready-to-sync', async () => {
@@ -117,13 +116,13 @@ describe('committee', async () => {
         await v.registerAsGuardian();
         await v.stake(stake);
         let r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(stake)]
         });
 
         r = await v.readyToSync();
-        expect(r).to.have.a.committeeSnapshotEvent({addrs: []});
+        await expectCommittee(d,  {addrs: []});
     });
 
     it('does not allow a non-ready guardian to join committee even if was ready previously', async () => {
@@ -131,14 +130,14 @@ describe('committee', async () => {
 
         const stake = 100;
         const {v: v1, r: r1} = await d.newGuardian(stake, false, false, true); // committee now full
-        expect(r1).to.have.a.committeeSnapshotEvent({addrs: [v1.address]});
+        await expectCommittee(d,{addrs: [v1.address]});
 
         const {v: v2, r: r2} = await d.newGuardian(stake - 1, false, false, true); // a ready member
-        expect(r2).to.not.have.a.committeeSnapshotEvent();
+        expect(r2).to.not.have.a.guardianCommitteeChangeEvent();
 
         let r = await v2.readyToSync(); // should now become not ready-for-committee
         r = await v2.stake(2); // now has more stake than committee member, but not ready so should not enter committee
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
     });
 
     it('guardian can overtake committee member with more stake', async () => {
@@ -154,7 +153,7 @@ describe('committee', async () => {
             await v.registerAsGuardian();
             await v.stake(stake + i);
             let r = await v.readyForCommittee();
-            expect(r).to.have.a.committeeSnapshotEvent({
+            await expectCommittee(d,  {
                 addrs: committee.map(s => s.address),
                 weights: committee.map((s, i) => bn(stake + i))
             });
@@ -162,19 +161,19 @@ describe('committee', async () => {
 
         const v = await d.newParticipant();
         let r = await v.registerAsGuardian();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.stake(stake - 1);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.readyForCommittee();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.stake(stake*10);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v].concat(committee.slice(1)).map(s => s.address),
         });
 
@@ -193,7 +192,7 @@ describe('committee', async () => {
             await v.registerAsGuardian();
             await v.stake(stake);
             let r = await v.readyForCommittee();
-            expect(r).to.have.a.committeeSnapshotEvent({
+            await expectCommittee(d,  {
                 addrs: committee.map(s => s.address),
                 weights: committee.map(s => bn(stake))
             });
@@ -204,7 +203,7 @@ describe('committee', async () => {
         await v.stake(stake);
         await v.readyToSync();
         let r = await v.stake(stake);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
     });
 
     it('returns committee using getters', async () => {
@@ -232,7 +231,7 @@ describe('committee', async () => {
             });
 
             let r = await v.readyForCommittee();
-            expect(r).to.have.a.committeeSnapshotEvent({
+            await expectCommittee(d,  {
                 addrs: committee.map(({v}) => v.address),
             });
         }
@@ -271,18 +270,18 @@ describe('committee', async () => {
 
         const stake = 100;
         const {v: committeeMember, r: r1} = await d.newGuardian(stake, false, false, true);
-        expect(r1).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,{
             addrs: [committeeMember.address]
         });
 
         let r = await committeeMember.becomeCertified();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [committeeMember.address],
             certification: [true]
         });
 
         r = await committeeMember.becomeNotCertified();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [committeeMember.address],
             certification: [false]
         });
@@ -293,13 +292,13 @@ describe('committee', async () => {
 
         const stake = 100;
         const {v: v1, r: r1} = await d.newGuardian(stake, false, false, true);
-        expect(r1).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,{
             addrs: [v1.address],
             certification: [false]
         });
 
         const {v: v2, r: r2} = await d.newGuardian(stake - 1, true, false, true);
-        expect(r2).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d, {
             addrs: [v1.address, v2.address],
             certification: [false, true]
         });
@@ -320,7 +319,7 @@ describe('committee', async () => {
             r = await committee[i].becomeGuardian(stake, false, false, true);
         }
 
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
     });
@@ -375,7 +374,8 @@ describe('committee', async () => {
 
         const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
         const notElections = d.newParticipant().address;
-        await expectRejected(d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: notElections}), /caller is not the elections/);
+        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}), /caller is not the elections/);
+        await expectRejected(d.committee.memberCertificationChange(v.address, true, {from: notElections}), /caller is not the elections/);
         const v2 = d.newParticipant();
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}), /caller is not the elections/);
         await expectRejected(d.committee.removeMember(v2.address, {from: notElections}), /caller is not the elections/);
@@ -392,13 +392,15 @@ describe('committee', async () => {
 
         await d.committee.lock({from: d.registryAdmin.address});
 
-        await expectRejected(d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.memberCertificationChange(v.address, true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.removeMember(v2.address, {from: elections}), /contract is locked for this operation/);
 
         await d.committee.unlock({from: d.registryAdmin.address});
 
-        await d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: elections});
+        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
+        await d.committee.memberCertificationChange(v.address, true, {from: elections});
         await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
         await d.committee.removeMember(v2.address, {from: elections});
 
@@ -436,8 +438,11 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
-        let r = await d.committee.memberChange(nonRegistered.address, fromTokenUnits(1), true,{from: elections});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+
+        r = await d.committee.memberCertificationChange(nonRegistered.address, true,{from: elections});
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
     });
 
     it("handles adding existing member", async () => {
@@ -449,7 +454,7 @@ describe('committee', async () => {
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
         const r = await d.committee.addMember(v.address, fromTokenUnits(5), false, {from: elections});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
     });
 
     it("emits incremental committee change events", async () => {
@@ -534,13 +539,13 @@ describe('committee', async () => {
             inCommittee: true,
             weight: bn(1)
         });
-        expect(r1).to.not.have.a.committeeSnapshotEvent();
+        expect(r1).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r1).to.not.have.a.stakingRewardsAssignedEvent();
         expect(r1).to.not.have.a.feesAssignedEvent();
         expect(r1).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         let r = await c.stake(1);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.not.have.a.stakingRewardsAssignedEvent();
         expect(r).to.not.have.a.feesAssignedEvent();
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
@@ -553,7 +558,7 @@ describe('committee', async () => {
             inCommittee: true,
             weight: bn(3)
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [c.address]
         });
         expect(r).to.have.a.stakingRewardsAssignedEvent({
@@ -568,7 +573,7 @@ describe('committee', async () => {
             inCommittee: true,
             weight: bn(4)
         });
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.not.have.a.stakingRewardsAssignedEvent();
         expect(r).to.not.have.a.feesAssignedEvent();
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();

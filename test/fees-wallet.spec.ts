@@ -7,9 +7,10 @@ import {
   feesAddedToBucketEvents,
 } from "./event-parsing";
 import {bn, bnSum, contractId, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
+import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const MONTH_IN_SECONDS = 30*24*60*60;
 

@@ -12,9 +12,10 @@ import {
 import {bn, bnSum, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {FeesAddedToBucketEvent} from "../typings/fees-wallet-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
+import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const MONTH_IN_SECONDS = 30*24*60*60;
 

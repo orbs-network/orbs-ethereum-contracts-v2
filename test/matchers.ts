@@ -83,6 +83,7 @@ import {
   StakeMigrationNotificationFailedEvent,
   StakeMigrationNotificationSkippedEvent
 } from "../typings/stake-change-handler-contract";
+import {Driver} from "./driver";
 
 export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
   return (
@@ -116,15 +117,15 @@ function objectMatches(obj, against): boolean {
     return true;
 }
 
-function compare(event: any, against: any, transposeKey?: string): boolean {
+function compareEvents(actual: any, expected: any, transposeKey?: string): boolean {
   if (transposeKey != null) {
-    const fields = Object.keys(against);
-    event = transpose(event, transposeKey, fields);
-    against = transpose(against, transposeKey);
-    return  Object.keys(against).length == Object.keys(event).length &&
-        Object.keys(against).find(key => !objectMatches(event[key], against[key])) == null;
+    const fields = Object.keys(expected);
+    actual = transpose(actual, transposeKey, fields);
+    expected = transpose(expected, transposeKey);
+    return  Object.keys(expected).length == Object.keys(actual).length &&
+        Object.keys(expected).find(key => !objectMatches(actual[key], expected[key])) == null;
   } else {
-    return objectMatches(event, against);
+    return objectMatches(actual, expected);
   }
 }
 
@@ -149,7 +150,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
       if (logs.length == 1) {
         const log = logs.pop();
         this.assert(
-            compare(log, data, transposeKey),
+            compareEvents(log, data, transposeKey),
             "expected #{this} to be #{exp} but got #{act}",
             "expected #{this} to not be #{act}",
             data, // expected
@@ -157,7 +158,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
         );
       } else {
         for (const log of logs) {
-          if (compare(log, data, transposeKey)) {
+          if (compareEvents(log, data, transposeKey)) {
             return;
           }
         }
@@ -176,7 +177,21 @@ const TransposeKeys = {
   "StakingRewardsAssigned": "assignees",
 };
 
-module.exports = function(chai) {
+export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeSnapshotEvent> & {addrs: string[]}) {
+  const curCommittee: any = await d.committee.getCommittee();
+  const actualCommittee: CommitteeSnapshotEvent = {
+    addrs: curCommittee.addrs,
+    weights: curCommittee.weights,
+    certification: curCommittee.certification
+  }
+
+  chai.assert(
+      compareEvents(actualCommittee, expectedCommittee, 'addrs'),
+      `expected committee to be ${JSON.stringify(expectedCommittee)} but got ${JSON.stringify(actualCommittee)}`,
+  );
+}
+
+export const chaiEventMatchersPlugin = function(chai) {
   for (const event of eventDefinitions) {
     chai.Assertion.overwriteMethod(event.name[0].toLowerCase() + event.name.substr(1) + 'Event',
         containEvent(

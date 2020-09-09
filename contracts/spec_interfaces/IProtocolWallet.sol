@@ -12,7 +12,7 @@ interface IProtocolWallet {
     event ClientSet(address client);
     event MaxAnnualRateSet(uint256 maxAnnualRate);
     event EmergencyWithdrawal(address addr);
-    event OutstandingTokensReset();
+    event OutstandingTokensReset(uint256 outstandingTokens);
 
     /// @dev Returns the address of the underlying staked token.
     /// @return IERC20 The address of the token.
@@ -22,7 +22,7 @@ interface IProtocolWallet {
     /// @return balance uint256 the balance
     function getBalance() external view returns (uint256 balance);
 
-    function getOutstandingTokens() public view returns (uint);
+    function getOutstandingTokens() external view returns (uint);
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUp(uint256 amount) external;
@@ -30,7 +30,6 @@ interface IProtocolWallet {
     /// @dev Withdraw from pool to a the sender's address, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external; /* onlyClient */
-    function withdrawMax() external; /* onlyClient */
 
     /* Governance */
     /// @dev Sets a new transfer rate for the Orbs pool.
@@ -44,5 +43,5 @@ interface IProtocolWallet {
 
     function getMaxAnnualRate() external view returns (uint256);
 
-    function resetOutstandingTokens() external /* onlyMigrationOwner */;
+    function setOutstandingTokens(uint _outstandingTokens) external /* onlyMigrationOwner */;
 }

@@ -5,9 +5,10 @@ import {Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {bn, contractId, expectRejected} from "./helpers";
 import {ContractRegistryContract} from "../typings/contract-registry-contract";
+import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 

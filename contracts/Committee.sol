@@ -10,8 +10,12 @@ import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
 import "./interfaces/IElections.sol";
 import "./ManagedContract.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract Committee is ICommittee, ManagedContract {
+	using SafeMath for uint256;
+	using SafeMath for uint96;
+
 	struct CommitteeMember {
 		address addr;
 		uint96 weightAndCertifiedBit;
@@ -55,7 +59,28 @@ contract Committee is ICommittee, ManagedContract {
 	 * Methods restricted to other Orbs contracts
 	 */
 
-	function memberChange(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberWeightChange(address addr, uint256 weight, address delegator, uint256 prevDelegatorStake) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+		MemberStatus memory status = membersStatus[addr];
+
+		if (!status.inCommittee) {
+			return false;
+		}
+		CommitteeMember memory member = committee[status.pos];
+		(uint prevWeight, bool isCertified) = getWeightCertification(member);
+
+		CommitteeStats memory _committeeStats = committeeStats;
+
+		rewardsContract.committeeMemberStakeWillChange(addr, prevWeight, _committeeStats.totalWeight, delegator, prevDelegatorStake);
+
+		committeeStats.totalWeight = uint96(_committeeStats.totalWeight.sub(prevWeight).add(weight));
+
+		committee[status.pos].weightAndCertifiedBit = packWeightCertification(weight, isCertified);
+		emit GuardianCommitteeChange(addr, weight, isCertified, true);
+
+		return true;
+	}
+
+	function memberCertificationChange(address addr, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
 		MemberStatus memory status = membersStatus[addr];
 
 		if (!status.inCommittee) {
@@ -64,19 +89,11 @@ contract Committee is ICommittee, ManagedContract {
 		CommitteeStats memory _committeeStats = committeeStats;
 
 		CommitteeMember memory member = committee[status.pos];
-		(uint prevWeight, uint prevCertification) = getWeightCertification(member);
+		(uint weight, bool prevCertification) = getWeightCertification(member);
 
-		if (weight != prevWeight) {
-			rewardsContract.committeeMemberStakeWillChange(addr, prevWeight);
-		}
+		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, true, prevCertification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
-		if (isCertified != prevCertification) {
-			rewardsContract.committeeMembershipWillChange(addr, prevWeight, _committeeStats.totalWeight, true, prevCertification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
-		}
-
-		_committeeStats.totalWeight = _committeeStats.totalWeight.sub(prevWeight).add(weight);
-		_committeeStats.certifiedCommitteeSize = _committeeStats.certifiedCommitteeSize - (prevCertification ? 1 : 0) + (isCertified ? 1 : 0);
-		committeeStats = _committeeStats;
+		committeeStats.certifiedCommitteeSize = committeeStats.certifiedCommitteeSize - (prevCertification ? 1 : 0) + (isCertified ? 1 : 0);
 
 		committee[status.pos].weightAndCertifiedBit = packWeightCertification(weight, isCertified);
 		emit GuardianCommitteeChange(addr, weight, isCertified, true);
@@ -102,7 +119,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		_committeeStats.generalCommitteeSize++;
 		if (isCertified) _committeeStats.certifiedCommitteeSize++;
-		_committeeStats.totalWeight = _committeeStats.totalWeight.add(weight);
+		_committeeStats.totalWeight = uint96(_committeeStats.totalWeight.add(weight));
 
 		CommitteeMember memory newMember = CommitteeMember({
 			addr: addr,
@@ -211,12 +228,12 @@ contract Committee is ICommittee, ManagedContract {
 		maxCommitteeSize = _settings.maxCommitteeSize;
 	}
 
-	function getCommitteeStats() external view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalWeight) {
-		CommitteeStats _committeeStats = committeeStats;
+	function getCommitteeStats() external override view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalWeight) {
+		CommitteeStats memory _committeeStats = committeeStats;
 		return (_committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize, _committeeStats.totalWeight);
 	}
 
-	function getMemberInfo(address addr) external view returns (bool inCommittee, uint stake, bool isCertified) {
+	function getMemberInfo(address addr) external override view returns (bool inCommittee, uint stake, bool isCertified) {
 		MemberStatus memory status = membersStatus[addr];
 		inCommittee = status.inCommittee;
 		if (inCommittee) {
@@ -232,7 +249,7 @@ contract Committee is ICommittee, ManagedContract {
 		return uint96(weight) | (certification ? CERTIFICATION_MASK : 0);
 	}
 
-	function unpackWeightCertification(uint96 weightAndCertified) private pure returns (uint256 weight, bool certification) {
+	function unpackWeightCertification(uint96 weightAndCertifiedBit) private pure returns (uint256 weight, bool certification) {
 		return (uint256(weightAndCertifiedBit & WEIGHT_MASK), weightAndCertifiedBit & CERTIFICATION_MASK != 0);
 	}
 
@@ -276,10 +293,10 @@ contract Committee is ICommittee, ManagedContract {
 		return (false, 0);
 	}
 
-	function removeMemberAtPos(uint pos, bool clearFromList, CommitteeStats _committeeStats) private returns (CommitteeStats memory newCommitteeStats){
+	function removeMemberAtPos(uint pos, bool clearFromList, CommitteeStats memory _committeeStats) private returns (CommitteeStats memory newCommitteeStats){
 		CommitteeMember memory member = committee[pos];
 
-		(uint weight, uint certification) = getWeightCertification(member);
+		(uint weight, bool certification) = getWeightCertification(member);
 
 		rewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
@@ -287,7 +304,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		_committeeStats.generalCommitteeSize--;
 		if (certification) _committeeStats.certifiedCommitteeSize--;
-		_committeeStats.totalWeight = _committeeStats.totalWeight.sub(weight);
+		_committeeStats.totalWeight = uint96(_committeeStats.totalWeight.sub(weight));
 
 		emit GuardianCommitteeChange(member.addr, weight, certification, false);
 
