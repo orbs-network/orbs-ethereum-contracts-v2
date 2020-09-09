@@ -17,7 +17,7 @@ interface IRewards {
 
     function committeeMemberStakeWillChange(address addr, uint256 stake, uint256 totalCommitteeStake, address delegator, uint256 delegatorStake) external /* onlyCommitteeContract */;
 
-    function committeeMembershipWillChange(address addr, uint256 stake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
+    function committeeMembershipWillChange(address addr, uint256 stake, uint256 uncappedStake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
 
     /*
      * Staking
