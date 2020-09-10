@@ -15,7 +15,7 @@ chai.use(chaiEventMatchersPlugin);
 const expect = chai.expect;
 const assert = chai.assert;
 
-describe('delegations-contract', async () => {
+describe.only('delegations-contract', async () => {
 
     it('should only accept stake notifications from the staking contract handler', async () => {
         const d = await Driver.new();
@@ -383,7 +383,7 @@ describe('delegations-contract', async () => {
         };
     };
 
-    it('imports a delegation for a delegator with an existing stake (without elections notification)', importDelegationsTestGenerator(false));
+    // it('imports a delegation for a delegator with an existing stake (without elections notification)', importDelegationsTestGenerator(false));
     it('imports a delegation for a delegator with an existing stake (with    elections notification)', importDelegationsTestGenerator(true));
 
     it('tracks uncappedStakes and totalDelegateStakes correctly on importDelegations', async () => {

@@ -29,11 +29,12 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        try delegationsContract.stakeChange{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwner, _amount, _sign, _updatedStake) {
-
-        } catch {
-            emit StakeChangeNotificationFailed(_stakeOwner);
-        }
+        delegationsContract.stakeChange{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwner, _amount, _sign, _updatedStake);
+//        try delegationsContract.stakeChange{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwner, _amount, _sign, _updatedStake) {
+//
+//        } catch {
+//            emit StakeChangeNotificationFailed(_stakeOwner);
+//        }
     }
 
     /// @dev Notifies of multiple stake change events.

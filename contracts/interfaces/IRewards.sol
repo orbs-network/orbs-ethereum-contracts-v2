@@ -10,39 +10,35 @@ interface IRewards {
 
     event RewardDistributionActivated(uint256 startTime);
     event RewardDistributionDeactivated();
+    event StakingRewardAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
+    event GuardianStakingRewardsAssigned(address guardian, uint256 amount, uint256 delegatorRewardsPerToken);
 
     function deactivate() external /* onlyMigrationManager */;
 
     function activate(uint startTime) external /* onlyInitializationAdmin */;
 
-    function committeeMemberStakeWillChange(address addr, uint256 stake, uint256 totalCommitteeStake, address delegator, uint256 delegatorStake) external /* onlyCommitteeContract */;
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 delegatedStake, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyElectionsContract */;
 
-    function committeeMembershipWillChange(address addr, uint256 stake, uint256 uncappedStake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
+    function delegatorWillChange(address guardian, uint256 weight, uint256 delegatedStake, bool inCommittee, uint256 totalCommitteeWeight, address delegator, uint256 delegatorStake) external /* onlyElections */;
 
     /*
      * Staking
      */
 
-    event StakingRewardsAssigned(address indexed guardian, uint256 amount);
-    event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
+    event StakingRewardsAssigned(address indexed addr, uint256 amount);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
     function getStakingRewardBalance(address addr) external view returns (uint256 balance);
 
-    /// @dev Distributes msg.sender's orbs token rewards to a list of addresses, by transferring directly into the staking contract.
-    /// @dev `to[0]` must be the sender's main address
-    /// @dev Total delegators reward (`to[1:n]`) must be less then maxDelegatorsStakingRewardsPercentMille of total amount
-    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external;
-
     // Staking Parameters Governance 
-    event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
+    event MaxDelegatorsStakingRewardsChanged(uint32 delegatorsStakingRewardsPercentMille);
     event AnnualStakingRewardsRateChanged(uint256 annualRateInPercentMille, uint256 annualCap);
 
     /// @dev Sets a new annual rate and cap for the staking reward.
     function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
 
     /// @dev Sets the maximum cut of the delegators staking reward.
-    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+    function setDelegatorsStakingRewardsPercentMille(uint32 delegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
 
     /// @dev Gets the annual staking reward rate.
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
@@ -105,7 +101,7 @@ interface IRewards {
         uint certifiedCommitteeAnnualBootstrap,
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
-        uint32 maxDelegatorsStakingRewardsPercentMille,
+        uint32 delegatorsStakingRewardsPercentMille,
         bool active
     );
 

@@ -255,12 +255,12 @@ describe('elections-high-level-flows', async () => {
             expect(status.committee.length).to.eq(committee.length);
             for (let i = 0; i < status.committee.length; i++) {
                 const data = committeeData[status.committee[i]];
-                expect(status.weights[i]).to.bignumber.eq(data.stake);
                 expect(status.votes[i]).to.eq(data.voted);
                 expect(status.certification[i]).to.be.false;
-                expect(status.subjectInCommittee).to.be.true;
-                expect(status.subjectInCertifiedCommittee).to.be.false;
+                expect(status.weights[i]).to.bignumber.eq(data.stake);
             }
+            expect(status.subjectInCommittee).to.be.true;
+            expect(status.subjectInCertifiedCommittee).to.be.false;
 
             r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
             expect(r).to.have.a.voteUnreadyCastedEvent({

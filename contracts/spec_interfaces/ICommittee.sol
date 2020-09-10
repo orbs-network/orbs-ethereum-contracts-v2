@@ -17,16 +17,16 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a weight change of certification change of a member
-	function memberWeightChange(address addr, uint256 weight, address delegator, uint256 prevDelegatorStake) external /* onlyElectionsContract onlyWhenActive */ returns (bool committeeChanged);
-	function memberCertificationChange(address addr, bool isCertified) external /* onlyElectionsContract onlyWhenActive */ returns (bool committeeChanged);
+	function memberWeightChange(address addr, uint256 weight) external /* onlyElectionsContract onlyWhenActive */;
+	function memberCertificationChange(address addr, bool isCertified) external /* onlyElectionsContract onlyWhenActive */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for exampl	e due to voteOut / voteUnready
-	function removeMember(address addr) external returns (bool committeeChanged) /* onlyElectionContract */;
+	function removeMember(address addr) external returns (bool memberRemoved, uint removedMemberEffectiveStake, bool removedMemberCertified)/* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a new member applicable for committee (due to registration, unbanning, certification change)
-	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool committeeChanged) /* onlyElectionsContract */;
+	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool memberAdded, address removedMember, uint removedMemberWeight, bool removedMemberCertification)  /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights

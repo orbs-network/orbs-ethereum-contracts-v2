@@ -25,7 +25,7 @@ import {
   VoteOutTimeoutSecondsChangedEvent,
   MinSelfStakePercentMilleChangedEvent,
   VoteUnreadyPercentMilleThresholdChangedEvent,
-  VoteOutPercentMilleThresholdChangedEvent,
+  VoteOutPercentMilleThresholdChangedEvent, StakeChangedEvent,
 } from "../typings/elections-contract";
 import { MigratedStakeEvent, StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {
@@ -36,10 +36,15 @@ import {
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
   AnnualStakingRewardsRateChangedEvent,
-  BootstrapRewardsWithdrawnEvent, CertifiedCommitteeAnnualBootstrapChangedEvent,
-  FeesWithdrawnEvent, GeneralCommitteeAnnualBootstrapChangedEvent, MaxDelegatorsStakingRewardsChangedEvent,
-  StakingRewardAssignedEvent, StakingRewardsBalanceMigratedEvent,
-  StakingRewardsDistributedEvent, StakingRewardsMigrationAcceptedEvent
+  BootstrapRewardsWithdrawnEvent,
+  CertifiedCommitteeAnnualBootstrapChangedEvent,
+  FeesWithdrawnEvent,
+  GeneralCommitteeAnnualBootstrapChangedEvent,
+  GuardianStakingRewardAssignedEvent,
+  DelegatorsStakingRewardsChangedEvent,
+  StakingRewardAssignedEvent,
+  StakingRewardsBalanceMigratedEvent,
+  StakingRewardsMigrationAcceptedEvent
 } from "../typings/rewards-contract";
 import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
@@ -75,7 +80,7 @@ import {
 
 } from "../typings/fees-wallet-contract";
 import {
-  NotifyDelegationsChanged,
+  NotifyDelegationsChangedEvent,
   StakeChangeBatchNotificationFailedEvent,
   StakeChangeBatchNotificationSkippedEvent,
   StakeChangeNotificationFailedEvent,
@@ -233,8 +238,7 @@ declare global {
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       guardianCertificationUpdateEvent(data?: Partial<GuardianCertificationUpdateEvent>)
-      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
-      stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
+      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>);
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
@@ -251,7 +255,7 @@ declare global {
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       guardianStatusUpdatedEvent(data?: Partial<GuardianStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
-      maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
+      delegatorsStakingRewardsChangedEvent(data?: Partial<DelegatorsStakingRewardsChangedEvent>);
       fundsAddedToPoolEvent(data?: Partial<FundsAddedToPoolEvent>);
       clientSetEvent(data?: Partial<ClientSetEvent>);
       maxAnnualRateSetEvent(data?: Partial<MaxAnnualRateSetEvent>);
@@ -278,7 +282,9 @@ declare global {
       generalCommitteeAnnualBootstrapChangedEvent(data?: Partial<GeneralCommitteeAnnualBootstrapChangedEvent>);
       certifiedCommitteeAnnualBootstrapChangedEvent(data?: Partial<CertifiedCommitteeAnnualBootstrapChangedEvent>);
       contractRegistryUpdatedEvent(data?: Partial<ContractRegistryUpdatedEvent>);
-      notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChanged>);
+      notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChangedEvent>);
+      guardianStakingRewardAssignedEvent(data?: Partial<GuardianStakingRewardAssignedEvent>);
+      stakeChangedEvent(data?: Partial<StakeChangedEvent>);
 
       withinContract(contract: Contract): Assertion;
     }

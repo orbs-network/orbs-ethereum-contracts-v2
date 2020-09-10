@@ -19,7 +19,7 @@ chai.use(chaiEventMatchersPlugin);
 const expect = chai.expect;
 const assert = chai.assert;
 
-describe.only('committee', async () => {
+describe('committee', async () => {
 
     // Basic tests
 
@@ -525,57 +525,4 @@ describe.only('committee', async () => {
             inCommittee: false,
         });
     });
-
-    it("assigns rewards and emits snapshot event only if enough time has passed", async () => {
-        const maxTimeBetweenRewardAssignments = 2 * 24 * 60 * 60;
-        const d = await Driver.new({
-            maxTimeBetweenRewardAssignments: maxTimeBetweenRewardAssignments,
-            maxCommitteeSize: 1,
-        });
-
-        let {r: r1, v: c} = await d.newGuardian(bn(1), false, false, true);
-        expect(r1).to.have.a.guardianCommitteeChangeEvent({
-            addr: c.address,
-            inCommittee: true,
-            weight: bn(1)
-        });
-        expect(r1).to.not.have.a.guardianCommitteeChangeEvent();
-        expect(r1).to.not.have.a.stakingRewardsAssignedEvent();
-        expect(r1).to.not.have.a.feesAssignedEvent();
-        expect(r1).to.not.have.a.bootstrapRewardsAssignedEvent();
-
-        let r = await c.stake(1);
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
-        expect(r).to.not.have.a.stakingRewardsAssignedEvent();
-        expect(r).to.not.have.a.feesAssignedEvent();
-        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
-
-        await evmIncreaseTime(d.web3, maxTimeBetweenRewardAssignments);
-
-        r = await c.stake(1);
-        expect(r).to.have.a.guardianCommitteeChangeEvent({
-            addr: c.address,
-            inCommittee: true,
-            weight: bn(3)
-        });
-        await expectCommittee(d,  {
-            addrs: [c.address]
-        });
-        expect(r).to.have.a.stakingRewardsAssignedEvent({
-            assignees: [c.address]
-        });
-        expect(r).to.have.a.feesAssignedEvent({});
-        expect(r).to.have.a.bootstrapRewardsAssignedEvent({});
-
-        r = await c.stake(1);
-        expect(r).to.have.a.guardianCommitteeChangeEvent({
-            addr: c.address,
-            inCommittee: true,
-            weight: bn(4)
-        });
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
-        expect(r).to.not.have.a.stakingRewardsAssignedEvent();
-        expect(r).to.not.have.a.feesAssignedEvent();
-        expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
-    })
 });

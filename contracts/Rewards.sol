@@ -26,7 +26,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint48 certifiedCommitteeAnnualBootstrap;
         uint48 annualCap;
         uint32 annualRateInPercentMille;
-        uint32 maxDelegatorsStakingRewardsPercentMille;
+        uint32 delegatorsStakingRewardsPercentMille;
         bool active;
     }
     Settings settings;
@@ -34,29 +34,29 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     IERC20 bootstrapToken;
     IERC20 erc20;
 
-    struct StakingRewardsTotals {
-        uint96 stakingRewardsPerToken;
+    struct StakingRewardsState {
+        uint96 stakingRewardsPerWeight;
         uint32 lastAssigned;
     }
 
-    StakingRewardsTotals stakingRewardsTotals;
+    StakingRewardsState stakingRewardsState;
 
-    struct CommitteeTotalsPerMember {
-        uint48 certifiedFees;
-        uint48 generalFees;
-        uint48 certifiedBootstrap;
-        uint48 generalBootstrap;
+    struct CommitteeRewardsState {
+        uint48 certifiedFeesPerMember;
+        uint48 generalFeesPerMember;
+        uint48 certifiedBootstrapPerMember;
+        uint48 generalBootstrapPerMember;
         uint32 lastAssigned;
     }
-    CommitteeTotalsPerMember committeeTotalsPerMember;
+    CommitteeRewardsState committeeTotalsPerMember;
 
-    struct StakingRewardsBalance {
+    struct StakingRewards {
         uint96 delegatorRewardsPerToken;
-        uint96 lastStakingRewardsPerToken;
         uint96 lastDelegatorRewardsPerToken;
+        uint96 lastStakingRewardsPerWeight;
         uint48 balance;
     }
-    mapping(address => StakingRewardsBalance) stakingRewardsBalances;
+    mapping(address => StakingRewards) stakingRewards;
 
     struct CommitteeBalance {
         uint48 feeBalance;
@@ -66,151 +66,170 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
     mapping(address => CommitteeBalance) committeeBalances;
 
-	uint32 constant PERCENT_MILLIE_BASE = 100000;
+	uint256 constant PERCENT_MILLIE_BASE = 100000;
 
     uint256 lastAssignedAt;
 
-    modifier onlyCommitteeContract() {
-        require(msg.sender == address(committeeContract), "caller is not the committee contract");
+    modifier onlyElectionsContract() {
+        require(msg.sender == address(electionsContract), "caller is not the elections contract");
 
         _;
     }
 
     uint constant TOKEN_BASE = 1e18;
 
-    function calcStakingRewardPerTokenDelta(uint256 totalCommitteeStake, uint duration, Settings memory _settings) private pure returns (uint256 stakingRewardsPerTokenDelta) {
+    //
+    // Staking rewards
+    //
+
+
+    function calcStakingRewardPerWeightDelta(uint256 totalCommitteeWeight, uint duration, Settings memory _settings) private pure returns (uint256 stakingRewardsPerTokenDelta) {
         stakingRewardsPerTokenDelta = 0;
 
-        if (totalCommitteeStake > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
-            uint annualRateInPercentMille = Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(PERCENT_MILLIE_BASE).div(totalCommitteeStake));
-            stakingRewardsPerTokenDelta = annualRateInPercentMille.mul(TOKEN_BASE).mul(duration).div(uint(PERCENT_MILLIE_BASE).mul(365 days));
+        if (totalCommitteeWeight > 0) { // TODO - handle the case of totalStake == 0. consider also an empty committee. consider returning a boolean saying if the amount was successfully distributed or not and handle on caller side.
+            uint annualRateInPercentMille = totalCommitteeWeight == 0 ? 0 : Math.min(uint(_settings.annualRateInPercentMille), toUint256Granularity(_settings.annualCap).mul(PERCENT_MILLIE_BASE).div(totalCommitteeWeight));
+            stakingRewardsPerTokenDelta = annualRateInPercentMille.mul(TOKEN_BASE).mul(duration).div(PERCENT_MILLIE_BASE.mul(365 days));
         }
     }
 
-    function updateStakingRewardsTotals(uint256 totalCommitteeStake) private returns (StakingRewardsTotals memory totals){
-        totals = stakingRewardsTotals;
-        if (settings.active) {
-            totals.stakingRewardsPerToken = uint96(uint256(totals.stakingRewardsPerToken).add(calcStakingRewardPerTokenDelta(totalCommitteeStake, block.timestamp - totals.lastAssigned, settings)));
-            totals.lastAssigned = uint32(block.timestamp);
-            stakingRewardsTotals = totals;
+    function updateStakingRewardsState(uint256 totalCommitteeWeight, Settings memory _settings) private returns (StakingRewardsState memory _stakingRewardsState) {
+        _stakingRewardsState = stakingRewardsState;
+        if (_settings.active) {
+            uint delta = calcStakingRewardPerWeightDelta(totalCommitteeWeight, block.timestamp - stakingRewardsState.lastAssigned, _settings);
+            _stakingRewardsState.stakingRewardsPerWeight = uint96(uint256(stakingRewardsState.stakingRewardsPerWeight).add(delta));
+            _stakingRewardsState.lastAssigned = uint32(block.timestamp);
+            stakingRewardsState = _stakingRewardsState;
+
+            emit StakingRewardAllocated(delta.mul(totalCommitteeWeight).div(TOKEN_BASE), _stakingRewardsState.stakingRewardsPerWeight);
         }
     }
 
-    function committeeMemberStakeWillChange(address guardian, uint256 stake, uint256 totalCommitteeStake, address delegator, uint256 delegatorStake) external override onlyCommitteeContract {
-        _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, true, stake, totalCommitteeStake);
+    // Internal interface: committee member change (joined, left) [], (changed weight - handled internally by _updateDelegatorStakingRewards)
+    function _updateGuardianStakingRewards(address guardian, bool inCommittee, uint256 guardianWeight, uint256 guardianDelegatedStake, uint256 totalCommitteeWeight) private returns (StakingRewards memory guardianStakingRewards) {
+        Settings memory _settings = settings; //TODO find the right place to read
+        StakingRewardsState memory _stakingRewardsState = updateStakingRewardsState(totalCommitteeWeight, _settings);
+        guardianStakingRewards = stakingRewards[guardian];
+
+        if (inCommittee) {
+            uint256 guardianTotalReward = uint256(_stakingRewardsState.stakingRewardsPerWeight)
+                .sub(uint256(guardianStakingRewards.lastStakingRewardsPerWeight))
+                .mul(guardianWeight);
+
+            uint256 delegatorRewardsPerTokenDelta = guardianDelegatedStake == 0 ? 0 : guardianTotalReward
+                .div(guardianDelegatedStake)
+                .mul(uint256(_settings.delegatorsStakingRewardsPercentMille))
+                .div(PERCENT_MILLIE_BASE);
+
+            uint256 guardianCutPercentMille = PERCENT_MILLIE_BASE.sub(_settings.delegatorsStakingRewardsPercentMille);
+
+            uint256 amount = guardianTotalReward
+                .mul(guardianCutPercentMille)
+                .div(PERCENT_MILLIE_BASE)
+                .div(TOKEN_BASE);
+
+            guardianStakingRewards.delegatorRewardsPerToken = uint96(guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta));
+            guardianStakingRewards.balance = guardianStakingRewards.balance.add(toUint48Granularity(amount));
+
+            emit GuardianStakingRewardsAssigned(guardian, amount, guardianStakingRewards.delegatorRewardsPerToken);
+        }
+
+        guardianStakingRewards.lastStakingRewardsPerWeight = _stakingRewardsState.stakingRewardsPerWeight;
+        stakingRewards[guardian] = guardianStakingRewards;
     }
 
-    function _updateDelegatorStakingRewards(address delegator, uint256 delegatorStake, address delegate, bool inCommittee, uint256 guardianStake, uint256 totalCommitteeStake) private {
-        StakingRewardsBalance memory delegateBalance = _updateDelegatorStakingRewardsPerToken(delegate, inCommittee, guardianStake, totalCommitteeStake);
-        StakingRewardsBalance memory delegatorBalance = delegator == delegate ? delegateBalance : stakingRewardsBalances[delegator];
+    // Internal interface: delegator actions (staking, delegation) [Called by Elections on delegations notification]
+    function _updateDelegatorStakingRewards(address delegator, uint256 delegatorStake, address guardian, bool inCommittee, uint256 guardianWeight, uint256 guardianDelegatedStake, uint256 totalCommitteeWeight) private {
+        StakingRewards memory guardianRewards = _updateGuardianStakingRewards(guardian, inCommittee, guardianWeight, guardianDelegatedStake, totalCommitteeWeight);
+        StakingRewards memory delegatorRewards = stakingRewards[delegator];
 
-        uint256 amount = uint256(delegateBalance.delegatorRewardsPerToken)
-            .sub(uint256(delegatorBalance.lastDelegatorRewardsPerToken))
+        uint256 amount = uint256(guardianRewards.delegatorRewardsPerToken)
+            .sub(uint256(delegatorRewards.lastDelegatorRewardsPerToken))
             .mul(delegatorStake)
             .div(TOKEN_BASE);
 
-        delegatorBalance.balance = delegatorBalance.balance.add(toUint48Granularity(amount));
-        delegatorBalance.lastDelegatorRewardsPerToken = delegateBalance.delegatorRewardsPerToken;
+        delegatorRewards.balance = delegatorRewards.balance.add(toUint48Granularity(amount));
+        delegatorRewards.lastDelegatorRewardsPerToken = guardianRewards.delegatorRewardsPerToken;
+        stakingRewards[delegator] = delegatorRewards;
 
-        if (amount > 0) {
-            emit StakingRewardsAssigned(delegator, amount);
-        }
-
-        stakingRewardsBalances[delegate] = delegateBalance;
-        if (delegate != delegator) stakingRewardsBalances[delegator] = delegatorBalance;
-    }
-
-    function _updateDelegatorStakingRewardsPerToken(address guardian, bool inCommittee, uint256 guardianEffectiveStake, uint256 guardianUncappedStake, uint256 totalCommitteeStake) private returns (StakingRewardsBalance memory guardianBalance){
-        Settings memory _settings = settings;
-        StakingRewardsTotals memory totals = updateStakingRewardsTotals(totalCommitteeStake);
-        guardianBalance = stakingRewardsBalances[guardian];
-
-        if (inCommittee) {
-            uint256 amount = uint256(totals.stakingRewardsPerToken)
-                .sub(uint256(guardianBalance.lastStakingRewardsPerToken))
-                .mul(guardianEffectiveStake)
-                .div(TOKEN_BASE);
-
-            uint256 delegatorsAmount = amount
-                .mul(_settings.maxDelegatorsStakingRewardsPercentMille)
-                .div(PERCENT_MILLIE_BASE);
-
-            uint256 guardianAmount = amount.sub(delegatorsAmount);
-            guardianBalance.balance = guardianBalance.balance.add(toUint48Granularity(guardianAmount));
-            if (guardianAmount > 0) {
-                emit StakingRewardsAssigned(guardian, guardianAmount);
-            }
-
-            guardianBalance.delegatorRewardsPerToken = uint96(guardianBalance.delegatorRewardsPerToken.add(
-                    delegatorsAmount.div(guardianUncappedStake)
-            ));
-        }
-
-        guardianBalance.lastStakingRewardsPerToken = totals.stakingRewardsPerToken;
-
-        return guardianBalance;
+        emit StakingRewardsAssigned(delegator, amount);
     }
 
     function updateDelegatorStakingRewards(address delegator) private {
-        ICommittee _committee = committeeContract;
+        ICommittee _committeeContract = committeeContract;
+        IDelegations _delegationsContract = delegationsContract;
         uint256 delegatorStake = stakingContract.getStakeBalanceOf(delegator);
-        address guardian = delegationsContract.getDelegation(delegator);
-        (, , uint totalCommitteeStake) = _committee.getCommitteeStats();
-        (bool inCommittee, uint guardianStake,) = _committee.getMemberInfo(guardian);
-        _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, inCommittee, guardianStake, totalCommitteeStake);
+        address guardian = _delegationsContract.getDelegation(delegator);
+        uint256 delegatedStake = _delegationsContract.getDelegatedStakes(guardian);
+
+        (, , uint totalCommitteeStake) = _committeeContract.getCommitteeStats();
+        (bool inCommittee, uint guardianWeight,) = _committeeContract.getMemberInfo(guardian);
+        _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, inCommittee, guardianWeight, delegatedStake, totalCommitteeStake);
     }
 
-    function updateCommitteeTotalsPerMember(uint generalCommitteeSize, uint certifiedCommitteeSize) private returns (CommitteeTotalsPerMember memory totals) {
+    //
+    // Bootstrap and fees
+    //
+
+    function updateCommitteeTotalsPerMember(uint generalCommitteeSize, uint certifiedCommitteeSize) private returns (CommitteeRewardsState memory totals) {
         Settings memory _settings = settings;
 
         totals = committeeTotalsPerMember;
 
         if (_settings.active) {
-            totals.generalFees = totals.generalFees.add(toUint48Granularity(generalFeesWallet.collectFees().div(generalCommitteeSize)));
-            totals.certifiedFees = totals.certifiedFees.add(toUint48Granularity(certifiedFeesWallet.collectFees().div(certifiedCommitteeSize)));
+            totals.generalFeesPerMember = totals.generalFeesPerMember.add(generalCommitteeSize == 0 ? 0 : toUint48Granularity(generalFeesWallet.collectFees().div(generalCommitteeSize)));
+            totals.certifiedFeesPerMember = totals.certifiedFeesPerMember.add(certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(certifiedFeesWallet.collectFees().div(certifiedCommitteeSize)));
 
             uint duration = now.sub(lastAssignedAt);
 
             uint48 generalDelta = uint48(uint(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days));
             uint48 certifiedDelta = uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days));
-            totals.generalBootstrap = totals.generalBootstrap.add(generalDelta);
-            totals.certifiedBootstrap = totals.certifiedBootstrap.add(generalDelta).add(certifiedDelta);
+            totals.generalBootstrapPerMember = totals.generalBootstrapPerMember.add(generalDelta);
+            totals.certifiedBootstrapPerMember = totals.certifiedBootstrapPerMember.add(generalDelta).add(certifiedDelta);
             totals.lastAssigned = uint32(block.timestamp);
 
             committeeTotalsPerMember = totals;
         }
     }
 
+    // Internal interface: committee membership changed (joined, left)
     function _updateGuardianFeesAndBootstrap(address addr, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) private {
-        CommitteeTotalsPerMember memory totals = updateCommitteeTotalsPerMember(generalCommitteeSize, certifiedCommitteeSize);
+        CommitteeRewardsState memory totals = updateCommitteeTotalsPerMember(generalCommitteeSize, certifiedCommitteeSize);
         CommitteeBalance memory balance = committeeBalances[addr];
 
         if (inCommittee) {
-            uint256 totalBootstrap = isCertified ? totals.certifiedBootstrap : totals.generalBootstrap;
+            uint256 totalBootstrap = isCertified ? totals.certifiedBootstrapPerMember : totals.generalBootstrapPerMember;
             uint256 bootstrapAmount = totalBootstrap.sub(balance.lastBootstrapPerMember);
             balance.bootstrapBalance = balance.bootstrapBalance.add(toUint48Granularity(bootstrapAmount));
             emit BootstrapRewardsAssigned(addr, bootstrapAmount);
             
-            uint256 totalFees = isCertified ? totals.certifiedFees : totals.generalFees;
+            uint256 totalFees = isCertified ? totals.certifiedFeesPerMember : totals.generalFeesPerMember;
             uint256 feesAmount = totalFees.sub(balance.lastFeePerMember);
             balance.feeBalance = balance.bootstrapBalance.add(toUint48Granularity(feesAmount));
             emit FeesAssigned(addr, feesAmount);
         }
         
-        balance.lastBootstrapPerMember = isCertified ? totals.certifiedBootstrap : totals.generalBootstrap;
-        balance.lastFeePerMember = isCertified ? totals.certifiedFees : totals.generalFees;
+        balance.lastBootstrapPerMember = isCertified ? totals.certifiedBootstrapPerMember : totals.generalBootstrapPerMember;
+        balance.lastFeePerMember = isCertified ? totals.certifiedFeesPerMember : totals.generalFeesPerMember;
     }
 
     function updateMemberFeesAndBootstrap(address guardian) private {
-        ICommittee _committee = committeeContract;
-        (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committee.getCommitteeStats();
-        (bool inCommittee, , bool certified) = _committee.getMemberInfo(guardian);
+        ICommittee _committeeContract = committeeContract;
+        (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
+        (bool inCommittee, , bool certified) = _committeeContract.getMemberInfo(guardian);
         _updateGuardianFeesAndBootstrap(guardian, inCommittee, certified, generalCommitteeSize, certifiedCommitteeSize);
     }
 
-    function committeeMembershipWillChange(address guardian, uint256 stake, uint256 uncappedStake, uint256 totalCommitteeStake, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external override onlyCommitteeContract {
+    //
+    // External push notifications
+    //
+
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 delegatedStake, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external override onlyElectionsContract {
         _updateGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, generalCommitteeSize, certifiedCommitteeSize);
-        stakingRewardsBalances[guardian] = _updateDelegatorStakingRewardsPerToken(guardian, inCommittee, stake, uncappedStake, totalCommitteeStake);
+        stakingRewards[guardian] = _updateGuardianStakingRewards(guardian, inCommittee, weight, delegatedStake, totalCommitteeWeight);
+    }
+
+    function delegatorWillChange(address guardian, uint256 weight, uint256 delegatedStake, bool inCommittee, uint256 totalCommitteeWeight, address delegator, uint256 delegatorStake) external override onlyElectionsContract {
+        _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, inCommittee, weight, delegatedStake, totalCommitteeWeight);
     }
 
     constructor(
@@ -222,7 +241,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint certifiedCommitteeAnnualBootstrap,
         uint annualRateInPercentMille,
         uint annualCap,
-        uint32 maxDelegatorsStakingRewardsPercentMille
+        uint32 delegatorsStakingRewardsPercentMille
     ) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
@@ -230,7 +249,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap);
         setCertifiedCommitteeAnnualBootstrap(certifiedCommitteeAnnualBootstrap);
         setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
-        setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille);
+        setDelegatorsStakingRewardsPercentMille(delegatorsStakingRewardsPercentMille);
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
@@ -251,10 +270,10 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit CertifiedCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
-    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public override onlyFunctionalManager onlyWhenActive {
-        require(maxDelegatorsStakingRewardsPercentMille <= PERCENT_MILLIE_BASE, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
-        settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
-        emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
+    function setDelegatorsStakingRewardsPercentMille(uint32 delegatorsStakingRewardsPercentMille) public override onlyFunctionalManager onlyWhenActive {
+        require(delegatorsStakingRewardsPercentMille <= PERCENT_MILLIE_BASE, "delegatorsStakingRewardsPercentMille must not be larger than 100000");
+        settings.delegatorsStakingRewardsPercentMille = delegatorsStakingRewardsPercentMille;
+        emit MaxDelegatorsStakingRewardsChanged(delegatorsStakingRewardsPercentMille);
     }
 
     function getGeneralCommitteeAnnualBootstrap() external override view returns (uint256) {
@@ -266,7 +285,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function getMaxDelegatorsStakingRewardsPercentMille() public override view returns (uint32) {
-        return settings.maxDelegatorsStakingRewardsPercentMille;
+        return settings.delegatorsStakingRewardsPercentMille;
     }
 
     function getAnnualStakingRewardsRatePercentMille() external override view returns (uint32) {
@@ -303,7 +322,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function getStakingRewardBalance(address addr) external override view returns (uint256) {
-        return toUint256Granularity(stakingRewardsBalances[addr].balance);
+        return toUint256Granularity(stakingRewards[addr].balance);
     }
 
     struct DistributorBatchState {
@@ -315,69 +334,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     mapping (address => DistributorBatchState) public distributorBatchState;
 
     function isDelegatorRewardsBelowThreshold(uint256 delegatorRewards, uint256 totalRewards) private view returns (bool) {
-        return delegatorRewards.mul(PERCENT_MILLIE_BASE) <= uint(settings.maxDelegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors
-    }
-
-    struct distributeStakingRewardsVars {
-        bool firstTxBySender;
-        address guardianAddr;
-        uint256 delegatorsAmount;
-    }
-    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external override onlyWhenActive {
-        require(to.length > 0, "list must contain at least one recipient");
-        require(to.length == amounts.length, "expected to and amounts to be of same length");
-        uint48 totalAmount_uint48 = toUint48Granularity(totalAmount);
-        require(totalAmount == toUint256Granularity(totalAmount_uint48), "totalAmount must divide by 1e15");
-
-        distributeStakingRewardsVars memory vars;
-
-        vars.guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
-
-        if (txIndex == 0) {
-            updateDelegatorStakingRewards(vars.guardianAddr);
-        }
-
-        for (uint i = 0; i < to.length; i++) {
-            if (to[i] != vars.guardianAddr) {
-                vars.delegatorsAmount = vars.delegatorsAmount.add(amounts[i]);
-            }
-        }
-        require(isDelegatorRewardsBelowThreshold(vars.delegatorsAmount, totalAmount), "Total delegators reward must be less then maxDelegatorsStakingRewardsPercentMille of total amount");
-
-        DistributorBatchState memory ds = distributorBatchState[vars.guardianAddr];
-        vars.firstTxBySender = ds.nextTxIndex == 0;
-
-        if (vars.firstTxBySender || fromBlock == ds.toBlock + 1) { // New distribution batch
-            require(vars.firstTxBySender || txIndex == 0, "txIndex must be 0 for the first transaction of a new (non-initial) distribution batch");
-            require(toBlock < block.number, "toBlock must be in the past");
-            require(toBlock >= fromBlock, "toBlock must be at least fromBlock");
-            ds.fromBlock = fromBlock;
-            ds.toBlock = toBlock;
-            ds.split = split;
-            ds.nextTxIndex = txIndex + 1;
-            distributorBatchState[vars.guardianAddr] = ds;
-        } else {
-            require(fromBlock == ds.fromBlock, "fromBlock mismatch");
-            require(toBlock == ds.toBlock, "toBlock mismatch");
-            require(txIndex == ds.nextTxIndex, "txIndex mismatch");
-            require(split == ds.split, "split mismatch");
-            distributorBatchState[vars.guardianAddr].nextTxIndex = txIndex + 1;
-        }
-
-        require(totalAmount_uint48 <= stakingRewardsBalances[vars.guardianAddr].balance, "not enough member balance for this distribution");
-
-        stakingRewardsBalances[vars.guardianAddr].balance = uint48(stakingRewardsBalances[vars.guardianAddr].balance.sub(totalAmount_uint48));
-
-        IStakingContract _stakingContract = stakingContract;
-
-        stakingRewardsWallet.withdraw(totalAmount);
-
-        approve(erc20, address(_stakingContract), totalAmount_uint48);
-        _stakingContract.distributeRewards(totalAmount, to, amounts); // TODO should we rely on staking contract to verify total amount?
-
-        delegationsContract.refreshStakeNotification(vars.guardianAddr);
-
-        emit StakingRewardsDistributed(vars.guardianAddr, fromBlock, toBlock, split, txIndex, to, amounts);
+        return delegatorRewards.mul(PERCENT_MILLIE_BASE) <= uint(settings.delegatorsStakingRewardsPercentMille).mul(totalRewards.add(toUint256Granularity(1))); // +1 is added to account for rounding errors
     }
 
     function getFeeBalance(address addr) external override view returns (uint256) {
@@ -385,9 +342,9 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function withdrawFees(address guardian) external override {
-        ICommittee _committee = committeeContract;
-        (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committee.getCommitteeStats();
-        (bool inCommittee, , bool certified) = _committee.getMemberInfo(guardian);
+        ICommittee _committeeContract = committeeContract;
+        (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
+        (bool inCommittee, , bool certified) = _committeeContract.getMemberInfo(guardian);
         _updateGuardianFeesAndBootstrap(guardian, inCommittee, certified, generalCommitteeSize, certifiedCommitteeSize);
 
         uint48 amount = committeeBalances[guardian].feeBalance;
@@ -404,8 +361,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
         updateDelegatorStakingRewards(guardian);
 
-        uint48 balance = stakingRewardsBalances[guardian].balance;
-        stakingRewardsBalances[guardian].balance = 0;
+        uint48 balance = stakingRewards[guardian].balance;
+        stakingRewards[guardian].balance = 0;
 
         require(approve(erc20, address(currentRewardsContract), balance), "migrateStakingBalance: approve failed");
         currentRewardsContract.acceptStakingRewardsMigration(guardian, toUint256Granularity(balance));
@@ -417,8 +374,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint48 amount48 = toUint48Granularity(amount);
         require(transferFrom(erc20, msg.sender, address(this), amount48), "acceptStakingMigration: transfer failed");
 
-        uint48 balance = stakingRewardsBalances[guardian].balance.add(amount48);
-        stakingRewardsBalances[guardian].balance = balance;
+        uint48 balance = stakingRewards[guardian].balance.add(amount48);
+        stakingRewards[guardian].balance = balance;
 
         emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
     }
@@ -431,7 +388,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     function activate(uint startTime) external override onlyMigrationManager {
         committeeTotalsPerMember.lastAssigned = uint32(startTime);
-        stakingRewardsTotals.lastAssigned = uint32(startTime);
+        stakingRewardsState.lastAssigned = uint32(startTime);
         settings.active = true;
 
         emit RewardDistributionActivated(startTime);
@@ -439,7 +396,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     function deactivate() external override onlyMigrationManager {
         (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalStake) = committeeContract.getCommitteeStats();
-        updateStakingRewardsTotals(totalStake);
+        updateStakingRewardsState(totalStake, settings);
         updateCommitteeTotalsPerMember(generalCommitteeSize, certifiedCommitteeSize);
 
         settings.active = false;
@@ -452,7 +409,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint certifiedCommitteeAnnualBootstrap,
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
-        uint32 maxDelegatorsStakingRewardsPercentMille,
+        uint32 delegatorsStakingRewardsPercentMille,
         bool active
     ) {
         Settings memory _settings = settings;
@@ -460,7 +417,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         certifiedCommitteeAnnualBootstrap = toUint256Granularity(_settings.certifiedCommitteeAnnualBootstrap);
         annualStakingRewardsCap = toUint256Granularity(_settings.annualCap);
         annualStakingRewardsRatePercentMille = _settings.annualRateInPercentMille;
-        maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
+        delegatorsStakingRewardsPercentMille = _settings.delegatorsStakingRewardsPercentMille;
         active = _settings.active;
     }
 
@@ -468,6 +425,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
      * Contracts topology / registry interface
      */
 
+    IElections electionsContract;
     ICommittee committeeContract;
     IDelegations delegationsContract;
     IGuardiansRegistration guardianRegistrationContract;
@@ -477,6 +435,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     IProtocolWallet stakingRewardsWallet;
     IProtocolWallet bootstrapRewardsWallet;
     function refreshContracts() external override {
+        electionsContract = IElections(getElectionsContract());
         committeeContract = ICommittee(getCommitteeContract());
         delegationsContract = IDelegations(getDelegationsContract());
         guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());

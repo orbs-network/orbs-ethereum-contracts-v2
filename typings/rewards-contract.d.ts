@@ -1,36 +1,31 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
-import {Contract} from "../eth";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
-export interface BootstrapRewardsAssignedEvent {
-    generalGuardianAmount: string|BN,
-    certifiedGuardianAmount: string|BN,
+export interface FeesAssignedEvent {
+    guardian: string,
+    amount: (string|BN),
 }
 
-export interface FeesAssignedEvent {
-    generalGuardianAmount: string|BN,
-    certifiedGuardianAmount: string|BN
+export interface BootstrapRewardsAssignedEvent {
+    guardian: string,
+    amount: (string|BN),
+}
+
+export interface GuardianStakingRewardAssignedEvent {
+    guardian: string,
+    amount: (string|BN),
+    delegatorRewardsPerToken: (string|BN)
 }
 
 export interface StakingRewardAssignedEvent {
-    assignees: string[],
-    amounts: (string|BN)[],
-}
-
-export interface StakingRewardsDistributedEvent {
-    distributer: string,
-    fromBlock: string|BN,
-    toBlock: string|BN,
-    split: string|BN,
-    txIndex: string|BN,
-    to: string[],
-    amounts: (string|BN)[]
+    addr: string,
+    amount: (string|BN),
 }
 
 export interface FeesWithdrawnEvent {
     guardian: string,
-    amount: string|BN
+    amount: (string|BN),
 }
 
 export interface BootstrapRewardsWithdrawnEvent {
@@ -38,8 +33,8 @@ export interface BootstrapRewardsWithdrawnEvent {
     amount: string|BN
 }
 
-export interface MaxDelegatorsStakingRewardsChangedEvent {
-    maxDelegatorsStakingRewardsPercentMille: string|BN
+export interface DelegatorsStakingRewardsChangedEvent {
+    delegatorsStakingRewardsPercentMille: string|BN
 }
 
 export interface StakingRewardsBalanceMigratedEvent {
@@ -74,7 +69,7 @@ export interface RewardsContract extends OwnedContract {
     // staking rewards
     distributeStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
-    setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
+    setDelegatorsStakingRewardsPercentMille(delegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;
     migrateStakingRewardsBalance(guardian: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
