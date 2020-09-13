@@ -15,7 +15,7 @@ chai.use(chaiEventMatchersPlugin);
 const expect = chai.expect;
 const assert = chai.assert;
 
-describe.only('delegations-contract', async () => {
+describe('delegations-contract', async () => {
 
     it('should only accept stake notifications from the staking contract handler', async () => {
         const d = await Driver.new();

@@ -70,7 +70,7 @@ export interface RewardsContract extends OwnedContract {
     distributeStakingRewards(totalAmount: (number|BN), fromBlock: (number|BN), toBlock: (number|BN), split: (number|BN), txIndex: (number|BN), to: string[], amounts: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     setDelegatorsStakingRewardsPercentMille(delegatorsStakingRewardsPercentMille: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
-    getStakingRewardBalance(address: string): Promise<string>;
+    getStakingRewardsBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;
     migrateStakingRewardsBalance(guardian: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
     acceptStakingRewardsMigration(guardian: string, amount: number|BN,  params?: TransactionConfig): Promise<TransactionReceipt>;

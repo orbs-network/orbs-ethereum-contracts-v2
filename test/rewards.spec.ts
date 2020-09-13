@@ -77,7 +77,7 @@ async function sumBalances(d: Driver, committee: Participant[]): Promise<{fees: 
     await Promise.all(committee.map(async (v) => {
        const fees = bn(await d.rewards.getFeeBalance(v.address));
        const bootstrap = bn(await d.rewards.getBootstrapBalance(v.address));
-       const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
+       const balance = bn(await d.rewards.getStakingRewardsBalance(v.address));
 
        r.fees = bn(r.fees).add(fees).toString();
        r.bootstrap = bn(r.bootstrap).add(bootstrap).toString();
@@ -122,8 +122,8 @@ describe('rewards', async () => {
         );
         expect(r).to.have.a.stakedEvent({stakeOwner: committee[1].address, amount: stakingRewards[1]});
 
-        expect(await d.rewards.getStakingRewardBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
-        expect(await d.rewards.getStakingRewardBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
+        expect(await d.rewards.getStakingRewardsBalance(committee[0].address)).to.be.bignumber.eq(bn(0));
+        expect(await d.rewards.getStakingRewardsBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
     });
 
     // todo - rewards contract tests

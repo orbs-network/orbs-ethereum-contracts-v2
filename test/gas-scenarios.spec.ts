@@ -331,7 +331,7 @@ describe('gas usage scenarios', async () => {
             return delegator;
         }));
 
-        const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
+        const balance = bn(await d.rewards.getStakingRewardsBalance(v.address));
 
         d.resetGasRecording();
         await d.rewards.distributeStakingRewards(
