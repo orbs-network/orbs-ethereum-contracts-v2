@@ -291,6 +291,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		return getStakeOwnerData(addr).delegation;
 	}
 
+	function getDelegationInfo(address addr) external override view returns (address delegation, uint256 delegatorStake) {
+		StakeOwnerData memory data = getStakeOwnerData(addr);
+		return (data.delegation, data.stake);
+	}
+
 	function getStakeOwnerData(address addr) private view returns (StakeOwnerData memory data) {
 		data = stakeOwnersData[addr];
 		data.delegation = (data.delegation == address(0)) ? addr : data.delegation;

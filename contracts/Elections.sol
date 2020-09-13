@@ -9,7 +9,6 @@ import "./spec_interfaces/ICommitteeListener.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
@@ -139,6 +138,7 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function removeFromCommittee(address guardian) private {
+		// TODO can be optimized by checking first if currently in committee
 		(uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalCommitteeEffectiveStake) = committeeContract.getCommitteeStats();
 
 		(bool memberRemoved, uint removedMemberEffectiveStake, bool removedMemberCertified) = committeeContract.removeMember(guardian);
@@ -294,15 +294,16 @@ contract Elections is IElections, ManagedContract {
 
 	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 prevDelegatedStake, uint256 totalDelegatedStake, address delegator, uint256 prevDelegatorStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
+		ICommittee _committeeContract = committeeContract;
 
-		(, , uint prevTotalCommitteeWeight) = committeeContract.getCommitteeStats();
-		(bool inCommittee, uint prevEffectiveStake,) = committeeContract.getMemberInfo(delegate);
+		(, , uint prevTotalCommitteeWeight) = _committeeContract.getCommitteeStats();
+		(bool inCommittee, uint prevEffectiveStake,) = _committeeContract.getMemberInfo(delegate);
 		rewardsContract.delegatorWillChange(delegate, prevEffectiveStake, prevDelegatedStake, inCommittee, prevTotalCommitteeWeight, delegator, prevDelegatorStake);
 
 		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 		emit StakeChanged(delegate, selfStake, delegatedStake, effectiveStake);
 
-		committeeContract.memberWeightChange(delegate, effectiveStake);
+		_committeeContract.memberWeightChange(delegate, effectiveStake);
 
 		_applyStakesToVoteOutBy(delegate, delegatedStake, totalDelegatedStake, _settings);
 	}
@@ -320,8 +321,9 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function getGuardianStakeInfo(address v, Settings memory _settings) private view returns (uint256 selfStake, uint256 effectiveStake, uint256 delegatedStake) {
-		selfStake = stakingContract.getStakeBalanceOf(v);
-		delegatedStake = delegationsContract.getDelegatedStakes(v);
+		IDelegations _delegationsContract = delegationsContract;
+		(,selfStake) = _delegationsContract.getDelegationInfo(v);
+		delegatedStake = _delegationsContract.getDelegatedStakes(v);
 		effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 	}
 
@@ -400,14 +402,12 @@ contract Elections is IElections, ManagedContract {
 	ICommittee committeeContract;
 	IDelegations delegationsContract;
 	IGuardiansRegistration guardianRegistrationContract;
-	IStakingContract stakingContract;
 	ICertification certificationContract;
 	IRewards rewardsContract;
 	function refreshContracts() external override {
 		committeeContract = ICommittee(getCommitteeContract());
 		delegationsContract = IDelegations(getDelegationsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
-		stakingContract = IStakingContract(getStakingContract());
 		certificationContract = ICertification(getCertificationContract());
 		rewardsContract = IRewards(getRewardsContract());
 	}

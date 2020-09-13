@@ -194,7 +194,7 @@ contract Committee is ICommittee, ManagedContract {
 		IElections _electionsContract = electionsContract;
 		while (committee.length > maxCommitteeSize) {
 			(, ,uint pos) = _getMinCommitteeMember();
-			_electionsContract.updateGuardianRewards(committee[pos].addr);
+			_electionsContract.updateGuardianRewards(committee[pos].addr); // TODO consider a different flow, e.g. setMaxCommitteeSize is called from elections, or a claimable pattern
 			committeeStats = removeMemberAtPos(pos, true, committeeStats);
 		}
 

@@ -329,6 +329,10 @@ export class Driver {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
         }
 
+        if (!(await rewards.isInitializationComplete())) {
+            await rewards.activate(await web3.now());
+        }
+
         const contracts = [
             contractRegistry,
             rewards,

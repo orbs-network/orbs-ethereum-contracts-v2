@@ -29,12 +29,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        delegationsContract.stakeChange{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwner, _amount, _sign, _updatedStake);
-//        try delegationsContract.stakeChange{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwner, _amount, _sign, _updatedStake) {
-//
-//        } catch {
-//            emit StakeChangeNotificationFailed(_stakeOwner);
-//        }
+        delegationsContract.stakeChange(_stakeOwner, _amount, _sign, _updatedStake);
     }
 
     /// @dev Notifies of multiple stake change events.
@@ -48,11 +43,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        try delegationsContract.stakeChangeBatch{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwners, _amounts, _signs, _updatedStakes) {
-
-        } catch {
-            emit StakeChangeBatchNotificationFailed(_stakeOwners);
-        }
+        delegationsContract.stakeChangeBatch(_stakeOwners, _amounts, _signs, _updatedStakes);
     }
 
     /// @dev Notifies of stake migration event.
@@ -64,11 +55,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
             return;
         }
 
-        try delegationsContract.stakeMigration{gas: NOTIFICATION_GAS_LIMIT}(_stakeOwner, _amount) {
-
-        } catch {
-            emit StakeMigrationNotificationFailed(_stakeOwner);
-        }
+        delegationsContract.stakeMigration(_stakeOwner, _amount);
     }
 
     /// @dev Returns the stake of the specified stake owner (excluding unstaked tokens).
