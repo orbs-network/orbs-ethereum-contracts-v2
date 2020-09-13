@@ -47,7 +47,7 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// @dev Called by: delegation contract
 	/// Notifies a delegated stake change event
 	/// total_delegated_stake = 0 if addr delegates to another guardian
-	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 prevDelegatedStake, uint256 totalDelegatedStake, address delegator, uint256 prevDelegatorStake) external /* onlyDelegationsContract onlyWhenActive */;
+	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external /* onlyDelegationsContract onlyWhenActive */;
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was registered

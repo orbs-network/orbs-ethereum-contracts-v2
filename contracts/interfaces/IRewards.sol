@@ -19,7 +19,7 @@ interface IRewards {
 
     function committeeMembershipWillChange(address guardian, uint256 weight, uint256 delegatedStake, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyElectionsContract */;
 
-    function delegatorWillChange(address guardian, uint256 weight, uint256 delegatedStake, bool inCommittee, uint256 totalCommitteeWeight, address delegator, uint256 delegatorStake) external /* onlyElections */;
+    function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian) external /* onlyElections */;
 
     /*
      * Staking
@@ -109,15 +109,15 @@ interface IRewards {
      * Migration
      */
 
-    event StakingRewardsBalanceMigrated(address guardian, uint256 amount, address toRewardsContract);
-    event StakingRewardsMigrationAccepted(address from, address guardian, uint256 amount);
+    event StakingRewardsBalanceMigrated(address guardian, uint256 delegatorBalance, uint256 guardianBalance, address toRewardsContract);
+    event StakingRewardsMigrationAccepted(address from, address guardian, uint256 delegatorBalance, uint256 guardianBalance);
     event EmergencyWithdrawal(address addr);
 
     /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
     function migrateStakingRewardsBalance(address guardian) external;
 
     /// @dev accepts guardian's balance migration from a previous rewards contarct.
-    function acceptStakingRewardsMigration(address guardian, uint256 amount) external;
+    function acceptStakingRewardsMigration(address guardian, uint256 delegatorBalance, uint256 guardianBalance) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
     function emergencyWithdraw() external /* onlyMigrationManager */; // TODO change to EmergencyManager.

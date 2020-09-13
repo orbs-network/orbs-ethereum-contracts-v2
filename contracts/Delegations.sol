@@ -17,6 +17,7 @@ import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
 import "./ManagedContract.sol";
+import "./interfaces/IRewards.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
@@ -82,6 +83,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		vars.prevDelegateStatusBefore = getDelegateStatus(prevDelegate);
 		vars.newDelegateStatusBefore = getDelegateStatus(to);
 
+		rewardsContract.delegationWillChange(prevDelegate, vars.prevDelegateStatusBefore.delegatedStake, from, delegatorData.stake, to);
+
 		stakeOwnersData[from].delegation = to;
 
 		uint256 delegatorStake = delegatorData.stake;
@@ -111,20 +114,14 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 				prevDelegate,
 				vars.prevDelegateStatusAfter.selfDelegatedStake,
 				vars.prevDelegateStatusAfter.delegatedStake,
-				vars.prevDelegateStatusBefore.delegatedStake,
-				_totalDelegatedStake,
-				from,
-				delegatorData.stake
+				_totalDelegatedStake
 			);
 
 			_electionsContract.delegatedStakeChange(
 				to,
 			    vars.newDelegateStatusAfter.selfDelegatedStake,
 				vars.newDelegateStatusAfter.delegatedStake,
-				vars.newDelegateStatusBefore.delegatedStake,
-				_totalDelegatedStake,
-				from,
-				delegatorData.stake
+				_totalDelegatedStake
 			);
 		}
 
@@ -151,8 +148,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	function importDelegations(address[] calldata from, address to, bool refreshStakeNotification) external override onlyMigrationManager onlyDuringDelegationImport {
 		require(to != address(0), "to must be a non zero address");
 		require(from.length > 0, "from array must contain at least one address");
-
-		uint256 prevDelegatedStake = getDelegateStatus(to).delegatedStake;
 
 		uint256 uncappedStakesDelta = 0;
 		StakeOwnerData memory data;
@@ -207,10 +202,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 			to,
 			delegateStatus.selfDelegatedStake,
 			delegateStatus.delegatedStake,
-			prevDelegatedStake,
-			newTotalDelegatedStake,
-			to,
-			delegateStatus.selfDelegatedStake
+			newTotalDelegatedStake
 		);
 	}
 
@@ -226,10 +218,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 			stakeOwnerData.delegation,
 			delegateStatus.selfDelegatedStake,
 			delegateStatus.delegatedStake,
-			delegateStatus.delegatedStake,
-			totalDelegatedStake,
-			addr,
-			stakeOwnerData.stake
+			totalDelegatedStake
 		);
 	}
 
@@ -305,34 +294,39 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	function stakeMigration(address _stakeOwner, uint256 _amount) external override onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
-		uint i = 0;
-		while (i < stakeOwners.length) {
-			// init sequence
-			StakeOwnerData memory curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
-			address sequenceDelegate = curStakeOwnerData.delegation;
-			uint currentUncappedStake = uncappedStakes[sequenceDelegate];
-			uint prevUncappedStake = currentUncappedStake;
-
-			uint sequenceStartIdx = i;
-			for (i = sequenceStartIdx; i < stakeOwners.length; i++) { // aggregate sequence stakes changes
-				if (i != sequenceStartIdx) curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
-				if (sequenceDelegate != curStakeOwnerData.delegation) break;
-
-				currentUncappedStake = currentUncappedStake
-				.sub(curStakeOwnerData.stake)
-				.add(updatedStakes[i]);
-
-				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
-				stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
-			}
-
-			// closing sequence
-			uncappedStakes[sequenceDelegate] = currentUncappedStake;
-			if (_isSelfDelegating(sequenceDelegate)) {
-				totalDelegatedStake = totalDelegatedStake.sub(prevUncappedStake).add(currentUncappedStake);
-			}
-
-			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
+//		uint i = 0;
+//		while (i < stakeOwners.length) {
+//			// init sequence
+//			StakeOwnerData memory curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
+//			address sequenceDelegate = curStakeOwnerData.delegation;
+//			uint currentUncappedStake = uncappedStakes[sequenceDelegate];
+//			uint prevUncappedStake = currentUncappedStake;
+//
+//			uint sequenceStartIdx = i;
+//			for (i = sequenceStartIdx; i < stakeOwners.length; i++) { // aggregate sequence stakes changes
+//				if (i != sequenceStartIdx) curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
+//				if (sequenceDelegate != curStakeOwnerData.delegation) break;
+//
+//				rewardsContract.delegationWillChange(sequenceDelegate, currentUncappedStake, stakeOwners[i], curStakeOwnerData.stake, sequenceDelegate);
+//
+//				currentUncappedStake = currentUncappedStake
+//				.sub(curStakeOwnerData.stake)
+//				.add(updatedStakes[i]);
+//
+//				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
+//				stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
+//			}
+//
+//			// closing sequence
+//			uncappedStakes[sequenceDelegate] = currentUncappedStake;
+//			if (_isSelfDelegating(sequenceDelegate)) {
+//				totalDelegatedStake = totalDelegatedStake.sub(prevUncappedStake).add(currentUncappedStake);
+//			}
+//
+//			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
+//		}
+		for (uint i = 0; i < stakeOwners.length; i++) {
+			_stakeChange(stakeOwners[i], updatedStakes[i]);
 		}
 	}
 
@@ -342,6 +336,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 		uint256 prevUncappedStake = delegateStatusBefore.uncappedStakes;
 		uint256 newUncappedStake = prevUncappedStake.sub(stakeOwnerDataBefore.stake).add(_updatedStake);
+
+		rewardsContract.delegationWillChange(stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake, _stakeOwner, stakeOwnerDataBefore.stake, stakeOwnerDataBefore.delegation);
 
 		uncappedStakes[stakeOwnerDataBefore.delegation] = newUncappedStake;
 
@@ -360,10 +356,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 			stakeOwnerDataBefore.delegation,
 			delegateStatusAfter.selfDelegatedStake,
 			delegateStatusAfter.delegatedStake,
-			delegateStatusBefore.delegatedStake,
-			_totalDelegatedStake,
-			_stakeOwner,
-			stakeOwnerDataBefore.stake
+			_totalDelegatedStake
 		);
 
 		if (_updatedStake != stakeOwnerDataBefore.stake) {
@@ -371,7 +364,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		}
 	}
 
-	function getDelegatedStakes(address addr) external override view returns (uint256) {
+	function getDelegatedStake(address addr) external override view returns (uint256) {
 		return _isSelfDelegating(addr) ? uncappedStakes[addr] : 0;
 	}
 
@@ -384,10 +377,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	}
 
 	IElections electionsContract;
+	IRewards rewardsContract;
 	IStakingContractHandler stakingContractHandler;
 	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 		stakingContractHandler = IStakingContractHandler(getStakingContractHandler());
+		rewardsContract = IRewards(getRewardsContract());
 	}
 
 }

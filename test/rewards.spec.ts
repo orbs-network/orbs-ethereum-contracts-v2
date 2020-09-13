@@ -354,9 +354,7 @@ describe('rewards', async () => {
         expect(await d.rewards.getStakingRewardsBalance(committee[1].address)).to.be.bignumber.eq(bn(0));
     });
 
-    // Staking rewrads
-
-
+    // Staking rewards
 
     it('performs emergency withdrawal only by the migration manager', async () => {
         const {d} = await fullCommittee();

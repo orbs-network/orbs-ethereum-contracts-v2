@@ -49,13 +49,28 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
     FeesAndBootstrapState feesAndBootstrapState;
 
-    struct StakingRewards {
+//    struct StakingRewards {
+//        uint96 delegatorRewardsPerToken;
+//        uint96 lastDelegatorRewardsPerToken;
+//        uint96 lastStakingRewardsPerWeight;
+//        uint48 balance;
+//    }
+//    mapping(address => StakingRewards) stakingRewards;
+
+    struct GuardianStakingRewards {
         uint96 delegatorRewardsPerToken;
-        uint96 lastDelegatorRewardsPerToken;
-        uint96 lastStakingRewardsPerWeight;
         uint48 balance;
+        uint96 lastStakingRewardsPerWeight;
     }
-    mapping(address => StakingRewards) stakingRewards;
+
+    mapping(address => GuardianStakingRewards) guardiansStakingRewards;
+
+    struct DelegatorStakingRewards {
+        uint48 balance;
+        uint96 lastDelegatorRewardsPerToken;
+    }
+
+    mapping(address => DelegatorStakingRewards) delegatorsStakingRewards;
 
     // TODO fit one state entry?
     struct FeesAndBootstrap {
@@ -72,6 +87,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     modifier onlyElectionsContract() {
         require(msg.sender == address(electionsContract), "caller is not the elections contract");
+
+        _;
+    }
+
+    modifier onlyDelegationsContract() {
+        require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
 
         _;
     }
@@ -105,10 +126,10 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     // Internal interface: committee member change (joined, left) [], (changed weight - handled internally by _updateDelegatorStakingRewards)
-    function _getGuardianStakingRewards(address guardian, bool inCommittee, uint256 guardianWeight, uint256 guardianDelegatedStake, uint256 totalCommitteeWeight) private view returns (StakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 rewardsAdded) {
+    function _getGuardianStakingRewards(address guardian, bool inCommittee, uint256 guardianWeight, uint256 guardianDelegatedStake, uint256 totalCommitteeWeight) private view returns (GuardianStakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 rewardsAdded) {
         Settings memory _settings = settings; //TODO find the right place to read
         _stakingRewardsState = getStakingRewardsState(totalCommitteeWeight, _settings);
-        guardianStakingRewards = stakingRewards[guardian];
+        guardianStakingRewards = guardiansStakingRewards[guardian];
 
         if (inCommittee) {
             uint256 guardianTotalReward = uint256(_stakingRewardsState.stakingRewardsPerWeight)
@@ -134,13 +155,18 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         }
 
         guardianStakingRewards.lastStakingRewardsPerWeight = _stakingRewardsState.stakingRewardsPerWeight;
-//        stakingRewards[guardian] = guardianStakingRewards;
+    }
+
+    function getGuardianStakingRewards(address guardian) private view returns (GuardianStakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 rewardsAdded) {
+        (bool inCommittee, uint256 guardianWeight, ,uint256 totalCommitteeWeight) = committeeContract.getMemberInfo(guardian);
+        uint256 guardianDelegatedStake = delegationsContract.getDelegatedStake(guardian);
+        return _getGuardianStakingRewards(guardian, inCommittee, guardianWeight, guardianDelegatedStake, totalCommitteeWeight);
     }
 
     // Internal interface: delegator actions (staking, delegation) [Called by Elections on delegations notification]
-    function _getDelegatorStakingRewards(address delegator, uint256 delegatorStake, address guardian, bool inCommittee, uint256 guardianWeight, uint256 guardianDelegatedStake, uint256 totalCommitteeWeight) private view returns (StakingRewards memory delegatorStakingRewards, StakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 guardianRewardsAdded, uint256 delegatorRewardsAdded){
+    function _getDelegatorStakingRewards(address delegator, uint256 delegatorStake, address guardian, bool inCommittee, uint256 guardianWeight, uint256 guardianDelegatedStake, uint256 totalCommitteeWeight) private view returns (DelegatorStakingRewards memory delegatorStakingRewards, GuardianStakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 guardianRewardsAdded, uint256 delegatorRewardsAdded){
         (guardianStakingRewards, _stakingRewardsState, guardianRewardsAdded) = _getGuardianStakingRewards(guardian, inCommittee, guardianWeight, guardianDelegatedStake, totalCommitteeWeight);
-        delegatorStakingRewards = delegator == guardian ? guardianStakingRewards : stakingRewards[delegator];
+        delegatorStakingRewards = delegatorsStakingRewards[delegator];
 
         uint256 amount = uint256(guardianStakingRewards.delegatorRewardsPerToken)
             .sub(uint256(delegatorStakingRewards.lastDelegatorRewardsPerToken))
@@ -154,40 +180,38 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     struct GetDelegatorsStakingRewardsVars {
-        ICommittee committeeContract;
         IDelegations delegationsContract;
         uint256 totalCommitteeWeight;
         bool inCommittee;
         uint256 guardianWeight;
     }
 
-    function getDelegatorStakingRewards(address delegator) private view returns (StakingRewards memory delegatorStakingRewards, address guardian, StakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 guardianRewardsAdded, uint256 delegatorRewardsAdded) {
+    function getDelegatorStakingRewards(address delegator) private view returns (DelegatorStakingRewards memory delegatorStakingRewards, address guardian, GuardianStakingRewards memory guardianStakingRewards, StakingRewardsState memory _stakingRewardsState, uint256 guardianRewardsAdded, uint256 delegatorRewardsAdded) {
         GetDelegatorsStakingRewardsVars memory vars;
-        vars.committeeContract = committeeContract;
+        committeeContract;
         vars.delegationsContract = delegationsContract;
 
         uint256 delegatorStake;
         (guardian, delegatorStake) = vars.delegationsContract.getDelegationInfo(delegator);
-        (, , vars.totalCommitteeWeight) = vars.committeeContract.getCommitteeStats();
-        (vars.inCommittee, vars.guardianWeight,) = vars.committeeContract.getMemberInfo(guardian);
+        (vars.inCommittee, vars.guardianWeight,,vars.totalCommitteeWeight) = committeeContract.getMemberInfo(guardian);
         (delegatorStakingRewards, guardianStakingRewards, _stakingRewardsState, guardianRewardsAdded, delegatorRewardsAdded) = _getDelegatorStakingRewards(
             delegator,
             delegatorStake,
             guardian,
             vars.inCommittee,
             vars.guardianWeight,
-            vars.delegationsContract.getDelegatedStakes(guardian),
+            vars.delegationsContract.getDelegatedStake(guardian),
             vars.totalCommitteeWeight
         );
     }
 
     function updateDelegatorStakingRewards(address delegator) private {
         address guardian;
-        StakingRewards memory guardianRewards;
+        GuardianStakingRewards memory guardianRewards;
         uint256 guardianStakingRewardsAdded;
         uint256 delegatorStakingRewardsAdded;
-        (stakingRewards[delegator], guardian, guardianRewards, stakingRewardsState, guardianStakingRewardsAdded, delegatorStakingRewardsAdded) = getDelegatorStakingRewards(delegator);
-        if (guardian != delegator) stakingRewards[guardian] = guardianRewards;
+        (delegatorsStakingRewards[delegator], guardian, guardianRewards, stakingRewardsState, guardianStakingRewardsAdded, delegatorStakingRewardsAdded) = getDelegatorStakingRewards(delegator);
+        guardiansStakingRewards[guardian] = guardianRewards;
 
         emit GuardianStakingRewardsAssigned(guardian, guardianStakingRewardsAdded, guardianRewards.delegatorRewardsPerToken);
         emit StakingRewardsAssigned(delegator, delegatorStakingRewardsAdded);
@@ -245,7 +269,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     function getGuardianFeesAndBootstrap(address guardian) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, FeesAndBootstrapState memory _feesAndBootstrapState, uint256 addedBootstrapAmount, uint256 addedFeesAmount) {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
-        (bool inCommittee, , bool certified) = _committeeContract.getMemberInfo(guardian);
+        (bool inCommittee, , bool certified,) = _committeeContract.getMemberInfo(guardian);
         (guardianFeesAndBootstrap, _feesAndBootstrapState, addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, certified, generalCommitteeSize, certifiedCommitteeSize);
     }
 
@@ -275,22 +299,36 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit FeesAssigned(guardian, addedFeesAmount);
 
         uint256 guardianStakingRewardsAdded;
-        StakingRewards memory guardianStakingRewards;
+        GuardianStakingRewards memory guardianStakingRewards;
         (guardianStakingRewards, stakingRewardsState, guardianStakingRewardsAdded) = _getGuardianStakingRewards(guardian, inCommittee, weight, delegatedStake, totalCommitteeWeight);
-        stakingRewards[guardian] = guardianStakingRewards;
+        guardiansStakingRewards[guardian] = guardianStakingRewards;
 
         emit GuardianStakingRewardsAssigned(guardian, guardianStakingRewardsAdded, guardianStakingRewards.delegatorRewardsPerToken);
     }
 
-    function delegatorWillChange(address guardian, uint256 weight, uint256 delegatedStake, bool inCommittee, uint256 totalCommitteeWeight, address delegator, uint256 delegatorStake) external override onlyElectionsContract {
+    struct DelegationWillChangeVars {
+        bool inCommittee;
+        uint256 weight;
+        uint256 totalCommitteeWeight;
         uint256 guardianRewardsAdded;
         uint256 delegatorRewardsAdded;
+    }
 
-        StakingRewards memory guardianStakingRewards;
-        (stakingRewards[delegator], guardianStakingRewards, stakingRewardsState, guardianRewardsAdded, delegatorRewardsAdded) = _getDelegatorStakingRewards(delegator, delegatorStake, guardian, inCommittee, weight, delegatedStake, totalCommitteeWeight);
-        stakingRewards[guardian] = guardianStakingRewards;
-        emit GuardianStakingRewardsAssigned(guardian, guardianRewardsAdded, guardianStakingRewards.delegatorRewardsPerToken);
-        emit StakingRewardsAssigned(guardian, delegatorRewardsAdded);
+    function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian) external override onlyDelegationsContract {
+        DelegationWillChangeVars memory vars;
+        (vars.inCommittee, vars.weight, , vars.totalCommitteeWeight) = committeeContract.getMemberInfo(guardian);
+
+        GuardianStakingRewards memory guardianStakingRewards;
+        DelegatorStakingRewards memory delegatorStakingRewards;
+        (delegatorStakingRewards, guardianStakingRewards, stakingRewardsState, vars.guardianRewardsAdded, vars.delegatorRewardsAdded) = _getDelegatorStakingRewards(delegator, delegatorStake, guardian, vars.inCommittee, vars.weight, delegatedStake, vars.totalCommitteeWeight);
+        if (nextGuardian != guardian) {
+            delegatorStakingRewards.lastDelegatorRewardsPerToken = guardiansStakingRewards[nextGuardian].delegatorRewardsPerToken;
+        }
+
+        guardiansStakingRewards[guardian] = guardianStakingRewards;
+        delegatorsStakingRewards[delegator] = delegatorStakingRewards;
+        emit GuardianStakingRewardsAssigned(guardian, vars.guardianRewardsAdded, guardianStakingRewards.delegatorRewardsPerToken);
+        emit StakingRewardsAssigned(guardian, vars.delegatorRewardsAdded);
     }
 
     constructor(
@@ -381,8 +419,9 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function getStakingRewardsBalance(address addr) external override view returns (uint256) {
-        (StakingRewards memory delegatorStakingRewards,,,,,) = getDelegatorStakingRewards(addr);
-        return toUint256Granularity(delegatorStakingRewards.balance);
+        (DelegatorStakingRewards memory delegatorStakingRewards,,,,,) = getDelegatorStakingRewards(addr);
+        (GuardianStakingRewards memory guardianStakingRewards,,) = getGuardianStakingRewards(addr); // TODO consider removing, data in state must be up to date at this point
+        return toUint256Granularity(delegatorStakingRewards.balance.add(guardianStakingRewards.balance));
     }
 
     struct DistributorBatchState {
@@ -411,31 +450,35 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         require(transfer(erc20, guardian, amount), "Rewards::claimExternalTokenRewards - insufficient funds");
     }
 
-    function migrateStakingRewardsBalance(address guardian) external override {
+    function migrateStakingRewardsBalance(address addr) external override {
         require(!settings.active, "Reward distribution must be deactivated for migration");
 
         IRewards currentRewardsContract = IRewards(getRewardsContract());
         require(address(currentRewardsContract) != address(this), "New rewards contract is not set");
 
-        updateDelegatorStakingRewards(guardian);
+        updateDelegatorStakingRewards(addr);
 
-        uint48 balance = stakingRewards[guardian].balance;
-        stakingRewards[guardian].balance = 0;
+        uint48 guardianBalance = guardiansStakingRewards[addr].balance;
+        guardiansStakingRewards[addr].balance = 0;
 
-        require(approve(erc20, address(currentRewardsContract), balance), "migrateStakingBalance: approve failed");
-        currentRewardsContract.acceptStakingRewardsMigration(guardian, toUint256Granularity(balance));
+        uint48 delegatorBalance = delegatorsStakingRewards[addr].balance;
+        delegatorsStakingRewards[addr].balance = 0;
 
-        emit StakingRewardsBalanceMigrated(guardian, toUint256Granularity(balance), address(currentRewardsContract));
+        require(approve(erc20, address(currentRewardsContract), delegatorBalance.add(guardianBalance)), "migrateStakingBalance: approve failed");
+        currentRewardsContract.acceptStakingRewardsMigration(addr, toUint256Granularity(delegatorBalance), toUint256Granularity(guardianBalance));
+
+        emit StakingRewardsBalanceMigrated(addr, toUint256Granularity(delegatorBalance), toUint256Granularity(guardianBalance), address(currentRewardsContract));
     }
 
-    function acceptStakingRewardsMigration(address guardian, uint256 amount) external override {
-        uint48 amount48 = toUint48Granularity(amount);
-        require(transferFrom(erc20, msg.sender, address(this), amount48), "acceptStakingMigration: transfer failed");
+    function acceptStakingRewardsMigration(address addr, uint256 delegatorBalance, uint256 guardianBalance) external override {
+        uint48 delegatorBalance48 = toUint48Granularity(delegatorBalance);
+        uint48 guardianBalance48 = toUint48Granularity(guardianBalance);
+        require(transferFrom(erc20, msg.sender, address(this), delegatorBalance48.add(guardianBalance48)), "acceptStakingMigration: transfer failed");
 
-        uint48 balance = stakingRewards[guardian].balance.add(amount48);
-        stakingRewards[guardian].balance = balance;
+        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(guardianBalance48);
+        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(delegatorBalance48);
 
-        emit StakingRewardsMigrationAccepted(msg.sender, guardian, amount);
+        emit StakingRewardsMigrationAccepted(msg.sender, addr, delegatorBalance, guardianBalance);
     }
 
     function emergencyWithdraw() external override onlyMigrationManager {

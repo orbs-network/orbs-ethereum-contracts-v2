@@ -34,7 +34,7 @@ interface ICommittee {
 
 	function getCommitteeStats() external view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalStake);
 
-	function getMemberInfo(address addr) external view returns (bool inCommittee, uint stake, bool isCertified);
+	function getMemberInfo(address addr) external view returns (bool inCommittee, uint weight, bool isCertified, uint totalCommitteeWeight);
 
 	/*
 	 * Governance
