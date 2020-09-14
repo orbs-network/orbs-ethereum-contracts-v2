@@ -217,14 +217,14 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     // Bootstrap and fees
     //
 
-    function getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
+    function getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize, uint256 collectedGeneralFees, uint256 collectedCertifiedFees) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
         Settings memory _settings = settings;
 
         _feesAndBootstrapState = feesAndBootstrapState;
 
         if (_settings.active) {
-            uint48 generalFeesDelta = generalCommitteeSize == 0 ? 0 : toUint48Granularity(generalFeesWallet.getOutstandingFees().div(generalCommitteeSize));
-            uint48 certifiedFeesDelta = generalFeesDelta.add(certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(certifiedFeesWallet.getOutstandingFees().div(certifiedCommitteeSize)));
+            uint48 generalFeesDelta = generalCommitteeSize == 0 ? 0 : toUint48Granularity(collectedGeneralFees.div(generalCommitteeSize));
+            uint48 certifiedFeesDelta = generalFeesDelta.add(certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(collectedCertifiedFees.div(certifiedCommitteeSize)));
 
             _feesAndBootstrapState.generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember.add(generalFeesDelta);
             _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember.add(certifiedFeesDelta);
@@ -240,11 +240,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function updateFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize) private returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
-        _feesAndBootstrapState = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
+        uint256 collectedGeneralFees = generalFeesWallet.collectFees();
+        uint256 collectedCertifiedFees = certifiedFeesWallet.collectFees();
+
+        _feesAndBootstrapState = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, collectedGeneralFees, collectedCertifiedFees);
 
         feesAndBootstrapState = _feesAndBootstrapState;
-        generalFeesWallet.collectFees();
-        certifiedFeesWallet.collectFees();
     }
 
     function _getGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, FeesAndBootstrapState memory _feesAndBootstrapState) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, uint256 addedBootstrapAmount, uint256 addedFeesAmount) {
@@ -281,7 +282,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
         (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
-        FeesAndBootstrapState memory _feesAndBootstrapState = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
+        FeesAndBootstrapState memory _feesAndBootstrapState = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees());
         (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, _feesAndBootstrapState);
     }
 

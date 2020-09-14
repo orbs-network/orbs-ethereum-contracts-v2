@@ -586,21 +586,23 @@ describe.only('rewards', async () => {
     })
 
     it('performs emergency withdrawal only by the migration manager', async () => {
-        const {d, committee} = await fullCommittee();
+        // const {d, committee} = await fullCommittee();
 
-        // await d.rewards.assignRewards();
-        await evmIncreaseTime(d.web3, 12*30*24*60*60);
-        await committee[0].stake(bn(1000)); // trigger reward assignment
+        // // await d.rewards.assignRewards();
+        // await evmIncreaseTime(d.web3, 12*30*24*60*60);
+        // await committee[0].stake(bn(1000)); // trigger reward assignment
 
-        expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
-        expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.gt(bn(0));
+        const d = await Driver.new();
+        const p = d.newParticipant();
+        await p.assignAndTransferOrbs(bn(1000), d.rewards.address);
+        await p.assignAndTransferExternalToken(bn(2000), d.rewards.address);
 
         await expectRejected(d.rewards.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
         let r = await d.rewards.emergencyWithdraw({from: d.migrationManager.address});
         expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
 
-        expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.gt(bn(0));
-        expect(await d.bootstrapToken.balanceOf(d.migrationManager.address)).to.bignumber.gt(bn(0));
+        expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(bn(1000));
+        expect(await d.bootstrapToken.balanceOf(d.migrationManager.address)).to.bignumber.eq(bn(2000));
         expect(await d.erc20.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
         expect(await d.bootstrapToken.balanceOf(d.rewards.address)).to.bignumber.eq(bn(0));
     });
@@ -629,7 +631,7 @@ describe.only('rewards', async () => {
         expect((await d.rewards.getSettings()).active).to.be.true;
     });
 
-    it.only("ensures only migration manager can activate and deactivate", async () => {
+    it("ensures only migration manager can activate and deactivate", async () => {
         const d = await Driver.new();
 
         await expectRejected(d.rewards.deactivate({from: d.functionalManager.address}), /sender is not the migration manager/);
@@ -641,7 +643,7 @@ describe.only('rewards', async () => {
         expect(r).to.have.a.rewardDistributionActivatedEvent();
     });
 
-    it.only("allows anyone to migrate staking rewards to a new contract", async () => {
+    it("allows anyone to migrate staking rewards to a new contract", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];

@@ -539,12 +539,25 @@ export class Participant {
         await token.approve(to, amount, {from: this.address});
     }
 
+    private async assignAndTransfer(amount: number|BN, to: string, token: ERC20Contract) {
+        await token.assign(this.address, amount);
+        await token.transfer(to, amount, {from: this.address});
+    }
+
     async assignAndApproveOrbs(amount: number|BN, to: string) {
         return this.assignAndApprove(amount, to, this.driver.erc20);
     }
 
+    async assignAndTransferOrbs(amount: number|BN, to: string) {
+        return this.assignAndTransfer(amount, to, this.driver.erc20);
+    }
+
     async assignAndApproveExternalToken(amount: number|BN, to: string) {
         return this.assignAndApprove(amount, to, this.driver.bootstrapToken);
+    }
+
+    async assignAndTransferExternalToken(amount: number|BN, to: string) {
+        return this.assignAndTransfer(amount, to, this.driver.bootstrapToken);
     }
 
     async unstake(amount: number|BN) {
