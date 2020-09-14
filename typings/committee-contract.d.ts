@@ -45,6 +45,7 @@ export interface CommitteeContract extends OwnedContract {
     setMaxCommitteeSize(maxCommitteeSize: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getMaxTimeBetweenRewardAssignments(): Promise<number>;
     getMaxCommitteeSize(): Promise<number>;
+    getMemberInfo(addr: string): Promise<{inCommittee: boolean, weight: string, isCertified: boolean, totalCommitteeWeight: string}>
 
     getSettings(params?: TransactionConfig): Promise<[string /* maxTimeBetweenRewardAssignments */, string /* maxCommitteeSize */]>;
     getTopology(): Promise<TransactionReceipt>;

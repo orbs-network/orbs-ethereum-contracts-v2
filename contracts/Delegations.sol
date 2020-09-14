@@ -83,7 +83,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		vars.prevDelegateStatusBefore = getDelegateStatus(prevDelegate);
 		vars.newDelegateStatusBefore = getDelegateStatus(to);
 
-		rewardsContract.delegationWillChange(prevDelegate, vars.prevDelegateStatusBefore.delegatedStake, from, delegatorData.stake, to);
+		rewardsContract.delegationWillChange(prevDelegate, vars.prevDelegateStatusBefore.delegatedStake, from, delegatorData.stake, to, vars.newDelegateStatusBefore.delegatedStake);
 
 		stakeOwnersData[from].delegation = to;
 
@@ -337,7 +337,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		uint256 prevUncappedStake = delegateStatusBefore.uncappedStakes;
 		uint256 newUncappedStake = prevUncappedStake.sub(stakeOwnerDataBefore.stake).add(_updatedStake);
 
-		rewardsContract.delegationWillChange(stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake, _stakeOwner, stakeOwnerDataBefore.stake, stakeOwnerDataBefore.delegation);
+		rewardsContract.delegationWillChange(stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake, _stakeOwner, stakeOwnerDataBefore.stake, stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake);
 
 		uncappedStakes[stakeOwnerDataBefore.delegation] = newUncappedStake;
 

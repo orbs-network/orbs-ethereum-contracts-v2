@@ -227,11 +227,11 @@ contract Committee is ICommittee, ManagedContract {
 		return (_committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize, _committeeStats.totalWeight);
 	}
 
-	function getMemberInfo(address addr) external override view returns (bool inCommittee, uint stake, bool isCertified, uint totalCommitteeWeight) {
+	function getMemberInfo(address addr) external override view returns (bool inCommittee, uint weight, bool isCertified, uint totalCommitteeWeight) {
 		MemberStatus memory status = membersStatus[addr];
 		inCommittee = status.inCommittee;
 		if (inCommittee) {
-			(stake, isCertified) = getWeightCertification(committee[status.pos]);
+			(weight, isCertified) = getWeightCertification(committee[status.pos]);
 		}
 		totalCommitteeWeight = committeeStats.totalWeight;
 	}

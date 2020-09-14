@@ -678,7 +678,7 @@
 //     await d.rewards.assignRewards();
 //
 //     let r = await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(66666, {from: d.functionalManager.address});
-//     expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({maxDelegatorsStakingRewardsPercentMille: bn(66666)});
+//     expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({delegatorsStakingRewardsPercentMille: bn(66666)});
 //
 //     await expectRejected(d.rewards.distributeStakingRewards(
 //         fromTokenUnits(100000),
@@ -689,7 +689,7 @@
 //         [v.address, delegator.address],
 //         [fromTokenUnits(33333), fromTokenUnits(66667)],
 //         {from: v.address}
-//     ), /Total delegators reward must be less then maxDelegatorsStakingRewardsPercentMille of total amount/);
+//     ), /Total delegators reward must be less then delegatorsStakingRewardsPercentMille of total amount/);
 //
 //     await expectRejected(d.rewards.distributeStakingRewards(
 //         fromTokenUnits(2),
@@ -700,7 +700,7 @@
 //         [delegator.address],
 //         [fromTokenUnits(2)],
 //         {from: v.address}
-//     ), /Total delegators reward must be less then maxDelegatorsStakingRewardsPercentMille of total amount/);
+//     ), /Total delegators reward must be less then delegatorsStakingRewardsPercentMille of total amount/);
 //
 //     await d.rewards.distributeStakingRewards(
 //         fromTokenUnits(100000),
@@ -837,7 +837,7 @@
 //       defaultDriverOptions.certifiedCommitteeAnnualBootstrap,
 //       defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
 //       defaultDriverOptions.stakingRewardsAnnualCap,
-//       defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille
+//       defaultDriverOptions.delegatorsStakingRewardsPercentMille
 //     ], null, d.session);
 //     await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 //

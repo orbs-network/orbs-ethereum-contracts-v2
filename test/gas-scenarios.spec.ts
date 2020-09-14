@@ -309,52 +309,6 @@ describe('gas usage scenarios', async () => {
         d.logGasUsageSummary("Manual-voteout is cast, threshold is reached and top committee member leaves", [thresholdVoter]);
     });
 
-    const distributeRewardsScenario = async (batchSize: number) => {
-        const {d, committee} = await fullCommittee(true);
-
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-        let r = await d.rewards.assignRewards();
-        console.log(feesAssignedEvents(r));
-
-        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalManager.address});
-
-        const v = committee[0];
-
-        const delegator = d.newParticipant();
-        await delegator.stake(100);
-        await delegator.delegate(v);
-
-        const delegators: Participant[] =await Promise.all(_.range(batchSize).map(async i => {
-            const delegator = i == 0 ? v : d.newParticipant();
-            await delegator.stake(100);
-            await delegator.delegate(committee[i % committee.length]);
-            return delegator;
-        }));
-
-        const balance = bn(await d.rewards.getStakingRewardsBalance(v.address));
-
-        d.resetGasRecording();
-        await d.rewards.distributeStakingRewards(
-            balance.div(bn(batchSize)).mul(bn(batchSize)),
-            0,
-            100,
-            1,
-            0,
-            delegators.map(delegator => delegator.address),
-            delegators.map(() => balance.div(bn(batchSize)))
-            , {from: v.address});
-
-        d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same guardian (batch size - ${batchSize})`, [committee[0]]);
-    };
-
-    it("Distribute rewards - all delegators delegated to same guardian (batch size - 1)", async () => {
-        await distributeRewardsScenario(1)
-    });
-
-    it("Distribute rewards - all delegators delegated to same guardian (batch size - 50)", async () => {
-        await distributeRewardsScenario(50)
-    });
-
     it("assigns rewards (1 month, initial balance == 0)", async () => {
         const {d, committee} = await fullCommittee(false, 100);
         await evmIncreaseTime(d.web3, 30*24*60*60);

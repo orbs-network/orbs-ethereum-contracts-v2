@@ -44,7 +44,10 @@ import {
   DelegatorsStakingRewardsChangedEvent,
   StakingRewardAssignedEvent,
   StakingRewardsBalanceMigratedEvent,
-  StakingRewardsMigrationAcceptedEvent
+  StakingRewardsMigrationAcceptedEvent,
+  StakingRewardsClaimedEvent,
+  RewardDistributionDeactivatedEvent,
+  RewardDistributionActivatedEvent
 } from "../typings/rewards-contract";
 import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
@@ -90,47 +93,54 @@ import {
 } from "../typings/stake-change-handler-contract";
 import {Driver} from "./driver";
 
-export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
+function bnEq(b1, b2, approx?: number) {
+  b1 = new BN(b1);
+  b2 = new BN(b2)
+  if (!approx) return b1.eq(b2);
+  return b1.sub(b2).abs().lte(BN.max(b1, b2).mul(new BN(approx)).div(new BN(100)));
+}
+
+export function isBNArrayEqual(a1: Array<any>, a2: Array<any>, approx?: number): boolean {
   return (
     a1.length == a2.length &&
-    a1.find((v, i) => !new BN(a1[i]).eq(new BN(a2[i]))) == null
+    a1.find((v, i) => !bnEq(a1[i], a2[i], approx)) == null
   );
 }
 
-function comparePrimitive(a: any, b: any): boolean {
+function comparePrimitive(a: any, b: any, approx?: number): boolean {
   if (BN.isBN(a) || BN.isBN(b)) {
-    return new BN(a).eq(new BN(b));
+    return bnEq(a, b, approx);
   } else {
     if (
       (Array.isArray(a) && BN.isBN(a[0])) ||
       (Array.isArray(b) && BN.isBN(b[0]))
     ) {
-      return isBNArrayEqual(a, b);
+      return isBNArrayEqual(a, b, approx);
     }
     return _.isEqual(a, b);
   }
 }
 
-function objectMatches(obj, against): boolean {
+function objectMatches(obj, against, approx?: number): boolean {
     if (obj == null || against == null) return false;
 
     for (const k in against) {
-      if (!comparePrimitive(obj[k], against[k])) {
+      if (!comparePrimitive(obj[k], against[k], approx)) {
         return false;
       }
     }
     return true;
 }
 
-function compareEvents(actual: any, expected: any, transposeKey?: string): boolean {
+function compareEvents(actual: any, expected: any, transposeKey?: string, approx?: number): boolean {
   if (transposeKey != null) {
     const fields = Object.keys(expected);
     actual = transpose(actual, transposeKey, fields);
     expected = transpose(expected, transposeKey);
     return  Object.keys(expected).length == Object.keys(actual).length &&
-        Object.keys(expected).find(key => !objectMatches(actual[key], expected[key])) == null;
+        Object.keys(expected).find(key => !objectMatches(actual[key], expected[key], approx)) == null;
   } else {
-    return objectMatches(actual, expected);
+    return objectMatches(actual, expected, approx);
   }
 }
 
@@ -144,6 +154,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
       data = data || {};
 
       const contractAddress = chai.util.flag(this, "contractAddress");
+      const approx = chai.util.flag(this, "approx");
       const logs = eventParser(this._obj, contractAddress).map(stripEvent);
 
       this.assert(
@@ -155,7 +166,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
       if (logs.length == 1) {
         const log = logs.pop();
         this.assert(
-            compareEvents(log, data, transposeKey),
+            compareEvents(log, data, transposeKey, approx),
             "expected #{this} to be #{exp} but got #{act}",
             "expected #{this} to not be #{act}",
             data, // expected
@@ -163,7 +174,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
         );
       } else {
         for (const log of logs) {
-          if (compareEvents(log, data, transposeKey)) {
+          if (compareEvents(log, data, transposeKey, approx)) {
             return;
           }
         }
@@ -209,6 +220,10 @@ export const chaiEventMatchersPlugin = function(chai) {
 
   chai.Assertion.addChainableMethod("withinContract", function (this: any, contract: Contract) {
     chai.util.flag(this, "contractAddress", contract.address);
+  })
+
+  chai.Assertion.addChainableMethod("approx", function (this: any, p: number) {
+    chai.util.flag(this, "approx", p || 2);
   })
 };
 
@@ -285,8 +300,12 @@ declare global {
       notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChangedEvent>);
       guardianStakingRewardAssignedEvent(data?: Partial<GuardianStakingRewardAssignedEvent>);
       stakeChangedEvent(data?: Partial<StakeChangedEvent>);
+      stakingRewardsClaimedEvent(data?: Partial<StakingRewardsClaimedEvent>);
+      rewardDistributionDeactivatedEvent(data?: Partial<RewardDistributionDeactivatedEvent>);
+      rewardDistributionActivatedEvent(data?: Partial<RewardDistributionActivatedEvent>);
 
       withinContract(contract: Contract): Assertion;
+      approx(): Assertion;
     }
 
     export interface Assertion {

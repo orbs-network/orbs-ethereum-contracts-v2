@@ -36,7 +36,7 @@ export type DriverOptions = {
     certifiedCommitteeAnnualBootstrap: number;
     stakingRewardsAnnualRateInPercentMille: number;
     stakingRewardsAnnualCap: number;
-    maxDelegatorsStakingRewardsPercentMille: number;
+    delegatorsStakingRewardsPercentMille: number;
 
     stakingRewardsWalletRate: number;
     bootstrapRewardsWalletRate: number;
@@ -81,7 +81,7 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     certifiedCommitteeAnnualBootstrap: 0,
     stakingRewardsAnnualRateInPercentMille: 0,
     stakingRewardsAnnualCap: 0,
-    maxDelegatorsStakingRewardsPercentMille: 100000,
+    delegatorsStakingRewardsPercentMille: 100000,
 
     minimumInitialVcPayment: 0,
 
@@ -109,7 +109,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     certifiedCommitteeAnnualBootstrap: bn(6).mul(bn(10).pow(bn(18))),
     stakingRewardsAnnualRateInPercentMille: 12000,
     stakingRewardsAnnualCap: bn(12000).mul(bn(10).pow(bn(18))),
-    maxDelegatorsStakingRewardsPercentMille: 66667,
+    delegatorsStakingRewardsPercentMille: 66667,
 
     // Protocol wallets
     stakingRewardsWalletRate: bn(12000 * 1.1).mul(bn(10).pow(bn(18))), // staking rewards for entire committee + 10%
@@ -183,7 +183,7 @@ export class Driver {
             certifiedCommitteeAnnualBootstrap,
             stakingRewardsAnnualRateInPercentMille,
             stakingRewardsAnnualCap,
-            maxDelegatorsStakingRewardsPercentMille,
+            delegatorsStakingRewardsPercentMille,
 
             stakingRewardsWalletRate,
             bootstrapRewardsWalletRate,
@@ -238,7 +238,7 @@ export class Driver {
                 certifiedCommitteeAnnualBootstrap,
                 stakingRewardsAnnualRateInPercentMille,
                 stakingRewardsAnnualCap,
-                maxDelegatorsStakingRewardsPercentMille
+                delegatorsStakingRewardsPercentMille
             ], null, session);
 
         const elections = options.electionsAddress ?

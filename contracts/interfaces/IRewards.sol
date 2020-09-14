@@ -10,8 +10,6 @@ interface IRewards {
 
     event RewardDistributionActivated(uint256 startTime);
     event RewardDistributionDeactivated();
-    event StakingRewardAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
-    event GuardianStakingRewardsAssigned(address guardian, uint256 amount, uint256 delegatorRewardsPerToken);
 
     function deactivate() external /* onlyMigrationManager */;
 
@@ -19,13 +17,16 @@ interface IRewards {
 
     function committeeMembershipWillChange(address guardian, uint256 weight, uint256 delegatedStake, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyElectionsContract */;
 
-    function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian) external /* onlyElections */;
+    function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian, uint256 nextGuardianDelegatedStake) external /* onlyElections */;
 
     /*
      * Staking
      */
 
     event StakingRewardsAssigned(address indexed addr, uint256 amount);
+    event StakingRewardsClaimed(address addr, uint256 amount);
+    event StakingRewardAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
+    event GuardianStakingRewardsAssigned(address guardian, uint256 amount, uint256 delegatorRewardsPerToken);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
     function getStakingRewardsBalance(address addr) external view returns (uint256 balance);
@@ -47,9 +48,12 @@ interface IRewards {
     function getAnnualStakingRewardsCap() external view returns (uint256);
 
     /// @dev Gets the maximum cut of the delegators staking reward.
-    function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
+    function getDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
-    /* 
+    /// @dev Claims the staking rewards balance of addr by staking
+    function claimStakingRewards(address addr) external;
+
+    /*
      * Fees
      */
 
@@ -109,8 +113,8 @@ interface IRewards {
      * Migration
      */
 
-    event StakingRewardsBalanceMigrated(address guardian, uint256 delegatorBalance, uint256 guardianBalance, address toRewardsContract);
-    event StakingRewardsMigrationAccepted(address from, address guardian, uint256 delegatorBalance, uint256 guardianBalance);
+    event StakingRewardsBalanceMigrated(address from, uint256 delegatorBalance, uint256 guardianBalance, address toRewardsContract);
+    event StakingRewardsMigrationAccepted(address from, address migrator, address to, uint256 delegatorBalance, uint256 guardianBalance);
     event EmergencyWithdrawal(address addr);
 
     /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
