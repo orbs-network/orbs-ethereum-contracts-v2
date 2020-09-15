@@ -178,7 +178,7 @@ function expectApproxEq(actual: BN|string|number, expected: BN|string|number) {
     assert(bn(actual).sub(bn(expected)).abs().lte(BN.max(bn(actual), bn(expected)).div(bn(50))), `Expected ${actual.toString()} to approx. equal ${expected.toString()}`);
 }
 
-describe.only('rewards', async () => {
+describe('rewards', async () => {
 
     // Bootstrap and fees
 
