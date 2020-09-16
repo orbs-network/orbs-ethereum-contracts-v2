@@ -32,14 +32,14 @@ interface IRewards {
     function getStakingRewardsBalance(address addr) external view returns (uint256 balance);
 
     // Staking Parameters Governance 
-    event MaxDelegatorsStakingRewardsChanged(uint32 delegatorsStakingRewardsPercentMille);
+    event DefaultDelegatorsStakingRewardsChanged(uint32 defaultDelegatorsStakingRewardsPercentMille);
     event AnnualStakingRewardsRateChanged(uint256 annualRateInPercentMille, uint256 annualCap);
 
     /// @dev Sets a new annual rate and cap for the staking reward.
     function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
 
     /// @dev Sets the maximum cut of the delegators staking reward.
-    function setDelegatorsStakingRewardsPercentMille(uint32 delegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+    function setDefaultDelegatorsStakingRewardsPercentMille(uint32 defaultDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
 
     /// @dev Gets the annual staking reward rate.
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
@@ -48,7 +48,7 @@ interface IRewards {
     function getAnnualStakingRewardsCap() external view returns (uint256);
 
     /// @dev Gets the maximum cut of the delegators staking reward.
-    function getDelegatorsStakingRewardsPercentMille() external view returns (uint32);
+    function getDefaultDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
     /// @dev Claims the staking rewards balance of addr by staking
     function claimStakingRewards(address addr) external;
@@ -105,7 +105,7 @@ interface IRewards {
         uint certifiedCommitteeAnnualBootstrap,
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
-        uint32 delegatorsStakingRewardsPercentMille,
+        uint32 defaultDelegatorsStakingRewardsPercentMille,
         bool active
     );
 

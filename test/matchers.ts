@@ -41,7 +41,7 @@ import {
   FeesWithdrawnEvent,
   GeneralCommitteeAnnualBootstrapChangedEvent,
   GuardianStakingRewardAssignedEvent,
-  DelegatorsStakingRewardsChangedEvent,
+  DefaultDelegatorsStakingRewardsChangedEvent,
   StakingRewardAssignedEvent,
   StakingRewardsBalanceMigratedEvent,
   StakingRewardsMigrationAcceptedEvent,
@@ -190,7 +190,6 @@ const containEvent = (eventParser, transposeKey?: string) =>
 
 const TransposeKeys = {
   "CommitteeSnapshot": "addrs",
-  "StakingRewardsAssigned": "assignees",
 };
 
 export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeSnapshotEvent> & {addrs: string[]}) {
@@ -270,7 +269,7 @@ declare global {
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       guardianStatusUpdatedEvent(data?: Partial<GuardianStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
-      delegatorsStakingRewardsChangedEvent(data?: Partial<DelegatorsStakingRewardsChangedEvent>);
+      defaultDelegatorsStakingRewardsChangedEvent(data?: Partial<DefaultDelegatorsStakingRewardsChangedEvent>);
       fundsAddedToPoolEvent(data?: Partial<FundsAddedToPoolEvent>);
       clientSetEvent(data?: Partial<ClientSetEvent>);
       maxAnnualRateSetEvent(data?: Partial<MaxAnnualRateSetEvent>);

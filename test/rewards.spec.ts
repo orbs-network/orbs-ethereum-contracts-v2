@@ -5,7 +5,7 @@ import * as _ from "lodash";
 import {
     defaultDriverOptions,
     Driver,
-    Participant
+    Participant, ZERO_ADDR
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
@@ -61,7 +61,7 @@ async function fullCommittee(stakes?: BN[] | null, numVCs=5, opts?: {
     const stakingRewardsAnnualCap: BN = opts.stakingRewardsAnnualCap || STAKING_REWARDS_ANNUAL_CAP;
     const minSelfStakePercentMille: BN = opts.minSelfStakePercentMille || MIN_SELF_STAKE_PERCENT_MILLE;
 
-    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, minSelfStakePercentMille: minSelfStakePercentMille.toNumber(), delegatorsStakingRewardsPercentMille: DELEGATOR_REWARDS_PERCENT_MILLE});
+    const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, minSelfStakePercentMille: minSelfStakePercentMille.toNumber(), defaultDelegatorsStakingRewardsPercentMille: DELEGATOR_REWARDS_PERCENT_MILLE});
 
     const g = d.newParticipant();
     const poolAmount = fromTokenUnits(1000000000000);
@@ -153,7 +153,7 @@ async function stakingRewardsForDuration(d: Driver, duration: number, delegator:
     const totalWeight = bn(memberInfo.totalCommitteeWeight)
 
     const cap = bn(await d.rewards.getAnnualStakingRewardsCap());
-    const ratio = bn(await d.rewards.getDelegatorsStakingRewardsPercentMille());
+    const ratio = bn(await d.rewards.getDefaultDelegatorsStakingRewardsPercentMille());
     const rate = bn(await d.rewards.getAnnualStakingRewardsRatePercentMille());
 
     const actualRate = BN.min(totalWeight.mul(rate).div(bn(100000)), cap).mul(bn(100000)).div(totalWeight);
@@ -282,6 +282,11 @@ describe('rewards', async () => {
         await d.rewards.withdrawBootstrapFunds(committee[1].address);
         const c1AssignedBootstrap = bn(await d.bootstrapToken.balanceOf(committee[1].address)).sub(bn(c1BootstrapBalance));
         expectApproxEq(c1AssignedBootstrap, generalBootstrapForDuration(DURATION));
+
+        expect(c0AssignedFees).to.be.bignumber.gt(bn(0));
+        expect(c1AssignedFees).to.be.bignumber.gt(bn(0));
+        expect(c0AssignedBootstrap).to.be.bignumber.gt(bn(0));
+        expect(c1AssignedBootstrap).to.be.bignumber.gt(bn(0));
     });
 
     it('assigned bootstrap rewards and fees according to committee member participation (compliance committee)', async () => {
@@ -375,6 +380,11 @@ describe('rewards', async () => {
         await d.rewards.withdrawBootstrapFunds(committee[1].address);
         const c1AssignedBootstrap = bn(await d.bootstrapToken.balanceOf(committee[1].address)).sub(bn(c1BootstrapBalance));
         expectApproxEq(c1AssignedBootstrap, certifiedBootstrapForDuration(DURATION));
+
+        expect(c0AssignedFees).to.be.bignumber.gt(bn(0));
+        expect(c1AssignedFees).to.be.bignumber.gt(bn(0));
+        expect(c0AssignedBootstrap).to.be.bignumber.gt(bn(0));
+        expect(c1AssignedBootstrap).to.be.bignumber.gt(bn(0));
     });
 
     // Staking rewards
@@ -448,6 +458,8 @@ describe('rewards', async () => {
             stakeOwner: c0.address,
             amount: total
         });
+
+        expect(total).to.be.bignumber.gt(bn(0));
     });
 
     it('assigns staking rewards to delegator, accommodate for delegation and stake changes', async () => {
@@ -536,6 +548,9 @@ describe('rewards', async () => {
             addr: d0.address,
             amount: dTotal
         });
+
+        expect(cTotal).to.be.bignumber.gt(bn(0));
+        expect(dTotal).to.be.bignumber.gt(bn(0));
     });
 
     it('enforces annual staking rewards cap', async () => {
@@ -611,7 +626,7 @@ describe('rewards', async () => {
         const opts = {
             generalCommitteeAnnualBootstrap: fromTokenUnits(10),
             certifiedCommitteeAnnualBootstrap: fromTokenUnits(20),
-            delegatorsStakingRewardsPercentMille: 3,
+            defaultDelegatorsStakingRewardsPercentMille: 3,
             stakingRewardsAnnualRateInPercentMille: 4,
             stakingRewardsAnnualCap: fromTokenUnits(50)
         };
@@ -619,13 +634,13 @@ describe('rewards', async () => {
 
         expect(await d.rewards.getGeneralCommitteeAnnualBootstrap()).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
         expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
-        expect(await d.rewards.getDelegatorsStakingRewardsPercentMille()).to.eq(opts.delegatorsStakingRewardsPercentMille.toString());
+        expect(await d.rewards.getDefaultDelegatorsStakingRewardsPercentMille()).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
         expect(await d.rewards.getAnnualStakingRewardsRatePercentMille()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
         expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(opts.stakingRewardsAnnualCap.toString());
 
         expect((await d.rewards.getSettings()).generalCommitteeAnnualBootstrap).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).certifiedCommitteeAnnualBootstrap).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
-        expect((await d.rewards.getSettings()).delegatorsStakingRewardsPercentMille).to.eq(opts.delegatorsStakingRewardsPercentMille.toString());
+        expect((await d.rewards.getSettings()).defaultDelegatorsStakingRewardsPercentMille).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
         expect((await d.rewards.getSettings()).annualStakingRewardsRatePercentMille).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
         expect((await d.rewards.getSettings()).annualStakingRewardsCap).to.eq(opts.stakingRewardsAnnualCap.toString());
         expect((await d.rewards.getSettings()).active).to.be.true;
@@ -647,9 +662,6 @@ describe('rewards', async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
-
-        /* top up staking rewards pool */
-        const g = d.functionalManager;
 
         await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
@@ -676,7 +688,7 @@ describe('rewards', async () => {
           defaultDriverOptions.certifiedCommitteeAnnualBootstrap,
           defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
           defaultDriverOptions.stakingRewardsAnnualCap,
-          defaultDriverOptions.delegatorsStakingRewardsPercentMille
+          defaultDriverOptions.defaultDelegatorsStakingRewardsPercentMille
         ], null, d.session);
         await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
