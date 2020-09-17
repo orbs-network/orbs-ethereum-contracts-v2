@@ -635,30 +635,6 @@ describe('elections-high-level-flows', async () => {
         let r = await d.staking.distributeRewards(rewardsTotal, rewards.map(r => r.p.address), rewards.map(r => r.amount), {from: a.address});
 
         await expectTotalGovernanceStakeToBe(stakeOfABC + totalRewardsForGovernanceStake);
-
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: a.address,
-            selfDelegatedStake: bn(stakeOfA),
-            delegatedStake: bn(stakeOfA + stakeOfC + 30),
-            delegators: [rewards[0].p.address, rewards[1].p.address],
-            delegatorTotalStakes: [bn(rewards[0].amount), bn(rewards[1].amount)]
-        });
-
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: b.address,
-            selfDelegatedStake: bn(stakeOfB),
-            delegatedStake: bn(stakeOfB + 120),
-            delegators: [rewards[2].p.address, rewards[3].p.address, rewards[4].p.address],
-            delegatorTotalStakes: [bn(rewards[2].amount), bn(rewards[3].amount), bn(rewards[4].amount)]
-        });
-
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: c.address,
-            selfDelegatedStake: bn(0),
-            delegatedStake: bn(0),
-            delegators: [rewards[5].p.address, rewards[6].p.address],
-            delegatorTotalStakes: [bn(rewards[5].amount), bn(rewards[6].amount)]
-        })
     });
 
     it("VoteOut: does not count delegators voting - because they don't have effective governance stake", async () => {
@@ -799,9 +775,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.guardianVotedOutEvent({
             guardian: votedOutGuardian.address
         });
-        expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
-            addrs: []
-        });
+        await expectCommittee(d, {addrs: []});
 
         await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}), /caller is voted-out/);
         await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}), /caller is voted-out/);
@@ -848,7 +822,7 @@ describe('elections-high-level-flows', async () => {
         expect(await d.elections.getMinSelfStakePercentMille()).to.bignumber.eq(minSelfStakePercentMille.add(bn(1)));
         expect(await d.elections.getVoteUnreadyPercentMilleThreshold()).to.bignumber.eq(voteUnreadyPercentMilleThreshold.add(bn(1)));
         expect(await d.elections.getVoteOutPercentMilleThreshold()).to.bignumber.eq(voteOutPercentMilleThreshold.add(bn(1)));
-    })
+    });
 
     it("reverts if casting a vote-unready with expiration in the past", async () => {
         const d = await Driver.new();
