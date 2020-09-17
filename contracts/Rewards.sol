@@ -6,20 +6,28 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
-import "./ContractRegistryAccessor.sol";
-import "./Erc20AccessorWithTokenGranularity.sol";
 import "./spec_interfaces/IFeesWallet.sol";
-import "./Lockable.sol";
+import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IDelegation.sol";
 import "./ManagedContract.sol";
 import "./SafeMath48.sol";
 
-contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract {
+contract Rewards is IRewards, ManagedContract {
     using SafeMath for uint256;
     using SafeMath for uint96;
     using SafeMath48 for uint48;
+
+    uint constant TOKEN_GRANULARITY = 1000000000000000;
+
+    function toUint48Granularity(uint256 v) internal pure returns (uint48) {
+        return uint48(v / TOKEN_GRANULARITY);
+    }
+
+    function toUint256Granularity(uint48 v) internal pure returns (uint256) {
+        return uint256(v) * TOKEN_GRANULARITY;
+    }
 
     struct Settings {
         uint48 generalCommitteeAnnualBootstrap;
@@ -450,11 +458,11 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     function withdrawBootstrapFunds(address guardian) external override {
         updateGuardianFeesAndBootstrap(guardian);
-        uint48 amount = feesAndBootstrap[guardian].bootstrapBalance;
+        uint256 amount = toUint256Granularity(feesAndBootstrap[guardian].bootstrapBalance);
         feesAndBootstrap[guardian].bootstrapBalance = 0;
-        emit BootstrapRewardsWithdrawn(guardian, toUint256Granularity(amount));
+        emit BootstrapRewardsWithdrawn(guardian, amount);
 
-        require(transfer(bootstrapToken, guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
+        require(bootstrapToken.transfer(guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
     // staking rewards
@@ -509,10 +517,10 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     function withdrawFees(address guardian) external override {
         updateGuardianFeesAndBootstrap(guardian);
 
-        uint48 amount = feesAndBootstrap[guardian].feeBalance;
+        uint256 amount = toUint256Granularity(feesAndBootstrap[guardian].feeBalance);
         feesAndBootstrap[guardian].feeBalance = 0;
-        emit FeesWithdrawn(guardian, toUint256Granularity(amount));
-        require(transfer(erc20, guardian, amount), "Rewards::withdrawFees - insufficient funds");
+        emit FeesWithdrawn(guardian, amount);
+        require(erc20.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
     }
 
     function claimStakingRewards(address addr) external override {
@@ -643,20 +651,16 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
      * Contracts topology / registry interface
      */
 
-    IElections electionsContract;
     ICommittee committeeContract;
     IDelegations delegationsContract;
-    IGuardiansRegistration guardianRegistrationContract;
     IFeesWallet generalFeesWallet;
     IFeesWallet certifiedFeesWallet;
     IProtocolWallet stakingRewardsWallet;
     IProtocolWallet bootstrapRewardsWallet;
     IStakingContract stakingContract;
     function refreshContracts() external override {
-        electionsContract = IElections(getElectionsContract());
         committeeContract = ICommittee(getCommitteeContract());
         delegationsContract = IDelegations(getDelegationsContract());
-        guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
         certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
         stakingRewardsWallet = IProtocolWallet(getStakingRewardsWallet());
