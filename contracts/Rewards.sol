@@ -69,7 +69,6 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint48 balance;
         uint96 lastDelegatorRewardsPerToken;
     }
-
     mapping(address => DelegatorStakingRewards) public delegatorsStakingRewards;
 
     // TODO fit one state entry?
@@ -148,7 +147,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
                 .sub(uint256(guardianStakingRewards.lastStakingRewardsPerWeight))
                 .mul(guardianWeight);
 
-            uint256 delegatorRewardsRatioPercentMille = getGuardianDelegatorStakingRewardsPercentMille(guardian, _settings);
+            uint256 delegatorRewardsRatioPercentMille = _getGuardianDelegatorsStakingRewardsPercentMille(guardian, _settings);
 
             uint256 delegatorRewardsPerTokenDelta = guardianDelegatedStake == 0 ? 0 : totalRewards
                 .div(guardianDelegatedStake)
@@ -233,9 +232,13 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         _updateDelegatorStakingRewards(delegator, delegatorStake, guardianRewards);
     }
 
-    function getGuardianDelegatorStakingRewardsPercentMille(address guardian, Settings memory _settings) private view returns (uint256 delegatorRewardsRatioPercentMille) {
+    function _getGuardianDelegatorsStakingRewardsPercentMille(address guardian, Settings memory _settings) private view returns (uint256 delegatorRewardsRatioPercentMille) {
         GuardianRewardSettings memory guardianSettings = guardiansRewardSettings[guardian];
         return guardianSettings.overrideDefault ? guardianSettings.delegatorsStakingRewardsPercentMille : _settings.defaultDelegatorsStakingRewardsPercentMille;
+    }
+
+    function getGuardianDelegatorsStakingRewardsPercentMille(address guardian) external override view returns (uint256 delegatorRewardsRatioPercentMille) {
+        return _getGuardianDelegatorsStakingRewardsPercentMille(guardian, settings);
     }
 
     //
@@ -365,7 +368,9 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         uint certifiedCommitteeAnnualBootstrap,
         uint annualRateInPercentMille,
         uint annualCap,
-        uint32 defaultDelegatorsStakingRewardsPercentMille
+        uint32 defaultDelegatorsStakingRewardsPercentMille,
+        IRewards previousRewardsContract,
+        address[] memory guardiansToMigrate
     ) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
         require(address(_erc20) != address(0), "erc20 must not be 0");
@@ -377,6 +382,16 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
+
+        if (address(previousRewardsContract) != address(0)) {
+            migrateGuardiansSettings(previousRewardsContract, guardiansToMigrate);
+        }
+    }
+
+    function migrateGuardiansSettings(IRewards previousRewardsContract, address[] memory guardiansToMigrate) private {
+        for (uint i = 0; i < guardiansToMigrate.length; i++) {
+            _setGuardianDelegatorsStakingRewardsPercentMille(guardiansToMigrate[i], uint32(previousRewardsContract.getGuardianDelegatorsStakingRewardsPercentMille(guardiansToMigrate[i])));
+        }
     }
 
     // bootstrap rewards
@@ -456,17 +471,19 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         return _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
     }
 
-    function setGuardianDelegatorsRewardsRatio(uint32 delegatorsRewardRatioPercentMille) external {
-        require(delegatorsRewardRatioPercentMille <= 100000, "delegatorsRewardRatioPercentMille must be 100000 at most");
-
+    function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external {
+        require(delegatorRewardsPercentMille <= 100000, "delegatorRewardsPercentMille must be 100000 at most");
         updateDelegatorStakingRewards(msg.sender);
+        _setGuardianDelegatorsStakingRewardsPercentMille(msg.sender, delegatorRewardsPercentMille);
+    }
 
-        guardiansRewardSettings[msg.sender] = GuardianRewardSettings({
+    function _setGuardianDelegatorsStakingRewardsPercentMille(address guardian, uint32 delegatorRewardsPercentMille) private {
+        guardiansRewardSettings[guardian] = GuardianRewardSettings({
             overrideDefault: true,
-            delegatorsStakingRewardsPercentMille: delegatorsRewardRatioPercentMille
+            delegatorsStakingRewardsPercentMille: delegatorRewardsPercentMille
         });
 
-        // TODO event
+        emit GuardianDelegatorsStakingRewardsPercentMilleUpdated(guardian, delegatorRewardsPercentMille);
     }
 
     function getStakingRewardsBalance(address addr) external override view returns (uint256) {
@@ -593,6 +610,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function deactivate() external override onlyMigrationManager {
+//        require(settings.active, "rewrad distribution is already deactivated");
+
         updateFeesAndBootstrapState();
         updateStakingRewardsState();
 

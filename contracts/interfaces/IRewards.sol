@@ -27,9 +27,12 @@ interface IRewards {
     event StakingRewardsClaimed(address addr, uint256 amount);
     event StakingRewardAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
     event GuardianStakingRewardsAssigned(address guardian, uint256 amount, uint256 delegatorRewardsPerToken);
+    event GuardianDelegatorsStakingRewardsPercentMilleUpdated(address guardian, uint256 delegatorsStakingRewardsPercentMille);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
     function getStakingRewardsBalance(address addr) external view returns (uint256 balance);
+
+    function getGuardianDelegatorsStakingRewardsPercentMille(address guardian) external view returns (uint256 delegatorRewardsRatioPercentMille);
 
     // Staking Parameters Governance 
     event DefaultDelegatorsStakingRewardsChanged(uint32 defaultDelegatorsStakingRewardsPercentMille);

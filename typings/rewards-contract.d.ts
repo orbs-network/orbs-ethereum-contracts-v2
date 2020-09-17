@@ -79,6 +79,11 @@ export interface RewardDistributionActivatedEvent {
     startTime: number|BN
 }
 
+export interface GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent {
+    guardian: string,
+    delegatorsStakingRewardsPercentMille: number|BN
+}
+
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>; // TODO remove
     deactivate(params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -88,10 +93,12 @@ export interface RewardsContract extends OwnedContract {
     claimStakingRewards(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     setAnnualStakingRewardsRate(annual_rate_in_percent_mille: number | BN, annual_cap: number | BN,  params?: TransactionConfig): Promise<TransactionReceipt>;
     setDefaultDelegatorsStakingRewardsPercentMille(defaultDelegatorsStakingRewardsPercentMille: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    setGuardianDelegatorsStakingRewardsPercentMille(delegatorsStakingRewardsPercentMille: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardsBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;
     migrateRewardsBalance(addr: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
     acceptRewardsBalanceMigration(addr: string, guardianAmount: number|BN, delegatorAmount: number|BN, fees: number|BN, bootstrap: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    getGuardianDelegatorsStakingRewardsPercentMille(guardian: string): Promise<string|BN>;
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;

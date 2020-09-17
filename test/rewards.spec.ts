@@ -50,7 +50,7 @@ const DELEGATOR_REWARDS_PERCENT_MILLE = bn(67000);
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
-async function fullCommittee(stakes?: BN[] | null, numVCs=5, opts?: {
+async function fullCommittee(stakes?: BN[] | null, numVCs=2, opts?: {
     stakingRewardsAnnualRate?: BN,
     stakingRewardsAnnualCap?: BN,
     minSelfStakePercentMille?: BN
@@ -153,7 +153,7 @@ async function stakingRewardsForDuration(d: Driver, duration: number, delegator:
     const totalWeight = bn(memberInfo.totalCommitteeWeight)
 
     const cap = bn(await d.rewards.getAnnualStakingRewardsCap());
-    const ratio = bn(await d.rewards.getDefaultDelegatorsStakingRewardsPercentMille());
+    const ratio = bn(await d.rewards.getGuardianDelegatorsStakingRewardsPercentMille(guardian.address));
     const rate = bn(await d.rewards.getAnnualStakingRewardsRatePercentMille());
 
     const actualRate = BN.min(totalWeight.mul(rate).div(bn(100000)), cap).mul(bn(100000)).div(totalWeight);
@@ -268,10 +268,7 @@ describe('rewards', async () => {
         expectApproxEq(c0AssignedFees, generalFeesForDuration(DURATION / 2, MAX_COMMITTEE))
 
         const c0BootstrapBalance = await d.bootstrapToken.balanceOf(committee[0].address);
-        console.log('withdrawing', await d.rewards.getBootstrapBalance(committee[0].address));
-        console.log('before', await d.bootstrapToken.balanceOf(d.rewards.address));
         r = await d.rewards.withdrawBootstrapFunds(committee[0].address);
-        console.log('after', await d.bootstrapToken.balanceOf(d.rewards.address));
         expect(r).to.have.a.bootstrapRewardsAssignedEvent({});
         const c0AssignedBootstrap = bn(await d.bootstrapToken.balanceOf(committee[0].address)).sub(bn(c0BootstrapBalance));
         expectApproxEq(c0AssignedBootstrap, generalBootstrapForDuration(DURATION / 2));
@@ -282,7 +279,6 @@ describe('rewards', async () => {
         expectApproxEq(c1AssignedFees, generalFeesForDuration(DURATION / 2, MAX_COMMITTEE).add(generalFeesForDuration(DURATION / 2, MAX_COMMITTEE - 1)));
 
         const c1BootstrapBalance = await d.bootstrapToken.balanceOf(committee[1].address);
-        console.log('withdrawing', await d.rewards.getBootstrapBalance(committee[1].address));
         await d.rewards.withdrawBootstrapFunds(committee[1].address);
         const c1AssignedBootstrap = bn(await d.bootstrapToken.balanceOf(committee[1].address)).sub(bn(c1BootstrapBalance));
         expectApproxEq(c1AssignedBootstrap, generalBootstrapForDuration(DURATION));
@@ -701,7 +697,9 @@ describe('rewards', async () => {
           defaultDriverOptions.certifiedCommitteeAnnualBootstrap,
           defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
           defaultDriverOptions.stakingRewardsAnnualCap,
-          defaultDriverOptions.defaultDelegatorsStakingRewardsPercentMille
+          defaultDriverOptions.defaultDelegatorsStakingRewardsPercentMille,
+          ZERO_ADDR,
+          []
         ], null, d.session);
         await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
@@ -766,4 +764,137 @@ describe('rewards', async () => {
 
     });
 
+    it("updates guardian delegator rewards ratio", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const d0 = d.newParticipant();
+        await d0.stake(fromTokenUnits(1000));
+        const c0 = committee[0];
+        await d0.delegate(c0);
+
+        const PERIOD = MONTH_IN_SECONDS*2;
+
+        let cTotal = bn(0);
+        let dTotal = bn(0);
+
+        const checkAndUpdate = async (updater?: ()=>Promise<void>) => {
+            expectApproxEq(await d.rewards.getStakingRewardsBalance(c0.address), cTotal);
+            expectApproxEq(await d.rewards.getStakingRewardsBalance(d0.address), dTotal);
+
+            if (updater) {
+                await updater();
+            }
+            await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+            cTotal = cTotal.add((await stakingRewardsForDuration(d, PERIOD, c0, c0)).guardianRewards);
+            expectApproxEq(await d.rewards.getStakingRewardsBalance(c0.address), cTotal);
+
+            dTotal = dTotal.add((await stakingRewardsForDuration(d, PERIOD, d0, c0)).delegatorRewards);
+            expectApproxEq(await d.rewards.getStakingRewardsBalance(d0.address), dTotal);
+        }
+
+        await checkAndUpdate();
+
+        await checkAndUpdate(async () => {
+            let r = await d.rewards.setGuardianDelegatorsStakingRewardsPercentMille(bn(100000).sub(DELEGATOR_REWARDS_PERCENT_MILLE), {from: c0.address});
+            expect(r).to.have.a.guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent({
+                guardian: c0.address,
+                delegatorsStakingRewardsPercentMille: bn(100000).sub(DELEGATOR_REWARDS_PERCENT_MILLE)
+            });
+        });
+
+        // Claim entire amount
+        let r = await d.rewards.claimStakingRewards(c0.address);
+        expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
+            addr: c0.address,
+            amount: cTotal
+        });
+
+        r = await d.rewards.claimStakingRewards(d0.address);
+        expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
+            addr: d0.address,
+            amount: dTotal
+        });
+
+        expect(cTotal).to.be.bignumber.gt(bn(0));
+        expect(dTotal).to.be.bignumber.gt(bn(0));
+    });
+
+    it("does not update rewards when deactivated", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0StakingBefore = bn(await d.rewards.getStakingRewardsBalance(committee[0].address));
+        const c0BootstrapBefore = bn(await d.rewards.getBootstrapBalance(committee[0].address));
+        const c0FeesBefore = bn(await d.rewards.getFeeBalance(committee[0].address));
+
+        expect(c0StakingBefore).to.be.bignumber.gt(bn(0));
+        expect(c0BootstrapBefore).to.be.bignumber.gt(bn(0));
+        expect(c0FeesBefore).to.be.bignumber.gt(bn(0));
+
+        let r = await d.rewards.deactivate({from: d.migrationManager.address});
+        expect(r).to.have.a.rewardDistributionDeactivatedEvent();
+        const deactivationTime = await d.web3.txTimestamp(r);
+
+        const c0StakingAfter = bn(await d.rewards.getStakingRewardsBalance(committee[0].address));
+        const c0BootstrapAfter = bn(await d.rewards.getBootstrapBalance(committee[0].address));
+        const c0FeesAfter = bn(await d.rewards.getFeeBalance(committee[0].address));
+
+        expectApproxEq(c0StakingBefore, c0StakingAfter);
+        expectApproxEq(c0BootstrapBefore, c0BootstrapAfter);
+        expectApproxEq(c0FeesBefore, c0FeesAfter);
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        expect(await d.rewards.getStakingRewardsBalance(committee[0].address)).to.be.bignumber.eq(c0StakingAfter);
+        expect(await d.rewards.getBootstrapBalance(committee[0].address)).to.be.bignumber.eq(c0BootstrapAfter);
+        expect(await d.rewards.getFeeBalance(committee[0].address)).to.be.bignumber.eq(c0FeesAfter);
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        expect(await d.rewards.getStakingRewardsBalance(committee[0].address)).to.be.bignumber.eq(c0StakingAfter);
+        expect(await d.rewards.getBootstrapBalance(committee[0].address)).to.be.bignumber.eq(c0BootstrapAfter);
+        expect(await d.rewards.getFeeBalance(committee[0].address)).to.be.bignumber.eq(c0FeesAfter);
+
+        r = await d.rewards.activate(deactivationTime, {from: d.migrationManager.address});
+        expect(r).to.have.a.rewardDistributionActivatedEvent();
+
+        expectApproxEq(await d.rewards.getStakingRewardsBalance(committee[0].address), c0StakingAfter.mul(bn(3)));
+        expectApproxEq(await d.rewards.getBootstrapBalance(committee[0].address), c0BootstrapAfter.mul(bn(3)));
+        expectApproxEq(await d.rewards.getFeeBalance(committee[0].address), c0FeesAfter.mul(bn(3)));
+    });
+
+    it("migrates guardian settings from previous contract", async () => {
+        const d = await Driver.new();
+
+        const guardians = _.range(4).map(() => d.newParticipant());
+        const ratios = [bn(1000), bn(2000), bn(3000), bn(4000)];
+        for (const [guardian, ratio] of _.zip(guardians, ratios)) {
+            await d.rewards.setGuardianDelegatorsStakingRewardsPercentMille(ratio, {from: (guardian as Participant).address});
+        }
+
+        const newRewardsContract = await d.web3.deploy('Rewards', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address, d.bootstrapToken.address,
+            defaultDriverOptions.generalCommitteeAnnualBootstrap,
+            defaultDriverOptions.certifiedCommitteeAnnualBootstrap,
+            defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
+            defaultDriverOptions.stakingRewardsAnnualCap,
+            defaultDriverOptions.defaultDelegatorsStakingRewardsPercentMille,
+            d.rewards.address,
+            guardians.map(g => g.address)
+        ], null, d.session);
+
+        const creationTx = await newRewardsContract.getCreationTx();
+        for (const [g, ratio] of _.zip(guardians, ratios)) {
+            const guardian = g as Participant;
+            expect(creationTx).to.have.a.guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent({
+                guardian: guardian.address,
+                delegatorsStakingRewardsPercentMille: ratio
+            });
+            expect(await newRewardsContract.getGuardianDelegatorsStakingRewardsPercentMille(guardian.address)).to.bignumber.eq(ratio);
+        }
+
+    });
 });

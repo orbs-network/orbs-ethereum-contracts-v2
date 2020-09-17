@@ -47,7 +47,7 @@ import {
   RewardsBalanceMigrationAcceptedEvent,
   StakingRewardsClaimedEvent,
   RewardDistributionDeactivatedEvent,
-  RewardDistributionActivatedEvent
+  RewardDistributionActivatedEvent, GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent
 } from "../typings/rewards-contract";
 import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
@@ -302,6 +302,7 @@ declare global {
       stakingRewardsClaimedEvent(data?: Partial<StakingRewardsClaimedEvent>);
       rewardDistributionDeactivatedEvent(data?: Partial<RewardDistributionDeactivatedEvent>);
       rewardDistributionActivatedEvent(data?: Partial<RewardDistributionActivatedEvent>);
+      guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent(data?: Partial<GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent>);
 
       withinContract(contract: Contract): Assertion;
       approx(): Assertion;

@@ -238,7 +238,9 @@ export class Driver {
                 certifiedCommitteeAnnualBootstrap,
                 stakingRewardsAnnualRateInPercentMille,
                 stakingRewardsAnnualCap,
-                defaultDelegatorsStakingRewardsPercentMille
+                defaultDelegatorsStakingRewardsPercentMille,
+                ZERO_ADDR,
+                []
             ], null, session);
 
         const elections = options.electionsAddress ?
