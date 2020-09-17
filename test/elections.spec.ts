@@ -153,6 +153,9 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await d.delegateMoreStake(stake500, guardianStaked100);
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+
+        r = await guardianStaked100.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [guardianStaked100.address, guardianStaked200.address],
             weights: [stake100.add(stake500), stake500]
@@ -169,7 +172,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         // The bottom guardian in the topology delegates more stake and switches places with the second to last
-        r = await d.delegateMoreStake(201, inTopologyGuardian);
+        await d.delegateMoreStake(201, inTopologyGuardian);
 
         // A new guardian registers and stakes but does not enter the topology
         const outOfTopologyGuardian = d.newParticipant();
@@ -183,8 +186,8 @@ describe('elections-high-level-flows', async () => {
         // A new guardian stakes enough to get to the top
         const guardian = d.newParticipant();
         await guardian.registerAsGuardian();
-        await guardian.readyForCommittee();
-        r = await guardian.stake(stake1000); // now top of committee
+        await guardian.stake(stake1000); // now top of committee
+        r = await guardian.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [guardian.address, guardianStaked100.address],
             weights: [stake1000, stake100.add(stake500)]
@@ -491,10 +494,9 @@ describe('elections-high-level-flows', async () => {
             addr: v.address,
             effective_stake: bn(0),
         });
-        expect((await d.committee.getCommittee())[0].length).to.eq(0);
     });
 
-    it('ensures guardian who delegated cannot join committee even when owning enough stake', async () => {
+    it('ensures guardian who delegated has zero effective stakew', async () => {
         const d = await Driver.new();
         const v1 = d.newParticipant();
         const v2 = d.newParticipant();
@@ -502,15 +504,10 @@ describe('elections-high-level-flows', async () => {
         await v1.delegate(v2);
         await v1.stake(baseStake);
         await v1.registerAsGuardian();
-        await v1.readyForCommittee();
-
-        await v2.registerAsGuardian();
-        await v2.readyForCommittee();
-        let r = await v2.stake(baseStake);
-
-        // Make sure v1 does not enter the committee
+        let r = await v1.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
-            addrs: [v2.address],
+            addrs: [v1.address],
+            weights: [bn(0)]
         });
     });
 
@@ -540,7 +537,7 @@ describe('elections-high-level-flows', async () => {
             addrs: [v.address]
         });
 
-        r = await v.unstake(baseStake);
+        r = await v.unregisterAsGuardian();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: []
         });

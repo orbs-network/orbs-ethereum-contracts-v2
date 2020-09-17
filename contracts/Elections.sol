@@ -67,7 +67,7 @@ contract Elections is IElections, ManagedContract {
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external override {
-		committeeContract.memberCertificationChange(addr, isCertified);
+		committeeContract.memberChange(addr, getCommitteeEffectiveStake(addr, settings), isCertified);
 	}
 
 	function requireNotVotedOut(address addr) private view {
@@ -244,7 +244,7 @@ contract Elections is IElections, ManagedContract {
 		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
 
-		committeeContract.memberWeightChange(addr, effectiveStake);
+		committeeContract.memberChange(addr, effectiveStake, certificationContract.isGuardianCertified(addr));
 	}
 
 	function getEffectiveStake(address addr) external override view returns (uint effectiveStake) {
@@ -261,10 +261,6 @@ contract Elections is IElections, ManagedContract {
 
 	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
 		return getCommitteeEffectiveStake(stakingContract.getStakeBalanceOf(v), delegationsContract.getDelegatedStakes(v), _settings);
-	}
-
-	function removeMemberFromCommittees(address addr) private {
-		committeeContract.removeMember(addr);
 	}
 
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public override onlyFunctionalManager {

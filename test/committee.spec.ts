@@ -171,6 +171,9 @@ describe('committee', async () => {
         expect(r).to.not.have.a.committeeSnapshotEvent();
 
         r = await v.stake(stake*10);
+        expect(r).to.not.have.a.committeeSnapshotEvent();
+
+        r = await v.readyForCommittee();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs: [v].concat(committee.slice(1)).map(s => s.address),
         });
@@ -202,7 +205,6 @@ describe('committee', async () => {
         await v.readyToSync();
         let r = await v.stake(stake);
         expect(r).to.not.have.a.committeeSnapshotEvent();
-
     });
 
     it('returns committee using getters', async () => {
@@ -211,47 +213,57 @@ describe('committee', async () => {
 
         const stake = 100;
 
-        const committee: Participant[] = [];
-        for (let i = 0; i < maxCommitteeSize; i++) {
-            const v = await d.newParticipant();
-            committee.push(v);
+        const committee: any[] = [];
 
+        for (let i = 0; i < maxCommitteeSize; i++) {
+            const curStake = stake*(maxCommitteeSize - i);
+            const certified = i % 2 == 0;
+
+            const v = await d.newParticipant();
             await v.registerAsGuardian();
-            await v.stake(stake*(maxCommitteeSize - i));
-            if (i % 2 == 0) {
+            await v.stake(curStake);
+            if (certified) {
                 await v.becomeCertified();
             }
+            committee.push({
+                v,
+                stake: curStake,
+                certified
+            });
+
             let r = await v.readyForCommittee();
             expect(r).to.have.a.committeeSnapshotEvent({
-                addrs: committee.map(s => s.address),
+                addrs: committee.map(({v}) => v.address),
             });
         }
 
         let r: any = await d.committee.getCommittee();
         expect([r[0], r[1]]).to.deep.equal(
             [
-                committee.map(v => v.address),
-                committee.map((v, i) => (stake * (maxCommitteeSize - i)).toString()),
+                committee.map(({v}) => v.address),
+                committee.map(({stake}) => stake.toString()),
             ]
         );
 
         r = await d.committee.getCommitteeInfo();
         expect([r[0], r[1], r[2], r[3], r[4]]).to.deep.equal(
             [
-                committee.map(v => v.address),
-                committee.map((v, i) => (stake * (maxCommitteeSize - i)).toString()),
-                committee.map(v => v.orbsAddress),
-                committee.map((v, i) => i % 2 == 0),
-                committee.map(v => v.ip),
+                committee.map(({v}) => v.address),
+                committee.map(({stake}) => stake.toString()),
+                committee.map(({v}) => v.orbsAddress),
+                committee.map(({certified}) => certified),
+                committee.map(({v}) => v.ip),
             ]
         );
 
         // have a middle committee member leave
-        await committee[1].unregisterAsGuardian();
+        await committee[1].v.unregisterAsGuardian();
         committee.splice(1,1);
 
+        [committee[1], committee[2]] = [committee[2], committee[1]]; // TODO order is incidental but consistent, better matchers can be used
+
         r = await d.committee.getCommittee();
-        expect(r[0]).to.deep.equal(committee.map(v => v.address));
+        expect(r[0]).to.deep.equal(committee.map(({v}) => v.address));
     });
 
     it('emit committeeChanged when committee member change certification', async () => {
@@ -352,11 +364,9 @@ describe('committee', async () => {
         expect(await d.committee.getMaxTimeBetweenRewardAssignments()).to.bignumber.eq(maxTimeBetweenRewardAssignments.add(bn(1)))
     });
 
-    it("validates 0 < maxCommitteeSize <= 32", async () => {
+    it("validates 0 < maxCommitteeSize", async () => {
        const d = await Driver.new();
 
-       await d.committee.setMaxCommitteeSize(32, {from: d.functionalManager.address});
-       await expectRejected(d.committee.setMaxCommitteeSize(33, {from: d.functionalManager.address}), /maxCommitteeSize must be 32 at most/);
        await expectRejected(d.committee.setMaxCommitteeSize(0, {from: d.functionalManager.address}), /maxCommitteeSize must be larger than 0/);
     });
 
@@ -365,21 +375,10 @@ describe('committee', async () => {
 
         const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
         const notElections = d.newParticipant().address;
-        const elections = d.newParticipant().address;
-        await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
-
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}), /caller is not the elections/);
-        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
-
-        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: notElections}), /caller is not the elections/);
-        await d.committee.memberCertificationChange(v.address,true,  {from: elections});
-
+        await expectRejected(d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: notElections}), /caller is not the elections/);
         const v2 = d.newParticipant();
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}), /caller is not the elections/);
-        await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
-
         await expectRejected(d.committee.removeMember(v2.address, {from: notElections}), /caller is not the elections/);
-        await d.committee.removeMember(v2.address, {from: elections});
     });
 
     it("allows committee methods to be called only when active", async () => {
@@ -393,44 +392,41 @@ describe('committee', async () => {
 
         await d.committee.lock({from: d.registryAdmin.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}), /contract is locked for this operation/);
-        await expectRejected(d.committee.memberCertificationChange(v.address,true, {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.removeMember(v2.address, {from: elections}), /contract is locked for this operation/);
 
         await d.committee.unlock({from: d.registryAdmin.address});
 
-        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
-        await d.committee.memberCertificationChange(v.address,true,  {from: elections});
+        await d.committee.memberChange(v.address, fromTokenUnits(1), true, {from: elections});
         await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
         await d.committee.removeMember(v2.address, {from: elections});
 
     });
 
-    it("validate constructor arguments (0 < maxCommitteeSize <= 32)", async () => {
+    it("validate constructor arguments (0 < maxCommitteeSize)", async () => {
         const d = await Driver.new();
 
         await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.registryAdmin.address, 0, 1]), /maxCommitteeSize must be larger than 0/);
-        await expectRejected(d.web3.deploy('Committee', [d.contractRegistry.address, d.registryAdmin.address, 33, 1]), /maxCommitteeSize must be 32 at most/);
         await d.web3.deploy('Committee', [d.contractRegistry.address, d.registryAdmin.address, 1, 1]);
     });
 
-    it("validates weight is within range - less than 2^96", async () => {
-        const d = await Driver.new();
-
-        const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
-
-        const elections = d.newParticipant().address;
-        await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
-
-        await expectRejected(d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)), {from: elections}), /weight is out of range/);
-        await d.committee.memberWeightChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), {from: elections});
-
-        const v2 = await d.newParticipant();
-
-        await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(96)), true, {from: elections}), /weight is out of range/);
-        await d.committee.addMember(v2.address, bn(2).pow(bn(96)).sub(bn(1)), true, {from: elections});
-    });
+    // it("validates weight is within range - less than 2^96", async () => {
+    //     const d = await Driver.new();
+    //
+    //     const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
+    //
+    //     const elections = d.newParticipant().address;
+    //     await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
+    //
+    //     await expectRejected(d.committee.memberChange(v.address, bn(2).pow(bn(96)), true, {from: elections}), /weight is out of range/);
+    //     await d.committee.memberChange(v.address, bn(2).pow(bn(96)).sub(bn(1)), true, {from: elections});
+    //
+    //     const v2 = await d.newParticipant();
+    //
+    //     await expectRejected(d.committee.addMember(v2.address, bn(2).pow(bn(96)), true, {from: elections}), /weight is out of range/);
+    //     await d.committee.addMember(v2.address, bn(2).pow(bn(96)).sub(bn(1)), true, {from: elections});
+    // });
 
     it("handles notifications for unregistered guardians", async () => {
         const d = await Driver.new();
@@ -440,10 +436,7 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
-        let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
-
-        r = await d.committee.memberCertificationChange(nonRegistered.address, true, {from: elections});
+        let r = await d.committee.memberChange(nonRegistered.address, fromTokenUnits(1), true,{from: elections});
         expect(r).to.not.have.a.committeeSnapshotEvent();
     });
 
