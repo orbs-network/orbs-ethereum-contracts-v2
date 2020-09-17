@@ -113,15 +113,15 @@ interface IRewards {
      * Migration
      */
 
-    event StakingRewardsBalanceMigrated(address from, uint256 delegatorBalance, uint256 guardianBalance, address toRewardsContract);
-    event StakingRewardsMigrationAccepted(address from, address migrator, address to, uint256 delegatorBalance, uint256 guardianBalance);
+    event RewardsBalanceMigrated(address from, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrapRewards, address toRewardsContract);
+    event RewardsBalanceMigrationAccepted(address from, address to, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrapRewards);
     event EmergencyWithdrawal(address addr);
 
     /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
-    function migrateStakingRewardsBalance(address guardian) external;
+    function migrateRewardsBalance(address guardian) external;
 
     /// @dev accepts guardian's balance migration from a previous rewards contarct.
-    function acceptStakingRewardsMigration(address guardian, uint256 delegatorBalance, uint256 guardianBalance) external;
+    function acceptRewardsBalanceMigration(address guardian, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrapRewards) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
     function emergencyWithdraw() external /* onlyMigrationManager */; // TODO change to EmergencyManager.

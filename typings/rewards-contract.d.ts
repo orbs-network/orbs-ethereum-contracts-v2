@@ -37,18 +37,22 @@ export interface DefaultDelegatorsStakingRewardsChangedEvent {
     delegatorsStakingRewardsPercentMille: string|BN
 }
 
-export interface StakingRewardsBalanceMigratedEvent {
+export interface RewardsBalanceMigratedEvent {
     from: string;
-    delegatorBalance: number|BN;
-    guardianBalance: number|BN;
+    guardianStakingRewards: number|BN;
+    delegatorStakingRewards: number|BN;
+    bootstrapRewards: number|BN;
+    fees: number|BN;
     toRewardsContract: string;
 }
 
-export interface StakingRewardsMigrationAcceptedEvent {
-    migrator: string;
+export interface RewardsBalanceMigrationAcceptedEvent {
+    from: string;
     to: string;
-    delegatorBalance: number|BN;
-    guardianBalance: number|BN;
+    guardianStakingRewards: number|BN|string;
+    delegatorStakingRewards: number|BN|string;
+    bootstrapRewards: number|BN|string;
+    fees: number|BN|string;
 }
 
 export interface StakingRewardsClaimedEvent {
@@ -86,8 +90,8 @@ export interface RewardsContract extends OwnedContract {
     setDefaultDelegatorsStakingRewardsPercentMille(defaultDelegatorsStakingRewardsPercentMille: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getStakingRewardsBalance(address: string): Promise<string>;
     getLastRewardAssignmentTime(): Promise<string>;
-    migrateStakingRewardsBalance(guardian: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
-    acceptStakingRewardsMigration(guardian: string, delegatorAmount: number|BN, guardianAmount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    migrateRewardsBalance(addr: string,  params?: TransactionConfig): Promise<TransactionReceipt>;
+    acceptRewardsBalanceMigration(addr: string, guardianAmount: number|BN, delegatorAmount: number|BN, fees: number|BN, bootstrap: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // bootstrap rewards
     setGeneralCommitteeAnnualBootstrap(annual_bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;

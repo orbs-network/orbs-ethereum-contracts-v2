@@ -36,9 +36,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
     struct StakingRewardsState {
         uint96 stakingRewardsPerWeight;
+        uint96 stakingWalletAllocatedRewards;
         uint32 lastAssigned;
     }
     StakingRewardsState stakingRewardsState;
+
+    uint96 unclaimedStakingRewards;
 
     struct FeesAndBootstrapState {
         uint48 certifiedFeesPerMember;
@@ -117,6 +120,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
             _stakingRewardsState.stakingRewardsPerWeight = uint96(uint256(stakingRewardsState.stakingRewardsPerWeight).add(delta));
             _stakingRewardsState.lastAssigned = uint32(block.timestamp);
             allocatedRewards = delta.mul(totalCommitteeWeight).div(TOKEN_BASE);
+            _stakingRewardsState.stakingWalletAllocatedRewards = uint96(_stakingRewardsState.stakingWalletAllocatedRewards.add(allocatedRewards));
         }
     }
 
@@ -238,7 +242,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     // Bootstrap and fees
     //
 
-    function getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize, uint256 collectedGeneralFees, uint256 collectedCertifiedFees, Settings memory _settings) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
+    function getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize, uint256 collectedGeneralFees, uint256 collectedCertifiedFees, Settings memory _settings) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState, uint256 allocatedBootstrap) {
         _feesAndBootstrapState = feesAndBootstrapState;
 
         if (_settings.active) {
@@ -250,11 +254,13 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
             uint duration = now.sub(_feesAndBootstrapState.lastAssigned);
             uint48 generalBootstrapDelta = uint48(uint(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days));
-            uint48 certifiedBootstrapDelta = uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days));
+            uint48 certifiedBootstrapDelta = generalBootstrapDelta.add(uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days)));
 
             _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember.add(generalBootstrapDelta);
-            _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember.add(generalBootstrapDelta).add(certifiedBootstrapDelta);
+            _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember.add(certifiedBootstrapDelta);
             _feesAndBootstrapState.lastAssigned = uint32(block.timestamp);
+
+            allocatedBootstrap = toUint256Granularity(generalBootstrapDelta).mul(generalCommitteeSize).add(toUint256Granularity(certifiedBootstrapDelta).mul(certifiedCommitteeSize));
         }
     }
 
@@ -266,8 +272,10 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
         uint256 collectedGeneralFees = generalFeesWallet.collectFees();
         uint256 collectedCertifiedFees = certifiedFeesWallet.collectFees();
+        uint256 allocatedBootstrap;
 
-        _feesAndBootstrapState = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, collectedGeneralFees, collectedCertifiedFees, _settings);
+        (_feesAndBootstrapState, allocatedBootstrap) = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, collectedGeneralFees, collectedCertifiedFees, _settings);
+        bootstrapRewardsWallet.withdraw(allocatedBootstrap);
 
         feesAndBootstrapState = _feesAndBootstrapState;
     }
@@ -311,7 +319,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
         (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
-        FeesAndBootstrapState memory _feesAndBootstrapState = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees(), settings);
+        (FeesAndBootstrapState memory _feesAndBootstrapState,) = getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees(), settings);
         (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, _feesAndBootstrapState);
     }
 
@@ -429,7 +437,6 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         feesAndBootstrap[guardian].bootstrapBalance = 0;
         emit BootstrapRewardsWithdrawn(guardian, toUint256Granularity(amount));
 
-        bootstrapRewardsWallet.withdraw(toUint256Granularity(amount));
         require(transfer(bootstrapToken, guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
 
@@ -500,7 +507,12 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
         uint256 total = delegatorBalance.add(guardianBalance);
 
-        stakingRewardsWallet.withdraw(total);
+        uint96 allocated = stakingRewardsState.stakingWalletAllocatedRewards;
+        if (allocated > 0) {
+            stakingRewardsWallet.withdraw(allocated);
+            stakingRewardsState.stakingWalletAllocatedRewards = 0;
+            unclaimedStakingRewards = uint96(unclaimedStakingRewards.add(allocated).sub(total));
+        }
 
         require(erc20.approve(address(stakingContract), total), "claimStakingRewards: approve failed");
 
@@ -513,7 +525,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
         emit StakingRewardsClaimed(addr, total);
     }
 
-    function migrateStakingRewardsBalance(address addr) external override {
+    function migrateRewardsBalance(address addr) external override {
         require(!settings.active, "Reward distribution must be deactivated for migration");
 
         IRewards currentRewardsContract = IRewards(getRewardsContract());
@@ -521,27 +533,49 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
         updateDelegatorStakingRewards(addr);
 
-        uint48 guardianBalance = guardiansStakingRewards[addr].balance;
+        uint256 guardianStakingRewards = toUint256Granularity(guardiansStakingRewards[addr].balance);
         guardiansStakingRewards[addr].balance = 0;
 
-        uint48 delegatorBalance = delegatorsStakingRewards[addr].balance;
+        uint256 delegatorStakingRewards = toUint256Granularity(delegatorsStakingRewards[addr].balance);
         delegatorsStakingRewards[addr].balance = 0;
 
-        require(approve(erc20, address(currentRewardsContract), delegatorBalance.add(guardianBalance)), "migrateStakingBalance: approve failed");
-        currentRewardsContract.acceptStakingRewardsMigration(addr, toUint256Granularity(delegatorBalance), toUint256Granularity(guardianBalance));
+        uint96 allocated = stakingRewardsState.stakingWalletAllocatedRewards;
+        if (allocated > 0) {
+            stakingRewardsWallet.withdraw(allocated);
+            stakingRewardsState.stakingWalletAllocatedRewards = 0;
+            unclaimedStakingRewards = uint96(unclaimedStakingRewards.add(allocated).sub(guardianStakingRewards).sub(delegatorStakingRewards));
+        }
 
-        emit StakingRewardsBalanceMigrated(addr, toUint256Granularity(delegatorBalance), toUint256Granularity(guardianBalance), address(currentRewardsContract));
+        updateGuardianFeesAndBootstrap(addr);
+
+        FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[addr];
+        uint256 fees = toUint256Granularity(guardianFeesAndBootstrap.feeBalance);
+        uint256 bootstrap = toUint256Granularity(guardianFeesAndBootstrap.bootstrapBalance);
+
+        guardianFeesAndBootstrap.feeBalance = 0;
+        guardianFeesAndBootstrap.bootstrapBalance = 0;
+        feesAndBootstrap[addr] = guardianFeesAndBootstrap;
+
+        require(erc20.approve(address(currentRewardsContract), guardianStakingRewards.add(delegatorStakingRewards).add(fees)), "migrateRewardsBalance: approve failed");
+        require(bootstrapToken.approve(address(currentRewardsContract), bootstrap), "migrateRewardsBalance: approve failed");
+        currentRewardsContract.acceptRewardsBalanceMigration(addr, guardianStakingRewards, delegatorStakingRewards, fees, bootstrap);
+
+        emit RewardsBalanceMigrated(addr, guardianStakingRewards, delegatorStakingRewards, fees, bootstrap, address(currentRewardsContract));
     }
 
-    function acceptStakingRewardsMigration(address addr, uint256 delegatorBalance, uint256 guardianBalance) external override {
-        uint48 delegatorBalance48 = toUint48Granularity(delegatorBalance);
-        uint48 guardianBalance48 = toUint48Granularity(guardianBalance);
-        require(transferFrom(erc20, msg.sender, address(this), delegatorBalance48.add(guardianBalance48)), "acceptStakingMigration: transfer failed");
+    function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrap) external override {
+        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(toUint48Granularity(guardianStakingRewards));
+        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(toUint48Granularity(delegatorStakingRewards));
 
-        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(guardianBalance48);
-        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(delegatorBalance48);
+        FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[addr];
+        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(toUint48Granularity(fees));
+        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(toUint48Granularity(bootstrap));
+        feesAndBootstrap[addr] = guardianFeesAndBootstrap;
 
-        emit StakingRewardsMigrationAccepted(msg.sender, msg.sender, addr, delegatorBalance, guardianBalance);
+        require(erc20.transferFrom(msg.sender, address(this), guardianStakingRewards.add(delegatorStakingRewards).add(fees)), "acceptRewardBalanceMigration: transfer failed");
+        require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+
+        emit RewardsBalanceMigrationAccepted(msg.sender, addr, guardianStakingRewards, delegatorStakingRewards, fees, bootstrap);
     }
 
     function emergencyWithdraw() external override onlyMigrationManager {

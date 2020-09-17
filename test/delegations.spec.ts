@@ -147,9 +147,23 @@ describe('delegations-contract', async () => {
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
             selfDelegatedStake: bn(200),
+            delegatedStake: bn(411),
+            delegators: [p1.address],
+            delegatorTotalStakes: [bn(200)]
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p1.address,
+            selfDelegatedStake: bn(200),
+            delegatedStake: bn(611),
+            delegators: [p2.address],
+            delegatorTotalStakes: [bn(311)]
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: p1.address,
+            selfDelegatedStake: bn(200),
             delegatedStake: bn(911),
-            delegators: [p1.address, p2.address, p3.address],
-            delegatorTotalStakes: [bn(200), bn(311), bn(400)]
+            delegators: [p3.address],
+            delegatorTotalStakes: [bn(400)]
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p4.address,
@@ -158,22 +172,6 @@ describe('delegations-contract', async () => {
             delegators: [p4.address],
             delegatorTotalStakes: [bn(500)]
         });
-
-        await d.erc20.assign(d.accounts[0], 300);
-        await d.erc20.approve(d.staking.address, 300, {from: d.accounts[0]});
-        r = await d.staking.distributeRewards(
-            300,
-            [p1.address, p2.address, p3.address],
-            [100, 100, 100]
-        );
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: p1.address,
-            selfDelegatedStake: bn(300),
-            delegatedStake: bn(1211),
-            delegators: [p1.address, p2.address, p3.address],
-            delegatorTotalStakes: [bn(300), bn(411), bn(500)]
-        });
-
     });
 
     it('when delegating to another, DelegatedStakeChanged should indicate a new delegation of 0 to the previous delegate', async () => {
@@ -492,45 +490,6 @@ describe('delegations-contract', async () => {
             addr: v.address,
             delegatedStake: bn(600)
         });
-    });
-
-    it('does not notify elections on a batched stake change until stake change', async () => {
-        const d = await Driver.new();
-
-        const {v} = await d.newGuardian(100, false, false, true);
-
-        const distributer = d.newParticipant();
-        await distributer.assignAndApproveOrbs(bn(200), d.staking.address);
-
-        let r = await d.staking.distributeRewards(200, [v.address], [200], {from: distributer.address});
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
-
-        // Next notification should include the updated stake
-        r = await v.stake(300); // total delegated stake of v is now 100 + 200 + 300 = 600
-        await expectCommittee(d,  {
-            addrs: [v.address],
-            weights: [bn(600)]
-        });
-    });
-
-    it('does not notify elections on a batched stake change until refreshStakeNotification is called', async () => {
-        const d = await Driver.new();
-
-        const {v} = await d.newGuardian(100, false, false, true);
-
-        const distributer = d.newParticipant();
-        await distributer.assignAndApproveOrbs(bn(200), d.staking.address);
-
-        let r = await d.staking.distributeRewards(200, [v.address], [200], {from: distributer.address});
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
-
-        // Next notification should include the updated stake
-        r = await d.delegations.refreshStakeNotification(v.address);
-        await expectCommittee(d,  {
-            addrs: [v.address],
-            weights: [bn(300)]
-        });
-        expect(r).to.not.have.a.delegatedStakeChangedEvent();
     });
 
     it('does not fail a delegation to the same guardian', async () => {

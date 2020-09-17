@@ -43,8 +43,8 @@ import {
   GuardianStakingRewardAssignedEvent,
   DefaultDelegatorsStakingRewardsChangedEvent,
   StakingRewardAssignedEvent,
-  StakingRewardsBalanceMigratedEvent,
-  StakingRewardsMigrationAcceptedEvent,
+  RewardsBalanceMigratedEvent,
+  RewardsBalanceMigrationAcceptedEvent,
   StakingRewardsClaimedEvent,
   RewardDistributionDeactivatedEvent,
   RewardDistributionActivatedEvent
@@ -281,8 +281,8 @@ declare global {
       subscriberRemovedEvent(data?: Partial<SubscriberRemovedEvent>);
       genesisRefTimeDelayChangedEvent(data?: Partial<GenesisRefTimeDelayChangedEvent>);
       minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
-      stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
-      stakingRewardsMigrationAcceptedEvent(data?: Partial<StakingRewardsMigrationAcceptedEvent>);
+      rewardsBalanceMigratedEvent(data?: Partial<RewardsBalanceMigratedEvent>);
+      rewardsBalanceMigrationAcceptedEvent(data?: Partial<RewardsBalanceMigrationAcceptedEvent>);
       stakeChangeNotificationFailedEvent(data?: Partial<StakeChangeNotificationFailedEvent>);
       stakeChangeBatchNotificationFailedEvent(data?: Partial<StakeChangeBatchNotificationFailedEvent>);
       stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);

@@ -12,7 +12,7 @@ interface IProtocolWallet {
     event ClientSet(address client);
     event MaxAnnualRateSet(uint256 maxAnnualRate);
     event EmergencyWithdrawal(address addr);
-    event OutstandingTokensReset(uint256 outstandingTokens);
+    event OutstandingTokensReset();
 
     /// @dev Returns the address of the underlying staked token.
     /// @return IERC20 The address of the token.
@@ -21,8 +21,6 @@ interface IProtocolWallet {
     /// @dev Returns the address of the underlying staked token.
     /// @return balance uint256 the balance
     function getBalance() external view returns (uint256 balance);
-
-    function getOutstandingTokens() external view returns (uint);
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUp(uint256 amount) external;
@@ -43,5 +41,5 @@ interface IProtocolWallet {
 
     function getMaxAnnualRate() external view returns (uint256);
 
-    function setOutstandingTokens(uint _outstandingTokens) external /* onlyMigrationOwner */;
+    function resetOutstandingTokens() external /* onlyMigrationOwner */;
 }

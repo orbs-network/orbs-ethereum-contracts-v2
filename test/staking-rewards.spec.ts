@@ -827,8 +827,8 @@
 //     expect(v1balance).to.be.bignumber.greaterThan(bn(0));
 //
 //     // migrating to the same contract has no effect
-//     let r = await d.rewards.migrateStakingRewardsBalance(v1.address);
-//     expect(r).to.not.have.a.stakingRewardsMigrationAcceptedEvent();
+//     let r = await d.rewards.migrateRewardsBalance(v1.address);
+//     expect(r).to.not.have.a.stakingRewardsBalanceMigrationAcceptedEvent();
 //     expect(r).to.not.have.a.stakingRewardsBalanceMigratedEvent();
 //     expect(bn(await d.rewards.getStakingRewardBalance(v1.address))).to.bignumber.eq(v1balance);
 //
@@ -842,8 +842,8 @@
 //     await d.contractRegistry.setContract('rewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 //
 //     // migrating to the new contract
-//     r = await d.rewards.migrateStakingRewardsBalance(v1.address);
-//     expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsMigrationAcceptedEvent({
+//     r = await d.rewards.migrateRewardsBalance(v1.address);
+//     expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
 //       from: d.rewards.address,
 //       guardian: v1.address,
 //       amount: v1balance
@@ -859,8 +859,8 @@
 //     // anyone can migrate
 //     const migrator = d.newParticipant();
 //     await migrator.assignAndApproveOrbs(100, newRewardsContract.address);
-//     r = await newRewardsContract.acceptStakingRewardsMigration(v2.address, 100, {from: migrator.address});
-//     expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsMigrationAcceptedEvent({
+//     r = await newRewardsContract.acceptRewardsBalanceMigration(v2.address, 100, {from: migrator.address});
+//     expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
 //       from: migrator.address,
 //       guardian: v2.address,
 //       amount: bn(100)
