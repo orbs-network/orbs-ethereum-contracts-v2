@@ -14,7 +14,6 @@ import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 import "./ManagedContract.sol";
-import "./interfaces/IRewards.sol";
 
 
 contract Elections is IElections, ManagedContract {
@@ -61,23 +60,13 @@ contract Elections is IElections, ManagedContract {
 	/// Notifies a new guardian was unregistered
 	function guardianUnregistered(address addr) external override onlyGuardiansRegistrationContract {
 		emit GuardianStatusUpdated(addr, false, false);
-		removeFromCommittee(addr);
+		committeeContract.removeMember(addr);
 	}
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external override {
-		updateGuardianRewards(addr);
 		committeeContract.memberCertificationChange(addr, isCertified);
-	}
-
-	function updateGuardianRewards(address guardian) public override {
-		ICommittee _committeeContract = committeeContract;
-		(uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalCommitteeEffectiveStake) = _committeeContract.getCommitteeStats();
-
-		(, , uint guardianDelegatedStake) = getGuardianStakeInfo(guardian, settings);
-		(bool inCommittee, uint guardianEffectiveStake, bool prevCertified, ) = _committeeContract.getMemberInfo(guardian);
-		rewardsContract.committeeMembershipWillChange(guardian, guardianEffectiveStake, guardianDelegatedStake, totalCommitteeEffectiveStake, inCommittee, prevCertified, generalCommitteeSize, certifiedCommitteeSize);
 	}
 
 	function requireNotVotedOut(address addr) private view {
@@ -90,7 +79,9 @@ contract Elections is IElections, ManagedContract {
 
 		emit GuardianStatusUpdated(guardianAddr, true, true);
 
-		addToCommittee(guardianAddr);
+		bool isCertified = certificationContract.isGuardianCertified(guardianAddr);
+		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardianAddr, settings);
+		committeeContract.addMember(guardianAddr, effectiveStake, isCertified);
 	}
 
 	function readyToSync() external override {
@@ -99,53 +90,7 @@ contract Elections is IElections, ManagedContract {
 
 		emit GuardianStatusUpdated(guardianAddr, true, false);
 
-		removeFromCommittee(guardianAddr);
-	}
-
-	struct AddToCommitteeVars {
-		uint generalCommitteeSize;
-		uint certifiedCommitteeSize;
-		uint totalCommitteeEffectiveStake;
-		bool isCertified;
-		bool memberAdded;
-		address removedMember;
-		uint removedMemberEffectiveStake;
-		bool removedMemberCertified;
-	}
-
-	function addToCommittee(address guardian) private {
-		AddToCommitteeVars memory vars;
-
-		ICommittee _committeeContract = committeeContract;
-		vars.isCertified = certificationContract.isGuardianCertified(guardian);
-
-		(vars.generalCommitteeSize, vars.certifiedCommitteeSize, vars.totalCommitteeEffectiveStake) = _committeeContract.getCommitteeStats();
-
-		(, uint addedGuardianEffectiveStake, uint addedGuardianDelegatedStake) = getGuardianStakeInfo(guardian, settings);
-		(vars.memberAdded, vars.removedMember, vars.removedMemberEffectiveStake, vars.removedMemberCertified) = _committeeContract.addMember(guardian, addedGuardianDelegatedStake, vars.isCertified);
-		if (!vars.memberAdded) return;
-
-		if (vars.removedMember != address(0)) {
-			(,, uint removedGuardianDelegatedStake) = getGuardianStakeInfo(vars.removedMember, settings);
-			rewardsContract.committeeMembershipWillChange(vars.removedMember, vars.removedMemberEffectiveStake, removedGuardianDelegatedStake, vars.totalCommitteeEffectiveStake, true, vars.removedMemberCertified, vars.generalCommitteeSize, vars.certifiedCommitteeSize);
-
-			vars.generalCommitteeSize--;
-			if (vars.removedMemberCertified) vars.certifiedCommitteeSize--;
-			vars.totalCommitteeEffectiveStake = vars.totalCommitteeEffectiveStake.sub(vars.removedMemberEffectiveStake);
-		}
-
-		rewardsContract.committeeMembershipWillChange(guardian, addedGuardianEffectiveStake, addedGuardianDelegatedStake, vars.totalCommitteeEffectiveStake, false, vars.isCertified, vars.generalCommitteeSize, vars.certifiedCommitteeSize);
-	}
-
-	function removeFromCommittee(address guardian) private {
-		// TODO can be optimized by checking first if currently in committee
-		(uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalCommitteeEffectiveStake) = committeeContract.getCommitteeStats();
-
-		(bool memberRemoved, uint removedMemberEffectiveStake, bool removedMemberCertified) = committeeContract.removeMember(guardian);
-		if (memberRemoved) {
-			(,, uint removedGuardianDelegatedStake) = getGuardianStakeInfo(guardian, settings);
-			rewardsContract.committeeMembershipWillChange(guardian, removedMemberEffectiveStake, removedGuardianDelegatedStake, totalCommitteeEffectiveStake, true, removedMemberCertified, generalCommitteeSize, certifiedCommitteeSize);
-		}
+		committeeContract.removeMember(guardianAddr);
 	}
 
 	function clearCommitteeUnreadyVotes(address[] memory committee, address votee) private {
@@ -210,7 +155,7 @@ contract Elections is IElections, ManagedContract {
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
 			emit GuardianVotedUnready(subjectAddr);
 			emit GuardianStatusUpdated(subjectAddr, false, false);
-            removeFromCommittee(subjectAddr);
+			committeeContract.removeMember(subjectAddr);
 		}
 	}
 
@@ -280,7 +225,7 @@ contract Elections is IElections, ManagedContract {
 			emit GuardianVotedOut(subjectAddr);
 
 			emit GuardianStatusUpdated(subjectAddr, false, false);
-			removeFromCommittee(subjectAddr);
+			committeeContract.removeMember(subjectAddr);
 
 			accumulated = 0;
 		}
@@ -398,13 +343,11 @@ contract Elections is IElections, ManagedContract {
 	IDelegations delegationsContract;
 	IGuardiansRegistration guardianRegistrationContract;
 	ICertification certificationContract;
-	IRewards rewardsContract;
 	function refreshContracts() external override {
 		committeeContract = ICommittee(getCommitteeContract());
 		delegationsContract = IDelegations(getDelegationsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
 		certificationContract = ICertification(getCertificationContract());
-		rewardsContract = IRewards(getRewardsContract());
 	}
 
 }

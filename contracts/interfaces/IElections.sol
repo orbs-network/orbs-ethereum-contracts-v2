@@ -61,8 +61,6 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external /* onlyCertificationContract */;
 
-	function updateGuardianRewards(address addr) external;
-
 	/*
      * Governance
 	 */

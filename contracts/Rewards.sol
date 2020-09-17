@@ -84,8 +84,8 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
 
 	uint256 constant PERCENT_MILLIE_BASE = 100000;
 
-    modifier onlyElectionsContract() {
-        require(msg.sender == address(electionsContract), "caller is not the elections contract");
+    modifier onlyCommitteeContract() {
+        require(msg.sender == address(committeeContract), "caller is not the elections contract");
 
         _;
     }
@@ -337,7 +337,9 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     // External push notifications
     //
 
-    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 delegatedStake, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external override onlyElectionsContract {
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external override onlyCommitteeContract {
+        uint256 delegatedStake = delegationsContract.getDelegatedStake(guardian);
+
         _updateGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, generalCommitteeSize, certifiedCommitteeSize);
         Settings memory _settings = settings;
         StakingRewardsState memory _stakingRewardsState = _updateStakingRewardsState(totalCommitteeWeight, _settings);
@@ -610,7 +612,7 @@ contract Rewards is IRewards, ERC20AccessorWithTokenGranularity, ManagedContract
     }
 
     function deactivate() external override onlyMigrationManager {
-//        require(settings.active, "rewrad distribution is already deactivated");
+        require(settings.active, "reward distribution is already deactivated");
 
         updateFeesAndBootstrapState();
         updateStakingRewardsState();
