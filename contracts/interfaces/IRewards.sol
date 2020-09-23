@@ -56,6 +56,10 @@ interface IRewards {
     /// @dev Claims the staking rewards balance of addr by staking
     function claimStakingRewards(address addr) external;
 
+    function getStakingRewardsWalletAllocatedTokens() external view returns (uint256 allocated);
+
+    function getGuardianDelegatorStakingRewardsPerToken(address guardian) external view returns (uint256 stakingRewardsPerToken);
+
     /*
      * Fees
      */
@@ -68,6 +72,13 @@ interface IRewards {
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
     function withdrawFees(address guardian) external;
+
+    function getFeesAndBootstrapState() external view returns (
+        uint256 certifiedFeesPerMember,
+        uint256 generalFeesPerMember,
+        uint256 certifiedBootstrapPerMember,
+        uint256 generalBootstrapPerMember
+    );
 
     /*
      * Bootstrap
