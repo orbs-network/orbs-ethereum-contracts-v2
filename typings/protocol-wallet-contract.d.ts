@@ -30,4 +30,10 @@ export interface ProtocolWalletContract extends OwnedContract {
   setMaxAnnualRate(annualRate: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
   setClient(client: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  transferMigrationOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  claimMigrationOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
+  migrationOwner(params?: TransactionConfig): Promise<string>;
+  transferFunctionalOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  claimFunctionalOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
+  functionalOwner(params?: TransactionConfig): Promise<string>;
 }
