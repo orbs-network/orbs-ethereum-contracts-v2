@@ -37,6 +37,7 @@ export type DriverOptions = {
     stakingRewardsAnnualRateInPercentMille: number;
     stakingRewardsAnnualCap: number;
     defaultDelegatorsStakingRewardsPercentMille: number;
+    maxDelegatorsStakingRewardsPercentMille: number;
 
     stakingRewardsWalletRate: number;
     bootstrapRewardsWalletRate: number;
@@ -82,6 +83,7 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     stakingRewardsAnnualRateInPercentMille: 0,
     stakingRewardsAnnualCap: 0,
     defaultDelegatorsStakingRewardsPercentMille: 100000,
+    maxDelegatorsStakingRewardsPercentMille: 100000,
 
     minimumInitialVcPayment: 0,
 
@@ -110,6 +112,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     stakingRewardsAnnualRateInPercentMille: 12000,
     stakingRewardsAnnualCap: bn(12000).mul(bn(10).pow(bn(18))),
     defaultDelegatorsStakingRewardsPercentMille: 66667,
+    maxDelegatorsStakingRewardsPercentMille: 66667,
 
     // Protocol wallets
     stakingRewardsWalletRate: bn(12000 * 1.1).mul(bn(10).pow(bn(18))), // staking rewards for entire committee + 10%
@@ -184,6 +187,7 @@ export class Driver {
             stakingRewardsAnnualRateInPercentMille,
             stakingRewardsAnnualCap,
             defaultDelegatorsStakingRewardsPercentMille,
+            maxDelegatorsStakingRewardsPercentMille,
 
             stakingRewardsWalletRate,
             bootstrapRewardsWalletRate,
@@ -239,6 +243,7 @@ export class Driver {
                 stakingRewardsAnnualRateInPercentMille,
                 stakingRewardsAnnualCap,
                 defaultDelegatorsStakingRewardsPercentMille,
+                maxDelegatorsStakingRewardsPercentMille,
                 ZERO_ADDR,
                 []
             ], null, session);
