@@ -681,7 +681,7 @@ describe('guardian-registration', async () => {
     const v1 = d.newParticipant();
     let r = await v1.registerAsGuardian();
     const v1RegistrationTime = await d.web3.txTimestamp(r);
-    await d.guardiansRegistration.setMetadata("REWARDS_FREQUENCY_SEC", "123", {from: v1.address});
+    await d.guardiansRegistration.setMetadata("ID_FORM_URL", "123", {from: v1.address});
 
     const v2 = d.newParticipant();
     r = await v2.registerAsGuardian();
@@ -703,7 +703,7 @@ describe('guardian-registration', async () => {
       website: v1.website,
       isRegistered: true
     });
-    expect(creationTx).to.have.a.guardianMetadataChangedEvent({key: "REWARDS_FREQUENCY_SEC", newValue: "123", oldValue: ""});
+    expect(creationTx).to.have.a.guardianMetadataChangedEvent({key: "ID_FORM_URL", newValue: "123", oldValue: ""});
     expect(creationTx).to.have.a.guardianDataUpdatedEvent({
       addr: v2.address,
       orbsAddr: v2.orbsAddress,
@@ -721,7 +721,7 @@ describe('guardian-registration', async () => {
     expect(v1Data.website.toString()).to.eq(v1.website);
     expect(v1Data.registration_time.toString()).to.eq(v1RegistrationTime.toString());
     expect(v1Data.last_update_time.toString()).to.eq(v1LastUpdateTime.toString());
-    expect(await newContract.getMetadata(v1.address, "REWARDS_FREQUENCY_SEC")).to.eq("123");
+    expect(await newContract.getMetadata(v1.address, "ID_FORM_URL")).to.eq("123");
 
     const v2Data = await newContract.getGuardianData(v2.address);
 
