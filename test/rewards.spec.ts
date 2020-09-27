@@ -633,12 +633,6 @@ describe('rewards', async () => {
         };
         const d = await Driver.new(opts as any);
 
-        expect(await d.rewards.getGeneralCommitteeAnnualBootstrap()).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
-        expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
-        expect(await d.rewards.getDefaultDelegatorsStakingRewardsPercentMille()).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsRatePercentMille()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(opts.stakingRewardsAnnualCap.toString());
-
         expect((await d.rewards.getSettings()).generalCommitteeAnnualBootstrap).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).certifiedCommitteeAnnualBootstrap).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).defaultDelegatorsStakingRewardsPercentMille).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
