@@ -127,14 +127,14 @@ describe('fees-wallet-contract', async () => {
     const rate = bn(10000000);
     await d.generalFeesWallet.fillFeeBuckets(30000000, rate, now, {from: assigner.address});
 
-    await evmIncreaseTime(d.web3, 60);
+    await evmIncreaseTime(d.web3, 30);
 
     let r1 = await d.generalFeesWallet.collectFees({from: collector.address});
     let duration = await d.web3.txTimestamp(r1) - startTime;
     const expected1 = bn(duration).mul(rate).div(bn(MONTH_IN_SECONDS));
     expect(bn(await d.erc20.balanceOf(collector.address))).to.bignumber.eq(expected1);
 
-    await evmIncreaseTime(d.web3, 60*60);
+    await evmIncreaseTime(d.web3, 60*30);
 
     let r2 = await d.generalFeesWallet.collectFees({from: collector.address});
     duration = await d.web3.txTimestamp(r2) - await d.web3.txTimestamp(r1);
