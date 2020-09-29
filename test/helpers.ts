@@ -3,7 +3,7 @@ import BN from "bn.js";
 import * as _ from "lodash";
 import { Web3Driver } from "../eth";
 import {Driver} from "./driver";
-import {TransactionReceipt} from "web3-core";
+import {BlockNumber} from "web3-core";
 import chai from "chai";
 
 export const retry = (n: number, f: () => Promise<void>) => async  () => {
@@ -50,10 +50,14 @@ export function minAddress(addrs: string[]): string {
 }
 
 export async function getTopBlockTimestamp(d: Driver) : Promise<number> {
+    return getBlockTimestamp(d, "latest");
+}
+
+export async function getBlockTimestamp(d: Driver, blockHashOrBlockNumber: BlockNumber | string) : Promise<number> {
     return new Promise(
         (resolve, reject) =>
             d.web3.eth.getBlock(
-                "latest",
+                blockHashOrBlockNumber,
                 (err, block: any) =>
                     err ? reject(err): resolve(block.timestamp)
             )

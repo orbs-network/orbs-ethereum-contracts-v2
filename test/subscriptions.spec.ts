@@ -4,11 +4,15 @@ import BN from "bn.js";
 import {defaultDriverOptions, DEPLOYMENT_SUBSET_CANARY, DEPLOYMENT_SUBSET_MAIN, Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
-import {bn, expectRejected} from "./helpers";
+import {bn, expectRejected, getBlockTimestamp} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(require('./matchers'));
 
 const expect = chai.expect;
+
+async function sleep(ms): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 describe('subscriptions-high-level-flows', async () => {
 
@@ -31,7 +35,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     const genesisRefTimeDelay = await d.subscriptions.getGenesisRefTimeDelay();
     const blockNumber = new BN(r.blockNumber);
-    const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
+    const blockTimestamp = new BN(await getBlockTimestamp(d, blockNumber));
     const expectedGenRefTime = blockTimestamp.add(bn(genesisRefTimeDelay));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
@@ -93,7 +97,7 @@ describe('subscriptions-high-level-flows', async () => {
     const firstSubsc = subscriptionChangedEvents(r).pop()!;
 
     const blockNumber = new BN(r.blockNumber);
-    const blockTimestamp = new BN((await d.web3.eth.getBlock(blockNumber)).timestamp);
+    const blockTimestamp = new BN(await getBlockTimestamp(d, blockNumber));
     const expectedGenRef = blockTimestamp.add(bn(3*60*60));
     const secondsInMonth = new BN(30 * 24 * 60 * 60);
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
@@ -283,6 +287,65 @@ describe('subscriptions-high-level-flows', async () => {
     // can be extended with any amount
     await owner.assignAndApproveOrbs(1, subs.address);
     await subs.extendSubscription(vcid, 1, {from: owner.address});
+  });
+
+
+  it('extends subscription after expiration', async () => {
+    const d = await Driver.new();
+    const orbitonPerSecond = 30*24*60*60;
+    const subs = await d.newSubscriber("tier", orbitonPerSecond);
+
+    const owner = d.newParticipant();
+
+    const oneSecondsWorth = 1;
+
+    await d.subscriptions.setMinimumInitialVcPayment(oneSecondsWorth, {from: d.functionalManager.address});
+
+    await owner.assignAndApproveOrbs(oneSecondsWorth, subs.address);
+    let r = await subs.createVC("vc-name", oneSecondsWorth, false, "main", {from: owner.address});
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const expiresAtOrig = bn(subscriptionChangedEvents(r)[0].expiresAt);
+
+    // vc expires after one second
+    expect(expiresAtOrig).to.be.bignumber.equal(bn(await getBlockTimestamp(d, r.blockNumber) + 1));
+
+    // wait until after expiration
+    await sleep(3 * 1000);
+
+    await owner.assignAndApproveOrbs(oneSecondsWorth, subs.address);
+    r = await subs.extendSubscription(vcid, oneSecondsWorth, {from: owner.address});
+    const newExpiresAt = bn(subscriptionChangedEvents(r)[0].expiresAt);
+
+    // vc expires only 1 second after being extended
+    expect(newExpiresAt).to.be.bignumber.equal(bn(await getBlockTimestamp(d, r.blockNumber) + 1));
+  });
+
+
+  it('extends subscription before expiration', async () => {
+    const d = await Driver.new();
+    const orbitonPerSecond = 30*24*60*60;
+    const subs = await d.newSubscriber("tier", orbitonPerSecond);
+
+    const owner = d.newParticipant();
+
+    const oneHoursWorth = 60 * 60;
+
+    await d.subscriptions.setMinimumInitialVcPayment(oneHoursWorth, {from: d.functionalManager.address});
+
+    await owner.assignAndApproveOrbs(oneHoursWorth, subs.address);
+    let r = await subs.createVC("vc-name", oneHoursWorth, false, "main", {from: owner.address});
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const expiresAtOrig = bn(subscriptionChangedEvents(r)[0].expiresAt);
+
+    // vc expires in one hour
+    expect(expiresAtOrig).to.be.bignumber.equal(bn(await getBlockTimestamp(d, r.blockNumber) + 60 * 60));
+
+    await owner.assignAndApproveOrbs(oneHoursWorth, subs.address);
+    r = await subs.extendSubscription(vcid, oneHoursWorth, {from: owner.address});
+    const newExpiresAt = bn(subscriptionChangedEvents(r)[0].expiresAt);
+
+    // vc extended by 1 additional hour
+    expect(newExpiresAt).to.be.bignumber.equal(expiresAtOrig.add(bn(60 * 60)));
   });
 
   it('allows only the functional owner to set default genesis ref time delay', async () => {

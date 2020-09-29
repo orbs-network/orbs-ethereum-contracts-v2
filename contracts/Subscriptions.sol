@@ -148,15 +148,19 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     function _extendSubscription(uint256 vcId, uint256 amount, address payer) private {
-        VirtualChain storage vc = virtualChains[vcId];
+        VirtualChain memory vc = virtualChains[vcId];
 
         IFeesWallet feesWallet = vc.isCertified ? certifiedFeesWallet : generalFeesWallet;
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
         require(erc20.approve(address(feesWallet), amount), "failed to approve rewards to acquire subscription fees");
 
-        feesWallet.fillFeeBuckets(amount, vc.rate, vc.expiresAt);
+        uint fromTimestamp = vc.expiresAt > now ? vc.expiresAt : now;
+        feesWallet.fillFeeBuckets(amount, vc.rate, fromTimestamp);
 
-        vc.expiresAt = vc.expiresAt.add(amount.mul(30 days).div(vc.rate));
+        vc.expiresAt = fromTimestamp.add(amount.mul(30 days).div(vc.rate));
+
+        // commit new expiration timestamp to storage
+        virtualChains[vcId].expiresAt = vc.expiresAt;
 
         emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.rate, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
         emit Payment(vcId, payer, amount, vc.tier, vc.rate);
