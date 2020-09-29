@@ -505,4 +505,18 @@ describe('delegations-contract', async () => {
        await p.delegate(p);
        await p.delegate(p);
     });
+
+    it('does not count delegations to the void address as part of the total delegated stake', async () => {
+        const d = await Driver.new();
+
+        const p0 = d.newParticipant();
+        await p0.stake(1000);
+
+        const p1 = d.newParticipant();
+        await p1.stake(1000);
+        expect(await d.delegations.getTotalDelegatedStake()).to.bignumber.eq(bn(2000));
+
+        await d.delegations.delegate(await d.delegations.VOID_ADDR(), {from: p1.address});
+        expect(await d.delegations.getTotalDelegatedStake()).to.bignumber.eq(bn(1000));
+    })
 });

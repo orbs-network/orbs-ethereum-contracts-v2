@@ -33,13 +33,19 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	uint256 totalDelegatedStake;
 
+	address constant public VOID_ADDR = address(-1);
+
 	modifier onlyStakingContractHandler() {
 		require(msg.sender == address(stakingContractHandler), "caller is not the staking contract handler");
 
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {
+		address OTHER_VOID_ADDR = address(-2);
+		assert(VOID_ADDR != OTHER_VOID_ADDR && VOID_ADDR != address(0) && OTHER_VOID_ADDR != address(0));
+		stakeOwnersData[VOID_ADDR].delegation = OTHER_VOID_ADDR;
+	}
 
 	function getTotalDelegatedStake() external override view returns (uint256) {
 		return totalDelegatedStake;
@@ -294,37 +300,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	function stakeMigration(address _stakeOwner, uint256 _amount) external override onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
-//		uint i = 0;
-//		while (i < stakeOwners.length) {
-//			// init sequence
-//			StakeOwnerData memory curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
-//			address sequenceDelegate = curStakeOwnerData.delegation;
-//			uint currentUncappedStake = uncappedStakes[sequenceDelegate];
-//			uint prevUncappedStake = currentUncappedStake;
-//
-//			uint sequenceStartIdx = i;
-//			for (i = sequenceStartIdx; i < stakeOwners.length; i++) { // aggregate sequence stakes changes
-//				if (i != sequenceStartIdx) curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
-//				if (sequenceDelegate != curStakeOwnerData.delegation) break;
-//
-//				rewardsContract.delegationWillChange(sequenceDelegate, currentUncappedStake, stakeOwners[i], curStakeOwnerData.stake, sequenceDelegate);
-//
-//				currentUncappedStake = currentUncappedStake
-//				.sub(curStakeOwnerData.stake)
-//				.add(updatedStakes[i]);
-//
-//				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
-//				stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
-//			}
-//
-//			// closing sequence
-//			uncappedStakes[sequenceDelegate] = currentUncappedStake;
-//			if (_isSelfDelegating(sequenceDelegate)) {
-//				totalDelegatedStake = totalDelegatedStake.sub(prevUncappedStake).add(currentUncappedStake);
-//			}
-//
-//			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
-//		}
 		for (uint i = 0; i < stakeOwners.length; i++) {
 			_stakeChange(stakeOwners[i], updatedStakes[i]);
 		}
