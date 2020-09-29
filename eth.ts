@@ -10,7 +10,7 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
-
+const ETHERUM_FORK_URL = process.env.ETHEREUM_FORK_URL || "";
 const GAS_PRICE = parseInt(process.env.GAS_PRICE  || '1000000000'); // default: 1 Gwei
 const GAS_PRICE_DEPLOY = parseInt(process.env.GAS_PRICE_DEPLOY  || `${GAS_PRICE}`); // default: GAS_PRICE
 
@@ -26,7 +26,9 @@ export const defaultWeb3Provider = () => process.env.GANACHE_CORE ?
             default_balance_ether: 100,
             total_accounts: 400,
             gasPrice: 1,
-            gasLimit: "0x7fffffff"
+            gasLimit: "0x7fffffff",
+            // logger: console,
+            ...(ETHERUM_FORK_URL ? {fork: ETHERUM_FORK_URL} : {})
         }))
     :
         new Web3(new HDWalletProvider(
@@ -66,14 +68,15 @@ export class Web3Driver{
         let txHash;
         for (let attempt = 0; attempt < 5; attempt++) {
             try {
-                web3Contract = await new this.web3.eth.Contract(abi).deploy({
+                const deployTx = new this.web3.eth.Contract(abi).deploy({
                     data: compiledContracts[contractName].bytecode,
                     arguments: args || []
-                }).send({
+                });
+                web3Contract = await deployTx.send({
                     from: accounts[0],
-                    gasPrice: GAS_PRICE_DEPLOY,
+                    // gasPrice: GAS_PRICE_DEPLOY,
                     gas: 10000000,
-                    ...(options || {})
+                    // ...(options || {})
                 }, (err, _txHash) => {
                     if (!err) {
                         txHash = _txHash;

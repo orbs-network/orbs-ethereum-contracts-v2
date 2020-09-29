@@ -6,7 +6,7 @@
   "repository": "https://github.com/orbs-network/orbs-ethereum-contracts-v2",
   "scripts": {
     "deploy-beta": "node --require ./tsinit.js ./deploy-beta.ts",
-    "deploy-beta2": "node --require ./tsinit.js ./deploy-beta-2.ts",
+    "deploy-beta2": "npm run prepublish && node --require ./tsinit.js ./deploy-beta-2.ts",
     "test": "export GANACHE_CORE=true && npm run prepublish && mocha --exit --full-trace --async-stack-traces -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-ropsten": "export ETHEREUM_URL=https://ropsten.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-kovan": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
@@ -41,7 +41,7 @@
     "bn.js": "^5.1.1",
     "chai": "^4.2.0",
     "chai-bn": "^0.2.0",
-    "ganache-core": "^2.10.2",
+    "ganache-core": "^2.12.1",
     "lodash": "^4.17.20",
     "node-fetch": "^2.6.0",
     "truffle-hdwallet-provider": "1.0.3",
