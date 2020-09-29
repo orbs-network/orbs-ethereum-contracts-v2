@@ -12,12 +12,12 @@ import "./spec_interfaces/IFeesWallet.sol";
 import "./interfaces/IRewards.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./ManagedContract.sol";
-import "./SafeMath48.sol";
+//import "./SafeMath48.sol";
 
 contract Rewards is IRewards, ManagedContract {
     using SafeMath for uint256;
     using SafeMath for uint96;
-    using SafeMath48 for uint48;
+//    using SafeMath48 for uint48;
 
     uint constant TOKEN_GRANULARITY = 1000000000000000;
 
@@ -35,9 +35,10 @@ contract Rewards is IRewards, ManagedContract {
         uint48 annualCap;
         uint32 annualRateInPercentMille;
         uint32 defaultDelegatorsStakingRewardsPercentMille;
+        uint32 maxDelegatorsStakingRewardsPercentMille;
         bool active;
     }
-    Settings public settings;
+    Settings settings;
 
     IERC20 public bootstrapToken;
     IERC20 public erc20;
@@ -116,6 +117,7 @@ contract Rewards is IRewards, ManagedContract {
         uint annualRateInPercentMille,
         uint annualCap,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
+        uint32 maxDelegatorsStakingRewardsPercentMille,
         IRewards previousRewardsContract,
         address[] memory guardiansToMigrate
     ) ManagedContract(_contractRegistry, _registryAdmin) public {
@@ -125,6 +127,7 @@ contract Rewards is IRewards, ManagedContract {
         _setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap);
         _setCertifiedCommitteeAnnualBootstrap(certifiedCommitteeAnnualBootstrap);
         _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
+        setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille);
         setDefaultDelegatorsStakingRewardsPercentMille(defaultDelegatorsStakingRewardsPercentMille);
 
         erc20 = _erc20;
@@ -222,7 +225,7 @@ contract Rewards is IRewards, ManagedContract {
                 .div(TOKEN_BASE);
 
             guardianStakingRewards.delegatorRewardsPerToken = uint96(guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta));
-            guardianStakingRewards.balance = guardianStakingRewards.balance.add(toUint48Granularity(guardianRewards));
+            guardianStakingRewards.balance = guardianStakingRewards.balance + toUint48Granularity(guardianRewards);
 
             rewardsAdded = guardianRewards;
         }
@@ -248,7 +251,7 @@ contract Rewards is IRewards, ManagedContract {
             .mul(delegatorStake)
             .div(TOKEN_BASE);
 
-        delegatorStakingRewards.balance = delegatorStakingRewards.balance.add(toUint48Granularity(amount));
+        delegatorStakingRewards.balance = delegatorStakingRewards.balance + (toUint48Granularity(amount));
         delegatorStakingRewards.lastDelegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken;
 
         delegatorRewardsAdded = amount;
@@ -275,7 +278,7 @@ contract Rewards is IRewards, ManagedContract {
         emit StakingRewardsAssigned(delegator, delegatorStakingRewardsAdded);
     }
 
-    function updateGuardianStakingRewards(address guardian, StakingRewardsState memory _stakingRewardsState, Settings memory _settings) private returns (GuardianStakingRewards memory guardianStakingRewards){
+    function updateGuardianStakingRewards(address guardian, StakingRewardsState memory _stakingRewardsState, Settings memory _settings) private returns (GuardianStakingRewards memory guardianStakingRewards) {
         (bool inCommittee, uint256 guardianWeight,,) = committeeContract.getMemberInfo(guardian);
         return _updateGuardianStakingRewards(guardian, inCommittee, guardianWeight, delegationsContract.getDelegatedStake(guardian), _stakingRewardsState, _settings);
     }
@@ -294,7 +297,10 @@ contract Rewards is IRewards, ManagedContract {
 
     function _getGuardianDelegatorsStakingRewardsPercentMille(address guardian, Settings memory _settings) private view returns (uint256 delegatorRewardsRatioPercentMille) {
         GuardianRewardSettings memory guardianSettings = guardiansRewardSettings[guardian];
-        return guardianSettings.overrideDefault ? guardianSettings.delegatorsStakingRewardsPercentMille : _settings.defaultDelegatorsStakingRewardsPercentMille;
+        delegatorRewardsRatioPercentMille =  guardianSettings.overrideDefault ? guardianSettings.delegatorsStakingRewardsPercentMille : _settings.defaultDelegatorsStakingRewardsPercentMille;
+        if (delegatorRewardsRatioPercentMille > _settings.maxDelegatorsStakingRewardsPercentMille) {
+            delegatorRewardsRatioPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
+        }
     }
 
     function claimStakingRewardsLocally(address addr) private returns (uint256 guardianRewards, uint256 delegatorRewards) {
@@ -328,17 +334,17 @@ contract Rewards is IRewards, ManagedContract {
 
         if (_settings.active) {
             uint48 generalFeesDelta = generalCommitteeSize == 0 ? 0 : toUint48Granularity(collectedGeneralFees.div(generalCommitteeSize));
-            uint48 certifiedFeesDelta = generalFeesDelta.add(certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(collectedCertifiedFees.div(certifiedCommitteeSize)));
+            uint48 certifiedFeesDelta = generalFeesDelta + (certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(collectedCertifiedFees.div(certifiedCommitteeSize)));
 
-            _feesAndBootstrapState.generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember.add(generalFeesDelta);
-            _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember.add(certifiedFeesDelta);
+            _feesAndBootstrapState.generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember + (generalFeesDelta);
+            _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember + (certifiedFeesDelta);
 
             uint duration = now.sub(_feesAndBootstrapState.lastAssigned);
             uint48 generalBootstrapDelta = uint48(uint(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days));
-            uint48 certifiedBootstrapDelta = generalBootstrapDelta.add(uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days)));
+            uint48 certifiedBootstrapDelta = generalBootstrapDelta + (uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days)));
 
-            _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember.add(generalBootstrapDelta);
-            _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember.add(certifiedBootstrapDelta);
+            _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember + (generalBootstrapDelta);
+            _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember + (certifiedBootstrapDelta);
             _feesAndBootstrapState.lastAssigned = uint32(block.timestamp);
 
             allocatedBootstrap = toUint256Granularity(generalBootstrapDelta).mul(generalCommitteeSize).add(toUint256Granularity(certifiedBootstrapDelta).mul(certifiedCommitteeSize));
@@ -370,12 +376,12 @@ contract Rewards is IRewards, ManagedContract {
         guardianFeesAndBootstrap = feesAndBootstrap[guardian];
 
         if (inCommittee) {
-            uint48 bootstrapAmount = isCertified ? _feesAndBootstrapState.certifiedBootstrapPerMember.sub(guardianFeesAndBootstrap.lastCertifiedBootstrapPerMember) : _feesAndBootstrapState.generalBootstrapPerMember.sub(guardianFeesAndBootstrap.lastGeneralBootstrapPerMember);
-            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrapAmount);
+            uint48 bootstrapAmount = isCertified ? (_feesAndBootstrapState.certifiedBootstrapPerMember - (guardianFeesAndBootstrap.lastCertifiedBootstrapPerMember)) : (_feesAndBootstrapState.generalBootstrapPerMember - (guardianFeesAndBootstrap.lastGeneralBootstrapPerMember));
+            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance + (bootstrapAmount);
             addedBootstrapAmount = toUint256Granularity(bootstrapAmount);
 
-            uint48 feesAmount = isCertified ? _feesAndBootstrapState.certifiedFeesPerMember.sub(guardianFeesAndBootstrap.lastCertifiedFeesPerMember) : _feesAndBootstrapState.generalFeesPerMember.sub(guardianFeesAndBootstrap.lastGeneralFeesPerMember);
-            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(feesAmount);
+            uint48 feesAmount = isCertified ? (_feesAndBootstrapState.certifiedFeesPerMember - (guardianFeesAndBootstrap.lastCertifiedFeesPerMember)) : (_feesAndBootstrapState.generalFeesPerMember - (guardianFeesAndBootstrap.lastGeneralFeesPerMember));
+            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance + (feesAmount);
             addedFeesAmount = toUint256Granularity(feesAmount);
         }
         
@@ -463,29 +469,40 @@ contract Rewards is IRewards, ManagedContract {
 
     function setDefaultDelegatorsStakingRewardsPercentMille(uint32 defaultDelegatorsStakingRewardsPercentMille) public override onlyFunctionalManager onlyWhenActive {
         require(defaultDelegatorsStakingRewardsPercentMille <= PERCENT_MILLIE_BASE, "defaultDelegatorsStakingRewardsPercentMille must not be larger than 100000");
+        require(defaultDelegatorsStakingRewardsPercentMille <= settings.maxDelegatorsStakingRewardsPercentMille, "defaultDelegatorsStakingRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille");
         settings.defaultDelegatorsStakingRewardsPercentMille = defaultDelegatorsStakingRewardsPercentMille;
         emit DefaultDelegatorsStakingRewardsChanged(defaultDelegatorsStakingRewardsPercentMille);
     }
 
-    function getGeneralCommitteeAnnualBootstrap() external override view returns (uint256) {
-        return toUint256Granularity(settings.generalCommitteeAnnualBootstrap);
+    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) public override onlyFunctionalManager onlyWhenActive {
+        require(maxDelegatorsStakingRewardsPercentMille <= PERCENT_MILLIE_BASE, "maxDelegatorsStakingRewardsPercentMille must not be larger than 100000");
+        settings.maxDelegatorsStakingRewardsPercentMille = maxDelegatorsStakingRewardsPercentMille;
+        emit MaxDelegatorsStakingRewardsChanged(maxDelegatorsStakingRewardsPercentMille);
     }
 
-    function getCertifiedCommitteeAnnualBootstrap() external override view returns (uint256) {
-        return toUint256Granularity(settings.certifiedCommitteeAnnualBootstrap);
-    }
-
-    function getDefaultDelegatorsStakingRewardsPercentMille() public override view returns (uint32) {
-        return settings.defaultDelegatorsStakingRewardsPercentMille;
-    }
-
-    function getAnnualStakingRewardsRatePercentMille() external override view returns (uint32) {
-        return settings.annualRateInPercentMille;
-    }
-
-    function getAnnualStakingRewardsCap() external override view returns (uint256) {
-        return toUint256Granularity(settings.annualCap);
-    }
+//    function getGeneralCommitteeAnnualBootstrap() external override view returns (uint256) {
+//        return toUint256Granularity(settings.generalCommitteeAnnualBootstrap);
+//    }
+//
+//    function getCertifiedCommitteeAnnualBootstrap() external override view returns (uint256) {
+//        return toUint256Granularity(settings.certifiedCommitteeAnnualBootstrap);
+//    }
+//
+//    function getDefaultDelegatorsStakingRewardsPercentMille() public override view returns (uint32) {
+//        return settings.defaultDelegatorsStakingRewardsPercentMille;
+//    }
+//
+//    function getMaxDelegatorsStakingRewardsPercentMille() public override view returns (uint32) {
+//        return settings.maxDelegatorsStakingRewardsPercentMille;
+//    }
+//
+//    function getAnnualStakingRewardsRatePercentMille() external override view returns (uint32) {
+//        return settings.annualRateInPercentMille;
+//    }
+//
+//    function getAnnualStakingRewardsCap() external override view returns (uint256) {
+//        return toUint256Granularity(settings.annualCap);
+//    }
 
     function getFeesAndBootstrapState() external override view returns (
         uint256 certifiedFeesPerMember,
@@ -523,6 +540,7 @@ contract Rewards is IRewards, ManagedContract {
 
     function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external {
         require(delegatorRewardsPercentMille <= 100000, "delegatorRewardsPercentMille must be 100000 at most");
+        require(delegatorRewardsPercentMille <= settings.maxDelegatorsStakingRewardsPercentMille, "delegatorRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille");
         updateDelegatorStakingRewards(msg.sender);
         _setGuardianDelegatorsStakingRewardsPercentMille(msg.sender, delegatorRewardsPercentMille);
     }
@@ -534,7 +552,7 @@ contract Rewards is IRewards, ManagedContract {
     function getStakingRewardsBalance(address addr) external override view returns (uint256) {
         DelegatorStakingRewards memory delegatorStakingRewards = getDelegatorStakingRewards(addr);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(addr); // TODO consider removing, data in state must be up to date at this point
-        return toUint256Granularity(delegatorStakingRewards.balance.add(guardianStakingRewards.balance));
+        return toUint256Granularity(delegatorStakingRewards.balance + (guardianStakingRewards.balance));
     }
 
     function getFeeBalance(address addr) external override view returns (uint256) {
@@ -597,12 +615,12 @@ contract Rewards is IRewards, ManagedContract {
     }
 
     function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrap) external override {
-        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(toUint48Granularity(guardianStakingRewards));
-        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(toUint48Granularity(delegatorStakingRewards));
+        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance + (toUint48Granularity(guardianStakingRewards));
+        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance + (toUint48Granularity(delegatorStakingRewards));
 
         FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[addr];
-        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(toUint48Granularity(fees));
-        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(toUint48Granularity(bootstrap));
+        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance + (toUint48Granularity(fees));
+        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance + (toUint48Granularity(bootstrap));
         feesAndBootstrap[addr] = guardianFeesAndBootstrap;
 
         require(erc20.transferFrom(msg.sender, address(this), guardianStakingRewards.add(delegatorStakingRewards).add(fees)), "acceptRewardBalanceMigration: transfer failed");
@@ -656,6 +674,7 @@ contract Rewards is IRewards, ManagedContract {
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
+        uint32 maxDelegatorsStakingRewardsPercentMille,
         bool active
     ) {
         Settings memory _settings = settings;
@@ -664,6 +683,7 @@ contract Rewards is IRewards, ManagedContract {
         annualStakingRewardsCap = toUint256Granularity(_settings.annualCap);
         annualStakingRewardsRatePercentMille = _settings.annualRateInPercentMille;
         defaultDelegatorsStakingRewardsPercentMille = _settings.defaultDelegatorsStakingRewardsPercentMille;
+        maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
         active = _settings.active;
     }
 

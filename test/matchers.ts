@@ -47,7 +47,9 @@ import {
   RewardsBalanceMigrationAcceptedEvent,
   StakingRewardsClaimedEvent,
   RewardDistributionDeactivatedEvent,
-  RewardDistributionActivatedEvent, GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent
+  RewardDistributionActivatedEvent,
+  GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
+  MaxDelegatorsStakingRewardsChangedEvent
 } from "../typings/rewards-contract";
 import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
@@ -270,6 +272,7 @@ declare global {
       guardianStatusUpdatedEvent(data?: Partial<GuardianStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
       defaultDelegatorsStakingRewardsChangedEvent(data?: Partial<DefaultDelegatorsStakingRewardsChangedEvent>);
+      maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
       fundsAddedToPoolEvent(data?: Partial<FundsAddedToPoolEvent>);
       clientSetEvent(data?: Partial<ClientSetEvent>);
       maxAnnualRateSetEvent(data?: Partial<MaxAnnualRateSetEvent>);

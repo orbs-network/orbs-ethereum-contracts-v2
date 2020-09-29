@@ -152,9 +152,10 @@ async function stakingRewardsForDuration(d: Driver, duration: number, delegator:
     const guardianWeight = bn(memberInfo.weight);
     const totalWeight = bn(memberInfo.totalCommitteeWeight)
 
-    const cap = bn(await d.rewards.getAnnualStakingRewardsCap());
+    const settings = await d.rewards.getSettings();
+    const cap = bn(settings.annualStakingRewardsCap);
+    const rate = bn(settings.annualStakingRewardsRatePercentMille);
     const ratio = bn(await d.rewards.getGuardianDelegatorsStakingRewardsPercentMille(guardian.address));
-    const rate = bn(await d.rewards.getAnnualStakingRewardsRatePercentMille());
 
     const actualRate = BN.min(totalWeight.mul(rate).div(bn(100000)), cap).mul(bn(100000)).div(totalWeight);
 
@@ -164,7 +165,7 @@ async function stakingRewardsForDuration(d: Driver, duration: number, delegator:
 
     const totalRewards = guardianWeight.mul(actualRate).mul(bn(duration)).div(bn(YEAR_IN_SECONDS * 100000));
     const totalDelegatorRewards = totalRewards.mul(ratio).div(bn(100000));
-    let guardianRewards = totalRewards.sub(totalDelegatorRewards);
+    let guardianRewards = roundTo48(totalRewards.mul(bn(100000).sub(ratio)).div(bn(100000)));
     const delegatorRewards = roundTo48(totalDelegatorRewards.mul(delegatorStake).div(guardianDelegatedStake));
     guardianRewards = guardianRewards.add(roundTo48(totalDelegatorRewards.mul(guardianStake).div(guardianDelegatedStake)))
 
@@ -632,12 +633,6 @@ describe('rewards', async () => {
         };
         const d = await Driver.new(opts as any);
 
-        expect(await d.rewards.getGeneralCommitteeAnnualBootstrap()).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
-        expect(await d.rewards.getCertifiedCommitteeAnnualBootstrap()).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
-        expect(await d.rewards.getDefaultDelegatorsStakingRewardsPercentMille()).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsRatePercentMille()).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
-        expect(await d.rewards.getAnnualStakingRewardsCap()).to.eq(opts.stakingRewardsAnnualCap.toString());
-
         expect((await d.rewards.getSettings()).generalCommitteeAnnualBootstrap).to.eq(opts.generalCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).certifiedCommitteeAnnualBootstrap).to.eq(opts.certifiedCommitteeAnnualBootstrap.toString());
         expect((await d.rewards.getSettings()).defaultDelegatorsStakingRewardsPercentMille).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
@@ -698,6 +693,7 @@ describe('rewards', async () => {
           defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
           defaultDriverOptions.stakingRewardsAnnualCap,
           defaultDriverOptions.defaultDelegatorsStakingRewardsPercentMille,
+          defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille,
           ZERO_ADDR,
           []
         ], null, d.session);
@@ -803,6 +799,14 @@ describe('rewards', async () => {
             });
         });
 
+        await checkAndUpdate(async () => {
+            await c0.stake(1); // trigger reward assignment on the previous period
+            let r = await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(bn(11000), {from: d.functionalManager.address});
+            expect(r).to.have.a.maxDelegatorsStakingRewardsChangedEvent({
+                maxDelegatorsStakingRewardsPercentMille: bn(11000)
+            });
+        });
+
         // Claim entire amount
         let r = await d.rewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
@@ -818,6 +822,29 @@ describe('rewards', async () => {
 
         expect(cTotal).to.be.bignumber.gt(bn(0));
         expect(dTotal).to.be.bignumber.gt(bn(0));
+    });
+
+    it("does not allow setting guardian and default reward ratios bigger than the maximum", async () => {
+        const d = await Driver.new({maxDelegatorsStakingRewardsPercentMille: 55000, defaultDelegatorsStakingRewardsPercentMille: 55000});
+        const p = d.newParticipant();
+
+        await expectRejected(d.rewards.setGuardianDelegatorsStakingRewardsPercentMille(55001), /delegatorRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille/)
+        let r = await d.rewards.setGuardianDelegatorsStakingRewardsPercentMille(55000);
+        expect(r).to.have.a.guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent({delegatorsStakingRewardsPercentMille: bn(55000)})
+
+        await expectRejected(d.rewards.setGuardianDelegatorsStakingRewardsPercentMille(55001, {from: d.functionalManager.address}), /delegatorRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille/);
+    });
+
+    it("considers max allowed ratio when getting the guardian ratio", async () => {
+        const d = await Driver.new({maxDelegatorsStakingRewardsPercentMille: 55000, defaultDelegatorsStakingRewardsPercentMille: 55000});
+        const p = d.newParticipant();
+
+        let r = await d.rewards.setGuardianDelegatorsStakingRewardsPercentMille(55000);
+        expect(r).to.have.a.guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent({delegatorsStakingRewardsPercentMille: bn(55000)})
+
+        expect(await d.rewards.getGuardianDelegatorsStakingRewardsPercentMille(p.address)).to.bignumber.eq(bn(55000));
+        await d.rewards.setMaxDelegatorsStakingRewardsPercentMille(20000, {from: d.functionalManager.address});
+        expect(await d.rewards.getGuardianDelegatorsStakingRewardsPercentMille(p.address)).to.bignumber.eq(bn(20000));
     });
 
     it("does not update rewards when deactivated", async () => {
@@ -882,6 +909,7 @@ describe('rewards', async () => {
             defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
             defaultDriverOptions.stakingRewardsAnnualCap,
             defaultDriverOptions.defaultDelegatorsStakingRewardsPercentMille,
+            defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille,
             d.rewards.address,
             guardians.map(g => g.address)
         ], null, d.session);
