@@ -294,6 +294,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	function stakeMigration(address _stakeOwner, uint256 _amount) external override onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
+		// TODO remove dead code after gas testing
 //		uint i = 0;
 //		while (i < stakeOwners.length) {
 //			// init sequence
@@ -366,10 +367,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	function getDelegatedStake(address addr) external override view returns (uint256) {
 		return _isSelfDelegating(addr) ? uncappedStakes[addr] : 0;
-	}
-
-	function getSelfDelegatedStake(address addr) public override view returns (uint256) {
-		return _isSelfDelegating(addr) ? stakingContractHandler.getStakeBalanceOf(addr) : 0;
 	}
 
 	function _isSelfDelegating(address addr) private view returns (bool) {
