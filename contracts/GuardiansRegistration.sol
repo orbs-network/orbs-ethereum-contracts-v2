@@ -54,11 +54,11 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website);
 	}
 
-	string constant REWARDS_FREQUENCY_SEC_METADATA_KEY = "REWARDS_FREQUENCY_SEC";
+	string constant ID_FORM_URL_METADATA_KEY = "ID_FORM_URL";
 	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
-		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, REWARDS_FREQUENCY_SEC_METADATA_KEY);
+		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY);
 		if (bytes(rewardsFreqMetadata).length > 0) {
-			_setMetadata(guardianAddress, REWARDS_FREQUENCY_SEC_METADATA_KEY, rewardsFreqMetadata);
+			_setMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY, rewardsFreqMetadata);
 		}
 	}
 
