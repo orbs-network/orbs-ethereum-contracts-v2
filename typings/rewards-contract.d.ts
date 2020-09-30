@@ -135,6 +135,6 @@ export interface RewardsContract extends OwnedContract {
         annualStakingRewardsRatePercentMille: string,
         defaultDelegatorsStakingRewardsPercentMille: string,
         maxDelegatorsStakingRewardsPercentMille: string,
-        active: boolean
+        rewardAllocationActive: boolean
     }>;
 }

@@ -12,12 +12,10 @@ import "./spec_interfaces/IFeesWallet.sol";
 import "./interfaces/IRewards.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./ManagedContract.sol";
-//import "./SafeMath48.sol";
 
 contract Rewards is IRewards, ManagedContract {
     using SafeMath for uint256;
     using SafeMath for uint96;
-//    using SafeMath48 for uint48;
 
     uint constant TOKEN_GRANULARITY = 1000000000000000;
 
@@ -36,7 +34,7 @@ contract Rewards is IRewards, ManagedContract {
         uint32 annualRateInPercentMille;
         uint32 defaultDelegatorsStakingRewardsPercentMille;
         uint32 maxDelegatorsStakingRewardsPercentMille;
-        bool active;
+        bool rewardAllocationActive;
     }
     Settings settings;
 
@@ -84,11 +82,9 @@ contract Rewards is IRewards, ManagedContract {
     // TODO use nextCertification and keep only one counter for each
     struct FeesAndBootstrap {
         uint48 feeBalance;
-        uint48 lastGeneralFeesPerMember;
-        uint48 lastCertifiedFeesPerMember;
+        uint48 lastFeesPerMember;
         uint48 bootstrapBalance;
-        uint48 lastGeneralBootstrapPerMember;
-        uint48 lastCertifiedBootstrapPerMember;
+        uint48 lastBootstrapPerMember;
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
@@ -177,7 +173,7 @@ contract Rewards is IRewards, ManagedContract {
 
     function _getStakingRewardsState(uint256 totalCommitteeWeight, Settings memory _settings) private view returns (StakingRewardsState memory _stakingRewardsState, uint256 allocatedRewards) {
         _stakingRewardsState = stakingRewardsState;
-        if (_settings.active) {
+        if (_settings.rewardAllocationActive) {
             uint delta = calcStakingRewardPerWeightDelta(totalCommitteeWeight, block.timestamp - stakingRewardsState.lastAssigned, _settings);
             _stakingRewardsState.stakingRewardsPerWeight = uint96(uint256(stakingRewardsState.stakingRewardsPerWeight).add(delta));
             _stakingRewardsState.lastAssigned = uint32(block.timestamp);
@@ -187,7 +183,7 @@ contract Rewards is IRewards, ManagedContract {
     }
 
     function _updateStakingRewardsState(uint256 totalCommitteeWeight, Settings memory _settings) private returns (StakingRewardsState memory _stakingRewardsState) {
-        if (!_settings.active) {
+        if (!_settings.rewardAllocationActive) {
             return stakingRewardsState;
         }
 
@@ -298,9 +294,7 @@ contract Rewards is IRewards, ManagedContract {
     function _getGuardianDelegatorsStakingRewardsPercentMille(address guardian, Settings memory _settings) private view returns (uint256 delegatorRewardsRatioPercentMille) {
         GuardianRewardSettings memory guardianSettings = guardiansRewardSettings[guardian];
         delegatorRewardsRatioPercentMille =  guardianSettings.overrideDefault ? guardianSettings.delegatorsStakingRewardsPercentMille : _settings.defaultDelegatorsStakingRewardsPercentMille;
-        if (delegatorRewardsRatioPercentMille > _settings.maxDelegatorsStakingRewardsPercentMille) {
-            delegatorRewardsRatioPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
-        }
+        return Math.min(delegatorRewardsRatioPercentMille, _settings.maxDelegatorsStakingRewardsPercentMille);
     }
 
     function claimStakingRewardsLocally(address addr) private returns (uint256 guardianRewards, uint256 delegatorRewards) {
@@ -332,7 +326,7 @@ contract Rewards is IRewards, ManagedContract {
     function _getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize, uint256 collectedGeneralFees, uint256 collectedCertifiedFees, Settings memory _settings) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState, uint256 allocatedBootstrap) {
         _feesAndBootstrapState = feesAndBootstrapState;
 
-        if (_settings.active) {
+        if (_settings.rewardAllocationActive) {
             uint48 generalFeesDelta = generalCommitteeSize == 0 ? 0 : toUint48Granularity(collectedGeneralFees.div(generalCommitteeSize));
             uint48 certifiedFeesDelta = generalFeesDelta + (certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(collectedCertifiedFees.div(certifiedCommitteeSize)));
 
@@ -353,7 +347,7 @@ contract Rewards is IRewards, ManagedContract {
 
     function _updateFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize) private returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
         Settings memory _settings = settings;
-        if (!_settings.active) {
+        if (!_settings.rewardAllocationActive) {
             return feesAndBootstrapState;
         }
 
@@ -372,31 +366,29 @@ contract Rewards is IRewards, ManagedContract {
         return _updateFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
     }
 
-    function _getGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, FeesAndBootstrapState memory _feesAndBootstrapState) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, uint256 addedBootstrapAmount, uint256 addedFeesAmount) {
+    function _getGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, bool nextCertification, FeesAndBootstrapState memory _feesAndBootstrapState) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, uint256 addedBootstrapAmount, uint256 addedFeesAmount) {
         guardianFeesAndBootstrap = feesAndBootstrap[guardian];
 
         if (inCommittee) {
-            uint48 bootstrapAmount = isCertified ? (_feesAndBootstrapState.certifiedBootstrapPerMember - (guardianFeesAndBootstrap.lastCertifiedBootstrapPerMember)) : (_feesAndBootstrapState.generalBootstrapPerMember - (guardianFeesAndBootstrap.lastGeneralBootstrapPerMember));
+            uint48 bootstrapAmount = (isCertified ? _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember) - guardianFeesAndBootstrap.lastBootstrapPerMember;
             guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance + (bootstrapAmount);
             addedBootstrapAmount = toUint256Granularity(bootstrapAmount);
 
-            uint48 feesAmount = isCertified ? (_feesAndBootstrapState.certifiedFeesPerMember - (guardianFeesAndBootstrap.lastCertifiedFeesPerMember)) : (_feesAndBootstrapState.generalFeesPerMember - (guardianFeesAndBootstrap.lastGeneralFeesPerMember));
+            uint48 feesAmount = (isCertified ? _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember) - guardianFeesAndBootstrap.lastBootstrapPerMember;
             guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance + (feesAmount);
             addedFeesAmount = toUint256Granularity(feesAmount);
         }
         
-        guardianFeesAndBootstrap.lastGeneralBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember;
-        guardianFeesAndBootstrap.lastCertifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember;
-        guardianFeesAndBootstrap.lastGeneralFeesPerMember = _feesAndBootstrapState.generalFeesPerMember;
-        guardianFeesAndBootstrap.lastCertifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember;
+        guardianFeesAndBootstrap.lastBootstrapPerMember = nextCertification ?  _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember;
+        guardianFeesAndBootstrap.lastFeesPerMember = nextCertification ?  _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalBootstrapPerMember;
     }
 
-    function _updateGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) private {
+    function _updateGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) private {
         uint256 addedBootstrapAmount;
         uint256 addedFeesAmount;
 
         FeesAndBootstrapState memory _feesAndBootstrapState = _updateFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
-        (feesAndBootstrap[guardian], addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, _feesAndBootstrapState);
+        (feesAndBootstrap[guardian], addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
 
         emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount);
         emit FeesAssigned(guardian, addedFeesAmount);
@@ -407,14 +399,14 @@ contract Rewards is IRewards, ManagedContract {
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
         (FeesAndBootstrapState memory _feesAndBootstrapState,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees(), settings);
         (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
-        (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, _feesAndBootstrapState);
+        (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, isCertified, _feesAndBootstrapState);
     }
 
     function updateGuardianFeesAndBootstrap(address guardian) private {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
         (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
-        _updateGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, generalCommitteeSize, certifiedCommitteeSize);
+        _updateGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, isCertified, generalCommitteeSize, certifiedCommitteeSize);
     }
 
     function _setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) private {
@@ -431,10 +423,10 @@ contract Rewards is IRewards, ManagedContract {
     // External push notifications
     //
 
-    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external override onlyCommitteeContract {
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) external override onlyCommitteeContract {
         uint256 delegatedStake = delegationsContract.getDelegatedStake(guardian);
 
-        _updateGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, generalCommitteeSize, certifiedCommitteeSize);
+        _updateGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, generalCommitteeSize, certifiedCommitteeSize);
         Settings memory _settings = settings;
         StakingRewardsState memory _stakingRewardsState = _updateStakingRewardsState(totalCommitteeWeight, _settings);
         _updateGuardianStakingRewards(guardian, inCommittee, weight, delegatedStake, _stakingRewardsState, _settings);
@@ -590,7 +582,7 @@ contract Rewards is IRewards, ManagedContract {
     }
 
     function migrateRewardsBalance(address addr) external override {
-        require(!settings.active, "Reward distribution must be deactivated for migration");
+        require(!settings.rewardAllocationActive, "Reward distribution must be deactivated for migration");
 
         IRewards currentRewardsContract = IRewards(getRewardsContract());
         require(address(currentRewardsContract) != address(this), "New rewards contract is not set");
@@ -652,18 +644,18 @@ contract Rewards is IRewards, ManagedContract {
     function activate(uint startTime) external override onlyMigrationManager {
         feesAndBootstrapState.lastAssigned = uint32(startTime);
         stakingRewardsState.lastAssigned = uint32(startTime);
-        settings.active = true;
+        settings.rewardAllocationActive = true;
 
         emit RewardDistributionActivated(startTime);
     }
 
     function deactivate() external override onlyMigrationManager {
-        require(settings.active, "reward distribution is already deactivated");
+        require(settings.rewardAllocationActive, "reward distribution is already deactivated");
 
         updateFeesAndBootstrapState();
         updateStakingRewardsState();
 
-        settings.active = false;
+        settings.rewardAllocationActive = false;
 
         emit RewardDistributionDeactivated();
     }
@@ -675,7 +667,7 @@ contract Rewards is IRewards, ManagedContract {
         uint32 annualStakingRewardsRatePercentMille,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
         uint32 maxDelegatorsStakingRewardsPercentMille,
-        bool active
+        bool rewardAllocationActive
     ) {
         Settings memory _settings = settings;
         generalCommitteeAnnualBootstrap = toUint256Granularity(_settings.generalCommitteeAnnualBootstrap);
@@ -684,7 +676,7 @@ contract Rewards is IRewards, ManagedContract {
         annualStakingRewardsRatePercentMille = _settings.annualRateInPercentMille;
         defaultDelegatorsStakingRewardsPercentMille = _settings.defaultDelegatorsStakingRewardsPercentMille;
         maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
-        active = _settings.active;
+        rewardAllocationActive = _settings.rewardAllocationActive;
     }
 
     /*

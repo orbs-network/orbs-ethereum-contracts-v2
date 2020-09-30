@@ -638,7 +638,7 @@ describe('rewards', async () => {
         expect((await d.rewards.getSettings()).defaultDelegatorsStakingRewardsPercentMille).to.eq(opts.defaultDelegatorsStakingRewardsPercentMille.toString());
         expect((await d.rewards.getSettings()).annualStakingRewardsRatePercentMille).to.eq(opts.stakingRewardsAnnualRateInPercentMille.toString());
         expect((await d.rewards.getSettings()).annualStakingRewardsCap).to.eq(opts.stakingRewardsAnnualCap.toString());
-        expect((await d.rewards.getSettings()).active).to.be.true;
+        expect((await d.rewards.getSettings()).rewardAllocationActive).to.be.true;
     });
 
     it("ensures only migration manager can activate and deactivate", async () => {

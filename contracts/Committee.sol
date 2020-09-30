@@ -85,7 +85,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		CommitteeStats memory _committeeStats = committeeStats;
 
-		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, true, prevCertification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, true, prevCertification, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		committeeStats.certifiedCommitteeSize = _committeeStats.certifiedCommitteeSize - (prevCertification ? 1 : 0) + (isCertified ? 1 : 0);
 
@@ -93,24 +93,24 @@ contract Committee is ICommittee, ManagedContract {
 		emit GuardianCommitteeChange(addr, weight, isCertified, true);
 	}
 
-	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool memberAdded, address removedMember, uint removedMemberWeight, bool removedMemberCertification) {
+	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool memberAdded) {
 		Settings memory _settings = settings;
 		MemberStatus memory status = membersStatus[addr];
 
 		if (status.inCommittee) {
-			return (false, address(0), 0, false);
+			return false;
 		}
 
 		(bool qualified, uint entryPos) = qualifiesToEnterCommittee(addr, weight, _settings);
 		if (!qualified) {
-			return (false, address(0), 0, false);
+			return false;
 		}
 
 		memberAdded = true;
 
 		CommitteeStats memory _committeeStats = committeeStats;
 
-		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		_committeeStats.generalCommitteeSize++;
 		if (isCertified) _committeeStats.certifiedCommitteeSize++;
@@ -123,8 +123,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		if (entryPos < committee.length) {
 			CommitteeMember memory removed = committee[entryPos];
-			removedMember = removed.addr;
-			(removedMemberWeight, removedMemberCertification) = unpackWeightCertification(removed.weightAndCertifiedBit);
+			unpackWeightCertification(removed.weightAndCertifiedBit);
 
 			_committeeStats = removeMemberAtPos(entryPos, false, _committeeStats);
 			committee[entryPos] = newMember;
@@ -297,7 +296,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		(uint weight, bool certification) = getWeightCertification(member);
 
-		rewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		rewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, certification, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		delete membersStatus[member.addr];
 
