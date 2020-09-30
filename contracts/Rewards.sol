@@ -16,6 +16,7 @@ import "./ManagedContract.sol";
 contract Rewards is IRewards, ManagedContract {
     using SafeMath for uint256;
     using SafeMath for uint96;
+    using SafeMath for uint48;
 
     uint constant TOKEN_GRANULARITY = 1000000000000000;
 
@@ -221,7 +222,7 @@ contract Rewards is IRewards, ManagedContract {
                 .div(TOKEN_BASE);
 
             guardianStakingRewards.delegatorRewardsPerToken = uint96(guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta));
-            guardianStakingRewards.balance = guardianStakingRewards.balance + toUint48Granularity(guardianRewards);
+            guardianStakingRewards.balance = uint48(guardianStakingRewards.balance.add(toUint48Granularity(guardianRewards)));
 
             rewardsAdded = guardianRewards;
         }
@@ -247,7 +248,7 @@ contract Rewards is IRewards, ManagedContract {
             .mul(delegatorStake)
             .div(TOKEN_BASE);
 
-        delegatorStakingRewards.balance = delegatorStakingRewards.balance + (toUint48Granularity(amount));
+        delegatorStakingRewards.balance = uint48(delegatorStakingRewards.balance.add(toUint48Granularity(amount)));
         delegatorStakingRewards.lastDelegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken;
 
         delegatorRewardsAdded = amount;
@@ -329,17 +330,17 @@ contract Rewards is IRewards, ManagedContract {
 
         if (_settings.rewardAllocationActive) {
             uint48 generalFeesDelta = generalCommitteeSize == 0 ? 0 : toUint48Granularity(collectedGeneralFees.div(generalCommitteeSize));
-            uint48 certifiedFeesDelta = generalFeesDelta + (certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(collectedCertifiedFees.div(certifiedCommitteeSize)));
+            uint48 certifiedFeesDelta = uint48(generalFeesDelta.add(certifiedCommitteeSize == 0 ? 0 : toUint48Granularity(collectedCertifiedFees.div(certifiedCommitteeSize))));
 
-            _feesAndBootstrapState.generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember + (generalFeesDelta);
-            _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember + (certifiedFeesDelta);
+            _feesAndBootstrapState.generalFeesPerMember = uint48(_feesAndBootstrapState.generalFeesPerMember.add(generalFeesDelta));
+            _feesAndBootstrapState.certifiedFeesPerMember = uint48(_feesAndBootstrapState.certifiedFeesPerMember.add(certifiedFeesDelta));
 
             uint duration = now.sub(_feesAndBootstrapState.lastAssigned);
-            uint48 generalBootstrapDelta = uint48(uint(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days));
-            uint48 certifiedBootstrapDelta = generalBootstrapDelta + (uint48(uint(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days)));
+            uint48 generalBootstrapDelta = uint48(_settings.generalCommitteeAnnualBootstrap.mul(duration).div(365 days));
+            uint48 certifiedBootstrapDelta = uint48(generalBootstrapDelta.add(_settings.certifiedCommitteeAnnualBootstrap.mul(duration).div(365 days)));
 
-            _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember + (generalBootstrapDelta);
-            _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember + (certifiedBootstrapDelta);
+            _feesAndBootstrapState.generalBootstrapPerMember = uint48(_feesAndBootstrapState.generalBootstrapPerMember.add(generalBootstrapDelta));
+            _feesAndBootstrapState.certifiedBootstrapPerMember = uint48(_feesAndBootstrapState.certifiedBootstrapPerMember.add(certifiedBootstrapDelta));
             _feesAndBootstrapState.lastAssigned = uint32(block.timestamp);
 
             allocatedBootstrap = toUint256Granularity(generalBootstrapDelta).mul(generalCommitteeSize).add(toUint256Granularity(certifiedBootstrapDelta).mul(certifiedCommitteeSize));
@@ -371,17 +372,17 @@ contract Rewards is IRewards, ManagedContract {
         guardianFeesAndBootstrap = feesAndBootstrap[guardian];
 
         if (inCommittee) {
-            uint48 bootstrapAmount = (isCertified ? _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember) - guardianFeesAndBootstrap.lastBootstrapPerMember;
-            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance + (bootstrapAmount);
+            uint48 bootstrapAmount = uint48((isCertified ? _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember).sub(guardianFeesAndBootstrap.lastBootstrapPerMember));
+            guardianFeesAndBootstrap.bootstrapBalance = uint48(guardianFeesAndBootstrap.bootstrapBalance.add(bootstrapAmount));
             addedBootstrapAmount = toUint256Granularity(bootstrapAmount);
 
-            uint48 feesAmount = (isCertified ? _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember) - guardianFeesAndBootstrap.lastBootstrapPerMember;
-            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance + (feesAmount);
+            uint48 feesAmount = uint48((isCertified ? _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember).sub(guardianFeesAndBootstrap.lastFeesPerMember));
+            guardianFeesAndBootstrap.feeBalance = uint48(guardianFeesAndBootstrap.feeBalance.add(feesAmount));
             addedFeesAmount = toUint256Granularity(feesAmount);
         }
         
         guardianFeesAndBootstrap.lastBootstrapPerMember = nextCertification ?  _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember;
-        guardianFeesAndBootstrap.lastFeesPerMember = nextCertification ?  _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalBootstrapPerMember;
+        guardianFeesAndBootstrap.lastFeesPerMember = nextCertification ?  _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember;
     }
 
     function _updateGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) private {
@@ -545,7 +546,7 @@ contract Rewards is IRewards, ManagedContract {
     function getStakingRewardsBalance(address addr) external override view returns (uint256) {
         DelegatorStakingRewards memory delegatorStakingRewards = getDelegatorStakingRewards(addr);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(addr); // TODO consider removing, data in state must be up to date at this point
-        return toUint256Granularity(delegatorStakingRewards.balance + (guardianStakingRewards.balance));
+        return toUint256Granularity(uint48(delegatorStakingRewards.balance.add(guardianStakingRewards.balance)));
     }
 
     function getFeeBalance(address addr) external override view returns (uint256) {
@@ -608,12 +609,12 @@ contract Rewards is IRewards, ManagedContract {
     }
 
     function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrap) external override {
-        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance + (toUint48Granularity(guardianStakingRewards));
-        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance + (toUint48Granularity(delegatorStakingRewards));
+        guardiansStakingRewards[addr].balance = uint48(guardiansStakingRewards[addr].balance.add(toUint48Granularity(guardianStakingRewards)));
+        delegatorsStakingRewards[addr].balance = uint48(delegatorsStakingRewards[addr].balance.add(toUint48Granularity(delegatorStakingRewards)));
 
         FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[addr];
-        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance + (toUint48Granularity(fees));
-        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance + (toUint48Granularity(bootstrap));
+        guardianFeesAndBootstrap.feeBalance = uint48(guardianFeesAndBootstrap.feeBalance.add(toUint48Granularity(fees)));
+        guardianFeesAndBootstrap.bootstrapBalance = uint48(guardianFeesAndBootstrap.bootstrapBalance.add(toUint48Granularity(bootstrap)));
         feesAndBootstrap[addr] = guardianFeesAndBootstrap;
 
         require(erc20.transferFrom(msg.sender, address(this), guardianStakingRewards.add(delegatorStakingRewards).add(fees)), "acceptRewardBalanceMigration: transfer failed");
