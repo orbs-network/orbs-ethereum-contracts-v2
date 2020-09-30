@@ -9,7 +9,6 @@ import "./spec_interfaces/ICommitteeListener.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./interfaces/IElections.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
 import "./ContractRegistryAccessor.sol";
@@ -67,7 +66,7 @@ contract Elections is IElections, ManagedContract {
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
 	function guardianCertificationChanged(address addr, bool isCertified) external override {
-		committeeContract.memberChange(addr, getCommitteeEffectiveStake(addr, settings), isCertified);
+		committeeContract.memberCertificationChange(addr, isCertified);
 	}
 
 	function requireNotVotedOut(address addr) private view {
@@ -79,7 +78,10 @@ contract Elections is IElections, ManagedContract {
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit GuardianStatusUpdated(guardianAddr, true, true);
-		committeeContract.addMember(guardianAddr, getCommitteeEffectiveStake(guardianAddr, settings), certificationContract.isGuardianCertified(guardianAddr));
+
+		bool isCertified = certificationContract.isGuardianCertified(guardianAddr);
+		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardianAddr, settings);
+		committeeContract.addMember(guardianAddr, effectiveStake, isCertified);
 	}
 
 	function readyToSync() external override {
@@ -87,6 +89,7 @@ contract Elections is IElections, ManagedContract {
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit GuardianStatusUpdated(guardianAddr, true, false);
+
 		committeeContract.removeMember(guardianAddr);
 	}
 
@@ -152,7 +155,7 @@ contract Elections is IElections, ManagedContract {
 			clearCommitteeUnreadyVotes(generalCommittee, subjectAddr);
 			emit GuardianVotedUnready(subjectAddr);
 			emit GuardianStatusUpdated(subjectAddr, false, false);
-            committeeContract.removeMember(subjectAddr);
+			committeeContract.removeMember(subjectAddr);
 		}
 	}
 
@@ -162,7 +165,7 @@ contract Elections is IElections, ManagedContract {
 		address prevSubject = voteOutVotes[msg.sender];
 		voteOutVotes[msg.sender] = subject;
 
-		uint256 voterStake = delegationsContract.getDelegatedStakes(msg.sender);
+		uint256 voterStake = delegationsContract.getDelegatedStake(msg.sender);
 
 		if (prevSubject == address(0)) {
 			votersStake[msg.sender] = voterStake;
@@ -234,21 +237,19 @@ contract Elections is IElections, ManagedContract {
 		return votedOutGuardians[addr];
 	}
 
-	function delegatedStakeChange(address addr, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
-		_applyDelegatedStake(addr, selfStake, delegatedStake, _settings);
-		_applyStakesToVoteOutBy(addr, delegatedStake, totalDelegatedStake, _settings);
-	}
 
-	function _applyDelegatedStake(address addr, uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private {
 		uint effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
-		emit StakeChanged(addr, selfStake, delegatedStake, effectiveStake);
+		emit StakeChanged(delegate, selfStake, delegatedStake, effectiveStake);
 
-		committeeContract.memberChange(addr, effectiveStake, certificationContract.isGuardianCertified(addr));
+		committeeContract.memberWeightChange(delegate, effectiveStake);
+
+		_applyStakesToVoteOutBy(delegate, delegatedStake, totalDelegatedStake, _settings);
 	}
 
 	function getEffectiveStake(address addr) external override view returns (uint effectiveStake) {
-		return getCommitteeEffectiveStake(addr, settings);
+		(, effectiveStake, ) = getGuardianStakeInfo(addr, settings);
 	}
 
 	function getCommitteeEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
@@ -259,8 +260,11 @@ contract Elections is IElections, ManagedContract {
 		return selfStake.mul(PERCENT_MILLIE_BASE).div(_settings.minSelfStakePercentMille); // never overflows or divides by zero
 	}
 
-	function getCommitteeEffectiveStake(address v, Settings memory _settings) private view returns (uint256) {
-		return getCommitteeEffectiveStake(stakingContract.getStakeBalanceOf(v), delegationsContract.getDelegatedStakes(v), _settings);
+	function getGuardianStakeInfo(address v, Settings memory _settings) private view returns (uint256 selfStake, uint256 effectiveStake, uint256 delegatedStake) {
+		IDelegations _delegationsContract = delegationsContract;
+		(,selfStake) = _delegationsContract.getDelegationInfo(v);
+		delegatedStake = _delegationsContract.getDelegatedStake(v);
+		effectiveStake = getCommitteeEffectiveStake(selfStake, delegatedStake, _settings);
 	}
 
 	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) public override onlyFunctionalManager {
@@ -338,13 +342,11 @@ contract Elections is IElections, ManagedContract {
 	ICommittee committeeContract;
 	IDelegations delegationsContract;
 	IGuardiansRegistration guardianRegistrationContract;
-	IStakingContract stakingContract;
 	ICertification certificationContract;
 	function refreshContracts() external override {
 		committeeContract = ICommittee(getCommitteeContract());
 		delegationsContract = IDelegations(getDelegationsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
-		stakingContract = IStakingContract(getStakingContract());
 		certificationContract = ICertification(getCertificationContract());
 	}
 

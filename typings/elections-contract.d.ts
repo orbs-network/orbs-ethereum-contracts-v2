@@ -3,6 +3,13 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
+export interface StakeChangedEvent {
+  addr: string,
+  selfStake: string|BN,
+  delegated_stake: string|BN,
+  effective_stake: string|BN
+}
+
 export interface ElectionsContract extends OwnedContract {
   registerGuardian( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;

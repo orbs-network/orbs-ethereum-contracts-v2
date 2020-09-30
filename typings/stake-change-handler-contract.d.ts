@@ -14,7 +14,7 @@ export interface StakeMigrationNotificationFailedEvent {
   stakeOwner: string
 }
 
-export interface NotifyDelegationsChanged {
+export interface NotifyDelegationsChangedEvent {
   notifyDelegations: boolean;
 }
 

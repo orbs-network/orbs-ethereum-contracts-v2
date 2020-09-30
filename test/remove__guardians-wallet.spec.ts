@@ -15,7 +15,7 @@
 // import {Web3Driver} from "../eth";
 //
 // chai.use(require('chai-bn')(BN));
-// chai.use(require('./matchers'));
+// chai.use(chaiEventMatchersPlugin);
 //
 // const MONTH_IN_SECONDS = 30*24*60*60;
 //

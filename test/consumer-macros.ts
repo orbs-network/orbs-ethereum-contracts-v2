@@ -10,7 +10,7 @@ import {bn, fromTokenUnits} from "./helpers";
 
 export async function createVC(d : Driver, isCertified?: boolean, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number|BN, appOwner?: Participant) {
     const rate: BN = monthlyRate != null ? bn(monthlyRate) : fromTokenUnits(1000);
-    const firstPayment = rate.mul(bn(2));
+    const firstPayment = rate.mul(bn(20));
 
     subscriber = subscriber || await d.newSubscriber('defaultTier', rate);
     // buy subscription for a new VC

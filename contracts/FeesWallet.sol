@@ -44,39 +44,54 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     /// @dev collect fees from the buckets since the last call and transfers the amount back.
     /// Called by: only Rewards contract.
     function collectFees() external override onlyRewardsContract returns (uint256 collectedFees)  {
+        (uint256 _collectedFees, uint[] memory bucketsWithdrawn, uint[] memory amountsWithdrawn, uint[] memory newTotals) = _getOutstandingFees();
+
+        for (uint i = 0; i < bucketsWithdrawn.length; i++) {
+            buckets[bucketsWithdrawn[i]] = newTotals[i];
+            emit FeesWithdrawnFromBucket(bucketsWithdrawn[i], amountsWithdrawn[i], newTotals[i]);
+        }
+
+        lastCollectedAt = block.timestamp;
+
+        require(token.transfer(msg.sender, _collectedFees), "FeesWallet::failed to transfer collected fees to rewards"); // TODO in that case, transfer the remaining balance?
+        return _collectedFees;
+    }
+
+    function getOutstandingFees() external override view returns (uint256 outstandingFees)  {
+        (outstandingFees,,,) = _getOutstandingFees();
+    }
+
+    function _getOutstandingFees() private view returns (uint256 outstandingFees, uint[] memory bucketsWithdrawn, uint[] memory withdrawnAmounts, uint[] memory newTotals)  {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
         // Fee pool
         uint _lastCollectedAt = lastCollectedAt;
+        uint nUpdatedBuckets = _bucketTime(block.timestamp).sub(_bucketTime(_lastCollectedAt)).div(BUCKET_TIME_PERIOD).add(1);
+        bucketsWithdrawn = new uint[](nUpdatedBuckets);
+        withdrawnAmounts = new uint[](nUpdatedBuckets);
+        newTotals = new uint[](nUpdatedBuckets);
         uint bucketsPayed = 0;
-        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastCollectedAt < now) {
+        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastCollectedAt < block.timestamp) {
             uint256 bucketStart = _bucketTime(_lastCollectedAt);
             uint256 bucketEnd = bucketStart.add(BUCKET_TIME_PERIOD);
-            uint256 payUntil = Math.min(bucketEnd, now);
+            uint256 payUntil = Math.min(bucketEnd, block.timestamp);
             uint256 bucketDuration = payUntil.sub(_lastCollectedAt);
             uint256 remainingBucketTime = bucketEnd.sub(_lastCollectedAt);
 
             uint256 bucketTotal = buckets[bucketStart];
             uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
-            collectedFees += amount;
+            outstandingFees += amount;
             bucketTotal = bucketTotal.sub(amount);
-            buckets[bucketStart] = bucketTotal;
-            emit FeesWithdrawnFromBucket(bucketStart, amount, bucketTotal);
+
+
+            bucketsWithdrawn[bucketsPayed] = bucketStart;
+            withdrawnAmounts[bucketsPayed] = amount;
+            newTotals[bucketsPayed] = bucketTotal;
 
             _lastCollectedAt = payUntil;
-
-            assert(_lastCollectedAt <= bucketEnd);
-            if (_lastCollectedAt == bucketEnd) {
-                delete buckets[bucketStart];
-            }
-
             bucketsPayed++;
         }
-
-        lastCollectedAt = _lastCollectedAt;
-
-        require(token.transfer(msg.sender, collectedFees), "FeesWallet::failed to transfer collected fees to rewards"); // TODO in that case, transfer the remaining balance?
     }
 
     /*
@@ -87,7 +102,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract).
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external override {
         uint256 bucket = _bucketTime(fromTimestamp);
-        require(bucket >= _bucketTime(now), "FeeWallet::cannot fill bucket from the past");
+        require(bucket >= _bucketTime(block.timestamp), "FeeWallet::cannot fill bucket from the past");
 
         uint256 _amount = amount;
 

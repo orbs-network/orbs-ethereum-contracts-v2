@@ -4,14 +4,14 @@ import 'mocha';
 import BN from "bn.js";
 import {defaultDriverOptions, Driver} from "./driver";
 import chai from "chai";
-
-chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
-
-const expect = chai.expect;
-
 import {bn, evmIncreaseTime, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 import {inspect} from "util";
+import {chaiEventMatchersPlugin} from "./matchers";
+
+chai.use(require('chai-bn')(BN));
+chai.use(chaiEventMatchersPlugin);
+
+const expect = chai.expect;
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 

@@ -8,46 +8,71 @@ import "../spec_interfaces/IContractRegistry.sol";
 /// @title Rewards contract interface
 interface IRewards {
 
+    event RewardDistributionActivated(uint256 startTime);
+    event RewardDistributionDeactivated();
+
+    function deactivate() external /* onlyMigrationManager */;
+
+    function activate(uint startTime) external /* onlyInitializationAdmin */;
+
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
+
+    function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian, uint256 nextGuardianDelegatedStake) external /* onlyDelegationsContract */;
+
     /*
      * Staking
      */
 
-    event StakingRewardsAssigned(address[] assignees, uint256[] amounts);
-    event StakingRewardsDistributed(address indexed distributer, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] to, uint256[] amounts);
+    event StakingRewardsAssigned(address indexed addr, uint256 amount);
+    event StakingRewardsClaimed(address addr, uint256 amount);
+    event StakingRewardAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
+    event GuardianStakingRewardsAssigned(address guardian, uint256 amount, uint256 delegatorRewardsPerToken);
+    event GuardianDelegatorsStakingRewardsPercentMilleUpdated(address guardian, uint256 delegatorsStakingRewardsPercentMille);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
-    function getStakingRewardBalance(address addr) external view returns (uint256 balance);
+    function getStakingRewardsBalance(address addr) external view returns (uint256 balance);
 
-    /// @dev Distributes msg.sender's orbs token rewards to a list of addresses, by transferring directly into the staking contract.
-    /// @dev `to[0]` must be the sender's main address
-    /// @dev Total delegators reward (`to[1:n]`) must be less then maxDelegatorsStakingRewardsPercentMille of total amount
-    function distributeStakingRewards(uint256 totalAmount, uint256 fromBlock, uint256 toBlock, uint split, uint txIndex, address[] calldata to, uint256[] calldata amounts) external;
+    function getGuardianDelegatorsStakingRewardsPercentMille(address guardian) external view returns (uint256 delegatorRewardsRatioPercentMille);
 
     // Staking Parameters Governance 
+    event DefaultDelegatorsStakingRewardsChanged(uint32 defaultDelegatorsStakingRewardsPercentMille);
     event MaxDelegatorsStakingRewardsChanged(uint32 maxDelegatorsStakingRewardsPercentMille);
     event AnnualStakingRewardsRateChanged(uint256 annualRateInPercentMille, uint256 annualCap);
 
     /// @dev Sets a new annual rate and cap for the staking reward.
     function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
 
+    /// @dev Sets the default cut of the delegators staking reward.
+    function setDefaultDelegatorsStakingRewardsPercentMille(uint32 defaultDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+
     /// @dev Sets the maximum cut of the delegators staking reward.
     function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
 
-    /// @dev Gets the annual staking reward rate.
-    function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
+    //    /// @dev Gets the annual staking reward rate.
+    //    function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
+    //
+    //    /// @dev Gets the annual staking reward cap.
+    //    function getAnnualStakingRewardsCap() external view returns (uint256);
+    //
+    //    /// @dev Gets the maximum cut of the delegators staking reward.
+    //    function getDefaultDelegatorsStakingRewardsPercentMille() external view returns (uint32);
+    //
+    //    /// @dev Gets the maximum cut of the delegators staking reward.
+    //    function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
-    /// @dev Gets the annual staking reward cap.
-    function getAnnualStakingRewardsCap() external view returns (uint256);
+    /// @dev Claims the staking rewards balance of addr by staking
+    function claimStakingRewards(address addr) external;
 
-    /// @dev Gets the maximum cut of the delegators staking reward.
-    function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
+    function getStakingRewardsWalletAllocatedTokens() external view returns (uint256 allocated);
 
-    /* 
+    function getGuardianDelegatorStakingRewardsPerToken(address guardian) external view returns (uint256 stakingRewardsPerToken);
+
+    /*
      * Fees
      */
 
-    event FeesAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
-    event FeesWithdrawn(address guardian, uint256 amount);
+    event FeesAssigned(address indexed guardian, uint256 amount);
+    event FeesWithdrawn(address indexed guardian, uint256 amount);
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
     function getFeeBalance(address addr) external view returns (uint256 balance);
@@ -55,12 +80,19 @@ interface IRewards {
     /// @dev Transfer all of msg.sender's outstanding balance to their account
     function withdrawFees(address guardian) external;
 
+    function getFeesAndBootstrapState() external view returns (
+        uint256 certifiedFeesPerMember,
+        uint256 generalFeesPerMember,
+        uint256 certifiedBootstrapPerMember,
+        uint256 generalBootstrapPerMember
+    );
+
     /*
      * Bootstrap
      */
 
-    event BootstrapRewardsAssigned(uint256 generalGuardianAmount, uint256 certifiedGuardianAmount);
-    event BootstrapRewardsWithdrawn(address guardian, uint256 amount);
+    event BootstrapRewardsAssigned(address indexed guardian, uint256 amount);
+    event BootstrapRewardsWithdrawn(address indexed guardian, uint256 amount);
 
     /// @dev Returns the currently unclaimed bootstrap balance of the given address.
     function getBootstrapBalance(address addr) external view returns (uint256 balance);
@@ -78,47 +110,40 @@ interface IRewards {
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
     function setCertifiedCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
     
-    /// @dev returns the general committee annual bootstrap fund
-    function getGeneralCommitteeAnnualBootstrap() external view returns (uint256);
-    
-    /// @dev returns the certified committee annual bootstrap fund
-    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256);
+//    /// @dev returns the general committee annual bootstrap fund
+//    function getGeneralCommitteeAnnualBootstrap() external view returns (uint256);
+//
+//    /// @dev returns the certified committee annual bootstrap fund
+//    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256);
 
     /*
      * General
      */
 
-    /// @dev assignsRewards based to the current committee, may called by any client.
-    function assignRewards() external;
-    
-    /// @dev assignsRewards the current committee, called by the committee contract.
-    function assignRewardsToCommittee(address[] calldata generalCommittee, uint256[] calldata generalCommitteeWeights, bool[] calldata certification) external /* onlyCommitteeContract */;
-
-    /// @dev Returns the timestamp of the last reward assignment.
-    function getLastRewardAssignmentTime() external view returns (uint256 time);
-
-    /// @dev Returns the contract's settings 
+    /// @dev Returns the contract's settings
     function getSettings() external view returns (
         uint generalCommitteeAnnualBootstrap,
         uint certifiedCommitteeAnnualBootstrap,
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
-        uint32 maxDelegatorsStakingRewardsPercentMille
+        uint32 defaultDelegatorsStakingRewardsPercentMille,
+        uint32 maxDelegatorsStakingRewardsPercentMille,
+        bool rewardAllocationActive
     );
 
     /*
      * Migration
      */
 
-    event StakingRewardsBalanceMigrated(address guardian, uint256 amount, address toRewardsContract);
-    event StakingRewardsMigrationAccepted(address from, address guardian, uint256 amount);
+    event RewardsBalanceMigrated(address from, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrapRewards, address toRewardsContract);
+    event RewardsBalanceMigrationAccepted(address from, address to, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrapRewards);
     event EmergencyWithdrawal(address addr);
 
     /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
-    function migrateStakingRewardsBalance(address guardian) external;
+    function migrateRewardsBalance(address guardian) external;
 
     /// @dev accepts guardian's balance migration from a previous rewards contarct.
-    function acceptStakingRewardsMigration(address guardian, uint256 amount) external;
+    function acceptRewardsBalanceMigration(address guardian, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, uint256 fees, uint256 bootstrapRewards) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
     function emergencyWithdraw() external /* onlyMigrationManager */; // TODO change to EmergencyManager.

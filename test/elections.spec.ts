@@ -1,20 +1,20 @@
 import 'mocha';
 
 import BN from "bn.js";
+import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 import {
     defaultDriverOptions,
-    BANNING_LOCK_TIMEOUT,
     Driver,
     Participant, ZERO_ADDR
 } from "./driver";
+
 import chai from "chai";
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 const assert = chai.assert;
-
-import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
 
 const baseStake = 100;
 
@@ -114,7 +114,7 @@ describe('elections-high-level-flows', async () => {
         r = await guardianStaked100.readyToSync();
 
         r = await guardianStaked100.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [guardianStaked100.address],
             weights: [stake100],
         });
@@ -126,7 +126,7 @@ describe('elections-high-level-flows', async () => {
         await guardianStaked200.registerAsGuardian();
         await guardianStaked200.readyToSync();
         r = await guardianStaked200.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [guardianStaked200.address, guardianStaked100.address],
             weights: [stake200, stake100]
         });
@@ -141,22 +141,22 @@ describe('elections-high-level-flows', async () => {
 
         r = await guardianStaked300.readyToSync();
         r = await guardianStaked300.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [guardianStaked300.address, guardianStaked200.address],
             weights: [stake300, stake200]
         });
 
         r = await d.delegateMoreStake(stake300, guardianStaked200);
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [guardianStaked200.address, guardianStaked300.address],
             weights: [stake200.add(stake300), stake300]
         });
 
         r = await d.delegateMoreStake(stake500, guardianStaked100);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         r = await guardianStaked100.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [guardianStaked100.address, guardianStaked200.address],
             weights: [stake100.add(stake500), stake500]
         });
@@ -169,7 +169,7 @@ describe('elections-high-level-flows', async () => {
         await inTopologyGuardian.registerAsGuardian();
         r = await inTopologyGuardian.readyToSync();
         r = await inTopologyGuardian.readyForCommittee();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         // The bottom guardian in the topology delegates more stake and switches places with the second to last
         await d.delegateMoreStake(201, inTopologyGuardian);
@@ -181,14 +181,14 @@ describe('elections-high-level-flows', async () => {
         await outOfTopologyGuardian.registerAsGuardian();
         await outOfTopologyGuardian.readyToSync();
         r = await outOfTopologyGuardian.readyForCommittee();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         // A new guardian stakes enough to get to the top
         const guardian = d.newParticipant();
         await guardian.registerAsGuardian();
         await guardian.stake(stake1000); // now top of committee
         r = await guardian.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [guardian.address, guardianStaked100.address],
             weights: [stake1000, stake100.add(stake500)]
         });
@@ -227,7 +227,7 @@ describe('elections-high-level-flows', async () => {
                 voted: false
             }
         }
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
@@ -247,7 +247,7 @@ describe('elections-high-level-flows', async () => {
                     subject: votedOutGuardian.address
                 });
                 expect(r).to.not.have.a.guardianVotedUnreadyEvent();
-                expect(r).to.not.have.a.committeeSnapshotEvent();
+                expect(r).to.not.have.a.guardianCommitteeChangeEvent();
                 committeeData[v.address].voted = true;
             }
 
@@ -255,12 +255,12 @@ describe('elections-high-level-flows', async () => {
             expect(status.committee.length).to.eq(committee.length);
             for (let i = 0; i < status.committee.length; i++) {
                 const data = committeeData[status.committee[i]];
-                expect(status.weights[i]).to.bignumber.eq(data.stake);
                 expect(status.votes[i]).to.eq(data.voted);
                 expect(status.certification[i]).to.be.false;
-                expect(status.subjectInCommittee).to.be.true;
-                expect(status.subjectInCertifiedCommittee).to.be.false;
+                expect(status.weights[i]).to.bignumber.eq(data.stake);
             }
+            expect(status.subjectInCommittee).to.be.true;
+            expect(status.subjectInCertifiedCommittee).to.be.false;
 
             r = await d.elections.voteUnready(votedOutGuardian.address, 0xFFFFFFFF, {from: committee[thresholdCrossingIndex].orbsAddress}); // Threshold is reached
             expect(r).to.have.a.voteUnreadyCastedEvent({
@@ -275,13 +275,13 @@ describe('elections-high-level-flows', async () => {
                 readyToSync: false,
                 readyForCommittee: false
             });
-            expect(r).to.have.a.committeeSnapshotEvent({
+            await expectCommittee(d,  {
                 addrs: committee.filter(v => v != votedOutGuardian).map(v => v.address)
             });
 
             // voted-out guardian re-joins by notifying ready-for-committee
             r = await votedOutGuardian.readyForCommittee();
-            expect(r).to.have.a.committeeSnapshotEvent({
+            await expectCommittee(d,  {
                 addrs: committee.map(v => v.address)
             });
         }
@@ -302,7 +302,7 @@ describe('elections-high-level-flows', async () => {
             r = await v.stake(100);
             committee.push(v);
         }
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
@@ -324,7 +324,7 @@ describe('elections-high-level-flows', async () => {
             subject: committee[1].address,
         });
         expect(r).to.not.have.a.guardianVotedUnreadyEvent();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         expiration = bn((await d.web3.txTimestamp(r)) + WEEK);
         // recast the stale vote-out, threshold should be reached
@@ -337,7 +337,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.guardianVotedUnreadyEvent({
             guardian: committee[1].address
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [committee[0].address]
         });
     });
@@ -430,7 +430,7 @@ describe('elections-high-level-flows', async () => {
             addr: v1.address,
             effective_stake: new BN(1000),
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v1.address],
             weights: [new BN(1000)]
         });
@@ -440,7 +440,7 @@ describe('elections-high-level-flows', async () => {
             addr: v1.address,
             effective_stake: new BN(1012),
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v1.address],
             weights: [new BN(1012)]
         });
@@ -450,7 +450,7 @@ describe('elections-high-level-flows', async () => {
             addr: v1.address,
             effective_stake: new BN(1020),
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v1.address],
             weights: [new BN(1020)]
         });
@@ -460,7 +460,7 @@ describe('elections-high-level-flows', async () => {
             addr: v1.address,
             effective_stake: new BN(1030),
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v1.address],
             weights: [new BN(1030)]
         });
@@ -477,7 +477,7 @@ describe('elections-high-level-flows', async () => {
             addr: v.address,
             effective_stake: bn(100),
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address],
             weights: [bn(100)],
         });
@@ -505,7 +505,7 @@ describe('elections-high-level-flows', async () => {
         await v1.stake(baseStake);
         await v1.registerAsGuardian();
         let r = await v1.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v1.address],
             weights: [bn(0)]
         });
@@ -518,12 +518,12 @@ describe('elections-high-level-flows', async () => {
         await v.registerAsGuardian();
         let r = await v.readyToSync();
         r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address]
         });
 
         const {r: r2} = await d.newGuardian(baseStake * 2, false, true, false);
-        expect(r2).to.not.have.a.committeeSnapshotEvent();
+        expect(r2).to.not.have.a.guardianCommitteeChangeEvent();
     });
 
     it('publishes a CommiteeChangedEvent when the commitee becomes empty', async () => {
@@ -533,12 +533,12 @@ describe('elections-high-level-flows', async () => {
         await v.stake(baseStake);
 
         let r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v.address]
         });
 
         r = await v.unregisterAsGuardian();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: []
         });
     });
@@ -635,30 +635,6 @@ describe('elections-high-level-flows', async () => {
         let r = await d.staking.distributeRewards(rewardsTotal, rewards.map(r => r.p.address), rewards.map(r => r.amount), {from: a.address});
 
         await expectTotalGovernanceStakeToBe(stakeOfABC + totalRewardsForGovernanceStake);
-
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: a.address,
-            selfDelegatedStake: bn(stakeOfA),
-            delegatedStake: bn(stakeOfA + stakeOfC + 30),
-            delegators: [rewards[0].p.address, rewards[1].p.address],
-            delegatorTotalStakes: [bn(rewards[0].amount), bn(rewards[1].amount)]
-        });
-
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: b.address,
-            selfDelegatedStake: bn(stakeOfB),
-            delegatedStake: bn(stakeOfB + 120),
-            delegators: [rewards[2].p.address, rewards[3].p.address, rewards[4].p.address],
-            delegatorTotalStakes: [bn(rewards[2].amount), bn(rewards[3].amount), bn(rewards[4].amount)]
-        });
-
-        expect(r).to.have.a.delegatedStakeChangedEvent({
-            addr: c.address,
-            selfDelegatedStake: bn(0),
-            delegatedStake: bn(0),
-            delegators: [rewards[5].p.address, rewards[6].p.address],
-            delegatorTotalStakes: [bn(rewards[5].amount), bn(rewards[6].amount)]
-        })
     });
 
     it("VoteOut: does not count delegators voting - because they don't have effective governance stake", async () => {
@@ -674,7 +650,7 @@ describe('elections-high-level-flows', async () => {
                 voter: delegator.address,
                 subject: votedOutGuardian.address
             });
-            expect(r).to.not.have.a.committeeSnapshotEvent();
+            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
         }
     });
@@ -694,7 +670,7 @@ describe('elections-high-level-flows', async () => {
                 voter: p.address,
                 subject: votedOutGuardian.address
             });
-            expect(r).to.not.have.a.committeeSnapshotEvent();
+            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
         }
 
@@ -708,7 +684,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.guardianVotedOutEvent({
             guardian: votedOutGuardian.address
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: []
         });
     });
@@ -785,7 +761,7 @@ describe('elections-high-level-flows', async () => {
                 voter: p.address,
                 subject: votedOutGuardian.address
             });
-            expect(r).to.not.have.a.committeeSnapshotEvent();
+            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
         }
 
@@ -799,9 +775,7 @@ describe('elections-high-level-flows', async () => {
         expect(r).to.have.a.guardianVotedOutEvent({
             guardian: votedOutGuardian.address
         });
-        expect(r).to.have.withinContract(d.committee).a.committeeSnapshotEvent({
-            addrs: []
-        });
+        await expectCommittee(d, {addrs: []});
 
         await expectRejected(d.elections.readyToSync({from: votedOutGuardian.address}), /caller is voted-out/);
         await expectRejected(d.elections.readyToSync({from: votedOutGuardian.orbsAddress}), /caller is voted-out/);
@@ -848,7 +822,7 @@ describe('elections-high-level-flows', async () => {
         expect(await d.elections.getMinSelfStakePercentMille()).to.bignumber.eq(minSelfStakePercentMille.add(bn(1)));
         expect(await d.elections.getVoteUnreadyPercentMilleThreshold()).to.bignumber.eq(voteUnreadyPercentMilleThreshold.add(bn(1)));
         expect(await d.elections.getVoteOutPercentMilleThreshold()).to.bignumber.eq(voteOutPercentMilleThreshold.add(bn(1)));
-    })
+    });
 
     it("reverts if casting a vote-unready with expiration in the past", async () => {
         const d = await Driver.new();
@@ -896,7 +870,7 @@ export async function voteOutScenario_setupDelegatorsAndGuardians(driver: Driver
 
     await votedOutGuardian.stake(baseStake);
     let r = await votedOutGuardian.readyForCommittee();
-    expect(r).to.have.a.committeeSnapshotEvent({
+    await expectCommittee(driver,  {
         addrs: [votedOutGuardian.address]
     });
 
@@ -916,7 +890,7 @@ export async function banningScenario_voteUntilThresholdReached(driver: Driver, 
     expect(r).to.have.a.guardianVotedOutEvent({
         guardian: votedOutGuardian.address
     });
-    expect(r).to.have.a.committeeSnapshotEvent({
+    await expectCommittee(driver,  {
         addrs: []
     });
     return r;

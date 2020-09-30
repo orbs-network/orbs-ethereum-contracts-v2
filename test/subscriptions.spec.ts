@@ -4,9 +4,10 @@ import BN from "bn.js";
 import {defaultDriverOptions, DEPLOYMENT_SUBSET_CANARY, DEPLOYMENT_SUBSET_MAIN, Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
+import {chaiEventMatchersPlugin} from "./matchers";
 import {bn, expectRejected, getBlockTimestamp} from "./helpers";
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 
