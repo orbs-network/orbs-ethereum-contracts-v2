@@ -25,7 +25,7 @@ import {
   VoteOutTimeoutSecondsChangedEvent,
   MinSelfStakePercentMilleChangedEvent,
   VoteUnreadyPercentMilleThresholdChangedEvent,
-  VoteOutPercentMilleThresholdChangedEvent,
+  VoteOutPercentMilleThresholdChangedEvent, StakeChangedEvent,
 } from "../typings/elections-contract";
 import { MigratedStakeEvent, StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {
@@ -36,10 +36,20 @@ import {
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
   AnnualStakingRewardsRateChangedEvent,
-  BootstrapRewardsWithdrawnEvent, CertifiedCommitteeAnnualBootstrapChangedEvent,
-  FeesWithdrawnEvent, GeneralCommitteeAnnualBootstrapChangedEvent, MaxDelegatorsStakingRewardsChangedEvent,
-  StakingRewardAssignedEvent, StakingRewardsBalanceMigratedEvent,
-  StakingRewardsDistributedEvent, StakingRewardsMigrationAcceptedEvent
+  BootstrapRewardsWithdrawnEvent,
+  CertifiedCommitteeAnnualBootstrapChangedEvent,
+  FeesWithdrawnEvent,
+  GeneralCommitteeAnnualBootstrapChangedEvent,
+  GuardianStakingRewardAssignedEvent,
+  DefaultDelegatorsStakingRewardsChangedEvent,
+  StakingRewardAssignedEvent,
+  RewardsBalanceMigratedEvent,
+  RewardsBalanceMigrationAcceptedEvent,
+  StakingRewardsClaimedEvent,
+  RewardDistributionDeactivatedEvent,
+  RewardDistributionActivatedEvent,
+  GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
+  MaxDelegatorsStakingRewardsChangedEvent
 } from "../typings/rewards-contract";
 import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
 import {FeesAssignedEvent} from "../typings/rewards-contract";
@@ -75,7 +85,7 @@ import {
 
 } from "../typings/fees-wallet-contract";
 import {
-  NotifyDelegationsChanged,
+  NotifyDelegationsChangedEvent,
   StakeChangeBatchNotificationFailedEvent,
   StakeChangeBatchNotificationSkippedEvent,
   StakeChangeNotificationFailedEvent,
@@ -83,48 +93,56 @@ import {
   StakeMigrationNotificationFailedEvent,
   StakeMigrationNotificationSkippedEvent
 } from "../typings/stake-change-handler-contract";
+import {Driver} from "./driver";
 
-export function isBNArrayEqual(a1: Array<any>, a2: Array<any>): boolean {
+function bnEq(b1, b2, approx?: number) {
+  b1 = new BN(b1);
+  b2 = new BN(b2)
+  if (!approx) return b1.eq(b2);
+  return b1.sub(b2).abs().lte(BN.max(b1, b2).mul(new BN(approx)).div(new BN(100)));
+}
+
+export function isBNArrayEqual(a1: Array<any>, a2: Array<any>, approx?: number): boolean {
   return (
     a1.length == a2.length &&
-    a1.find((v, i) => !new BN(a1[i]).eq(new BN(a2[i]))) == null
+    a1.find((v, i) => !bnEq(a1[i], a2[i], approx)) == null
   );
 }
 
-function comparePrimitive(a: any, b: any): boolean {
+function comparePrimitive(a: any, b: any, approx?: number): boolean {
   if (BN.isBN(a) || BN.isBN(b)) {
-    return new BN(a).eq(new BN(b));
+    return bnEq(a, b, approx);
   } else {
     if (
       (Array.isArray(a) && BN.isBN(a[0])) ||
       (Array.isArray(b) && BN.isBN(b[0]))
     ) {
-      return isBNArrayEqual(a, b);
+      return isBNArrayEqual(a, b, approx);
     }
     return _.isEqual(a, b);
   }
 }
 
-function objectMatches(obj, against): boolean {
+function objectMatches(obj, against, approx?: number): boolean {
     if (obj == null || against == null) return false;
 
     for (const k in against) {
-      if (!comparePrimitive(obj[k], against[k])) {
+      if (!comparePrimitive(obj[k], against[k], approx)) {
         return false;
       }
     }
     return true;
 }
 
-function compare(event: any, against: any, transposeKey?: string): boolean {
+function compareEvents(actual: any, expected: any, transposeKey?: string, approx?: number): boolean {
   if (transposeKey != null) {
-    const fields = Object.keys(against);
-    event = transpose(event, transposeKey, fields);
-    against = transpose(against, transposeKey);
-    return  Object.keys(against).length == Object.keys(event).length &&
-        Object.keys(against).find(key => !objectMatches(event[key], against[key])) == null;
+    const fields = Object.keys(expected);
+    actual = transpose(actual, transposeKey, fields);
+    expected = transpose(expected, transposeKey);
+    return  Object.keys(expected).length == Object.keys(actual).length &&
+        Object.keys(expected).find(key => !objectMatches(actual[key], expected[key], approx)) == null;
   } else {
-    return objectMatches(event, against);
+    return objectMatches(actual, expected, approx);
   }
 }
 
@@ -138,6 +156,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
       data = data || {};
 
       const contractAddress = chai.util.flag(this, "contractAddress");
+      const approx = chai.util.flag(this, "approx");
       const logs = eventParser(this._obj, contractAddress).map(stripEvent);
 
       this.assert(
@@ -149,7 +168,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
       if (logs.length == 1) {
         const log = logs.pop();
         this.assert(
-            compare(log, data, transposeKey),
+            compareEvents(log, data, transposeKey, approx),
             "expected #{this} to be #{exp} but got #{act}",
             "expected #{this} to not be #{act}",
             data, // expected
@@ -157,7 +176,7 @@ const containEvent = (eventParser, transposeKey?: string) =>
         );
       } else {
         for (const log of logs) {
-          if (compare(log, data, transposeKey)) {
+          if (compareEvents(log, data, transposeKey, approx)) {
             return;
           }
         }
@@ -173,10 +192,23 @@ const containEvent = (eventParser, transposeKey?: string) =>
 
 const TransposeKeys = {
   "CommitteeSnapshot": "addrs",
-  "StakingRewardsAssigned": "assignees",
 };
 
-module.exports = function(chai) {
+export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeSnapshotEvent> & {addrs: string[]}) {
+  const curCommittee: any = await d.committee.getCommittee();
+  const actualCommittee: CommitteeSnapshotEvent = {
+    addrs: curCommittee.addrs,
+    weights: curCommittee.weights,
+    certification: curCommittee.certification
+  }
+
+  chai.assert(
+      compareEvents(actualCommittee, expectedCommittee, 'addrs'),
+      `expected committee to be ${JSON.stringify(expectedCommittee)} but got ${JSON.stringify(actualCommittee)}`,
+  );
+}
+
+export const chaiEventMatchersPlugin = function(chai) {
   for (const event of eventDefinitions) {
     chai.Assertion.overwriteMethod(event.name[0].toLowerCase() + event.name.substr(1) + 'Event',
         containEvent(
@@ -189,6 +221,10 @@ module.exports = function(chai) {
 
   chai.Assertion.addChainableMethod("withinContract", function (this: any, contract: Contract) {
     chai.util.flag(this, "contractAddress", contract.address);
+  })
+
+  chai.Assertion.addChainableMethod("approx", function (this: any, p: number) {
+    chai.util.flag(this, "approx", p || 2);
   })
 };
 
@@ -218,8 +254,7 @@ declare global {
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       guardianCertificationUpdateEvent(data?: Partial<GuardianCertificationUpdateEvent>)
-      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>)
-      stakingRewardsDistributedEvent(data?: Partial<StakingRewardsDistributedEvent>)
+      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>);
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
@@ -236,6 +271,7 @@ declare global {
       bootstrapRewardsWithdrawnEvent(data?: Partial<BootstrapRewardsWithdrawnEvent>);
       guardianStatusUpdatedEvent(data?: Partial<GuardianStatusUpdatedEvent>);
       contractRegistryAddressUpdatedEvent(data?: Partial<ContractRegistryAddressUpdatedEvent>)
+      defaultDelegatorsStakingRewardsChangedEvent(data?: Partial<DefaultDelegatorsStakingRewardsChangedEvent>);
       maxDelegatorsStakingRewardsChangedEvent(data?: Partial<MaxDelegatorsStakingRewardsChangedEvent>);
       fundsAddedToPoolEvent(data?: Partial<FundsAddedToPoolEvent>);
       clientSetEvent(data?: Partial<ClientSetEvent>);
@@ -248,8 +284,8 @@ declare global {
       subscriberRemovedEvent(data?: Partial<SubscriberRemovedEvent>);
       genesisRefTimeDelayChangedEvent(data?: Partial<GenesisRefTimeDelayChangedEvent>);
       minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
-      stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
-      stakingRewardsMigrationAcceptedEvent(data?: Partial<StakingRewardsMigrationAcceptedEvent>);
+      rewardsBalanceMigratedEvent(data?: Partial<RewardsBalanceMigratedEvent>);
+      rewardsBalanceMigrationAcceptedEvent(data?: Partial<RewardsBalanceMigrationAcceptedEvent>);
       stakeChangeNotificationFailedEvent(data?: Partial<StakeChangeNotificationFailedEvent>);
       stakeChangeBatchNotificationFailedEvent(data?: Partial<StakeChangeBatchNotificationFailedEvent>);
       stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);
@@ -263,9 +299,16 @@ declare global {
       generalCommitteeAnnualBootstrapChangedEvent(data?: Partial<GeneralCommitteeAnnualBootstrapChangedEvent>);
       certifiedCommitteeAnnualBootstrapChangedEvent(data?: Partial<CertifiedCommitteeAnnualBootstrapChangedEvent>);
       contractRegistryUpdatedEvent(data?: Partial<ContractRegistryUpdatedEvent>);
-      notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChanged>);
+      notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChangedEvent>);
+      guardianStakingRewardAssignedEvent(data?: Partial<GuardianStakingRewardAssignedEvent>);
+      stakeChangedEvent(data?: Partial<StakeChangedEvent>);
+      stakingRewardsClaimedEvent(data?: Partial<StakingRewardsClaimedEvent>);
+      rewardDistributionDeactivatedEvent(data?: Partial<RewardDistributionDeactivatedEvent>);
+      rewardDistributionActivatedEvent(data?: Partial<RewardDistributionActivatedEvent>);
+      guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent(data?: Partial<GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent>);
 
       withinContract(contract: Contract): Assertion;
+      approx(): Assertion;
     }
 
     export interface Assertion {

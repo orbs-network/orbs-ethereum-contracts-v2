@@ -5,8 +5,9 @@ import {defaultDriverOptions, DEPLOYMENT_SUBSET_CANARY, DEPLOYMENT_SUBSET_MAIN, 
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
 import {bn, expectRejected} from "./helpers";
+import {chaiEventMatchersPlugin} from "./matchers";
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 

@@ -36,6 +36,7 @@ export type DriverOptions = {
     certifiedCommitteeAnnualBootstrap: number;
     stakingRewardsAnnualRateInPercentMille: number;
     stakingRewardsAnnualCap: number;
+    defaultDelegatorsStakingRewardsPercentMille: number;
     maxDelegatorsStakingRewardsPercentMille: number;
 
     stakingRewardsWalletRate: number;
@@ -81,6 +82,7 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     certifiedCommitteeAnnualBootstrap: 0,
     stakingRewardsAnnualRateInPercentMille: 0,
     stakingRewardsAnnualCap: 0,
+    defaultDelegatorsStakingRewardsPercentMille: 100000,
     maxDelegatorsStakingRewardsPercentMille: 100000,
 
     minimumInitialVcPayment: 0,
@@ -109,6 +111,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     certifiedCommitteeAnnualBootstrap: bn(6).mul(bn(10).pow(bn(18))),
     stakingRewardsAnnualRateInPercentMille: 12000,
     stakingRewardsAnnualCap: bn(12000).mul(bn(10).pow(bn(18))),
+    defaultDelegatorsStakingRewardsPercentMille: 66667,
     maxDelegatorsStakingRewardsPercentMille: 66667,
 
     // Protocol wallets
@@ -183,6 +186,7 @@ export class Driver {
             certifiedCommitteeAnnualBootstrap,
             stakingRewardsAnnualRateInPercentMille,
             stakingRewardsAnnualCap,
+            defaultDelegatorsStakingRewardsPercentMille,
             maxDelegatorsStakingRewardsPercentMille,
 
             stakingRewardsWalletRate,
@@ -238,7 +242,10 @@ export class Driver {
                 certifiedCommitteeAnnualBootstrap,
                 stakingRewardsAnnualRateInPercentMille,
                 stakingRewardsAnnualCap,
-                maxDelegatorsStakingRewardsPercentMille
+                defaultDelegatorsStakingRewardsPercentMille,
+                maxDelegatorsStakingRewardsPercentMille,
+                ZERO_ADDR,
+                []
             ], null, session);
 
         const elections = options.electionsAddress ?
@@ -327,6 +334,10 @@ export class Driver {
 
         if (!(await protocol.deploymentSubsetExists(DEPLOYMENT_SUBSET_MAIN))) {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
+        }
+
+        if (!(await rewards.isInitializationComplete())) {
+            await rewards.activate(await web3.now());
         }
 
         const contracts = [
@@ -535,12 +546,25 @@ export class Participant {
         await token.approve(to, amount, {from: this.address});
     }
 
+    private async assignAndTransfer(amount: number|BN, to: string, token: ERC20Contract) {
+        await token.assign(this.address, amount);
+        await token.transfer(to, amount, {from: this.address});
+    }
+
     async assignAndApproveOrbs(amount: number|BN, to: string) {
         return this.assignAndApprove(amount, to, this.driver.erc20);
     }
 
+    async assignAndTransferOrbs(amount: number|BN, to: string) {
+        return this.assignAndTransfer(amount, to, this.driver.erc20);
+    }
+
     async assignAndApproveExternalToken(amount: number|BN, to: string) {
         return this.assignAndApprove(amount, to, this.driver.bootstrapToken);
+    }
+
+    async assignAndTransferExternalToken(amount: number|BN, to: string) {
+        return this.assignAndTransfer(amount, to, this.driver.bootstrapToken);
     }
 
     async unstake(amount: number|BN) {

@@ -133,7 +133,7 @@ module.exports = {
       settings: {          // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
           enabled: true,
-          runs: 2000
+          runs: 200
         }
       }
       // version: "0.5.1",    // Fetch exact version from solc-bin (default: truffle's version)

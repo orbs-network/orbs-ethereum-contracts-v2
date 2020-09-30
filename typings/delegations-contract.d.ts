@@ -15,7 +15,8 @@ export interface DelegationsContract extends OwnedContract {
 
   // getters
   getDelegation(address: string): Promise<string>;
-  getDelegatedStakes(address: string): Promise<BN>;
+  getDelegationInfo(address: string): Promise<{delegation: string, delegatorStake: string}>
+  getDelegatedStake(address: string): Promise<BN>;
   getOwnStake(address: string): Promise<BN>;
   getSelfDelegatedStake(address: string): Promise<BN>;
   getTotalDelegatedStake(): Promise<BN>;

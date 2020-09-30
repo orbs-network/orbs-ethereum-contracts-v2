@@ -10,8 +10,12 @@ import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
 import "./interfaces/IElections.sol";
 import "./ManagedContract.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract Committee is ICommittee, ManagedContract {
+	using SafeMath for uint256;
+	using SafeMath for uint96;
+
 	struct CommitteeMember {
 		address addr;
 		uint96 weightAndCertifiedBit;
@@ -29,6 +33,13 @@ contract Committee is ICommittee, ManagedContract {
 		uint8 maxCommitteeSize;
 	}
 	Settings public settings;
+
+	struct CommitteeStats {
+		uint96 totalWeight;
+		uint32 generalCommitteeSize;
+		uint32 certifiedCommitteeSize;
+	}
+	CommitteeStats committeeStats;
 
 	modifier onlyElectionsContract() {
 		require(msg.sender == address(electionsContract), "caller is not the elections");
@@ -48,20 +59,41 @@ contract Committee is ICommittee, ManagedContract {
 	 * Methods restricted to other Orbs contracts
 	 */
 
-	function memberChange(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberWeightChange(address addr, uint256 weight) external override onlyElectionsContract onlyWhenActive {
 		MemberStatus memory status = membersStatus[addr];
 
 		if (!status.inCommittee) {
-			return false;
+			return;
 		}
+		CommitteeMember memory member = committee[status.pos];
+		(uint prevWeight, bool isCertified) = getWeightCertification(member);
+
+		committeeStats.totalWeight = uint96(committeeStats.totalWeight.sub(prevWeight).add(weight));
 
 		committee[status.pos].weightAndCertifiedBit = packWeightCertification(weight, isCertified);
 		emit GuardianCommitteeChange(addr, weight, isCertified, true);
-		assignRewardsIfNeeded(settings);
-		return true;
 	}
 
-	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function memberCertificationChange(address addr, bool isCertified) external override onlyElectionsContract onlyWhenActive {
+		MemberStatus memory status = membersStatus[addr];
+
+		if (!status.inCommittee) {
+			return;
+		}
+		CommitteeMember memory member = committee[status.pos];
+		(uint weight, bool prevCertification) = getWeightCertification(member);
+
+		CommitteeStats memory _committeeStats = committeeStats;
+
+		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, true, prevCertification, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+
+		committeeStats.certifiedCommitteeSize = _committeeStats.certifiedCommitteeSize - (prevCertification ? 1 : 0) + (isCertified ? 1 : 0);
+
+		committee[status.pos].weightAndCertifiedBit = packWeightCertification(weight, isCertified);
+		emit GuardianCommitteeChange(addr, weight, isCertified, true);
+	}
+
+	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool memberAdded) {
 		Settings memory _settings = settings;
 		MemberStatus memory status = membersStatus[addr];
 
@@ -74,13 +106,26 @@ contract Committee is ICommittee, ManagedContract {
 			return false;
 		}
 
+		memberAdded = true;
+
+		CommitteeStats memory _committeeStats = committeeStats;
+
+		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+
+		_committeeStats.generalCommitteeSize++;
+		if (isCertified) _committeeStats.certifiedCommitteeSize++;
+		_committeeStats.totalWeight = uint96(_committeeStats.totalWeight.add(weight));
+
 		CommitteeMember memory newMember = CommitteeMember({
 			addr: addr,
 			weightAndCertifiedBit: packWeightCertification(weight, isCertified)
 		});
 
 		if (entryPos < committee.length) {
-			removeMemberAtPos(entryPos, false);
+			CommitteeMember memory removed = committee[entryPos];
+			unpackWeightCertification(removed.weightAndCertifiedBit);
+
+			_committeeStats = removeMemberAtPos(entryPos, false, _committeeStats);
 			committee[entryPos] = newMember;
 		} else {
 			committee.push(newMember);
@@ -90,23 +135,23 @@ contract Committee is ICommittee, ManagedContract {
 		status.pos = uint32(entryPos);
 		membersStatus[addr] = status;
 
+		committeeStats = _committeeStats;
+
 		emit GuardianCommitteeChange(addr, weight, isCertified, true);
-		assignRewardsIfNeeded(_settings);
-		return true;
 	}
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool committeeChanged) {
+	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool memberRemoved, uint256 memberEffectiveStake, bool isCertified) {
 		MemberStatus memory status = membersStatus[addr];
 		if (!status.inCommittee) {
-			return false;
+			return (false, 0, false);
 		}
 
-		removeMemberAtPos(status.pos, true);
+		memberRemoved = true;
+		(memberEffectiveStake, isCertified) = getWeightCertification(committee[status.pos]);
 
-		assignRewardsIfNeeded(settings);
-		return true;
+		committeeStats = removeMemberAtPos(status.pos, true, committeeStats);
 	}
 
 	/// @dev Called by: Elections contract
@@ -123,8 +168,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		for (uint i = 0; i < _committee.length; i++) {
 			addrs[i] = _committee[i].addr;
-			weights[i] = getMemberWeight(_committee[i]);
-			certification[i] = getMemberCertification(_committee[i]);
+			(weights[i], certification[i]) = getWeightCertification(_committee[i]);
 		}
 	}
 
@@ -154,7 +198,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		while (committee.length > maxCommitteeSize) {
 			(, ,uint pos) = _getMinCommitteeMember();
-			removeMemberAtPos(pos, true);
+			committeeStats = removeMemberAtPos(pos, true, committeeStats);
 		}
 
 		emit MaxCommitteeSizeChanged(maxCommitteeSize, prevMaxCommitteeSize);
@@ -181,20 +225,34 @@ contract Committee is ICommittee, ManagedContract {
 		maxCommitteeSize = _settings.maxCommitteeSize;
 	}
 
+	function getCommitteeStats() external override view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalWeight) {
+		CommitteeStats memory _committeeStats = committeeStats;
+		return (_committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize, _committeeStats.totalWeight);
+	}
+
+	function getMemberInfo(address addr) external override view returns (bool inCommittee, uint weight, bool isCertified, uint totalCommitteeWeight) {
+		MemberStatus memory status = membersStatus[addr];
+		inCommittee = status.inCommittee;
+		if (inCommittee) {
+			(weight, isCertified) = getWeightCertification(committee[status.pos]);
+		}
+		totalCommitteeWeight = committeeStats.totalWeight;
+	}
+
 	/*
 	 * Private
 	 */
 
-	function getMemberWeight(CommitteeMember memory member) private pure returns (uint256 weight) {
-		return uint256(member.weightAndCertifiedBit & WEIGHT_MASK);
-	}
-
-	function getMemberCertification(CommitteeMember memory member) private pure returns (bool certified) {
-		return member.weightAndCertifiedBit & CERTIFICATION_MASK != 0;
-	}
-
 	function packWeightCertification(uint256 weight, bool certification) private pure returns (uint96 weightAndCertified) {
 		return uint96(weight) | (certification ? CERTIFICATION_MASK : 0);
+	}
+
+	function unpackWeightCertification(uint96 weightAndCertifiedBit) private pure returns (uint256 weight, bool certification) {
+		return (uint256(weightAndCertifiedBit & WEIGHT_MASK), weightAndCertifiedBit & CERTIFICATION_MASK != 0);
+	}
+
+	function getWeightCertification(CommitteeMember memory member) private pure returns (uint256 weight, bool certification) {
+		return unpackWeightCertification(member.weightAndCertifiedBit);
 	}
 
 	function _getMinCommitteeMember() private view returns (
@@ -209,7 +267,7 @@ contract Committee is ICommittee, ManagedContract {
 		address memberAddress;
 		for (uint i = 0; i < _committee.length; i++) {
 			memberAddress = _committee[i].addr;
-			memberWeight = getMemberWeight(_committee[i]);
+			(memberWeight,) = getWeightCertification(_committee[i]);
 			if (memberWeight < minMemberWeight || memberWeight == minMemberWeight && memberAddress < minMemberAddress) {
 				minMemberPos = i;
 				minMemberWeight = memberWeight;
@@ -233,24 +291,20 @@ contract Committee is ICommittee, ManagedContract {
 		return (false, 0);
 	}
 
-	function assignRewardsIfNeeded(Settings memory _settings) private {
-		IRewards _rewardsContract = rewardsContract;
-		uint lastAssignment = _rewardsContract.getLastRewardAssignmentTime();
-		if (now - lastAssignment < _settings.maxTimeBetweenRewardAssignments) {
-			return;
-		}
-
-		(address[] memory committeeAddrs, uint[] memory committeeWeights, bool[] memory committeeCertification) = _getCommittee();
-		_rewardsContract.assignRewardsToCommittee(committeeAddrs, committeeWeights, committeeCertification);
-
-		emit CommitteeSnapshot(committeeAddrs, committeeWeights, committeeCertification);
-	}
-
-	function removeMemberAtPos(uint pos, bool clearFromList) private {
+	function removeMemberAtPos(uint pos, bool clearFromList, CommitteeStats memory _committeeStats) private returns (CommitteeStats memory newCommitteeStats){
 		CommitteeMember memory member = committee[pos];
 
+		(uint weight, bool certification) = getWeightCertification(member);
+
+		rewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, certification, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+
 		delete membersStatus[member.addr];
-		emit GuardianCommitteeChange(member.addr, getMemberWeight(member), getMemberCertification(member), false);
+
+		_committeeStats.generalCommitteeSize--;
+		if (certification) _committeeStats.certifiedCommitteeSize--;
+		_committeeStats.totalWeight = uint96(_committeeStats.totalWeight.sub(weight));
+
+		emit GuardianCommitteeChange(member.addr, weight, certification, false);
 
 		if (clearFromList) {
 			uint committeeLength = committee.length;
@@ -261,6 +315,8 @@ contract Committee is ICommittee, ManagedContract {
 			}
 			committee.pop();
 		}
+
+		return _committeeStats;
 	}
 
 	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
@@ -272,12 +328,12 @@ contract Committee is ICommittee, ManagedContract {
 	}
 
 	IElections electionsContract;
-	IRewards rewardsContract;
 	IGuardiansRegistration guardianRegistrationContract;
+	IRewards rewardsContract;
 	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
-		rewardsContract = IRewards(getRewardsContract());
 		guardianRegistrationContract = IGuardiansRegistration(getGuardiansRegistrationContract());
+		rewardsContract = IRewards(getRewardsContract());
 	}
 
 }

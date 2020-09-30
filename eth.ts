@@ -126,6 +126,11 @@ export class Web3Driver{
         throw new Error("web3.eth.getBlock failed after 5 attempts");
     }
 
+    async now(): Promise<number> {
+        const block = await this.eth.getBlock("latest");
+        return parseInt(block.timestamp.toString());
+    }
+
     getContract(address: string){
         const entry = this.contracts.get(address);
         if (!entry){

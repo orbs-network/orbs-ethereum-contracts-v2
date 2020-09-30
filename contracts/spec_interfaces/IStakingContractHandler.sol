@@ -4,10 +4,6 @@ pragma solidity 0.6.12;
 
 /// @title An interface for staking contracts.
 interface IStakingContractHandler {
-    event StakeChangeNotificationFailed(address stakeOwner);
-    event StakeChangeBatchNotificationFailed(address[] stakeOwners);
-    event StakeMigrationNotificationFailed(address stakeOwner);
-
     event StakeChangeNotificationSkipped(address stakeOwner);
     event StakeChangeBatchNotificationSkipped(address[] stakeOwners);
     event StakeMigrationNotificationSkipped(address stakeOwner);

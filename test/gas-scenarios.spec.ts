@@ -11,11 +11,12 @@ import chai from "chai";
 import {createVC} from "./consumer-macros";
 import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
 import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
+import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
 declare const web3: Web3;
 
 chai.use(require('chai-bn')(BN));
-chai.use(require('./matchers'));
+chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 const assert = chai.assert;
@@ -24,7 +25,8 @@ const BASE_STAKE = fromTokenUnits(1000000);
 const MAX_COMMITTEE = 22;
 
 const t0 = Date.now();
-const tlog = (s) => console.log(Math.floor(Date.now()/1000 - t0/1000), s);
+const tlog = (s) => 0;
+// const tlog = (s) => console.log(Math.floor(Date.now()/1000 - t0/1000), s);
 
 async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Promise<{d: Driver, committee: Participant[]}> {
     tlog("Creating driver..");
@@ -48,7 +50,6 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     for (let i = 0; i < MAX_COMMITTEE; i++) {
         const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(1 + (committeeEvenStakes ? 0 : i))), true, false, false);
         committee = [v].concat(committee);
-        console.log(`committee ${i}`)
     }
     tlog("Committee created");
 
@@ -80,13 +81,9 @@ describe('gas usage scenarios', async () => {
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
 
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-        await d.rewards.assignRewards();
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-
         d.resetGasRecording();
         let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
@@ -109,7 +106,6 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.guardianCommitteeChangeEvent({
             addr: committee[committee.length - 1].address
         });
-        expect(r).to.not.have.a.committeeSnapshotEvent();
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
 
         // const ge = gasReportEvents(r);
@@ -124,13 +120,13 @@ describe('gas usage scenarios', async () => {
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[0]);
         let r = await delegator.stake(BASE_STAKE.mul(bn(1000)));
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
         d.resetGasRecording();
         r = await delegator.delegate(committee[committee.length - 1]);
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(c => c.address)
         });
 
@@ -144,7 +140,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         d.logGasUsageSummary("New delegator stakes", [delegator]);
     });
@@ -157,7 +153,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.map(v => v.address)
         });
 
@@ -193,7 +189,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
 
@@ -206,11 +202,11 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.readyToSync();
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
 
         d.resetGasRecording();
         r = await v.readyForCommittee();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: [v].concat(committee.slice(0, committee.length - 1)).map(v => v.address)
         });
 
@@ -222,7 +218,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await committee[0].unregisterAsGuardian();
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.slice(1).map(v => v.address)
         });
 
@@ -234,7 +230,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteUnready(committee[1].address, 0xFFFFFFFF,{from: committee[0].orbsAddress});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
@@ -262,7 +258,7 @@ describe('gas usage scenarios', async () => {
             guardian: committee[0].address
         });
 
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.slice(1).map(v => v.address)
         });
 
@@ -274,7 +270,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].address});
-        expect(r).to.not.have.a.committeeSnapshotEvent();
+        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
         expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
@@ -301,82 +297,11 @@ describe('gas usage scenarios', async () => {
         expect(r).to.have.a.guardianVotedOutEvent({
             guardian: committee[0].address
         });
-        expect(r).to.have.a.committeeSnapshotEvent({
+        await expectCommittee(d,  {
             addrs: committee.slice(1).map(v => v.address)
         });
 
         d.logGasUsageSummary("Manual-voteout is cast, threshold is reached and top committee member leaves", [thresholdVoter]);
-    });
-
-    const distributeRewardsScenario = async (batchSize: number) => {
-        const {d, committee} = await fullCommittee(true);
-
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-        let r = await d.rewards.assignRewards();
-        console.log(feesAssignedEvents(r));
-
-        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalManager.address});
-
-        const v = committee[0];
-
-        const delegator = d.newParticipant();
-        await delegator.stake(100);
-        await delegator.delegate(v);
-
-        const delegators: Participant[] =await Promise.all(_.range(batchSize).map(async i => {
-            const delegator = i == 0 ? v : d.newParticipant();
-            await delegator.stake(100);
-            await delegator.delegate(committee[i % committee.length]);
-            return delegator;
-        }));
-
-        const balance = bn(await d.rewards.getStakingRewardBalance(v.address));
-
-        d.resetGasRecording();
-        await d.rewards.distributeStakingRewards(
-            balance.div(bn(batchSize)).mul(bn(batchSize)),
-            0,
-            100,
-            1,
-            0,
-            delegators.map(delegator => delegator.address),
-            delegators.map(() => balance.div(bn(batchSize)))
-            , {from: v.address});
-
-        d.logGasUsageSummary(`Distribute rewards - all delegators delegated to same guardian (batch size - ${batchSize})`, [committee[0]]);
-    };
-
-    it("Distribute rewards - all delegators delegated to same guardian (batch size - 1)", async () => {
-        await distributeRewardsScenario(1)
-    });
-
-    it("Distribute rewards - all delegators delegated to same guardian (batch size - 50)", async () => {
-        await distributeRewardsScenario(50)
-    });
-
-    it("assigns rewards (1 month, initial balance == 0)", async () => {
-        const {d, committee} = await fullCommittee(false, 100);
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-
-        const p = d.newParticipant("reward assigner");
-        d.resetGasRecording();
-        await d.rewards.assignRewards({from: p.address});
-        d.logGasUsageSummary("assigns rewards (1 month, initial balance == 0)", [p]);
-    });
-
-    it("assigns rewards (1 month, initial balance > 0)", async () => {
-        const {d, committee} = await fullCommittee(false, 5);
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-
-        await d.rewards.assignRewards();
-
-        await evmIncreaseTime(d.web3, 30*24*60*60);
-
-        const p = d.newParticipant("reward assigner");
-        d.resetGasRecording();
-        await d.rewards.assignRewards({from: p.address});
-
-        d.logGasUsageSummary("assigns rewards (1 month, initial balance > 0)", [p]);
     });
 
     it("imports 50 delegations, unregistered guardians", async () => {

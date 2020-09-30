@@ -33,7 +33,8 @@ export interface MaxTimeBetweenRewardAssignmentsChangedEvent {
 
 export interface CommitteeContract extends OwnedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
-    memberChange(addr: string, weight: number|BN, isCertified: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
+    memberWeightChange(addr: string, weight: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    memberCertificationChange(addr: string, isCertified: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberWeightChange(addr: string, weight: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     addMember(addr: string, weight: number|BN, certification: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
     removeMember(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -44,6 +45,7 @@ export interface CommitteeContract extends OwnedContract {
     setMaxCommitteeSize(maxCommitteeSize: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     getMaxTimeBetweenRewardAssignments(): Promise<number>;
     getMaxCommitteeSize(): Promise<number>;
+    getMemberInfo(addr: string): Promise<{inCommittee: boolean, weight: string, isCertified: boolean, totalCommitteeWeight: string}>
 
     getSettings(params?: TransactionConfig): Promise<[string /* maxTimeBetweenRewardAssignments */, string /* maxCommitteeSize */]>;
     getTopology(): Promise<TransactionReceipt>;
