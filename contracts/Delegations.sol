@@ -300,6 +300,38 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	function stakeMigration(address _stakeOwner, uint256 _amount) external override onlyStakingContractHandler onlyWhenActive {}
 
 	function _processStakeChangeBatch(address[] memory stakeOwners, uint256[] memory updatedStakes) private {
+		// TODO remove dead code after gas testing
+//		uint i = 0;
+//		while (i < stakeOwners.length) {
+//			// init sequence
+//			StakeOwnerData memory curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
+//			address sequenceDelegate = curStakeOwnerData.delegation;
+//			uint currentUncappedStake = uncappedStakes[sequenceDelegate];
+//			uint prevUncappedStake = currentUncappedStake;
+//
+//			uint sequenceStartIdx = i;
+//			for (i = sequenceStartIdx; i < stakeOwners.length; i++) { // aggregate sequence stakes changes
+//				if (i != sequenceStartIdx) curStakeOwnerData = getStakeOwnerData(stakeOwners[i]);
+//				if (sequenceDelegate != curStakeOwnerData.delegation) break;
+//
+//				rewardsContract.delegationWillChange(sequenceDelegate, currentUncappedStake, stakeOwners[i], curStakeOwnerData.stake, sequenceDelegate);
+//
+//				currentUncappedStake = currentUncappedStake
+//				.sub(curStakeOwnerData.stake)
+//				.add(updatedStakes[i]);
+//
+//				require(uint256(uint96(updatedStakes[i])) == updatedStakes[i], "Delegations::updatedStakes value too big (>96 bits)");
+//				stakeOwnersData[stakeOwners[i]].stake = uint96(updatedStakes[i]);
+//			}
+//
+//			// closing sequence
+//			uncappedStakes[sequenceDelegate] = currentUncappedStake;
+//			if (_isSelfDelegating(sequenceDelegate)) {
+//				totalDelegatedStake = totalDelegatedStake.sub(prevUncappedStake).add(currentUncappedStake);
+//			}
+//
+//			emitDelegatedStakeChangedSlice(sequenceDelegate, stakeOwners, updatedStakes, sequenceStartIdx, i - sequenceStartIdx);
+//		}
 		for (uint i = 0; i < stakeOwners.length; i++) {
 			_stakeChange(stakeOwners[i], updatedStakes[i]);
 		}
@@ -341,10 +373,6 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	function getDelegatedStake(address addr) external override view returns (uint256) {
 		return _isSelfDelegating(addr) ? uncappedStakes[addr] : 0;
-	}
-
-	function getSelfDelegatedStake(address addr) public override view returns (uint256) {
-		return _isSelfDelegating(addr) ? stakingContractHandler.getStakeBalanceOf(addr) : 0;
 	}
 
 	function _isSelfDelegating(address addr) private view returns (bool) {

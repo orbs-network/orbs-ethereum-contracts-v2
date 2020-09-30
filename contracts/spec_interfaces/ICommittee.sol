@@ -26,7 +26,7 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a new member applicable for committee (due to registration, unbanning, certification change)
-	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool memberAdded, address removedMember, uint removedMemberWeight, bool removedMemberCertification)  /* onlyElectionsContract */;
+	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool memberAdded)  /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights

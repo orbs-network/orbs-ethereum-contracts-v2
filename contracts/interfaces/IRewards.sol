@@ -15,7 +15,7 @@ interface IRewards {
 
     function activate(uint startTime) external /* onlyInitializationAdmin */;
 
-    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
 
     function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian, uint256 nextGuardianDelegatedStake) external /* onlyDelegationsContract */;
 
@@ -128,7 +128,7 @@ interface IRewards {
         uint32 annualStakingRewardsRatePercentMille,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
         uint32 maxDelegatorsStakingRewardsPercentMille,
-        bool active
+        bool rewardAllocationActive
     );
 
     /*
