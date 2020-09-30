@@ -33,13 +33,19 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	uint256 totalDelegatedStake;
 
+	address constant public VOID_ADDR = address(-1);
+
 	modifier onlyStakingContractHandler() {
 		require(msg.sender == address(stakingContractHandler), "caller is not the staking contract handler");
 
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {
+		address VOID_ADDRESS_DUMMY_DELEGATION = address(-2);
+		assert(VOID_ADDR != VOID_ADDRESS_DUMMY_DELEGATION && VOID_ADDR != address(0) && VOID_ADDRESS_DUMMY_DELEGATION != address(0));
+		stakeOwnersData[VOID_ADDR].delegation = VOID_ADDRESS_DUMMY_DELEGATION;
+	}
 
 	function getTotalDelegatedStake() external override view returns (uint256) {
 		return totalDelegatedStake;
