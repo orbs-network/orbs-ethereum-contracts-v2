@@ -313,9 +313,10 @@ contract Rewards is IRewards, ManagedContract {
         uint256 allocated = _stakingRewardsState.unclaimedStakingRewards.sub(uint96(_stakingRewardsWithdrawnFromWallet));
         if (allocated > 0) {
             stakingRewardsWallet.withdraw(allocated);
-            stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.add(allocated).sub(total);
+            _stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.add(allocated);
         }
 
+        stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.sub(total);
         stakingRewardsState.unclaimedStakingRewards = uint96(_stakingRewardsState.unclaimedStakingRewards.sub(total));
     }
 
