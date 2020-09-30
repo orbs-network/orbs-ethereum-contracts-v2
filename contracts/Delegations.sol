@@ -42,9 +42,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	}
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {
-		address OTHER_VOID_ADDR = address(-2);
-		assert(VOID_ADDR != OTHER_VOID_ADDR && VOID_ADDR != address(0) && OTHER_VOID_ADDR != address(0));
-		stakeOwnersData[VOID_ADDR].delegation = OTHER_VOID_ADDR;
+		address VOID_ADDRESS_DUMMY_DELEGATION = address(-2);
+		assert(VOID_ADDR != VOID_ADDRESS_DUMMY_DELEGATION && VOID_ADDR != address(0) && VOID_ADDRESS_DUMMY_DELEGATION != address(0));
+		stakeOwnersData[VOID_ADDR].delegation = VOID_ADDRESS_DUMMY_DELEGATION;
 	}
 
 	function getTotalDelegatedStake() external override view returns (uint256) {
