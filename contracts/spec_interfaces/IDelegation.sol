@@ -39,7 +39,6 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	 */
 
 	function getDelegatedStake(address addr) external view returns (uint256);
-	function getSelfDelegatedStake(address addr) external view returns (uint256);
 	function getDelegation(address addr) external view returns (address);
 	function getDelegationInfo(address addr) external view returns (address delegation, uint256 delegatorStake);
 	function getTotalDelegatedStake() external view returns (uint256) ;

@@ -22,6 +22,12 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 		_;
 	}
 
+	modifier onlyAdminOrMigrationManager {
+		require(msg.sender == registryAdmin() || msg.sender == initializationAdmin() || msg.sender == managers["migrationManager"], "sender is not an admin (registryAdmin or initializationAdmin when initialization in progress) and not the migration manager");
+
+		_;
+	}
+
 	constructor (address _previousContractRegistry, address registryAdmin) public {
 		previousContractRegistry = _previousContractRegistry;
 		_transferRegistryManagement(registryAdmin);
@@ -31,7 +37,7 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 		return previousContractRegistry;
 	}
 
-	function setContract(string calldata contractName, address addr, bool managedContract) external override onlyAdmin {
+	function setContract(string calldata contractName, address addr, bool managedContract) external override onlyAdminOrMigrationManager {
 		require(!managedContract || addr != address(0), "managed contract may not have address(0)");
 		removeManagedContract(contracts[contractName]);
 		contracts[contractName] = addr;
