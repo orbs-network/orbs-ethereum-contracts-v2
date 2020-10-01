@@ -9,8 +9,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
 import "./spec_interfaces/IFeesWallet.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
 import "./spec_interfaces/IDelegation.sol";
+import "./IStakingContract.sol";
 import "./ManagedContract.sol";
 
 contract Rewards is IRewards, ManagedContract {
@@ -527,12 +528,12 @@ contract Rewards is IRewards, ManagedContract {
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) public override onlyFunctionalManager onlyWhenActive {
+    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external override onlyFunctionalManager onlyWhenActive {
         updateStakingRewardsState();
         return _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
     }
 
-    function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external {
+    function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external override {
         require(delegatorRewardsPercentMille <= 100000, "delegatorRewardsPercentMille must be 100000 at most");
         require(delegatorRewardsPercentMille <= settings.maxDelegatorsStakingRewardsPercentMille, "delegatorRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille");
         updateDelegatorStakingRewards(msg.sender);
@@ -617,8 +618,13 @@ contract Rewards is IRewards, ManagedContract {
         guardianFeesAndBootstrap.bootstrapBalance = uint48(guardianFeesAndBootstrap.bootstrapBalance.add(toUint48Granularity(bootstrap)));
         feesAndBootstrap[addr] = guardianFeesAndBootstrap;
 
-        require(erc20.transferFrom(msg.sender, address(this), guardianStakingRewards.add(delegatorStakingRewards).add(fees)), "acceptRewardBalanceMigration: transfer failed");
-        require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+        uint orbsTransferAmount = guardianStakingRewards.add(delegatorStakingRewards).add(fees);
+        if (orbsTransferAmount > 0) {
+            require(erc20.transferFrom(msg.sender, address(this), orbsTransferAmount), "acceptRewardBalanceMigration: transfer failed");
+        }
+        if (bootstrap > 0) {
+            require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+        }
 
         emit RewardsBalanceMigrationAccepted(msg.sender, addr, guardianStakingRewards, delegatorStakingRewards, fees, bootstrap);
     }
@@ -643,7 +649,7 @@ contract Rewards is IRewards, ManagedContract {
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
     }
 
-    function activate(uint startTime) external override onlyMigrationManager {
+    function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
         feesAndBootstrapState.lastAssigned = uint32(startTime);
         stakingRewardsState.lastAssigned = uint32(startTime);
         settings.rewardAllocationActive = true;
@@ -651,7 +657,7 @@ contract Rewards is IRewards, ManagedContract {
         emit RewardDistributionActivated(startTime);
     }
 
-    function deactivate() external override onlyMigrationManager {
+    function deactivateRewardDistribution() external override onlyMigrationManager {
         require(settings.rewardAllocationActive, "reward distribution is already deactivated");
 
         updateFeesAndBootstrapState();

@@ -337,7 +337,7 @@ export class Driver {
         }
 
         if (!(await rewards.isInitializationComplete())) {
-            await rewards.activate(await web3.now());
+            await rewards.activateRewardDistribution(await web3.now());
         }
 
         const contracts = [

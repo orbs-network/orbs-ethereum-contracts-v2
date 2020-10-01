@@ -2,13 +2,13 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/math/Math.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "@openzeppelin/contracts/math/Math.sol";
+import "./spec_interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
-import "./interfaces/IRewards.sol";
-import "./interfaces/IElections.sol";
+import "./spec_interfaces/IRewards.sol";
 import "./ManagedContract.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -138,6 +138,15 @@ contract Committee is ICommittee, ManagedContract {
 		committeeStats = _committeeStats;
 
 		emit GuardianCommitteeChange(addr, weight, isCertified, true);
+	}
+
+	function checkAddMember(address addr, uint256 weight) external view override returns (bool wouldAddMember) {
+		if (membersStatus[addr].inCommittee) {
+			return false;
+		}
+
+		(bool qualified, ) = qualifiesToEnterCommittee(addr, weight, settings);
+		return qualified;
 	}
 
 	/// @dev Called by: Elections contract

@@ -5,19 +5,18 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
-import "./spec_interfaces/ICommitteeListener.sol";
-import "./interfaces/IElections.sol";
+import "./spec_interfaces/IElections.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./IStakingContract.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
-import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IDelegation.sol";
+import "./IStakingContract.sol";
+import "./ContractRegistryAccessor.sol";
 import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
 import "./ManagedContract.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
@@ -42,9 +41,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	}
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {
-		address OTHER_VOID_ADDR = address(-2);
-		assert(VOID_ADDR != OTHER_VOID_ADDR && VOID_ADDR != address(0) && OTHER_VOID_ADDR != address(0));
-		stakeOwnersData[VOID_ADDR].delegation = OTHER_VOID_ADDR;
+		address VOID_ADDRESS_DUMMY_DELEGATION = address(-2);
+		assert(VOID_ADDR != VOID_ADDRESS_DUMMY_DELEGATION && VOID_ADDR != address(0) && VOID_ADDRESS_DUMMY_DELEGATION != address(0));
+		stakeOwnersData[VOID_ADDR].delegation = VOID_ADDRESS_DUMMY_DELEGATION;
 	}
 
 	function getTotalDelegatedStake() external override view returns (uint256) {

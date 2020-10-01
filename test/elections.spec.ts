@@ -10,6 +10,7 @@ import {
 } from "./driver";
 
 import chai from "chai";
+import {guardianCommitteeChangeEvents} from "./event-parsing";
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);
 
@@ -38,6 +39,38 @@ describe('elections-high-level-flows', async () => {
             readyToSync: true,
             readyForCommittee: true
         });
+    });
+
+    it('canJoinCommittee returns true if readyForCommittee would result in entrance to committee', async () => {
+        const d = await Driver.new({maxCommitteeSize: 1});
+
+        const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, false);
+        const {v: v2} = await d.newGuardian(fromTokenUnits(9), false, false, false);
+
+        expect(await d.elections.canJoinCommittee(v1.address)).to.be.true;
+        expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.true;
+
+        let r = await v1.readyForCommittee();
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
+            addr: v1.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+        expect(r).to.have.a.guardianCommitteeChangeEvent({
+            addr: v1.address,
+            inCommittee: true
+        });
+
+        expect(await d.elections.canJoinCommittee(v1.address)).to.be.false;
+        expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.false;
+
+        expect(await d.elections.canJoinCommittee(v2.address)).to.be.false;
+        expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.false;
+
+        await v2.stake(fromTokenUnits(2));
+
+        expect(await d.elections.canJoinCommittee(v2.address)).to.be.true;
+        expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.true;
     });
 
     it('allows sending readyForCommittee and readyToSync form both guardian and orbs address', async () => {
@@ -713,37 +746,37 @@ describe('elections-high-level-flows', async () => {
         await otherVoter.stake(100);
         await d.elections.voteOut(subject.address, {from: otherVoter.address});
 
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(100));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(100));
 
         // Increase vote weight by staking
         await voter.stake(100);
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(200));
 
         // Decrease vote weight by unstaking
         await voter.unstake(30);
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(170));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(170));
 
         // Increase vote weight by restaking
         await voter.restake();
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(200));
 
         // Decrease vote weight by delegating
         await voter.delegate(d.newParticipant());
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(100));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(100));
 
         // Increase vote weight by self delegation
         await voter.delegate(voter);
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(200));
 
         // Increase vote weight by a delegator stake
         const delegator = d.newParticipant();
         await delegator.stake(40);
         await delegator.delegate(voter);
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(240));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(240));
 
         // Decrease vote weight by loosing a delegation
         await delegator.delegate(delegator);
-        expect(await d.elections.getAccumulatedStakesForVoteOut(subject.address)).to.be.bignumber.eq(bn(200));
+        expect((await d.elections.getVoteOutStatus(subject.address))[0]).to.be.bignumber.eq(bn(200));
     });
 
     it("rejects readyToSync and readyForCommittee for a voted-out guardian", async () => {

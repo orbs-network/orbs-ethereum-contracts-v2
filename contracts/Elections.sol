@@ -5,9 +5,8 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
-import "./spec_interfaces/ICommitteeListener.sol";
+import "./spec_interfaces/IElections.sol";
 import "./spec_interfaces/IDelegation.sol";
-import "./interfaces/IElections.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
@@ -82,6 +81,17 @@ contract Elections is IElections, ManagedContract {
 		bool isCertified = certificationContract.isGuardianCertified(guardianAddr);
 		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardianAddr, settings);
 		committeeContract.addMember(guardianAddr, effectiveStake, isCertified);
+	}
+
+	function canJoinCommittee(address addr) external view override returns (bool) {
+		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(addr); // this validates registration
+
+		if (isVotedOut(guardianAddr)) {
+			return false;
+		}
+
+		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardianAddr, settings);
+		return committeeContract.checkAddMember(guardianAddr, effectiveStake);
 	}
 
 	function readyToSync() external override {
@@ -194,10 +204,6 @@ contract Elections is IElections, ManagedContract {
 
 	function getVoteOutVote(address addr) external override view returns (address) {
 		return voteOutVotes[addr];
-	}
-
-	function getAccumulatedStakesForVoteOut(address addr) external override view returns (uint256) {
-		return accumulatedStakesForVoteOut[addr];
 	}
 
 	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 totalGovernanceStake, Settings memory _settings) private {
