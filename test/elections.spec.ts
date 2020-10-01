@@ -46,35 +46,32 @@ describe('elections-high-level-flows', async () => {
         const d = await Driver.new({maxCommitteeSize: 1});
 
         const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, false);
-        const {v: v2} = await d.newGuardian(fromTokenUnits(10), false, false, false);
+        const {v: v2} = await d.newGuardian(fromTokenUnits(9), false, false, false);
 
-        let r: any = await d.elections.canJoinCommittee(v1.address);
-        expect(r).to.be.true;
+        expect(await d.elections.canJoinCommittee(v1.address)).to.be.true;
+        expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.true;
 
-        r = await d.elections.canJoinCommittee(v1.orbsAddress);
-        expect(r).to.be.true;
-
-        r = await v1.readyForCommittee();
+        let r = await v1.readyForCommittee();
         expect(r).to.have.a.guardianStatusUpdatedEvent({
             addr: v1.address,
             readyToSync: true,
             readyForCommittee: true
         });
         expect(r).to.have.a.guardianCommitteeChangeEvent({
-            addr: v1.address
+            addr: v1.address,
+            inCommittee: true
         });
 
-        r = await d.elections.canJoinCommittee(v1.address);
-        expect(r).to.be.false;
+        expect(await d.elections.canJoinCommittee(v1.address)).to.be.false;
+        expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.false;
 
-        r = await d.elections.canJoinCommittee(v1.orbsAddress);
-        expect(r).to.be.false;
+        expect(await d.elections.canJoinCommittee(v2.address)).to.be.false;
+        expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.false;
 
-        r = await d.elections.canJoinCommittee(v2.address);
-        expect(r).to.be.false;
+        await v2.stake(fromTokenUnits(2));
 
-        r = await d.elections.canJoinCommittee(v2.orbsAddress);
-        expect(r).to.be.false;
+        expect(await d.elections.canJoinCommittee(v2.address)).to.be.true;
+        expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.true;
     });
 
     it('allows sending readyForCommittee and readyToSync form both guardian and orbs address', async () => {
