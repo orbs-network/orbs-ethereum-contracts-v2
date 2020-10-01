@@ -140,6 +140,15 @@ contract Committee is ICommittee, ManagedContract {
 		emit GuardianCommitteeChange(addr, weight, isCertified, true);
 	}
 
+	function checkAddMember(address addr, uint256 weight) external view override returns (bool wouldAddMember) {
+		if (membersStatus[addr].inCommittee) {
+			return false;
+		}
+
+		(bool qualified, ) = qualifiesToEnterCommittee(addr, weight, settings);
+		return qualified;
+	}
+
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
 	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool memberRemoved, uint256 memberEffectiveStake, bool isCertified) {

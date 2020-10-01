@@ -29,6 +29,10 @@ interface ICommittee {
 	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool memberAdded)  /* onlyElectionsContract */;
 
 	/// @dev Called by: Elections contract
+	/// Checks if addMember() would add a the member to the committee
+	function checkAddMember(address addr, uint256 weight) external view returns (bool wouldAddMember);
+
+	/// @dev Called by: Elections contract
 	/// Returns the committee members and their weights
 	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, bool[] memory certification);
 

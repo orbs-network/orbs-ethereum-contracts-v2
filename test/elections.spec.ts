@@ -10,6 +10,7 @@ import {
 } from "./driver";
 
 import chai from "chai";
+import {guardianCommitteeChangeEvents} from "./event-parsing";
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);
 
@@ -38,6 +39,38 @@ describe('elections-high-level-flows', async () => {
             readyToSync: true,
             readyForCommittee: true
         });
+    });
+
+    it('canJoinCommittee returns true if readyForCommittee would result in entrance to committee', async () => {
+        const d = await Driver.new({maxCommitteeSize: 1});
+
+        const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, false);
+        const {v: v2} = await d.newGuardian(fromTokenUnits(9), false, false, false);
+
+        expect(await d.elections.canJoinCommittee(v1.address)).to.be.true;
+        expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.true;
+
+        let r = await v1.readyForCommittee();
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
+            addr: v1.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+        expect(r).to.have.a.guardianCommitteeChangeEvent({
+            addr: v1.address,
+            inCommittee: true
+        });
+
+        expect(await d.elections.canJoinCommittee(v1.address)).to.be.false;
+        expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.false;
+
+        expect(await d.elections.canJoinCommittee(v2.address)).to.be.false;
+        expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.false;
+
+        await v2.stake(fromTokenUnits(2));
+
+        expect(await d.elections.canJoinCommittee(v2.address)).to.be.true;
+        expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.true;
     });
 
     it('allows sending readyForCommittee and readyToSync form both guardian and orbs address', async () => {

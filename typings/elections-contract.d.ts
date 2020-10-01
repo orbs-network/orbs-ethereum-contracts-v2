@@ -14,6 +14,7 @@ export interface ElectionsContract extends OwnedContract {
   registerGuardian( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
   readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
+  canJoinCommittee(addr: string, params?: TransactionConfig): Promise<boolean>;
   readyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
   voteUnready(subjectAddr: string, expiration: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   setGuardianOrbsAddress(orbsAddress: string, params?: TransactionConfig): Promise<TransactionReceipt>;
