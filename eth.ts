@@ -11,7 +11,7 @@ export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
 
-const GAS_LIMIT = parseInt(process.env.GAS_PRICE  || '7000000');
+const GAS_LIMIT = parseInt(process.env.GAS_LIMIT  || '7000000');
 const GAS_PRICE = parseInt(process.env.GAS_PRICE  || '1000000000'); // default: 1 Gwei
 const GAS_PRICE_DEPLOY = parseInt(process.env.GAS_PRICE_DEPLOY  || `${GAS_PRICE}`); // default: GAS_PRICE
 
