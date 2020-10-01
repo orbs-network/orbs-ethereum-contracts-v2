@@ -2,13 +2,13 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/math/Math.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "@openzeppelin/contracts/math/Math.sol";
+import "./spec_interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 import "./interfaces/IRewards.sol";
-import "./interfaces/IElections.sol";
 import "./ManagedContract.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 

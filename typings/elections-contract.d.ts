@@ -21,7 +21,6 @@ export interface ElectionsContract extends OwnedContract {
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   voteOut(subjectAddr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getVoteOutVote(address: string): Promise<string>;
-  getAccumulatedStakesForVoteOut(address: string): Promise<BN>;
 
   setVoteUnreadyTimeoutSeconds(voteOutTimeoutSeconds: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMinSelfStakePercentMille(minSelfStakePercentMille: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
