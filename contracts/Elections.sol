@@ -84,6 +84,17 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.addMember(guardianAddr, effectiveStake, isCertified);
 	}
 
+	function canJoinCommittee(address addr) external view override returns (bool) {
+		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(addr); // this validates registration
+
+		if (isVotedOut(guardianAddr)) {
+			return false;
+		}
+
+		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardianAddr, settings);
+		return committeeContract.checkAddMember(guardianAddr, effectiveStake);
+	}
+
 	function readyToSync() external override {
 		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");

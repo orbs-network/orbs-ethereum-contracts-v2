@@ -40,6 +40,9 @@ interface IElections /* is IStakeChangeNotifier */ {
 	/// @dev Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted out
 	function readyForCommittee() external;
 
+	/// @dev Called by a guardian to test if readyForCommittee() will lead to joining the committee
+	function canJoinCommittee(address addr) external view returns (bool);
+
 	/*
 	 * Methods restricted to other Orbs contracts
 	 */
