@@ -617,8 +617,13 @@ contract Rewards is IRewards, ManagedContract {
         guardianFeesAndBootstrap.bootstrapBalance = uint48(guardianFeesAndBootstrap.bootstrapBalance.add(toUint48Granularity(bootstrap)));
         feesAndBootstrap[addr] = guardianFeesAndBootstrap;
 
-        require(erc20.transferFrom(msg.sender, address(this), guardianStakingRewards.add(delegatorStakingRewards).add(fees)), "acceptRewardBalanceMigration: transfer failed");
-        require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+        uint orbsTransferAmount = guardianStakingRewards.add(delegatorStakingRewards).add(fees);
+        if (orbsTransferAmount > 0) {
+            require(erc20.transferFrom(msg.sender, address(this), orbsTransferAmount), "acceptRewardBalanceMigration: transfer failed");
+        }
+        if (bootstrap > 0) {
+            require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+        }
 
         emit RewardsBalanceMigrationAccepted(msg.sender, addr, guardianStakingRewards, delegatorStakingRewards, fees, bootstrap);
     }
