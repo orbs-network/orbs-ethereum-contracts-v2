@@ -14,7 +14,7 @@ const expect = chai.expect;
 
 describe('contract-registry-high-level-flows', async () => {
 
-  it('registers contracts only by registry manager and emits events', async () => {
+  it('registers contracts only by registry manager and migration manager and emits events', async () => {
     const d = await Driver.new();
     const owner = d.registryAdmin;
     const registry = d.contractRegistry;
@@ -22,8 +22,16 @@ describe('contract-registry-high-level-flows', async () => {
     const contract1Name = "protocol";
     const addr1 = d.newParticipant().address;
 
-    // set
+    // set (registry admin)
     let r = await registry.setContract(contract1Name, addr1, false, {from: owner.address});
+    expect(r).to.have.a.contractAddressUpdatedEvent({
+      contractName: contract1Name,
+      addr: addr1,
+      managedContract: false
+    });
+
+    // set (migration manager)
+    r = await registry.setContract(contract1Name, addr1, false, {from: d.migrationManager.address});
     expect(r).to.have.a.contractAddressUpdatedEvent({
       contractName: contract1Name,
       addr: addr1,
