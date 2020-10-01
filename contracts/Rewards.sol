@@ -11,6 +11,7 @@ import "./spec_interfaces/IProtocolWallet.sol";
 import "./spec_interfaces/IFeesWallet.sol";
 import "./spec_interfaces/IRewards.sol";
 import "./spec_interfaces/IDelegation.sol";
+import "./IStakingContract.sol";
 import "./ManagedContract.sol";
 
 contract Rewards is IRewards, ManagedContract {
@@ -527,12 +528,12 @@ contract Rewards is IRewards, ManagedContract {
 
     // staking rewards
 
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) public override onlyFunctionalManager onlyWhenActive {
+    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external override onlyFunctionalManager onlyWhenActive {
         updateStakingRewardsState();
         return _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
     }
 
-    function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external {
+    function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external override {
         require(delegatorRewardsPercentMille <= 100000, "delegatorRewardsPercentMille must be 100000 at most");
         require(delegatorRewardsPercentMille <= settings.maxDelegatorsStakingRewardsPercentMille, "delegatorRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille");
         updateDelegatorStakingRewards(msg.sender);
