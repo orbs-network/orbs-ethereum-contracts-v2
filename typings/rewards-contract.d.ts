@@ -90,8 +90,8 @@ export interface GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent {
 
 export interface RewardsContract extends OwnedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>; // TODO remove
-    deactivate(params?: TransactionConfig): Promise<TransactionReceipt>;
-    activate(startTime: number, params?: TransactionConfig): Promise<TransactionReceipt>;
+    deactivateRewardDistribution(params?: TransactionConfig): Promise<TransactionReceipt>;
+    activateRewardDistribution(startTime: number, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // staking rewards
     claimStakingRewards(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;

@@ -643,7 +643,7 @@ contract Rewards is IRewards, ManagedContract {
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
     }
 
-    function activate(uint startTime) external override onlyMigrationManager {
+    function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
         feesAndBootstrapState.lastAssigned = uint32(startTime);
         stakingRewardsState.lastAssigned = uint32(startTime);
         settings.rewardAllocationActive = true;
@@ -651,7 +651,7 @@ contract Rewards is IRewards, ManagedContract {
         emit RewardDistributionActivated(startTime);
     }
 
-    function deactivate() external override onlyMigrationManager {
+    function deactivateRewardDistribution() external override onlyMigrationManager {
         require(settings.rewardAllocationActive, "reward distribution is already deactivated");
 
         updateFeesAndBootstrapState();

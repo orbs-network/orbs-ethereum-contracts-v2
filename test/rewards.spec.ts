@@ -179,7 +179,7 @@ function expectApproxEq(actual: BN|string|number, expected: BN|string|number) {
     assert(bn(actual).sub(bn(expected)).abs().lte(BN.max(bn(actual), bn(expected)).div(bn(50))), `Expected ${actual.toString()} to approx. equal ${expected.toString()}`);
 }
 
-describe('rewards', async () => {
+describe.only('rewards', async () => {
 
     // Bootstrap and fees
 
@@ -790,12 +790,12 @@ describe('rewards', async () => {
     it("ensures only migration manager can activate and deactivate", async () => {
         const d = await Driver.new();
 
-        await expectRejected(d.rewards.deactivate({from: d.functionalManager.address}), /sender is not the migration manager/);
-        let r = await d.rewards.deactivate({from: d.migrationManager.address});
+        await expectRejected(d.rewards.deactivateRewardDistribution({from: d.functionalManager.address}), /sender is not the migration manager/);
+        let r = await d.rewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent();
 
-        await expectRejected(d.rewards.activate(await d.web3.txTimestamp(r), {from: d.functionalManager.address}), /sender is not the migration manager/);
-        r = await d.rewards.activate(await d.web3.txTimestamp(r), {from: d.migrationManager.address});
+        await expectRejected(d.rewards.activateRewardDistribution(await d.web3.txTimestamp(r), {from: d.functionalManager.address}), /sender is not the migration manager/);
+        r = await d.rewards.activateRewardDistribution(await d.web3.txTimestamp(r), {from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionActivatedEvent();
     });
 
@@ -808,7 +808,7 @@ describe('rewards', async () => {
 
         await expectRejected(d.rewards.migrateRewardsBalance(c0.address), /Reward distribution must be deactivated for migration/);
 
-        let r = await d.rewards.deactivate({from: d.migrationManager.address});
+        let r = await d.rewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent({});
 
         // Migrating to the same contract should revert
@@ -1008,7 +1008,7 @@ describe('rewards', async () => {
         expect(c0BootstrapBefore).to.be.bignumber.gt(bn(0));
         expect(c0FeesBefore).to.be.bignumber.gt(bn(0));
 
-        let r = await d.rewards.deactivate({from: d.migrationManager.address});
+        let r = await d.rewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent();
         const deactivationTime = await d.web3.txTimestamp(r);
 
@@ -1032,7 +1032,7 @@ describe('rewards', async () => {
         expect(await d.rewards.getBootstrapBalance(committee[0].address)).to.be.bignumber.eq(c0BootstrapAfter);
         expect(await d.rewards.getFeeBalance(committee[0].address)).to.be.bignumber.eq(c0FeesAfter);
 
-        r = await d.rewards.activate(deactivationTime, {from: d.migrationManager.address});
+        r = await d.rewards.activateRewardDistribution(deactivationTime, {from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionActivatedEvent();
 
         expectApproxEq(await d.rewards.getStakingRewardsBalance(committee[0].address), c0StakingAfter.mul(bn(3)));

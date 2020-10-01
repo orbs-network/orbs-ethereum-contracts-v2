@@ -11,9 +11,9 @@ interface IRewards {
     event RewardDistributionActivated(uint256 startTime);
     event RewardDistributionDeactivated();
 
-    function deactivate() external /* onlyMigrationManager */;
+    function deactivateRewardDistribution() external /* onlyMigrationManager */;
 
-    function activate(uint startTime) external /* onlyInitializationAdmin */;
+    function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
 
     function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
 
