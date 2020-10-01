@@ -3,9 +3,9 @@
 pragma solidity 0.6.12;
 
 import "./spec_interfaces/ICertification.sol";
+import "./spec_interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
-import "./interfaces/IElections.sol";
 import "./ManagedContract.sol";
 
 contract Certification is ICertification, ManagedContract {

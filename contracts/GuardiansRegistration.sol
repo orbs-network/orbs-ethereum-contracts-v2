@@ -3,7 +3,7 @@
 pragma solidity 0.6.12;
 
 import "./spec_interfaces/IGuardiansRegistration.sol";
-import "./interfaces/IElections.sol";
+import "./spec_interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
 import "./ManagedContract.sol";
