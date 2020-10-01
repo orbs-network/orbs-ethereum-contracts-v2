@@ -37,6 +37,9 @@ interface IElections {
 	/// @dev Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted out
 	function readyForCommittee() external;
 
+	/// @dev Called to test if a guardian calling readyForCommittee() will lead to joining the committee
+	function canJoinCommittee(address addr) external view returns (bool);
+
 	/// @dev Returns the governance voteOut status of a guardian.
 	/// A guardian is voted out if votedStake / totalDelegatedStake (in percent mille) > threshold  
 	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake);

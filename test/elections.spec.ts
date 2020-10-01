@@ -41,8 +41,7 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
-
-    it.only('canJoinCommittee returns true if readyForCommittee would result in entrance to committee', async () => {
+    it('canJoinCommittee returns true if readyForCommittee would result in entrance to committee', async () => {
         const d = await Driver.new({maxCommitteeSize: 1});
 
         const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, false);
