@@ -8,7 +8,7 @@ import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./spec_interfaces/IElections.sol";
 import "./ContractRegistryAccessor.sol";
 import "./Lockable.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
 import "./ManagedContract.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 

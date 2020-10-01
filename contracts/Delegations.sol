@@ -16,7 +16,7 @@ import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
 import "./ManagedContract.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
