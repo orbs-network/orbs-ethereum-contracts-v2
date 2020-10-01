@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/IProtocolWallet.sol";
 import "./spec_interfaces/IFeesWallet.sol";
-import "./interfaces/IRewards.sol";
+import "./spec_interfaces/IRewards.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./ManagedContract.sol";
 
