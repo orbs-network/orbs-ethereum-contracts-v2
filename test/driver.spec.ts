@@ -16,7 +16,7 @@ describe('testkit', async () => {
   it('should consistently return the same account idx in the first call to new participant', async () => {
     const d = await Driver.new();
 
-    expect(d.accounts.indexOf(d.newParticipant().address)).to.eq(32);
+    expect(d.accounts.indexOf(d.newParticipant().address)).to.eq(32); // 32 must remain constant, do not change! Would break clients that rely on the returned addresses to be consistent
   })
 
   it('should instantiate a new driver object using existing contracts', async () => {
