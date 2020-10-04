@@ -477,7 +477,7 @@ export class Driver {
 
     newParticipant(name?: string): Participant { // consumes two addresses from accounts for each participant - ethereum address and an orbs address
         name = name || `Guardian${this.participants.length}`;
-        const RESERVED_ACCOUNTS = 5;
+        const RESERVED_ACCOUNTS = 30;
         const v = new Participant(
             name,
             `${name}-website`,

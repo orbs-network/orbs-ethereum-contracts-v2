@@ -13,6 +13,12 @@ const expect = chai.expect;
 
 describe('testkit', async () => {
 
+  it('should consistently return the same account idx in the first call to new participant', async () => {
+    const d = await Driver.new();
+
+    expect(d.accounts.indexOf(d.newParticipant().address)).to.eq(32);
+  })
+
   it('should instantiate a new driver object using existing contracts', async () => {
     const firstDriver = await Driver.new({maxCommitteeSize: 4});
     const secondDriver = await Driver.new({contractRegistryForExistingContractsAddress: firstDriver.contractRegistry.address});
