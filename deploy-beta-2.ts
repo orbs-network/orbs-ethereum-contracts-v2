@@ -157,7 +157,7 @@ async function deploy() {
 
     await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
 
-    await rewards.activate(await web3.now());
+    await rewards.activateRewardDistribution(await web3.now());
 
     const managedContracts = [
         contractRegistry,
