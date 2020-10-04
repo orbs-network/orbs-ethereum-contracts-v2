@@ -475,13 +475,13 @@ describe('committee', async () => {
 
         const addrs = [v1.address, v2.address];
         const weights = [fromTokenUnits(10), fromTokenUnits(20)];
-        const certifications = [false, true];
+        const certification = [false, true];
 
         const r = await d.committee.emitCommitteeSnapshot();
         expect(r).to.have.a.committeeSnapshotEvent({
             addrs,
             weights,
-            certifications
+            certification
         });
         expect(r).to.have.a.committeeChangeEvent({
             addr: v1.address,

@@ -17,7 +17,7 @@ export interface CommitteeChangeEvent {
 export interface CommitteeSnapshotEvent {
     addrs: string[];
     weights: (string|BN)[];
-    certifications: boolean[];
+    certification: boolean[];
 }
 
 export interface CommitteeContract extends OwnedContract {
