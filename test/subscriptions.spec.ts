@@ -42,14 +42,14 @@ describe('subscriptions-high-level-flows', async () => {
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
     let expectedExpiration = new BN(blockTimestamp).add(payedDurationInSeconds);
 
-    expect(firstSubsc.vcid).to.exist;
+    expect(firstSubsc.vcId).to.exist;
     expect(firstSubsc.genRefTime).to.be.bignumber.equal(expectedGenRefTime);
     expect(firstSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(firstSubsc.tier).to.equal("defaultTier");
     expect(firstSubsc.name).to.equal("vc-name");
 
-    let vcid = bn(firstSubsc.vcid);
-    expect(r).to.have.paymentEvent({vcid, by: appOwner.address, amount: firstPayment, tier: "defaultTier", rate: monthlyRate});
+    let vcid = bn(firstSubsc.vcId);
+    expect(r).to.have.paymentEvent({vcId: vcid, by: appOwner.address, amount: firstPayment, tier: "defaultTier", rate: monthlyRate});
 
     // Buy more time
     const anotherPayer = d.newParticipant(); // Notice - anyone can pay for any VC without affecting ownership. TBD?
@@ -58,7 +58,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.approve(subscriber.address, secondPayment, {from: anotherPayer.address});
 
     r = await subscriber.extendSubscription(vcid, secondPayment, {from: anotherPayer.address});
-    expect(r).to.have.paymentEvent({vcid, by: anotherPayer.address, amount: secondPayment, tier: "defaultTier", rate: monthlyRate});
+    expect(r).to.have.paymentEvent({vcId: vcid, by: anotherPayer.address, amount: secondPayment, tier: "defaultTier", rate: monthlyRate});
 
     expect(r).to.have.subscriptionChangedEvent();
     const secondSubsc = subscriptionChangedEvents(r).pop()!;
@@ -66,7 +66,7 @@ describe('subscriptions-high-level-flows', async () => {
     const extendedDurationInSeconds = secondPayment.mul(secondsInMonth).div(monthlyRate);
     expectedExpiration = new BN(firstSubsc.expiresAt).add(extendedDurationInSeconds);
 
-    expect(secondSubsc.vcid).to.equal(firstSubsc.vcid);
+    expect(secondSubsc.vcId).to.equal(firstSubsc.vcId);
     expect(secondSubsc.genRefTime).to.be.equal(firstSubsc.genRefTime);
     expect(secondSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(secondSubsc.tier).to.equal("defaultTier");
@@ -104,13 +104,13 @@ describe('subscriptions-high-level-flows', async () => {
     const payedDurationInSeconds = firstPayment.mul(secondsInMonth).div(monthlyRate);
     let expectedExpiration = new BN(blockTimestamp).add(payedDurationInSeconds);
 
-    expect(firstSubsc.vcid).to.exist;
+    expect(firstSubsc.vcId).to.exist;
     expect(firstSubsc.genRefTime).to.be.bignumber.equal(expectedGenRef);
     expect(firstSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(firstSubsc.tier).to.equal("defaultTier");
 
-    let vcid = bn(firstSubsc.vcid);
-    expect(r).to.have.paymentEvent({vcid, by: appOwner.address, amount: firstPayment, tier: "defaultTier", rate: monthlyRate});
+    let vcid = bn(firstSubsc.vcId);
+    expect(r).to.have.paymentEvent({vcId: vcid, by: appOwner.address, amount: firstPayment, tier: "defaultTier", rate: monthlyRate});
 
     // Buy more time
     const anotherPayer = d.newParticipant(); // Notice - anyone can pay for any VC without affecting ownership. TBD?
@@ -119,7 +119,7 @@ describe('subscriptions-high-level-flows', async () => {
     await d.erc20.approve(subscriber.address, secondPayment, {from: anotherPayer.address});
 
     r = await subscriber.extendSubscription(vcid, secondPayment, {from: anotherPayer.address});
-    expect(r).to.have.paymentEvent({vcid, by: anotherPayer.address, amount: secondPayment, tier: "defaultTier", rate: monthlyRate});
+    expect(r).to.have.paymentEvent({vcId: vcid, by: anotherPayer.address, amount: secondPayment, tier: "defaultTier", rate: monthlyRate});
 
     expect(r).to.have.subscriptionChangedEvent();
     const secondSubsc = subscriptionChangedEvents(r).pop()!;
@@ -127,7 +127,7 @@ describe('subscriptions-high-level-flows', async () => {
     const extendedDurationInSeconds = secondPayment.mul(secondsInMonth).div(monthlyRate);
     expectedExpiration = new BN(firstSubsc.expiresAt).add(extendedDurationInSeconds);
 
-    expect(secondSubsc.vcid).to.equal(firstSubsc.vcid);
+    expect(secondSubsc.vcId).to.equal(firstSubsc.vcId);
     expect(secondSubsc.genRefTime).to.be.equal(firstSubsc.genRefTime);
     expect(secondSubsc.expiresAt).to.be.bignumber.equal(expectedExpiration);
     expect(secondSubsc.tier).to.equal("defaultTier");
@@ -180,7 +180,7 @@ describe('subscriptions-high-level-flows', async () => {
     await owner.assignAndApproveOrbs(amount, subs.address);
     let r = await subs.createVC("vc-name", amount, false, "main",  {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
-    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcId);
 
     const key = 'key_' + Date.now().toString();
 
@@ -188,7 +188,7 @@ describe('subscriptions-high-level-flows', async () => {
     const value = 'value_' + Date.now().toString();
     r = await d.subscriptions.setVcConfigRecord(vcid, key, value, {from: owner.address});
     expect(r).to.have.a.vcConfigRecordChangedEvent({
-      vcid: vcid.toString(),
+      vcId: vcid.toString(),
       key,
       value
     });
@@ -202,7 +202,7 @@ describe('subscriptions-high-level-flows', async () => {
     const value2 = 'value2_' + Date.now().toString();
     r = await d.subscriptions.setVcConfigRecord(vcid, key, value2, {from: owner.address});
     expect(r).to.have.a.vcConfigRecordChangedEvent({
-      vcid: vcid.toString(),
+      vcId: vcid.toString(),
       key,
       value: value2
     });
@@ -214,7 +214,7 @@ describe('subscriptions-high-level-flows', async () => {
     // clear
     r = await d.subscriptions.setVcConfigRecord(vcid, key, "", {from: owner.address});
     expect(r).to.have.a.vcConfigRecordChangedEvent({
-      vcid: vcid.toString(),
+      vcId: vcid.toString(),
       key,
       value: ""
     });
@@ -237,10 +237,9 @@ describe('subscriptions-high-level-flows', async () => {
     await owner.assignAndApproveOrbs(amount, subs.address);
     let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
     expect(r).to.have.a.subscriptionChangedEvent();
-    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcId);
     expect(r).to.have.a.vcCreatedEvent({
-      vcid: vcid.toString(),
-      owner: owner.address
+      vcId: vcid.toString()
     });
 
     const newOwner = d.newParticipant();
@@ -250,7 +249,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     r = await d.subscriptions.setVcOwner(vcid, newOwner.address, {from: owner.address});
     expect(r).to.have.a.vcOwnerChangedEvent({
-      vcid: vcid.toString(),
+      vcId: vcid.toString(),
       previousOwner: owner.address,
       newOwner: newOwner.address
     });
@@ -259,7 +258,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     r = await d.subscriptions.setVcOwner(vcid, owner.address, {from: newOwner.address});
     expect(r).to.have.a.vcOwnerChangedEvent({
-      vcid: vcid.toString(),
+      vcId: vcid.toString(),
       previousOwner: newOwner.address,
       newOwner: owner.address
     });
@@ -283,7 +282,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     await owner.assignAndApproveOrbs(amount + 1, subs.address);
     let r = await subs.createVC("vc-name", amount + 1, false, "main", {from: owner.address});
-    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcId);
 
     // can be extended with any amount
     await owner.assignAndApproveOrbs(1, subs.address);
@@ -304,7 +303,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     await owner.assignAndApproveOrbs(oneSecondsWorth, subs.address);
     let r = await subs.createVC("vc-name", oneSecondsWorth, false, "main", {from: owner.address});
-    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcId);
     const expiresAtOrig = bn(subscriptionChangedEvents(r)[0].expiresAt);
 
     // vc expires after one second
@@ -335,7 +334,7 @@ describe('subscriptions-high-level-flows', async () => {
 
     await owner.assignAndApproveOrbs(oneHoursWorth, subs.address);
     let r = await subs.createVC("vc-name", oneHoursWorth, false, "main", {from: owner.address});
-    const vcid = bn(subscriptionChangedEvents(r)[0].vcid);
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcId);
     const expiresAtOrig = bn(subscriptionChangedEvents(r)[0].expiresAt);
 
     // vc expires in one hour
@@ -392,7 +391,7 @@ describe('subscriptions-high-level-flows', async () => {
     let r = await subs.createVC("vc-name", amount, false, "main", {from: owner.address});
 
     const event = subscriptionChangedEvents(r)[0];
-    const vcid = bn(event.vcid);
+    const vcid = bn(event.vcId);
     const vcData = await d.subscriptions.getVcData(vcid);
     expect([
         vcData[0],
@@ -437,17 +436,17 @@ describe('subscriptions-high-level-flows', async () => {
     let r = await subs.createVC("vc-name", amount, true, "main", {from: owner.address});
 
     const event = subscriptionChangedEvents(r)[0];
-    const vcData = await d.subscriptions.getVcData(event.vcid);
+    const vcData = await d.subscriptions.getVcData(event.vcId);
 
     const newSubscriptions: any = await d.web3.deploy('Subscriptions', [
       d.contractRegistry.address,
       d.registryAdmin.address,
       d.erc20.address,
-      3*60*60, 1, [event.vcid], d.subscriptions.address]
+      3*60*60, 1, [event.vcId], 1000000, d.subscriptions.address]
     );
 
     expect(await newSubscriptions.getCreationTx()).to.have.a.subscriptionChangedEvent({
-      vcid: event.vcid,
+      vcId: event.vcId,
       name: "vc-name",
       tier: "tier",
       rate: bn(1),
@@ -458,7 +457,7 @@ describe('subscriptions-high-level-flows', async () => {
       isCertified: true
     });
 
-    expect(await newSubscriptions.nextVcId()).to.bignumber.eq(bn(event.vcid).add(bn(1)));
+    expect(await newSubscriptions.nextVcId()).to.bignumber.eq(bn(event.vcId).add(bn(1)));
 
   });
 

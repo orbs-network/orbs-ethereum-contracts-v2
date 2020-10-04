@@ -325,7 +325,7 @@ describe('delegations-contract', async () => {
             let r = await d.delegations.importDelegations([d1.address], v1.address, notifyElections, {from: d.migrationManager.address});
             notifyElections ?
                 await expectCommittee(d,  {addrs: [v1.address, v2.address]}) :
-                expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+                expect(r).to.not.have.a.committeeChangeEvent();
 
             expect(r).to.have.a.delegationsImportedEvent({
                 from: [d1.address],
@@ -345,7 +345,7 @@ describe('delegations-contract', async () => {
             r = await d.delegations.importDelegations([d2.address, d3.address], v2.address, notifyElections, {from: d.migrationManager.address});
             notifyElections ?
                 await expectCommittee(d,  {addrs: [v2.address, v1.address]}) :
-                expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+                expect(r).to.not.have.a.committeeChangeEvent();
 
             expect(r).to.have.a.delegationsImportedEvent({
                 from: [d2.address, d3.address],

@@ -15,11 +15,11 @@ const expect = chai.expect;
 
 const YEAR_IN_SECONDS = 365*24*60*60;
 
-describe('protocol-contract', async () => {
+describe('protocol-wallet-contract', async () => {
 
   it('returns erc20 address using getter', async () => {
     const d = await Driver.new();
-    expect(await d.stakingRewardsWallet.getToken()).to.eq(d.erc20.address);
+    expect(await d.stakingRewardsWallet.token()).to.eq(d.erc20.address);
   });
 
   it('tops up the wallet', async () => {

@@ -41,6 +41,61 @@ describe('elections-high-level-flows', async () => {
         });
     });
 
+    it('allows the initialization manager to call initReadyForCommittee', async () => {
+        const d = await Driver.new({callInitializationComplete: false});
+
+        const {v: v1} = await d.newGuardian(100, false, false, false);
+        const {v: v2} = await d.newGuardian(100, false, false, false);
+
+        await expectRejected(d.elections.initReadyForCommittee([v1.address, v2.address], {from: d.migrationManager.address}), /sender is not the initialization admin/);
+        const r = await d.elections.initReadyForCommittee([v1.address, v2.address], {from: d.initializationAdmin.address});
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
+            addr: v1.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+        expect(r).to.have.a.committeeChangeEvent({
+            addr: v1.address,
+            inCommittee: true
+        });
+        expect(r).to.have.a.guardianStatusUpdatedEvent({
+            addr: v2.address,
+            readyToSync: true,
+            readyForCommittee: true
+        });
+        expect(r).to.have.a.committeeChangeEvent({
+            addr: v1.address,
+            inCommittee: true
+        });
+
+        await d.elections.initializationComplete({from: d.initializationAdmin.address});
+
+        await expectRejected(d.elections.initReadyForCommittee([v1.address, v2.address], {from: d.initializationAdmin.address}), /sender is not the initialization admin/);
+    });
+
+    it('gets committee info', async () => {
+        const d = await Driver.new();
+
+        const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, true);
+        const {v: v2} = await d.newGuardian(fromTokenUnits(20), true, false, true);
+
+        const committee = [
+            {v: v1, stake: fromTokenUnits(10), certified: false},
+            {v: v2, stake: fromTokenUnits(20), certified: true}
+        ];
+
+        let r = await d.elections.getCommittee();
+        expect([r[0], r[1], r[2], r[3], r[4]]).to.deep.equal(
+            [
+                committee.map(({v}) => v.address),
+                committee.map(({stake}) => stake.toString()),
+                committee.map(({v}) => v.orbsAddress),
+                committee.map(({certified}) => certified),
+                committee.map(({v}) => v.ip),
+            ]
+        );
+    })
+
     it('canJoinCommittee returns true if readyForCommittee would result in entrance to committee', async () => {
         const d = await Driver.new({maxCommitteeSize: 1});
 
@@ -56,7 +111,7 @@ describe('elections-high-level-flows', async () => {
             readyToSync: true,
             readyForCommittee: true
         });
-        expect(r).to.have.a.guardianCommitteeChangeEvent({
+        expect(r).to.have.a.committeeChangeEvent({
             addr: v1.address,
             inCommittee: true
         });
@@ -154,7 +209,7 @@ describe('elections-high-level-flows', async () => {
 
         const guardianStaked200 = d.newParticipant();
         r = await guardianStaked200.stake(stake200);
-        expect(r).to.have.a.stakeChangedEvent({addr: guardianStaked200.address, effective_stake: stake200});
+        expect(r).to.have.a.stakeChangedEvent({addr: guardianStaked200.address, effectiveStake: stake200});
 
         await guardianStaked200.registerAsGuardian();
         await guardianStaked200.readyToSync();
@@ -186,7 +241,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         r = await d.delegateMoreStake(stake500, guardianStaked100);
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         r = await guardianStaked100.readyForCommittee();
         await expectCommittee(d,  {
@@ -202,7 +257,7 @@ describe('elections-high-level-flows', async () => {
         await inTopologyGuardian.registerAsGuardian();
         r = await inTopologyGuardian.readyToSync();
         r = await inTopologyGuardian.readyForCommittee();
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         // The bottom guardian in the topology delegates more stake and switches places with the second to last
         await d.delegateMoreStake(201, inTopologyGuardian);
@@ -214,7 +269,7 @@ describe('elections-high-level-flows', async () => {
         await outOfTopologyGuardian.registerAsGuardian();
         await outOfTopologyGuardian.readyToSync();
         r = await outOfTopologyGuardian.readyForCommittee();
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         // A new guardian stakes enough to get to the top
         const guardian = d.newParticipant();
@@ -280,7 +335,7 @@ describe('elections-high-level-flows', async () => {
                     subject: votedOutGuardian.address
                 });
                 expect(r).to.not.have.a.guardianVotedUnreadyEvent();
-                expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+                expect(r).to.not.have.a.committeeChangeEvent();
                 committeeData[v.address].voted = true;
             }
 
@@ -357,7 +412,7 @@ describe('elections-high-level-flows', async () => {
             subject: committee[1].address,
         });
         expect(r).to.not.have.a.guardianVotedUnreadyEvent();
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         expiration = bn((await d.web3.txTimestamp(r)) + WEEK);
         // recast the stale vote-out, threshold should be reached
@@ -397,14 +452,14 @@ describe('elections-high-level-flows', async () => {
         await delegator1.stake(100);
         r = await delegator1.delegate(aGuardian);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: aGuardian.address, effective_stake: new BN(200)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aGuardian.address, effectiveStake: new BN(200)});
 
         // delegate before stake
         const delegator2 = d.newParticipant();
         await delegator2.delegate(aGuardian);
         r = await delegator2.stake(100);
 
-        expect(r).to.have.a.stakeChangedEvent({addr: aGuardian.address, effective_stake: new BN(300)});
+        expect(r).to.have.a.stakeChangedEvent({addr: aGuardian.address, effectiveStake: new BN(300)});
     });
 
     it('does not count delegated stake twice', async () => {
@@ -419,11 +474,11 @@ describe('elections-high-level-flows', async () => {
         const r = await v1.delegate(v2);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(0)
+            effectiveStake: new BN(0)
         });
         expect(r).to.have.a.stakeChangedEvent({
             addr: v2.address,
-            effective_stake: new BN(200)
+            effectiveStake: new BN(200)
         });
     });
 
@@ -443,25 +498,25 @@ describe('elections-high-level-flows', async () => {
         let r = await v2.stake(900);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(1000),
+            effectiveStake: new BN(1000),
         });
 
         r = await v2.stake(1);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(1000),
+            effectiveStake: new BN(1000),
         });
 
         r = await v2.unstake(2);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(999),
+            effectiveStake: new BN(999),
         });
 
         r = await v2.stake(11);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(1000),
+            effectiveStake: new BN(1000),
         });
         await expectCommittee(d,  {
             addrs: [v1.address],
@@ -471,7 +526,7 @@ describe('elections-high-level-flows', async () => {
         r = await v1.stake(2);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(1012),
+            effectiveStake: new BN(1012),
         });
         await expectCommittee(d,  {
             addrs: [v1.address],
@@ -481,7 +536,7 @@ describe('elections-high-level-flows', async () => {
         r = await v2.stake(30);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(1020),
+            effectiveStake: new BN(1020),
         });
         await expectCommittee(d,  {
             addrs: [v1.address],
@@ -491,7 +546,7 @@ describe('elections-high-level-flows', async () => {
         r = await v1.stake(1);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
-            effective_stake: new BN(1030),
+            effectiveStake: new BN(1030),
         });
         await expectCommittee(d,  {
             addrs: [v1.address],
@@ -508,7 +563,7 @@ describe('elections-high-level-flows', async () => {
         let r = await delegator.delegate(v);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v.address,
-            effective_stake: bn(100),
+            effectiveStake: bn(100),
         });
         await expectCommittee(d,  {
             addrs: [v.address],
@@ -525,7 +580,7 @@ describe('elections-high-level-flows', async () => {
         let r = await delegator.delegate(v);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v.address,
-            effective_stake: bn(0),
+            effectiveStake: bn(0),
         });
     });
 
@@ -556,7 +611,7 @@ describe('elections-high-level-flows', async () => {
         });
 
         const {r: r2} = await d.newGuardian(baseStake * 2, false, true, false);
-        expect(r2).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r2).to.not.have.a.committeeChangeEvent();
     });
 
     it('publishes a CommiteeChangedEvent when the commitee becomes empty', async () => {
@@ -683,7 +738,7 @@ describe('elections-high-level-flows', async () => {
                 voter: delegator.address,
                 subject: votedOutGuardian.address
             });
-            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+            expect(r).to.not.have.a.committeeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
         }
     });
@@ -703,7 +758,7 @@ describe('elections-high-level-flows', async () => {
                 voter: p.address,
                 subject: votedOutGuardian.address
             });
-            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+            expect(r).to.not.have.a.committeeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
         }
 
@@ -794,7 +849,7 @@ describe('elections-high-level-flows', async () => {
                 voter: p.address,
                 subject: votedOutGuardian.address
             });
-            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+            expect(r).to.not.have.a.committeeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
         }
 

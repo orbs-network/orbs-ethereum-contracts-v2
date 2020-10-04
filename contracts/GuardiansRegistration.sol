@@ -4,8 +4,6 @@ pragma solidity 0.6.12;
 
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./spec_interfaces/IElections.sol";
-import "./ContractRegistryAccessor.sol";
-import "./Lockable.sol";
 import "./ManagedContract.sol";
 
 contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
@@ -24,10 +22,10 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		uint256 registrationTime;
 		uint256 lastUpdateTime;
 	}
-	mapping (address => Guardian) public guardians;
-	mapping (address => address) public orbsAddressToGuardianAddress;
-	mapping (bytes4 => address) public ipToGuardian;
-	mapping (address => mapping(string => string)) public guardianMetadata;
+	mapping(address => Guardian) guardians;
+	mapping(address => address) orbsAddressToGuardianAddress;
+	mapping(bytes4 => address) public ipToGuardian;
+	mapping(address => mapping(string => string)) guardianMetadata;
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) ManagedContract(_contractRegistry, _registryAdmin) public {
 		require(previousContract != IGuardiansRegistration(0) || guardiansToMigrate.length == 0, "A guardian address list was provided for migration without the previous contract");
@@ -35,30 +33,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		for (uint i = 0; i < guardiansToMigrate.length; i++) {
 			migrateGuardianData(previousContract, guardiansToMigrate[i]);
 			migrateGuardianMetadata(previousContract, guardiansToMigrate[i]);
-		}
-	}
-
-	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
-		(bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
-		guardians[guardianAddress] = Guardian({
-			orbsAddr: orbsAddr,
-			ip: ip,
-			name: name,
-			website: website,
-			registrationTime: registrationTime,
-			lastUpdateTime: lastUpdateTime
-		});
-		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
-		ipToGuardian[ip] = guardianAddress;
-
-		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website);
-	}
-
-	string constant ID_FORM_URL_METADATA_KEY = "ID_FORM_URL";
-	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
-		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY);
-		if (bytes(rewardsFreqMetadata).length > 0) {
-			_setMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY, rewardsFreqMetadata);
 		}
 	}
 
@@ -94,15 +68,8 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		_setMetadata(msg.sender, key, value);
 	}
 
-    function _setMetadata(address guardian, string memory key, string memory value) private {
-		string memory oldValue = guardianMetadata[guardian][key];
-		guardianMetadata[guardian][key] = value;
-		emit GuardianMetadataChanged(guardian, key, value, oldValue);
-	}
-
-	function getMetadata(address addr, string calldata key) external override view returns (string memory) {
-		require(isRegistered(addr), "getMetadata: Guardian is not registered");
-		return guardianMetadata[addr][key];
+	function getMetadata(address guardian, string calldata key) external override view returns (string memory) {
+		return guardianMetadata[guardian][key];
 	}
 
 	/// @dev Called by a participant who wishes to unregister
@@ -118,65 +85,48 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	}
 
     /// @dev Returns a guardian's data
-    /// Used also by the Election contract
-	function getGuardianData(address addr) external override view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registration_time, uint last_update_time) {
-		require(isRegistered(addr), "getGuardianData: Guardian is not registered");
-		Guardian memory v = guardians[addr];
+	function getGuardianData(address guardian) external override view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) {
+		Guardian memory v = guardians[guardian];
 		return (v.ip, v.orbsAddr, v.name, v.website, v.registrationTime, v.lastUpdateTime);
 	}
 
-	function getGuardiansOrbsAddress(address[] calldata addrs) external override view returns (address[] memory orbsAddrs) {
-		orbsAddrs = new address[](addrs.length);
-		for (uint i = 0; i < addrs.length; i++) {
-			orbsAddrs[i] = guardians[addrs[i]].orbsAddr;
+	function getGuardiansOrbsAddress(address[] calldata guardianAddrs) external override view returns (address[] memory orbsAddrs) {
+		orbsAddrs = new address[](guardianAddrs.length);
+		for (uint i = 0; i < guardianAddrs.length; i++) {
+			orbsAddrs[i] = guardians[guardianAddrs[i]].orbsAddr;
 		}
 	}
 
-	function getGuardianIp(address addr) external override view returns (bytes4 ip) {
-		require(isRegistered(addr), "getGuardianIp: Guardian is not registered");
-		return guardians[addr].ip;
+	function getGuardianIp(address guardian) external override view returns (bytes4 ip) {
+		return guardians[guardian].ip;
 	}
 
-	function getGuardianIps(address[] calldata addrs) external override view returns (bytes4[] memory ips) {
-		ips = new bytes4[](addrs.length);
-		for (uint i = 0; i < addrs.length; i++) {
-			ips[i] = guardians[addrs[i]].ip;
+	function getGuardianIps(address[] calldata guardianAddrs) external override view returns (bytes4[] memory ips) {
+		ips = new bytes4[](guardianAddrs.length);
+		for (uint i = 0; i < guardianAddrs.length; i++) {
+			ips[i] = guardians[guardianAddrs[i]].ip;
 		}
 	}
 
-	function isRegistered(address addr) public override view returns (bool) {
-		return guardians[addr].registrationTime != 0;
+	function isRegistered(address guardian) public override view returns (bool) {
+		return guardians[guardian].registrationTime != 0;
 	}
 
-	function resolveGuardianAddress(address ethereumOrOrbsAddress) public override view returns (address ethereumAddress) {
-		if (isRegistered(ethereumOrOrbsAddress)) {
-			ethereumAddress = ethereumOrOrbsAddress;
+	function resolveGuardianAddress(address guardianOrOrbsAddress) public override view returns (address guardianAddress) {
+		if (isRegistered(guardianOrOrbsAddress)) {
+			guardianAddress = guardianOrOrbsAddress;
 		} else {
-			ethereumAddress = orbsAddressToGuardianAddress[ethereumOrOrbsAddress];
+			guardianAddress = orbsAddressToGuardianAddress[guardianOrOrbsAddress];
 		}
 
-		require(ethereumAddress != address(0), "Cannot resolve address");
-	}
-
-	/*
-     * Methods restricted to other Orbs contracts
-     */
-
-    /// @dev Translates a list guardians Ethereum addresses to Orbs addresses
-    /// Used by the Election conract
-	function getOrbsAddresses(address[] calldata ethereumAddrs) external override view returns (address[] memory orbsAddrs) {
-		orbsAddrs = new address[](ethereumAddrs.length);
-		for (uint i = 0; i < ethereumAddrs.length; i++) {
-			orbsAddrs[i] = guardians[ethereumAddrs[i]].orbsAddr;
-		}
+		require(guardianAddress != address(0), "Cannot resolve address");
 	}
 
 	/// @dev Translates a list guardians Orbs addresses to Ethereum addresses
-	/// Used by the Election contract
-	function getEthereumAddresses(address[] calldata orbsAddrs) external override view returns (address[] memory ethereumAddrs) {
-		ethereumAddrs = new address[](orbsAddrs.length);
+	function getGuardianAddresses(address[] calldata orbsAddrs) external override view returns (address[] memory guardianAddrs) {
+		guardianAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {
-			ethereumAddrs[i] = orbsAddressToGuardianAddress[orbsAddrs[i]];
+			guardianAddrs[i] = orbsAddressToGuardianAddress[orbsAddrs[i]];
 		}
 	}
 
@@ -187,6 +137,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	function _updateGuardian(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
 		require(orbsAddr != guardianAddr, "orbs address must be different than the guardian address");
+		require(!isRegistered(orbsAddr), "orbs address must not be a guardian address of a registered guardian");
 		require(bytes(name).length != 0, "name must be given");
 
 		delete ipToGuardian[guardians[guardianAddr].ip];
@@ -205,6 +156,40 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
         emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website);
     }
+
+	function _setMetadata(address guardian, string memory key, string memory value) private {
+		string memory oldValue = guardianMetadata[guardian][key];
+		guardianMetadata[guardian][key] = value;
+		emit GuardianMetadataChanged(guardian, key, value, oldValue);
+	}
+
+	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
+		(bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
+		guardians[guardianAddress] = Guardian({
+			orbsAddr: orbsAddr,
+			ip: ip,
+			name: name,
+			website: website,
+			registrationTime: registrationTime,
+			lastUpdateTime: lastUpdateTime
+			});
+		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
+		ipToGuardian[ip] = guardianAddress;
+
+		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website);
+	}
+
+	string public constant ID_FORM_URL_METADATA_KEY = "ID_FORM_URL";
+	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
+		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY);
+		if (bytes(rewardsFreqMetadata).length > 0) {
+			_setMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY, rewardsFreqMetadata);
+		}
+	}
+
+	/*
+     * Contracts topology / registry interface
+     */
 
 	IElections electionsContract;
 	function refreshContracts() external override {

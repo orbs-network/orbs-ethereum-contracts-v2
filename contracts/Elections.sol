@@ -18,11 +18,11 @@ import "./ManagedContract.sol";
 contract Elections is IElections, ManagedContract {
 	using SafeMath for uint256;
 
-	mapping (address => mapping (address => uint256)) votedUnreadyVotes; // by => to => timestamp
-	mapping (address => uint256) votersStake;
-	mapping (address => address) voteOutVotes; // by => to
-	mapping (address => uint256) accumulatedStakesForVoteOut; // addr => total stake
-	mapping (address => bool) votedOutGuardians;
+	mapping(address => mapping(address => uint256)) votedUnreadyVotes; // by => to => timestamp
+	mapping(address => uint256) votersStake;
+	mapping(address => address) voteOutVotes; // by => to
+	mapping(address => uint256) accumulatedStakesForVoteOut; // addr => total stake
+	mapping(address => bool) votedOutGuardians;
 
 	uint32 constant PERCENT_MILLIE_BASE = 100000;
 
@@ -73,7 +73,17 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function readyForCommittee() external override {
-		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
+		_readyForCommittee(msg.sender);
+	}
+
+	function initReadyForCommittee(address[] calldata guardians) external override onlyInitializationAdmin {
+		for (uint i = 0; i < guardians.length; i++) {
+			_readyForCommittee(guardians[i]);
+		}
+	}
+
+	function _readyForCommittee(address addr) private {
+		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(addr); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
 		emit GuardianStatusUpdated(guardianAddr, true, true);
@@ -332,6 +342,21 @@ contract Elections is IElections, ManagedContract {
 		}
 
 		(subjectInCommittee, subjectInCertifiedCommittee) = getSubjectCommitteeStatus(committee, certification, subjectAddr);
+	}
+
+	/// @dev returns the current committee
+	/// used also by the rewards and fees contracts
+	function getCommittee() external override view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory certification, bytes4[] memory ips) {
+		(addrs, weights, certification) = committeeContract.getCommittee();
+		return (addrs, weights, _loadOrbsAddresses(addrs), certification, _loadIps(addrs));
+	}
+
+	function _loadOrbsAddresses(address[] memory addrs) private view returns (address[] memory) {
+		return guardianRegistrationContract.getGuardiansOrbsAddress(addrs);
+	}
+
+	function _loadIps(address[] memory addrs) private view returns (bytes4[] memory) {
+		return guardianRegistrationContract.getGuardianIps(addrs);
 	}
 
 	function getSettings() external override view returns (

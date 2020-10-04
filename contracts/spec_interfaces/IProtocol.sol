@@ -6,7 +6,7 @@ interface IProtocol {
     event ProtocolVersionChanged(string deploymentSubset, uint256 currentVersion, uint256 nextVersion, uint256 fromTimestamp);
 
     /*
-     *   External methods
+     *   External functions
      */
 
     /// @dev returns true if the given deployment subset exists (i.e - is registered with a protocol version)
@@ -16,7 +16,7 @@ interface IProtocol {
     function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256);
 
     /*
-     *   Governor methods
+     *   Governance functions
      */
 
     /// @dev create a new deployment subset.

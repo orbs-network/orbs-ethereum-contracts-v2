@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-import "./spec_interfaces/IContractRegistry.sol";
+import "./IContractRegistry.sol";
 
 interface IContractRegistryListener {
 

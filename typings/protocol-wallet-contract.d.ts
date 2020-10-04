@@ -23,7 +23,7 @@ interface EmergencyWithdrawalEvent {
 
 export interface ProtocolWalletContract extends OwnedContract {
   getMaxAnnualRate(): Promise<number>;
-  getToken(params?: TransactionConfig): Promise<string>;
+  token(params?: TransactionConfig): Promise<string>;
   getBalance(params?: TransactionConfig): Promise<string>;
   topUp(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   withdraw(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;

@@ -25,7 +25,7 @@ import {
   VoteOutTimeoutSecondsChangedEvent,
   MinSelfStakePercentMilleChangedEvent,
   VoteUnreadyPercentMilleThresholdChangedEvent,
-  VoteOutPercentMilleThresholdChangedEvent, StakeChangedEvent,
+  VoteOutPercentMilleThresholdChangedEvent, StakeChangedEvent, GuardianStatusUpdatedEvent
 } from "../typings/elections-contract";
 import { MigratedStakeEvent, StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {
@@ -63,11 +63,8 @@ import {
     DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
 } from "../typings/delegations-contract";
 import {
-  CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
-  MaxTimeBetweenRewardAssignmentsChangedEvent,
-  GuardianCommitteeChangeEvent,
-  GuardianStatusUpdatedEvent
+  CommitteeChangeEvent, CommitteeSnapshotEvent,
 } from "../typings/committee-contract";
 import {GuardianCertificationUpdateEvent} from "../typings/certification-contract";
 import {Contract} from "../eth";
@@ -194,9 +191,15 @@ const TransposeKeys = {
   "CommitteeSnapshot": "addrs",
 };
 
-export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeSnapshotEvent> & {addrs: string[]}) {
+interface CommitteeData {
+  addrs: string[],
+  weights: (number|BN)[],
+  certification: boolean[]
+}
+
+export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeData> & {addrs: string[]}) {
   const curCommittee: any = await d.committee.getCommittee();
-  const actualCommittee: CommitteeSnapshotEvent = {
+  const actualCommittee: CommitteeData = {
     addrs: curCommittee.addrs,
     weights: curCommittee.weights,
     certification: curCommittee.certification
@@ -217,7 +220,6 @@ export const chaiEventMatchersPlugin = function(chai) {
         )
     );
   }
-  chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
   chai.Assertion.addChainableMethod("withinContract", function (this: any, contract: Contract) {
     chai.util.flag(this, "contractAddress", contract.address);
@@ -233,8 +235,8 @@ declare global {
     export interface TypeComparison {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
+      committeeChangeEvent(data?: Partial<CommitteeChangeEvent>): void;
       committeeSnapshotEvent(data?: Partial<CommitteeSnapshotEvent>): void;
-      guardianCommitteeChangeEvent(data?: Partial<GuardianCommitteeChangeEvent>): void;
       guardianRegisteredEvent(data?: Partial<GuardianRegisteredEvent>): void;
       guardianMetadataChangedEvent(data?: Partial<GuardianMetadataChangedEvent>): void;
       guardianUnregisteredEvent(data?: Partial<GuardianUnregisteredEvent>): void;
@@ -264,7 +266,6 @@ declare global {
       voteUnreadyPercentMilleThresholdChangedEvent(data?: Partial<VoteOutPercentMilleThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
-      maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       feesWithdrawnFromBucketEvent(data?: Partial<FeesWithdrawnFromBucketEvent>);
@@ -313,7 +314,6 @@ declare global {
 
     export interface Assertion {
       bignumber: Assertion;
-      haveCommittee(data: CommitteeSnapshotEvent);
     }
   }
 }

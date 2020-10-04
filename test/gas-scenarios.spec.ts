@@ -96,14 +96,12 @@ describe('gas usage scenarios', async () => {
     it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
         const {d, committee} = await fullCommittee();
 
-        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalManager.address});
-
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
 
         d.resetGasRecording();
         let r = await delegator.stake(bn(1));
-        expect(r).to.have.a.guardianCommitteeChangeEvent({
+        expect(r).to.have.a.committeeChangeEvent({
             addr: committee[committee.length - 1].address
         });
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
@@ -140,7 +138,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         d.logGasUsageSummary("New delegator stakes", [delegator]);
     });
@@ -202,7 +200,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.readyToSync();
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         d.resetGasRecording();
         r = await v.readyForCommittee();
@@ -230,7 +228,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteUnready(committee[1].address, 0xFFFFFFFF,{from: committee[0].orbsAddress});
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
@@ -270,7 +268,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].address});
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
         expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address

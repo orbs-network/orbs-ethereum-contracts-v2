@@ -70,6 +70,7 @@ export type DriverOptions = {
     generalFeesWalletAddress?: string;
     certifiedFeesWalletAddress?: string;
 
+    callInitializationComplete?: boolean;
 }
 export const defaultDriverOptions: Readonly<DriverOptions> = {
     maxCommitteeSize: 2,
@@ -94,6 +95,8 @@ export const defaultDriverOptions: Readonly<DriverOptions> = {
     subscriptionRate: bn(100),
 
     web3Provider: defaultWeb3Provider,
+
+    callInitializationComplete: true
 };
 
 export const betaDriverOptions: Readonly<DriverOptions> = {
@@ -129,6 +132,8 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     minimumInitialVcPayment: 0,
 
     web3Provider: defaultWeb3Provider,
+
+    callInitializationComplete: true
 };
 
 export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet' | 'stakingContractHandler';
@@ -256,7 +261,7 @@ export class Driver {
         const subscriptions = options.subscriptionsAddress ?
             await web3.getExisting('Subscriptions', options.subscriptionsAddress, session)
             :
-            await web3.deploy('Subscriptions', [contractRegistry.address, registryAdmin, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment, [], ZERO_ADDR], null, session);
+            await web3.deploy('Subscriptions', [contractRegistry.address, registryAdmin, erc20.address, genesisRefTimeDelay || 3*60*60, minimumInitialVcPayment, [], 1000000, ZERO_ADDR], null, session);
 
         const protocol = options.protocolAddress ?
             await web3.getExisting('Protocol', options.protocolAddress, session)
@@ -271,7 +276,7 @@ export class Driver {
         const committee = options.committeeAddress ?
             await web3.getExisting('Committee', options.committeeAddress, session)
             :
-            await web3.deploy('Committee', [contractRegistry.address, registryAdmin, maxCommitteeSize, maxTimeBetweenRewardAssignments], null, session);
+            await web3.deploy('Committee', [contractRegistry.address, registryAdmin, maxCommitteeSize], null, session);
 
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
@@ -340,23 +345,25 @@ export class Driver {
             await rewards.activateRewardDistribution(await web3.now());
         }
 
-        const contracts = [
-            contractRegistry,
-            rewards,
-            delegations,
-            elections,
-            subscriptions,
-            protocol,
-            certification,
-            guardiansRegistration,
-            committee,
-            generalFeesWallet,
-            certifiedFeesWallet,
-            stakingContractHandler
-        ]
-        for (const contract of contracts) {
-            if (!(await contract.isInitializationComplete())) {
-                await contract.initializationComplete();
+        if (options.callInitializationComplete) {
+            const contracts = [
+                contractRegistry,
+                rewards,
+                delegations,
+                elections,
+                subscriptions,
+                protocol,
+                certification,
+                guardiansRegistration,
+                committee,
+                generalFeesWallet,
+                certifiedFeesWallet,
+                stakingContractHandler
+            ]
+            for (const contract of contracts) {
+                if (!(await contract.isInitializationComplete())) {
+                    await contract.initializationComplete();
+                }
             }
         }
 

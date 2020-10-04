@@ -27,10 +27,10 @@ describe('guardian-registration', async () => {
         v.website
     , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -46,8 +46,8 @@ describe('guardian-registration', async () => {
       orbsAddr: v.orbsAddress,
       name: v.name,
       website: v.website,
-      registration_time: registrationTime.toString(),
-      last_update_time: firstUpdateTime.toString()
+      registrationTime: registrationTime.toString(),
+      lastUpdateTime: firstUpdateTime.toString()
     });
 
     const _v = d.newParticipant();
@@ -60,7 +60,7 @@ describe('guardian-registration', async () => {
         _v.website
     , {from: v.address});
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: _v.ip,
       orbsAddr: _v.orbsAddress,
@@ -75,16 +75,16 @@ describe('guardian-registration', async () => {
       orbsAddr: _v.orbsAddress,
       name: _v.name,
       website: _v.website,
-      registration_time: registrationTime.toString(),
-      last_update_time: secondUpdateTime.toString()
+      registrationTime: registrationTime.toString(),
+      lastUpdateTime: secondUpdateTime.toString()
     });
 
     r = await d.guardiansRegistration.unregisterGuardian({from: v.address});
     expect(r).to.have.a.guardianUnregisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: false,
       ip: _v.ip,
       orbsAddr: _v.orbsAddress,
@@ -104,10 +104,10 @@ describe('guardian-registration', async () => {
         v.website
     , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -149,10 +149,10 @@ describe('guardian-registration', async () => {
         v.website,
          {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -188,10 +188,10 @@ describe('guardian-registration', async () => {
         v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -519,7 +519,7 @@ describe('guardian-registration', async () => {
         "0xaaaaaaaa"
     , {from: v.orbsAddress});
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: "0xaaaaaaaa"
     });
@@ -528,7 +528,7 @@ describe('guardian-registration', async () => {
         "0xbbbbbbbb"
     , {from: v.address});
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: "0xbbbbbbbb"
     });
@@ -545,10 +545,10 @@ describe('guardian-registration', async () => {
         v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -562,7 +562,7 @@ describe('guardian-registration', async () => {
 
     r = await d.guardiansRegistration.setMetadata(key, value, {from: v.address});
     expect(r).to.have.a.guardianMetadataChangedEvent({
-      addr: v.address,
+      guardian: v.address,
       key,
       oldValue: "",
       newValue: value
@@ -577,7 +577,7 @@ describe('guardian-registration', async () => {
     const value2 = 'value2_' + Date.now().toString();
     r = await d.guardiansRegistration.setMetadata(key, value2, {from: v.address});
     expect(r).to.have.a.guardianMetadataChangedEvent({
-      addr: v.address,
+      guardian: v.address,
       key,
       oldValue: value,
       newValue: value2
@@ -590,7 +590,7 @@ describe('guardian-registration', async () => {
     // clear
     r = await d.guardiansRegistration.setMetadata(key, "", {from: v.address});
     expect(r).to.have.a.guardianMetadataChangedEvent({
-      addr: v.address,
+      guardian: v.address,
       key,
       oldValue: value2,
       newValue: ""
@@ -612,10 +612,10 @@ describe('guardian-registration', async () => {
         v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -623,7 +623,7 @@ describe('guardian-registration', async () => {
       website: v.website
     });
 
-    expect(await d.guardiansRegistration.getOrbsAddresses([v.address])).to.deep.equal([v.orbsAddress])
+    expect(await d.guardiansRegistration.getGuardiansOrbsAddress([v.address])).to.deep.equal([v.orbsAddress])
   });
 
   it('converts orbs addrs to eth addrs', async () => {
@@ -637,10 +637,10 @@ describe('guardian-registration', async () => {
         v.website
         , {from: v.address});
     expect(r).to.have.a.guardianRegisteredEvent({
-      addr: v.address
+      guardian: v.address
     });
     expect(r).to.have.a.guardianDataUpdatedEvent({
-      addr: v.address,
+      guardian: v.address,
       isRegistered: true,
       ip: v.ip,
       orbsAddr: v.orbsAddress,
@@ -648,13 +648,24 @@ describe('guardian-registration', async () => {
       website: v.website
     });
 
-    expect(await d.guardiansRegistration.getOrbsAddresses([v.address])).to.deep.equal([v.orbsAddress])
+    expect(await d.guardiansRegistration.getGuardiansOrbsAddress([v.address])).to.deep.equal([v.orbsAddress])
   });
 
   it('resolves ethereum address', async () => {
     const d = await Driver.new();
 
     const v = d.newParticipant();
+    const v2 = d.newParticipant();
+
+    await d.guardiansRegistration.registerGuardian(
+        v2.ip,
+        v.address,
+        v2.name,
+        v2.website,
+        {from: v2.address});
+    expect(await d.guardiansRegistration.resolveGuardianAddress(v2.address)).to.deep.equal(v2.address);
+    expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v2.address);
+
     await d.guardiansRegistration.registerGuardian(
         v.ip,
         v.orbsAddress,
@@ -664,15 +675,7 @@ describe('guardian-registration', async () => {
 
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
     expect(await d.guardiansRegistration.resolveGuardianAddress(v.orbsAddress)).to.deep.equal(v.address);
-
-    const v2 = d.newParticipant();
-    await d.guardiansRegistration.registerGuardian(
-        v2.ip,
-        v.address,
-        v2.name,
-        v2.website,
-        {from: v2.address});
-    expect(await d.guardiansRegistration.resolveGuardianAddress(v.address)).to.deep.equal(v.address);
+    expect(await d.guardiansRegistration.resolveGuardianAddress(v2.address)).to.deep.equal(v2.address);
   });
 
   it('is able to migrate registered guardians from a previous contract', async () => {
@@ -697,7 +700,7 @@ describe('guardian-registration', async () => {
     const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.registryAdmin.address, d.guardiansRegistration.address, [v1.address, v2.address]], null, d.session);
     const creationTx = await newContract.getCreationTx();
     expect(creationTx).to.have.a.guardianDataUpdatedEvent({
-      addr: v1.address,
+      guardian: v1.address,
       orbsAddr: v1.orbsAddress,
       name: v1.name,
       website: v1.website,
@@ -705,7 +708,7 @@ describe('guardian-registration', async () => {
     });
     expect(creationTx).to.have.a.guardianMetadataChangedEvent({key: "ID_FORM_URL", newValue: "123", oldValue: ""});
     expect(creationTx).to.have.a.guardianDataUpdatedEvent({
-      addr: v2.address,
+      guardian: v2.address,
       orbsAddr: v2.orbsAddress,
       name: v2.name,
       website: v2.website,
@@ -719,8 +722,8 @@ describe('guardian-registration', async () => {
     expect(v1Data.orbsAddr.toString()).to.eq(v1.orbsAddress);
     expect(v1Data.name.toString()).to.eq(v1.name);
     expect(v1Data.website.toString()).to.eq(v1.website);
-    expect(v1Data.registration_time.toString()).to.eq(v1RegistrationTime.toString());
-    expect(v1Data.last_update_time.toString()).to.eq(v1LastUpdateTime.toString());
+    expect(v1Data.registrationTime.toString()).to.eq(v1RegistrationTime.toString());
+    expect(v1Data.lastUpdateTime.toString()).to.eq(v1LastUpdateTime.toString());
     expect(await newContract.getMetadata(v1.address, "ID_FORM_URL")).to.eq("123");
 
     const v2Data = await newContract.getGuardianData(v2.address);
@@ -729,8 +732,8 @@ describe('guardian-registration', async () => {
     expect(v2Data.orbsAddr.toString()).to.eq(v2.orbsAddress);
     expect(v2Data.name.toString()).to.eq(v2.name);
     expect(v2Data.website.toString()).to.eq(v2.website);
-    expect(v2Data.registration_time.toString()).to.eq(v2RegistrationTime.toString());
-    expect(v2Data.last_update_time.toString()).to.eq(v2LastUpdateTime.toString());
+    expect(v2Data.registrationTime.toString()).to.eq(v2RegistrationTime.toString());
+    expect(v2Data.lastUpdateTime.toString()).to.eq(v2LastUpdateTime.toString());
 
     expect(await newContract.resolveGuardianAddress(v1.orbsAddress)).to.eq(v1.address);
     await expectRejected(newContract.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
