@@ -35,25 +35,6 @@ import {
 } from "../typings/contract-registry-contract";
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
 import {
-  AnnualStakingRewardsRateChangedEvent,
-  BootstrapRewardsWithdrawnEvent,
-  CertifiedCommitteeAnnualBootstrapChangedEvent,
-  FeesWithdrawnEvent,
-  GeneralCommitteeAnnualBootstrapChangedEvent,
-  GuardianStakingRewardAssignedEvent,
-  DefaultDelegatorsStakingRewardsChangedEvent,
-  StakingRewardAssignedEvent,
-  RewardsBalanceMigratedEvent,
-  RewardsBalanceMigrationAcceptedEvent,
-  StakingRewardsClaimedEvent,
-  RewardDistributionDeactivatedEvent,
-  RewardDistributionActivatedEvent,
-  GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
-  MaxDelegatorsStakingRewardsChangedEvent
-} from "../typings/rewards-contract";
-import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
-import {FeesAssignedEvent} from "../typings/rewards-contract";
-import {
   GuardianDataUpdatedEvent, GuardianMetadataChangedEvent,
   GuardianRegisteredEvent,
   GuardianUnregisteredEvent
@@ -91,6 +72,23 @@ import {
   StakeMigrationNotificationSkippedEvent
 } from "../typings/stake-change-handler-contract";
 import {Driver} from "./driver";
+import {
+  AnnualStakingRewardsRateChangedEvent,
+  DefaultDelegatorsStakingRewardsChangedEvent, GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
+  GuardianStakingRewardAssignedEvent,
+  MaxDelegatorsStakingRewardsChangedEvent, RewardDistributionActivatedEvent, RewardDistributionDeactivatedEvent,
+  StakingRewardAssignedEvent,
+  StakingRewardsBalanceMigratedEvent,
+  StakingRewardsBalanceMigrationAcceptedEvent, StakingRewardsClaimedEvent
+} from "../typings/staking-rewards-contract";
+import {
+  BootstrapRewardsAssignedEvent,
+  BootstrapRewardsWithdrawnEvent, CertifiedCommitteeAnnualBootstrapChangedEvent,
+  FeesAndBootstrapRewardsBalanceMigratedEvent,
+  FeesAndBootstrapRewardsBalanceMigrationAcceptedEvent,
+  FeesAssignedEvent,
+  FeesWithdrawnEvent, GeneralCommitteeAnnualBootstrapChangedEvent
+} from "../typings/fees-and-bootstrap-rewards-contract";
 
 function bnEq(b1, b2, approx?: number) {
   b1 = new BN(b1);
@@ -285,8 +283,10 @@ declare global {
       subscriberRemovedEvent(data?: Partial<SubscriberRemovedEvent>);
       genesisRefTimeDelayChangedEvent(data?: Partial<GenesisRefTimeDelayChangedEvent>);
       minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
-      rewardsBalanceMigratedEvent(data?: Partial<RewardsBalanceMigratedEvent>);
-      rewardsBalanceMigrationAcceptedEvent(data?: Partial<RewardsBalanceMigrationAcceptedEvent>);
+      stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
+      feesAndBootstrapRewardsBalanceMigratedEvent(data?: Partial<FeesAndBootstrapRewardsBalanceMigratedEvent>);
+      stakingRewardsBalanceMigrationAcceptedEvent(data?: Partial<StakingRewardsBalanceMigrationAcceptedEvent>);
+      feesAndBootstrapRewardsBalanceMigrationAcceptedEvent(data?: Partial<FeesAndBootstrapRewardsBalanceMigrationAcceptedEvent>);
       stakeChangeNotificationFailedEvent(data?: Partial<StakeChangeNotificationFailedEvent>);
       stakeChangeBatchNotificationFailedEvent(data?: Partial<StakeChangeBatchNotificationFailedEvent>);
       stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);

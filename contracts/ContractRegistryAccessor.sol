@@ -43,8 +43,12 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
         return contractRegistry.getContract("protocol");
     }
 
-    function getRewardsContract() internal view returns (address) {
-        return contractRegistry.getContract("rewards");
+    function getStakingRewardsContract() internal view returns (address) {
+        return contractRegistry.getContract("stakingRewards");
+    }
+
+    function getFeesAndBootstrapRewardsContract() internal view returns (address) {
+        return contractRegistry.getContract("feesAndBootstrapRewards");
     }
 
     function getCommitteeContract() internal view returns (address) {

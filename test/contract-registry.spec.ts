@@ -76,13 +76,16 @@ describe('contract-registry-high-level-flows', async () => {
 
     const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryAdmin.address]);
     await expectRejected(d.elections.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
-    await expectRejected(d.rewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.stakingRewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.feesAndBootstrapRewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
     await expectRejected(d.subscriptions.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
     await expectRejected(subscriber.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
 
     let r = await d.elections.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
-    r = await d.rewards.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
+    r = await d.stakingRewards.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
+    r = await d.feesAndBootstrapRewards.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
     r = await d.subscriptions.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});

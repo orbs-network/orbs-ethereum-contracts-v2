@@ -148,7 +148,6 @@ contract FeesWallet is IFeesWallet, ManagedContract {
             outstandingFees += amount;
             bucketTotal = bucketTotal.sub(amount);
 
-
             bucketsWithdrawn[bucketsPayed] = bucketStart;
             withdrawnAmounts[bucketsPayed] = amount;
             newTotals[bucketsPayed] = bucketTotal;
@@ -168,6 +167,6 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     address rewardsContract;
     function refreshContracts() external override {
-        rewardsContract = getRewardsContract();
+        rewardsContract = getFeesAndBootstrapRewardsContract();
     }
 }

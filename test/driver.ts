@@ -58,7 +58,8 @@ export type DriverOptions = {
 
     contractRegistryAddress?: string;
     delegationsAddress?: string;
-    rewardsAddress?: string;
+    stakingRewardsAddress?: string;
+    feesAndBootstrapRewardsAddress?: string;
     electionsAddress?: string;
     subscriptionsAddress?: string;
     protocolAddress?: string;
@@ -154,7 +155,8 @@ export class Driver {
         public staking: Contracts["StakingContract"],
         public delegations: Contracts["Delegations"],
         public subscriptions: Contracts["Subscriptions"],
-        public rewards: Contracts["Rewards"],
+        public stakingRewards: Contracts["StakingRewards"],
+        public feesAndBootstrapRewards: Contracts["FeesAndBootstrapRewards"],
         public protocol: Contracts["Protocol"],
         public certification: Contracts["Certification"],
         public guardiansRegistration: Contracts['GuardiansRegistration'],
@@ -239,18 +241,24 @@ export class Driver {
             :
             await Driver.newStakingContract(web3, stakingContractHandler.address, erc20.address, session);
 
-        const rewards = options.rewardsAddress ?
-            await web3.getExisting('Rewards', options.rewardsAddress, session)
+        const stakingRewards = options.stakingRewardsAddress ?
+            await web3.getExisting('Rewards', options.stakingRewardsAddress, session)
             :
-            await web3.deploy('Rewards', [contractRegistry.address, registryAdmin, erc20.address, externalToken.address,
-                generalCommitteeAnnualBootstrap,
-                certifiedCommitteeAnnualBootstrap,
+            await web3.deploy('StakingRewards', [contractRegistry.address, registryAdmin, erc20.address,
                 stakingRewardsAnnualRateInPercentMille,
                 stakingRewardsAnnualCap,
                 defaultDelegatorsStakingRewardsPercentMille,
                 maxDelegatorsStakingRewardsPercentMille,
                 ZERO_ADDR,
                 []
+            ], null, session);
+
+        const feesAndBootstrapRewards = options.feesAndBootstrapRewardsAddress ?
+            await web3.getExisting('FeesAndBootstrapRewards', options.feesAndBootstrapRewardsAddress, session)
+            :
+            await web3.deploy('FeesAndBootstrapRewards', [contractRegistry.address, registryAdmin, erc20.address, externalToken.address,
+                generalCommitteeAnnualBootstrap,
+                certifiedCommitteeAnnualBootstrap
             ], null, session);
 
         const elections = options.electionsAddress ?
@@ -281,12 +289,12 @@ export class Driver {
         const stakingRewardsWallet = options.stakingRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.stakingRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [erc20.address, rewards.address, stakingRewardsWalletRate], null, session);
+            await web3.deploy('ProtocolWallet', [erc20.address, stakingRewards.address, stakingRewardsWalletRate], null, session);
 
         const bootstrapRewardsWallet = options.bootstrapRewardsWalletAddress ?
             await web3.getExisting('ProtocolWallet', options.bootstrapRewardsWalletAddress, session)
             :
-            await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address, bootstrapRewardsWalletRate], null, session);
+            await web3.deploy('ProtocolWallet', [externalToken.address, feesAndBootstrapRewards.address, bootstrapRewardsWalletRate], null, session);
 
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
@@ -305,7 +313,8 @@ export class Driver {
 
         await Promise.all([
             contractRegistry.setContract("staking", staking.address, false, {from: registryAdmin}),
-            contractRegistry.setContract("rewards", rewards.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("stakingRewards", stakingRewards.address, true, {from: registryAdmin}),
+            contractRegistry.setContract("feesAndBootstrapRewards", feesAndBootstrapRewards.address, true, {from: registryAdmin}),
             contractRegistry.setContract("delegations", delegations.address, true, {from: registryAdmin}),
             contractRegistry.setContract("elections", elections.address, true, {from: registryAdmin}),
             contractRegistry.setContract("subscriptions", subscriptions.address, true, {from: registryAdmin}),
@@ -341,14 +350,19 @@ export class Driver {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
         }
 
-        if (!(await rewards.isInitializationComplete())) {
-            await rewards.activateRewardDistribution(await web3.now());
+        if (!(await stakingRewards.isInitializationComplete())) {
+            await stakingRewards.activateRewardDistribution(await web3.now());
+        }
+
+        if (!(await feesAndBootstrapRewards.isInitializationComplete())) {
+            await feesAndBootstrapRewards.activateRewardDistribution(await web3.now());
         }
 
         if (options.callInitializationComplete) {
             const contracts = [
                 contractRegistry,
-                rewards,
+                stakingRewards,
+                feesAndBootstrapRewards,
                 delegations,
                 elections,
                 subscriptions,
@@ -375,7 +389,8 @@ export class Driver {
             staking,
             delegations,
             subscriptions,
-            rewards,
+            stakingRewards,
+            feesAndBootstrapRewards,
             protocol,
             certification,
             guardiansRegistration,
@@ -397,7 +412,8 @@ export class Driver {
     private static async withExistingContracts(web3, preExistingContractRegistryAddress, session, accounts) {
         const contractRegistry = await web3.getExisting('ContractRegistry', preExistingContractRegistryAddress, session);
 
-        const rewards = await web3.getExisting('Rewards', await contractRegistry.getContract('rewards'), session);
+        const stakingRewards = await web3.getExisting('StakingRewards', await contractRegistry.getContract('stakingRewards'), session);
+        const feesAndBootstrapRewards = await web3.getExisting('FeesAndBootstrapRewards', await contractRegistry.getContract('feesAndBootstrapRewards'), session);
         const externalToken = await web3.getExisting('TestingERC20', await contractRegistry.getContract('_bootstrapToken'), session);
         const erc20 = await web3.getExisting('TestingERC20', await contractRegistry.getContract('_erc20'), session);
         const delegations = await web3.getExisting('Delegations', await contractRegistry.getContract('delegations'), session);
@@ -422,7 +438,8 @@ export class Driver {
             staking,
             delegations,
             subscriptions,
-            rewards,
+            stakingRewards,
+            feesAndBootstrapRewards,
             protocol,
             certification,
             guardiansRegistration,
@@ -631,4 +648,11 @@ export class Participant {
         return this.driver.session.gasRecorder.gasUsedBy(this.address) + this.driver.session.gasRecorder.gasUsedBy(this.orbsAddress);
     }
 
+    async getFeeBalance(): Promise<string> {
+        return (await this.driver.feesAndBootstrapRewards.getFeesAndBootstrapBalance(this.address)).feeBalance;
+    }
+
+    async getBootstrapBalance(): Promise<string> {
+        return (await this.driver.feesAndBootstrapRewards.getFeesAndBootstrapBalance(this.address)).bootstrapBalance;
+    }
 }

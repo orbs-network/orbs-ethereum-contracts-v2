@@ -4,14 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
-import {
-    feesAddedToBucketEvents, feesAssignedEvents,
-    subscriptionChangedEvents,
-    vcCreatedEvents
-} from "./event-parsing";
 import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
-import {FeesAddedToBucketEvent} from "../typings/fees-wallet-contract";
-import {FeesAssignedEvent} from "../typings/rewards-contract";
 import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));

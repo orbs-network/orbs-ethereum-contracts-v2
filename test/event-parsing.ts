@@ -6,10 +6,6 @@ import {
     FeesAddedToBucketEvent,
     FeesWithdrawnFromBucketEvent
 } from "../typings/fees-wallet-contract";
-import {
-    BootstrapRewardsWithdrawnEvent,
-    FeesWithdrawnEvent,
-} from "../typings/rewards-contract";
 
 const elections = compiledContracts["Elections"];
 const committee = compiledContracts["Committee"];
