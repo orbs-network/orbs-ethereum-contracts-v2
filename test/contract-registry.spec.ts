@@ -157,20 +157,32 @@ describe('contract-registry-high-level-flows', async () => {
 
   });
 
-  it('locks and unlocks all managed contracts, only by registryAdmin', async () => {
+  it('locks and unlocks all managed contracts, only by registryAdmin and migrationManager', async () => {
     const d = await Driver.new();
 
     const managedContracts = await d.contractRegistry.getManagedContracts();
 
-    await expectRejected(d.contractRegistry.lockContracts({from: d.migrationManager.address}), /sender is not an admin/);
+    await expectRejected(d.contractRegistry.lockContracts({from: d.functionalManager.address}), /sender is not an admin/);
     await d.contractRegistry.lockContracts({from: d.registryAdmin.address});
     for (const contractAddr of managedContracts) {
       const contract = d.web3.getExisting("Lockable" as any, contractAddr);
       expect(await contract.isLocked()).to.be.true;
     }
 
-    await expectRejected(d.contractRegistry.unlockContracts({from: d.migrationManager.address}), /sender is not an admin/);
+    await expectRejected(d.contractRegistry.unlockContracts({from: d.functionalManager.address}), /sender is not an admin/);
     await d.contractRegistry.unlockContracts({from: d.registryAdmin.address});
+    for (const contractAddr of managedContracts) {
+      const contract = d.web3.getExisting("Lockable" as any, contractAddr);
+      expect(await contract.isLocked()).to.be.false;
+    }
+
+    await d.contractRegistry.lockContracts({from: d.migrationManager.address});
+    for (const contractAddr of managedContracts) {
+      const contract = d.web3.getExisting("Lockable" as any, contractAddr);
+      expect(await contract.isLocked()).to.be.true;
+    }
+
+    await d.contractRegistry.unlockContracts({from: d.migrationManager.address});
     for (const contractAddr of managedContracts) {
       const contract = d.web3.getExisting("Lockable" as any, contractAddr);
       expect(await contract.isLocked()).to.be.false;

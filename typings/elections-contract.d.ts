@@ -3,17 +3,24 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
+export interface GuardianStatusUpdatedEvent {
+  addr: string;
+  readyToSync: boolean;
+  readyForCommittee: boolean;
+}
+
 export interface StakeChangedEvent {
   addr: string,
   selfStake: string|BN,
-  delegated_stake: string|BN,
-  effective_stake: string|BN
+  delegatedStake: string|BN,
+  effectiveStake: string|BN
 }
 
 export interface ElectionsContract extends OwnedContract {
   registerGuardian( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
   readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;
+  initReadyForCommittee(addrs: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
   canJoinCommittee(addr: string, params?: TransactionConfig): Promise<boolean>;
   readyToSync(params?: TransactionConfig): Promise<TransactionReceipt>;
   voteUnready(subjectAddr: string, expiration: number, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -54,13 +61,15 @@ export interface ElectionsContract extends OwnedContract {
   }>;
 
   getEffectiveStake(addr: string): Promise<number>;
+
+  getCommittee(params?: TransactionConfig): Promise<[string[], Array<number|BN>, string[], boolean[], string[]]>;
 }
 
 export interface StakeChangeEvent {
   addr: string;
   selfStake: number | BN;
-  delegated_stake: number | BN;
-  effective_stake: number | BN;
+  delegatedStake: number | BN;
+  effectiveStake: number | BN;
 }
 
 export interface VoteUnreadyCastedEvent {

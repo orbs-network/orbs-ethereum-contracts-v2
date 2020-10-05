@@ -8,6 +8,10 @@ interface IContractRegistry {
 	event ManagerChanged(string role, address newManager);
 	event ContractRegistryUpdated(address newContractRegistry);
 
+	/*
+	* External functions
+	*/
+
 	/// @dev updates the contracts address and emits a corresponding event
 	/// managedContract indicates whether the contract is managed by the registry and notified on changes
 	function setContract(string calldata contractName, address addr, bool managedContract) external /* onlyAdmin */;

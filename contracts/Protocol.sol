@@ -3,8 +3,6 @@
 pragma solidity 0.6.12;
 
 import "./spec_interfaces/IProtocol.sol";
-import "./ContractRegistryAccessor.sol";
-import "./Lockable.sol";
 import "./ManagedContract.sol";
 
 contract Protocol is IProtocol, ManagedContract {
@@ -16,9 +14,13 @@ contract Protocol is IProtocol, ManagedContract {
         uint256 currentVersion;
     }
 
-    mapping (string => DeploymentSubset) deploymentSubsets;
+    mapping(string => DeploymentSubset) public deploymentSubsets;
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
+
+    /*
+     * External functions
+     */
 
     function deploymentSubsetExists(string calldata deploymentSubset) external override view returns (bool) {
         return deploymentSubsets[deploymentSubset].exists;
@@ -28,7 +30,7 @@ contract Protocol is IProtocol, ManagedContract {
         (, currentVersion) = checkPrevUpgrades(deploymentSubset);
     }
 
-    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external override onlyFunctionalManager onlyWhenActive {
+    function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external override onlyFunctionalManager {
         require(!deploymentSubsets[deploymentSubset].exists, "deployment subset already exists");
 
         deploymentSubsets[deploymentSubset].currentVersion = initialProtocolVersion;
@@ -39,7 +41,7 @@ contract Protocol is IProtocol, ManagedContract {
         emit ProtocolVersionChanged(deploymentSubset, initialProtocolVersion, initialProtocolVersion, now);
     }
 
-    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external override onlyFunctionalManager onlyWhenActive {
+    function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external override onlyFunctionalManager {
         require(deploymentSubsets[deploymentSubset].exists, "deployment subset does not exist");
         require(fromTimestamp > now, "a protocol update can only be scheduled for the future");
 
@@ -56,11 +58,19 @@ contract Protocol is IProtocol, ManagedContract {
         emit ProtocolVersionChanged(deploymentSubset, currentVersion, nextVersion, fromTimestamp);
     }
 
+    /*
+     * Private functions
+     */
+
     function checkPrevUpgrades(string memory deploymentSubset) private view returns (bool prevUpgradeExecuted, uint256 currentVersion) {
         prevUpgradeExecuted = deploymentSubsets[deploymentSubset].fromTimestamp <= now;
         currentVersion = prevUpgradeExecuted ? deploymentSubsets[deploymentSubset].nextVersion :
                                                deploymentSubsets[deploymentSubset].currentVersion;
     }
+
+    /*
+     * Contracts topology / registry interface
+     */
 
     function refreshContracts() external override {}
 }

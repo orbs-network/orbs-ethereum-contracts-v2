@@ -2,19 +2,17 @@
 
 pragma solidity 0.6.12;
 
-import "./IContractRegistry.sol";
-
-
 /// @title Elections contract interface
 interface ICertification /* is Ownable */ {
-	event GuardianCertificationUpdate(address guardian, bool isCertified);
+	event GuardianCertificationUpdate(address indexed guardian, bool isCertified);
 
 	/*
      * External methods
      */
 
-	function isGuardianCertified(address addr) external view returns (bool isCertified);
+	/// @dev Returns the certification status of a guardian
+	function isGuardianCertified(address guardian) external view returns (bool isCertified);
 
-	function setGuardianCertification(address addr, bool isCertified) external /* Owner only */ ;
-
+	/// @dev Sets the guardian certification status
+	function setGuardianCertification(address guardian, bool isCertified) external /* Owner only */ ;
 }

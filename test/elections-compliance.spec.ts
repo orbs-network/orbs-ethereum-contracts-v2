@@ -112,7 +112,7 @@ describe('elections-certification', async () => {
         for (const v of certifiedCommittee) {
             let r = await d.elections.voteUnready(generalCommittee[1].address, 0xFFFFFFFF, {from: v.orbsAddress});
             expect(r).to.not.have.a.guardianVotedUnreadyEvent();
-            expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+            expect(r).to.not.have.a.committeeChangeEvent();
         }
     });
 
