@@ -137,7 +137,7 @@ export const betaDriverOptions: Readonly<DriverOptions> = {
     callInitializationComplete: true
 };
 
-export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'rewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet' | 'stakingContractHandler';
+export type ContractName = 'protocol' | 'committee' | 'elections' | 'delegations' | 'guardiansRegistration' | 'certification' | 'staking' | 'subscriptions' | 'stakingRewards' | 'feesAndBootstrapRewards' | 'stakingRewardsWallet' | 'guardianWallet' | 'generalFeesWallet' | 'certifiedFeesWallet' | 'stakingContractHandler';
 
 export type ContractName4Testkit = '_bootstrapToken' | '_erc20' ; // TODO remove when resolving https://github.com/orbs-network/orbs-ethereum-contracts-v2/issues/97
 
@@ -242,7 +242,7 @@ export class Driver {
             await Driver.newStakingContract(web3, stakingContractHandler.address, erc20.address, session);
 
         const stakingRewards = options.stakingRewardsAddress ?
-            await web3.getExisting('Rewards', options.stakingRewardsAddress, session)
+            await web3.getExisting('StakingRewards', options.stakingRewardsAddress, session)
             :
             await web3.deploy('StakingRewards', [contractRegistry.address, registryAdmin, erc20.address,
                 stakingRewardsAnnualRateInPercentMille,
