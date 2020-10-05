@@ -476,19 +476,18 @@ describe('delegations-contract', async () => {
             delegatedStake: bn(100)
         });
 
-        const otherDelegationContract = await d.web3.deploy("Delegations", [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
-
-        await d.contractRegistry.setContract("delegations", otherDelegationContract.address, true, {from: d.registryAdmin.address});
+        await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
 
         r = await d1.stake(200);
         expect(r).to.not.have.withinContract(d.delegations).a.delegatedStakeChangedEvent();
+        expect(await d.delegations.getDelegatedStake(v.address)).to.bignumber.eq(bn(100));
 
-        await d.contractRegistry.setContract("delegations", d.delegations.address, true, {from: d.registryAdmin.address});
+        await d.stakingContractHandler.setNotifyDelegations(true, {from: d.migrationManager.address});
 
-        r = await d1.stake(300);
+        r = await d1.unstake(250);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v.address,
-            delegatedStake: bn(600)
+            delegatedStake: bn(50)
         });
     });
 
