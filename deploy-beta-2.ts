@@ -105,9 +105,7 @@ async function deploy() {
     const externalToken = await web3.deploy('TestingERC20', []);
     const erc20 = await web3.deploy('TestingERC20', []);
     const stakingContractHandler = await web3.deploy('StakingContractHandler', [contractRegistry.address, registryAdmin]);
-    const rewards = await web3.deploy('Rewards', [contractRegistry.address, registryAdmin, erc20.address, externalToken.address,
-            options.generalCommitteeAnnualBootstrap,
-            options.certifiedCommitteeAnnualBootstrap,
+    const stakingRewards = await web3.deploy('StakingRewards', [contractRegistry.address, registryAdmin, erc20.address,
             options.stakingRewardsAnnualRateInPercentMille,
             options.stakingRewardsAnnualCap,
             options.defaultDelegatorsStakingRewardsPercentMille,
@@ -115,19 +113,24 @@ async function deploy() {
             ZERO_ADDR,
             []
         ]);
+    const feesAndBootstrapRewards = await web3.deploy('FeesAndBootstrapRewards', [contractRegistry.address, registryAdmin, erc20.address, externalToken.address,
+            options.generalCommitteeAnnualBootstrap,
+            options.certifiedCommitteeAnnualBootstrap,
+        ]);
     const elections = await web3.deploy("Elections", [contractRegistry.address, registryAdmin, options.minSelfStakePercentMille, options.voteUnreadyThresholdPercentMille, options.voteOutThresholdPercentMille]);
     const subscriptions = await web3.deploy('Subscriptions', [contractRegistry.address, registryAdmin, erc20.address, options.genesisRefTimeDelay || 3*60*60, options.minimumInitialVcPayment, [], ZERO_ADDR]);
     const protocol = await web3.deploy('Protocol', [contractRegistry.address, registryAdmin]);
     const certification = await web3.deploy('Certification', [contractRegistry.address, registryAdmin]);
     const committee = await web3.deploy('Committee', [contractRegistry.address, registryAdmin, options.maxCommitteeSize, options.maxTimeBetweenRewardAssignments]);
-    const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, rewards.address, options.stakingRewardsWalletRate]);
-    const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, rewards.address, options.bootstrapRewardsWalletRate]);
+    const stakingRewardsWallet = await web3.deploy('ProtocolWallet', [erc20.address, stakingRewards.address, options.stakingRewardsWalletRate]);
+    const bootstrapRewardsWallet = await web3.deploy('ProtocolWallet', [externalToken.address, feesAndBootstrapRewards.address, options.bootstrapRewardsWalletRate]);
     const guardiansRegistration = await web3.deploy('GuardiansRegistration', [contractRegistry.address, registryAdmin, options.previousGuardianRegistrationContractAddr, guardiansToMigrate]);
     const generalFeesWallet = await web3.deploy('FeesWallet', [contractRegistry.address, registryAdmin, erc20.address]);
     const certifiedFeesWallet = await web3.deploy('FeesWallet', [contractRegistry.address, registryAdmin, erc20.address]);
     await Promise.all([
         contractRegistry.setContract("staking", options.stakingContractAddress, false, {from: registryAdmin}),
-        contractRegistry.setContract("rewards", rewards.address, true, {from: registryAdmin}),
+        contractRegistry.setContract("stakingRewards", stakingRewards.address, true, {from: registryAdmin}),
+        contractRegistry.setContract("feesAndBootstrapRewards", feesAndBootstrapRewards.address, true, {from: registryAdmin}),
         contractRegistry.setContract("delegations", delegations.address, true, {from: registryAdmin}),
         contractRegistry.setContract("elections", elections.address, true, {from: registryAdmin}),
         contractRegistry.setContract("subscriptions", subscriptions.address, true, {from: registryAdmin}),
@@ -157,11 +160,13 @@ async function deploy() {
 
     await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
 
-    await rewards.activateRewardDistribution(await web3.now());
+    await stakingRewards.activateRewardDistribution(await web3.now());
+    await feesAndBootstrapRewards.activateRewardDistribution(await web3.now());
 
     const managedContracts = [
         contractRegistry,
-        rewards,
+        stakingRewards,
+        feesAndBootstrapRewards,
         delegations,
         elections,
         subscriptions,
@@ -191,7 +196,8 @@ async function deploy() {
     console.log(`externalToken: ${externalToken.address}`);
     console.log(`erc20: ${erc20.address}`);
     console.log(`stakingContractHandler: ${stakingContractHandler.address}`);
-    console.log(`rewards: ${rewards.address}`);
+    console.log(`stakingRewards: ${stakingRewards.address}`);
+    console.log(`feesAndBootstrapRewards: ${feesAndBootstrapRewards.address}`);
     console.log(`elections: ${elections.address}`);
     console.log(`subscriptions: ${subscriptions.address}`);
     console.log(`protocol: ${protocol.address}`);
