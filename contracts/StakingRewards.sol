@@ -227,7 +227,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function emergencyWithdraw() external override onlyMigrationManager {
         emit EmergencyWithdrawal(msg.sender);
-        require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
+        require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (orbs token)");
     }
 
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
