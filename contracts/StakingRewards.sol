@@ -3,6 +3,7 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./SafeMath48.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -16,7 +17,7 @@ import "./ManagedContract.sol";
 contract StakingRewards is IStakingRewards, ManagedContract {
     using SafeMath for uint256;
     using SafeMath for uint96;
-    using SafeMath for uint48;
+    using SafeMath48 for uint48;
 
     uint256 constant PERCENT_MILLIE_BASE = 100000;
     uint256 constant TOKEN_BASE = 1e18;
@@ -128,7 +129,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function getStakingRewardsBalance(address addr) external override view returns (uint256) {
         DelegatorStakingRewards memory delegatorStakingRewards = getDelegatorStakingRewards(addr);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(addr); // TODO consider removing, data in state must be up to date at this point
-        return fromMilliOrbs(uint48(delegatorStakingRewards.balance.add(guardianStakingRewards.balance)));
+        return fromMilliOrbs(delegatorStakingRewards.balance.add(guardianStakingRewards.balance));
     }
 
     function claimStakingRewards(address addr) external override onlyWhenActive {
@@ -214,8 +215,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external override {
-        guardiansStakingRewards[addr].balance = uint48(guardiansStakingRewards[addr].balance.add(toMilliOrbs(guardianStakingRewards)));
-        delegatorsStakingRewards[addr].balance = uint48(delegatorsStakingRewards[addr].balance.add(toMilliOrbs(delegatorStakingRewards)));
+        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(toMilliOrbs(guardianStakingRewards));
+        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(toMilliOrbs(delegatorStakingRewards));
 
         uint orbsTransferAmount = guardianStakingRewards.add(delegatorStakingRewards);
         if (orbsTransferAmount > 0) {
@@ -318,8 +319,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function _getStakingRewardsState(uint256 totalCommitteeWeight, Settings memory _settings) private view returns (StakingRewardsState memory _stakingRewardsState, uint256 allocatedRewards) {
         _stakingRewardsState = stakingRewardsState;
         if (_settings.rewardAllocationActive) {
-            uint delta = calcStakingRewardPerWeightDelta(totalCommitteeWeight, block.timestamp - stakingRewardsState.lastAssigned, _settings);
-            _stakingRewardsState.stakingRewardsPerWeight = uint96(uint256(stakingRewardsState.stakingRewardsPerWeight).add(delta));
+            uint delta = calcStakingRewardPerWeightDelta(totalCommitteeWeight, block.timestamp.sub(stakingRewardsState.lastAssigned), _settings);
+            _stakingRewardsState.stakingRewardsPerWeight = uint96(stakingRewardsState.stakingRewardsPerWeight.add(delta));
             _stakingRewardsState.lastAssigned = uint32(block.timestamp);
             allocatedRewards = delta.mul(totalCommitteeWeight).div(TOKEN_BASE);
             _stakingRewardsState.unclaimedStakingRewards = uint96(_stakingRewardsState.unclaimedStakingRewards.add(allocatedRewards));
@@ -348,26 +349,26 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         guardianStakingRewards = guardiansStakingRewards[guardian];
 
         if (inCommittee) {
-            uint256 totalRewards = uint256(_stakingRewardsState.stakingRewardsPerWeight)
-            .sub(uint256(guardianStakingRewards.lastStakingRewardsPerWeight))
-            .mul(guardianWeight);
+            uint256 totalRewards = _stakingRewardsState.stakingRewardsPerWeight
+                .sub(guardianStakingRewards.lastStakingRewardsPerWeight)
+                .mul(guardianWeight);
 
             uint256 delegatorRewardsRatioPercentMille = _getGuardianDelegatorsStakingRewardsPercentMille(guardian, _settings);
 
             uint256 delegatorRewardsPerTokenDelta = guardianDelegatedStake == 0 ? 0 : totalRewards
-            .div(guardianDelegatedStake)
-            .mul(delegatorRewardsRatioPercentMille)
-            .div(PERCENT_MILLIE_BASE);
+                .div(guardianDelegatedStake)
+                .mul(delegatorRewardsRatioPercentMille)
+                .div(PERCENT_MILLIE_BASE);
 
             uint256 guardianCutPercentMille = PERCENT_MILLIE_BASE.sub(delegatorRewardsRatioPercentMille);
 
             uint256 guardianRewards = totalRewards
-            .mul(guardianCutPercentMille)
-            .div(PERCENT_MILLIE_BASE)
-            .div(TOKEN_BASE);
+                .mul(guardianCutPercentMille)
+                .div(PERCENT_MILLIE_BASE)
+                .div(TOKEN_BASE);
 
             guardianStakingRewards.delegatorRewardsPerToken = uint96(guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta));
-            guardianStakingRewards.balance = uint48(guardianStakingRewards.balance.add(toMilliOrbs(guardianRewards)));
+            guardianStakingRewards.balance = guardianStakingRewards.balance.add(toMilliOrbs(guardianRewards));
 
             rewardsAdded = guardianRewards;
         }
@@ -402,12 +403,12 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function _getDelegatorStakingRewards(address delegator, uint256 delegatorStake, GuardianStakingRewards memory guardianStakingRewards) private view returns (DelegatorStakingRewards memory delegatorStakingRewards, uint256 delegatorRewardsAdded) {
         delegatorStakingRewards = delegatorsStakingRewards[delegator];
 
-        uint256 amount = uint256(guardianStakingRewards.delegatorRewardsPerToken)
-        .sub(uint256(delegatorStakingRewards.lastDelegatorRewardsPerToken))
-        .mul(delegatorStake)
-        .div(TOKEN_BASE);
+        uint256 amount = guardianStakingRewards.delegatorRewardsPerToken
+            .sub(delegatorStakingRewards.lastDelegatorRewardsPerToken)
+            .mul(delegatorStake)
+            .div(TOKEN_BASE);
 
-        delegatorStakingRewards.balance = uint48(delegatorStakingRewards.balance.add(toMilliOrbs(amount)));
+        delegatorStakingRewards.balance = delegatorStakingRewards.balance.add(toMilliOrbs(amount));
         delegatorStakingRewards.lastDelegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken;
 
         delegatorRewardsAdded = amount;
@@ -486,14 +487,14 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
         StakingRewardsState memory _stakingRewardsState = stakingRewardsState;
         uint256 _stakingRewardsWithdrawnFromWallet = stakingRewardsWithdrawnFromWallet;
-        uint256 allocated = _stakingRewardsState.unclaimedStakingRewards.sub(uint96(_stakingRewardsWithdrawnFromWallet));
+        uint256 allocated = _stakingRewardsState.unclaimedStakingRewards.sub(_stakingRewardsWithdrawnFromWallet);
         if (allocated > 0) {
             stakingRewardsWallet.withdraw(allocated);
             _stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.add(allocated);
         }
 
         stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.sub(total);
-        stakingRewardsState.unclaimedStakingRewards = uint96(_stakingRewardsState.unclaimedStakingRewards.sub(total));
+        stakingRewardsState.unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards.sub(total);
     }
 
     function toMilliOrbs(uint256 v) private pure returns (uint48) {
