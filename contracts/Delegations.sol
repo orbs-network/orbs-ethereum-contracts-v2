@@ -16,7 +16,7 @@ import "./IStakeChangeNotifier.sol";
 import "./Lockable.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
 import "./ManagedContract.sol";
-import "./spec_interfaces/IRewards.sol";
+import "./spec_interfaces/IStakingRewards.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
@@ -88,7 +88,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		vars.prevDelegateStatusBefore = getDelegateStatus(prevDelegate);
 		vars.newDelegateStatusBefore = getDelegateStatus(to);
 
-		rewardsContract.delegationWillChange(prevDelegate, vars.prevDelegateStatusBefore.delegatedStake, from, delegatorData.stake, to, vars.newDelegateStatusBefore.delegatedStake);
+		stakingRewardsContract.delegationWillChange(prevDelegate, vars.prevDelegateStatusBefore.delegatedStake, from, delegatorData.stake, to, vars.newDelegateStatusBefore.delegatedStake);
 
 		stakeOwnersData[from].delegation = to;
 
@@ -343,7 +343,7 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		uint256 prevUncappedStake = delegateStatusBefore.uncappedStakes;
 		uint256 newUncappedStake = prevUncappedStake.sub(stakeOwnerDataBefore.stake).add(_updatedStake);
 
-		rewardsContract.delegationWillChange(stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake, _stakeOwner, stakeOwnerDataBefore.stake, stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake);
+		stakingRewardsContract.delegationWillChange(stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake, _stakeOwner, stakeOwnerDataBefore.stake, stakeOwnerDataBefore.delegation, delegateStatusBefore.delegatedStake);
 
 		uncappedStakes[stakeOwnerDataBefore.delegation] = newUncappedStake;
 
@@ -379,12 +379,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	}
 
 	IElections electionsContract;
-	IRewards rewardsContract;
+	IStakingRewards stakingRewardsContract;
 	IStakingContractHandler stakingContractHandler;
 	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 		stakingContractHandler = IStakingContractHandler(getStakingContractHandler());
-		rewardsContract = IRewards(getRewardsContract());
+		stakingRewardsContract = IStakingRewards(getStakingRewardsContract());
 	}
 
 }

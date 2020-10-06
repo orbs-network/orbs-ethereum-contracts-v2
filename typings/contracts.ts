@@ -9,12 +9,13 @@ import { GuardiansRegistrationContract } from "./guardian-registration-contract"
 import { CommitteeContract } from "./committee-contract";
 import { CertificationContract } from "./certification-contract";
 import { DelegationsContract } from "./delegations-contract";
-import {RewardsContract} from "./rewards-contract";
 import {ProtocolWalletContract} from "./protocol-wallet-contract";
 import {FeesWalletContract} from "./fees-wallet-contract";
 import {
     StakingContractHandlerContract
 } from "./stake-change-handler-contract";
+import {StakingRewardsContract} from "./staking-rewards-contract";
+import {FeesAndBootstrapRewardsContract} from "./fees-and-bootstrap-rewards-contract";
 
 /**
  * Dictionary type
@@ -23,7 +24,8 @@ import {
 export type Contracts = {
     ContractRegistry: ContractRegistryContract;
     TestingERC20: ERC20Contract;
-    Rewards: RewardsContract;
+    StakingRewards: StakingRewardsContract;
+    FeesAndBootstrapRewards: FeesAndBootstrapRewardsContract;
     Elections: ElectionsContract;
     Subscriptions: SubscriptionsContract;
     Protocol: ProtocolContract;

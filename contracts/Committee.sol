@@ -4,8 +4,9 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./spec_interfaces/ICommittee.sol";
-import "./spec_interfaces/IRewards.sol";
 import "./ManagedContract.sol";
+import "./spec_interfaces/IStakingRewards.sol";
+import "./spec_interfaces/IFeesAndBootstrapRewards.sol";
 
 contract Committee is ICommittee, ManagedContract {
 	using SafeMath for uint256;
@@ -75,7 +76,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		CommitteeStats memory _committeeStats = committeeStats;
 
-		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, true, prevCertification, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		feesAndBootstrapRewardsContract.committeeMembershipWillChange(addr, true, prevCertification, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		committeeStats.certifiedCommitteeSize = _committeeStats.certifiedCommitteeSize - (prevCertification ? 1 : 0) + (isCertified ? 1 : 0);
 
@@ -99,7 +100,8 @@ contract Committee is ICommittee, ManagedContract {
 
 		CommitteeStats memory _committeeStats = committeeStats;
 
-		rewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false);
+		feesAndBootstrapRewardsContract.committeeMembershipWillChange(addr, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		_committeeStats.generalCommitteeSize++;
 		if (isCertified) _committeeStats.certifiedCommitteeSize++;
@@ -269,7 +271,8 @@ contract Committee is ICommittee, ManagedContract {
 
 		(uint weight, bool certification) = getWeightCertification(member);
 
-		rewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, certification, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		stakingRewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true);
+		feesAndBootstrapRewardsContract.committeeMembershipWillChange(member.addr, true, certification, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		delete membersStatus[member.addr];
 
@@ -297,10 +300,12 @@ contract Committee is ICommittee, ManagedContract {
      */
 
 	address electionsContract;
-	IRewards rewardsContract;
+	IStakingRewards stakingRewardsContract;
+	IFeesAndBootstrapRewards feesAndBootstrapRewardsContract;
 	function refreshContracts() external override {
 		electionsContract = getElectionsContract();
-		rewardsContract = IRewards(getRewardsContract());
+		stakingRewardsContract = IStakingRewards(getStakingRewardsContract());
+		feesAndBootstrapRewardsContract = IFeesAndBootstrapRewards(getFeesAndBootstrapRewardsContract());
 	}
 
 }

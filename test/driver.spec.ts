@@ -30,7 +30,8 @@ describe('testkit', async () => {
     expect(firstDriver.staking.address).to.equal(secondDriver.staking.address);
     expect(firstDriver.delegations.address).to.equal(secondDriver.delegations.address);
     expect(firstDriver.subscriptions.address).to.equal(secondDriver.subscriptions.address);
-    expect(firstDriver.rewards.address).to.equal(secondDriver.rewards.address);
+    expect(firstDriver.stakingRewards.address).to.equal(secondDriver.stakingRewards.address);
+    expect(firstDriver.feesAndBootstrapRewards.address).to.equal(secondDriver.feesAndBootstrapRewards.address);
     expect(firstDriver.protocol.address).to.equal(secondDriver.protocol.address);
     expect(firstDriver.certification.address).to.equal(secondDriver.certification.address);
     expect(firstDriver.guardiansRegistration.address).to.equal(secondDriver.guardiansRegistration.address);
@@ -46,7 +47,8 @@ describe('testkit', async () => {
 
     const contractRegistryAddress = dd.contractRegistry.address;
     const delegationsAddress = dd.delegations.address;
-    const rewardsAddress = dd.rewards.address;
+    const stakingRewardsAddress = dd.stakingRewards.address;
+    const feesAndBootstrapRewardsAddress = dd.feesAndBootstrapRewards.address;
     const electionsAddress = dd.elections.address;
     const subscriptionsAddress = dd.subscriptions.address;
     const protocolAddress = dd.protocol.address;
@@ -65,7 +67,8 @@ describe('testkit', async () => {
       bootstrapTokenAddress,
       contractRegistryAddress,
       delegationsAddress,
-      rewardsAddress,
+      stakingRewardsAddress,
+      feesAndBootstrapRewardsAddress,
       electionsAddress,
       subscriptionsAddress,
       protocolAddress,
@@ -84,7 +87,8 @@ describe('testkit', async () => {
     expect(d.bootstrapToken.address).to.equal(bootstrapTokenAddress);
     expect(d.contractRegistry.address).to.equal(contractRegistryAddress);
     expect(d.delegations.address).to.equal(delegationsAddress);
-    expect(d.rewards.address).to.equal(rewardsAddress);
+    expect(d.stakingRewards.address).to.equal(stakingRewardsAddress);
+    expect(d.feesAndBootstrapRewards.address).to.equal(feesAndBootstrapRewardsAddress);
     expect(d.elections.address).to.equal(electionsAddress);
     expect(d.subscriptions.address).to.equal(subscriptionsAddress);
     expect(d.protocol.address).to.equal(protocolAddress);
