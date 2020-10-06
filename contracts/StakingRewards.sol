@@ -350,7 +350,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         guardianStakingRewards = guardiansStakingRewards[guardian];
 
         if (inCommittee) {
-            uint256 totalRewards = _stakingRewardsState.stakingRewardsPerWeight
+            uint256 totalRewards = uint256(_stakingRewardsState.stakingRewardsPerWeight)
                 .sub(guardianStakingRewards.lastStakingRewardsPerWeight)
                 .mul(guardianWeight);
 
@@ -404,7 +404,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function _getDelegatorStakingRewards(address delegator, uint256 delegatorStake, GuardianStakingRewards memory guardianStakingRewards) private view returns (DelegatorStakingRewards memory delegatorStakingRewards, uint256 delegatorRewardsAdded) {
         delegatorStakingRewards = delegatorsStakingRewards[delegator];
 
-        uint256 amount = guardianStakingRewards.delegatorRewardsPerToken
+        uint256 amount = uint256(guardianStakingRewards.delegatorRewardsPerToken)
             .sub(delegatorStakingRewards.lastDelegatorRewardsPerToken)
             .mul(delegatorStake)
             .div(TOKEN_BASE);

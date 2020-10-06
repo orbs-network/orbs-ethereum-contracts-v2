@@ -246,8 +246,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
             _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember.add(certifiedFeesDelta);
 
             uint duration = block.timestamp.sub(_feesAndBootstrapState.lastAssigned);
-            uint48 generalBootstrapDelta = _settings.generalCommitteeAnnualBootstrap.mul(uint48(duration)).div(365 days);
-            uint48 certifiedBootstrapDelta = generalBootstrapDelta.add(_settings.certifiedCommitteeAnnualBootstrap.mul(uint48(duration)).div(365 days));
+            uint48 generalBootstrapDelta = toMilliToken(fromMilliToken(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days));
+            uint48 certifiedBootstrapDelta = generalBootstrapDelta.add(toMilliToken(fromMilliToken(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days)));
 
             _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember.add(generalBootstrapDelta);
             _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember.add(certifiedBootstrapDelta);
