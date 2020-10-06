@@ -1,22 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity 0.6.12;
-import "../spec_interfaces/IContractRegistry.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-pragma solidity 0.6.12;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @title Protocol Wallet interface
 interface IProtocolWallet {
     event FundsAddedToPool(uint256 added, uint256 total);
-    event ClientSet(address client);
-    event MaxAnnualRateSet(uint256 maxAnnualRate);
-    event EmergencyWithdrawal(address addr);
-    event OutstandingTokensReset();
 
-    /// @dev Returns the address of the underlying staked token.
-    /// @return IERC20 The address of the token.
-    function getToken() external view returns (IERC20);
+    /*
+    * External functions
+    */
 
     /// @dev Returns the address of the underlying staked token.
     /// @return balance uint256 the balance
@@ -29,9 +22,20 @@ interface IProtocolWallet {
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external; /* onlyClient */
 
-    /* Governance */
+
+    /*
+    * Governance functions
+    */
+
+    event ClientSet(address client);
+    event MaxAnnualRateSet(uint256 maxAnnualRate);
+    event EmergencyWithdrawal(address addr);
+    event OutstandingTokensReset(uint256 startTime);
+
     /// @dev Sets a new transfer rate for the Orbs pool.
     function setMaxAnnualRate(uint256 annual_rate) external; /* onlyMigrationManager */
+
+    function getMaxAnnualRate() external view returns (uint256);
 
     /// @dev transfer the entire pool's balance to a new wallet.
     function emergencyWithdraw() external; /* onlyMigrationManager */
@@ -39,7 +43,6 @@ interface IProtocolWallet {
     /// @dev sets the address of the new contract
     function setClient(address client) external; /* onlyFunctionalManager */
 
-    function getMaxAnnualRate() external view returns (uint256);
+    function resetOutstandingTokens(uint256 startTime) external; /* onlyMigrationOwner */
 
-    function resetOutstandingTokens() external /* onlyMigrationOwner */;
-}
+    }

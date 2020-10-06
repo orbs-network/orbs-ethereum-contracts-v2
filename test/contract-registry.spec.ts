@@ -76,13 +76,16 @@ describe('contract-registry-high-level-flows', async () => {
 
     const newRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryAdmin.address]);
     await expectRejected(d.elections.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
-    await expectRejected(d.rewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.stakingRewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
+    await expectRejected(d.feesAndBootstrapRewards.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
     await expectRejected(d.subscriptions.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
     await expectRejected(subscriber.setContractRegistry(newRegistry.address, {from: d.functionalManager.address}), /sender is not an admin/);
 
     let r = await d.elections.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
-    r = await d.rewards.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
+    r = await d.stakingRewards.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
+    expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
+    r = await d.feesAndBootstrapRewards.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
     r = await d.subscriptions.setContractRegistry(newRegistry.address, {from: d.registryAdmin.address});
     expect(r).to.have.a.contractRegistryAddressUpdatedEvent({addr: newRegistry.address});
@@ -157,20 +160,32 @@ describe('contract-registry-high-level-flows', async () => {
 
   });
 
-  it('locks and unlocks all managed contracts, only by registryAdmin', async () => {
+  it('locks and unlocks all managed contracts, only by registryAdmin and migrationManager', async () => {
     const d = await Driver.new();
 
     const managedContracts = await d.contractRegistry.getManagedContracts();
 
-    await expectRejected(d.contractRegistry.lockContracts({from: d.migrationManager.address}), /sender is not an admin/);
+    await expectRejected(d.contractRegistry.lockContracts({from: d.functionalManager.address}), /sender is not an admin/);
     await d.contractRegistry.lockContracts({from: d.registryAdmin.address});
     for (const contractAddr of managedContracts) {
       const contract = d.web3.getExisting("Lockable" as any, contractAddr);
       expect(await contract.isLocked()).to.be.true;
     }
 
-    await expectRejected(d.contractRegistry.unlockContracts({from: d.migrationManager.address}), /sender is not an admin/);
+    await expectRejected(d.contractRegistry.unlockContracts({from: d.functionalManager.address}), /sender is not an admin/);
     await d.contractRegistry.unlockContracts({from: d.registryAdmin.address});
+    for (const contractAddr of managedContracts) {
+      const contract = d.web3.getExisting("Lockable" as any, contractAddr);
+      expect(await contract.isLocked()).to.be.false;
+    }
+
+    await d.contractRegistry.lockContracts({from: d.migrationManager.address});
+    for (const contractAddr of managedContracts) {
+      const contract = d.web3.getExisting("Lockable" as any, contractAddr);
+      expect(await contract.isLocked()).to.be.true;
+    }
+
+    await d.contractRegistry.unlockContracts({from: d.migrationManager.address});
     for (const contractAddr of managedContracts) {
       const contract = d.web3.getExisting("Lockable" as any, contractAddr);
       expect(await contract.isLocked()).to.be.false;

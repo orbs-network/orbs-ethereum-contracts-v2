@@ -3,11 +3,10 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./spec_interfaces/ISubscriptions.sol";
 import "./spec_interfaces/IProtocol.sol";
-import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
-import "./Lockable.sol";
 import "./ManagedContract.sol";
 
 contract Subscriptions is ISubscriptions, ManagedContract {
@@ -29,10 +28,9 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         bool isCertified;
     }
 
-    mapping (uint => mapping(string => string)) configRecords;
-
-    mapping (address => bool) public authorizedSubscribers;
-    mapping (uint => VirtualChain) public virtualChains;
+    mapping(uint => mapping(string => string)) configRecords;
+    mapping(address => bool) public authorizedSubscribers;
+    mapping(uint => VirtualChain) virtualChains;
 
     uint public nextVcId;
 
@@ -44,26 +42,27 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     IERC20 public erc20;
 
-    constructor (IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment, uint[] memory vcIds, ISubscriptions previousSubscriptionsContract) ManagedContract(_contractRegistry, _registryAdmin) public {
+    constructor (IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _erc20, uint256 _genesisRefTimeDelay, uint256 _minimumInitialVcPayment, uint[] memory vcIds, uint256 initialNextVcId, ISubscriptions previousSubscriptionsContract) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_erc20) != address(0), "erc20 must not be 0");
 
         erc20 = _erc20;
-        uint _nextVcId = 1000000;
+        nextVcId = initialNextVcId;
 
         setGenesisRefTimeDelay(_genesisRefTimeDelay);
         setMinimumInitialVcPayment(_minimumInitialVcPayment);
 
         for (uint i = 0; i < vcIds.length; i++) {
             importSubscription(vcIds[i], previousSubscriptionsContract);
-            if (vcIds[i] >= _nextVcId) {
-                _nextVcId = vcIds[i] + 1;
-            }
         }
-
-        nextVcId = _nextVcId;
     }
 
+    /*
+     *   External functions
+     */
+
     function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) public onlyInitializationAdmin {
+        require(virtualChains[vcId].owner == address(0), "the vcId already exists");
+
         (string memory name,
         string memory tier,
         uint256 rate,
@@ -84,6 +83,10 @@ contract Subscriptions is ISubscriptions, ManagedContract {
             isCertified: isCertified
         });
 
+        if (vcId >= nextVcId) {
+            nextVcId = vcId + 1;
+        }
+
         emit SubscriptionChanged(vcId, owner, name, genRefTime, tier, rate, expiresAt, isCertified, deploymentSubset);
     }
 
@@ -97,23 +100,21 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         return configRecords[vcId][key];
     }
 
-    function addSubscriber(address addr) external override onlyFunctionalManager onlyWhenActive {
-        // todo: emit event
+    function addSubscriber(address addr) external override onlyFunctionalManager {
         authorizedSubscribers[addr] = true;
-
         emit SubscriberAdded(addr);
     }
 
-    function removeSubscriber(address addr) external override onlyFunctionalManager onlyWhenActive {
+    function removeSubscriber(address addr) external override onlyFunctionalManager {
         require(authorizedSubscribers[addr], "given add is not an authorized subscriber");
 
         authorizedSubscribers[addr] = false;
-
         emit SubscriberRemoved(addr);
     }
 
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlyWhenActive returns (uint, uint) {
         require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
+        require(owner != address(0), "vc owner cannot be the zero address");
         require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
         require(amount >= settings.minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
 
@@ -130,7 +131,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         });
         virtualChains[vcId] = vc;
 
-        emit VcCreated(vcId, owner);
+        emit VcCreated(vcId);
 
         _extendSubscription(vcId, amount, owner);
         return (vcId, vc.genRefTime);
@@ -138,50 +139,6 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     function extendSubscription(uint256 vcId, uint256 amount, address payer) external override onlyWhenActive {
         _extendSubscription(vcId, amount, payer);
-    }
-
-    function setVcOwner(uint256 vcId, address owner) external override onlyWhenActive {
-        require(msg.sender == virtualChains[vcId].owner, "only the vc owner can transfer ownership");
-
-        virtualChains[vcId].owner = owner;
-        emit VcOwnerChanged(vcId, msg.sender, owner);
-    }
-
-    function _extendSubscription(uint256 vcId, uint256 amount, address payer) private {
-        VirtualChain memory vc = virtualChains[vcId];
-
-        IFeesWallet feesWallet = vc.isCertified ? certifiedFeesWallet : generalFeesWallet;
-        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
-        require(erc20.approve(address(feesWallet), amount), "failed to approve rewards to acquire subscription fees");
-
-        uint fromTimestamp = vc.expiresAt > now ? vc.expiresAt : now;
-        feesWallet.fillFeeBuckets(amount, vc.rate, fromTimestamp);
-
-        vc.expiresAt = fromTimestamp.add(amount.mul(30 days).div(vc.rate));
-
-        // commit new expiration timestamp to storage
-        virtualChains[vcId].expiresAt = vc.expiresAt;
-
-        emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.rate, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
-        emit Payment(vcId, payer, amount, vc.tier, vc.rate);
-    }
-
-    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public override onlyFunctionalManager onlyWhenActive {
-        settings.genesisRefTimeDelay = newGenesisRefTimeDelay;
-        emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
-    }
-
-    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public override onlyFunctionalManager {
-        settings.minimumInitialVcPayment = newMinimumInitialVcPayment;
-        emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
-    }
-
-    function getGenesisRefTimeDelay() external override view returns (uint) {
-        return settings.genesisRefTimeDelay;
-    }
-
-    function getMinimumInitialVcPayment() external override view returns (uint) {
-        return settings.minimumInitialVcPayment;
     }
 
     function getVcData(uint256 vcId) external override view returns (
@@ -205,13 +162,34 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         isCertified = vc.isCertified;
     }
 
-    IFeesWallet generalFeesWallet;
-    IFeesWallet certifiedFeesWallet;
-    IProtocol protocolContract;
-    function refreshContracts() external override {
-        generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
-        certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
-        protocolContract = IProtocol(getProtocolContract());
+    function setVcOwner(uint256 vcId, address owner) external override onlyWhenActive {
+        require(msg.sender == virtualChains[vcId].owner, "only the vc owner can transfer ownership");
+        require(owner != address(0), "cannot transfer ownership to the zero address");
+
+        virtualChains[vcId].owner = owner;
+        emit VcOwnerChanged(vcId, msg.sender, owner);
+    }
+
+    /*
+     *   Governance functions
+     */
+
+    function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public override onlyFunctionalManager {
+        settings.genesisRefTimeDelay = newGenesisRefTimeDelay;
+        emit GenesisRefTimeDelayChanged(newGenesisRefTimeDelay);
+    }
+
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public override onlyFunctionalManager {
+        settings.minimumInitialVcPayment = newMinimumInitialVcPayment;
+        emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
+    }
+
+    function getGenesisRefTimeDelay() external override view returns (uint) {
+        return settings.genesisRefTimeDelay;
+    }
+
+    function getMinimumInitialVcPayment() external override view returns (uint) {
+        return settings.minimumInitialVcPayment;
     }
 
     function getSettings() external override view returns(
@@ -221,6 +199,42 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         Settings memory _settings = settings;
         genesisRefTimeDelay = _settings.genesisRefTimeDelay;
         minimumInitialVcPayment = _settings.minimumInitialVcPayment;
+    }
+
+    /*
+    * Private functions
+    */
+
+    function _extendSubscription(uint256 vcId, uint256 amount, address payer) private {
+        VirtualChain memory vc = virtualChains[vcId];
+
+        IFeesWallet feesWallet = vc.isCertified ? certifiedFeesWallet : generalFeesWallet;
+        require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
+        require(erc20.approve(address(feesWallet), amount), "failed to approve rewards to acquire subscription fees");
+
+        uint fromTimestamp = vc.expiresAt > now ? vc.expiresAt : now;
+        feesWallet.fillFeeBuckets(amount, vc.rate, fromTimestamp);
+
+        vc.expiresAt = fromTimestamp.add(amount.mul(30 days).div(vc.rate));
+
+        // commit new expiration timestamp to storage
+        virtualChains[vcId].expiresAt = vc.expiresAt;
+
+        emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.rate, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
+        emit Payment(vcId, payer, amount, vc.tier, vc.rate);
+    }
+
+    /*
+     * Contracts topology / registry interface
+     */
+
+    IFeesWallet generalFeesWallet;
+    IFeesWallet certifiedFeesWallet;
+    IProtocol protocolContract;
+    function refreshContracts() external override {
+        generalFeesWallet = IFeesWallet(getGeneralFeesWallet());
+        certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
+        protocolContract = IProtocol(getProtocolContract());
     }
 
 }

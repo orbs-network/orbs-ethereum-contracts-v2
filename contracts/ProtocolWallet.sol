@@ -3,11 +3,8 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./spec_interfaces/IProtocolWallet.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./ContractRegistryAccessor.sol";
-import "./Lockable.sol";
-import "./ManagedContract.sol";
+import "./spec_interfaces/IProtocolWallet.sol";
 import "./WithClaimableMigrationOwnership.sol";
 import "./WithClaimableFunctionalOwnership.sol";
 
@@ -16,9 +13,8 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     IERC20 public token;
     address public client;
-
-    uint public lastWithdrawal;
-    uint public maxAnnualRate;
+    uint256 public lastWithdrawal;
+    uint256 maxAnnualRate;
 
     modifier onlyClient() {
         require(msg.sender == client, "caller is not the wallet client");
@@ -29,16 +25,14 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
         client = _client;
-        lastWithdrawal = now; // TODO init here, or in first call to setMaxAnnualRate?
+        lastWithdrawal = now;
 
         setMaxAnnualRate(_maxAnnualRate);
     }
 
-    /// @dev Returns the address of the underlying staked token.
-    /// @return IERC20 The address of the token.
-    function getToken() external override view returns (IERC20) {
-        return token;
-    }
+    /*
+    * External functions
+    */
 
     /// @dev Returns the address of the underlying staked token.
     /// @return balance IERC20 The address of the token.
@@ -65,7 +59,10 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         }
     }
 
-    /* Governance */
+    /*
+    * Governance functions
+    */
+
     /// @dev Sets a new transfer rate for the Orbs pool.
     function setMaxAnnualRate(uint256 _annualRate) public override onlyMigrationOwner {
         maxAnnualRate = _annualRate;
@@ -77,9 +74,9 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// @dev Sets a new transfer rate for the Orbs pool.
-    function resetOutstandingTokens() external override onlyMigrationOwner { //TODO add test
-        lastWithdrawal = now;
-        emit OutstandingTokensReset();
+    function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner { //TODO add test
+        lastWithdrawal = startTime;
+        emit OutstandingTokensReset(startTime);
     }
 
     /// @dev transfer the entire pool's balance to a new wallet.

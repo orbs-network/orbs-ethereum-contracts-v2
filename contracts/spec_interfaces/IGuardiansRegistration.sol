@@ -2,14 +2,12 @@
 
 pragma solidity 0.6.12;
 
-import "./IContractRegistry.sol";
-
-/// @title Elections contract interface
+/// @title Guardian registration contract interface
 interface IGuardiansRegistration {
-	event GuardianRegistered(address addr);
-	event GuardianUnregistered(address addr);
-	event GuardianDataUpdated(address addr, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website);
-	event GuardianMetadataChanged(address addr, string key, string newValue, string oldValue);
+	event GuardianRegistered(address indexed guardian);
+	event GuardianUnregistered(address indexed guardian);
+	event GuardianDataUpdated(address indexed guardian, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website);
+	event GuardianMetadataChanged(address indexed guardian, string key, string newValue, string oldValue);
 
 	/*
      * External methods
@@ -28,44 +26,30 @@ interface IGuardiansRegistration {
     function setMetadata(string calldata key, string calldata value) external;
 
     /// @dev Called by a participant to get additional guardian metadata properties.
-    function getMetadata(address addr, string calldata key) external view returns (string memory);
+    function getMetadata(address guardian, string calldata key) external view returns (string memory);
 
     /// @dev Called by a participant who wishes to unregister
 	function unregisterGuardian() external;
 
     /// @dev Returns a guardian's data
-    /// Used also by the Election contract
-	function getGuardianData(address addr) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registration_time, uint last_update_time);
+	function getGuardianData(address guardian) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime);
 
 	/// @dev Returns the Orbs addresses of a list of guardians
-	/// Used also by the committee contract
-	function getGuardiansOrbsAddress(address[] calldata addrs) external view returns (address[] memory orbsAddrs);
+	function getGuardiansOrbsAddress(address[] calldata guardianAddrs) external view returns (address[] memory orbsAddrs);
 
 	/// @dev Returns a guardian's ip
-	/// Used also by the Election contract
-	function getGuardianIp(address addr) external view returns (bytes4 ip);
+	function getGuardianIp(address guardian) external view returns (bytes4 ip);
 
 	/// @dev Returns guardian ips
-	function getGuardianIps(address[] calldata addr) external view returns (bytes4[] memory ips);
-
+	function getGuardianIps(address[] calldata guardian) external view returns (bytes4[] memory ips);
 
 	/// @dev Returns true if the given address is of a registered guardian
-	/// Used also by the Election contract
-	function isRegistered(address addr) external view returns (bool);
+	function isRegistered(address guardian) external view returns (bool);
 
-	/*
-     * Methods restricted to other Orbs contracts
-     */
+	/// @dev Translates a list guardians Orbs addresses to guardian addresses
+	function getGuardianAddresses(address[] calldata orbsAddrs) external view returns (address[] memory guardianAddrs);
 
-    /// @dev Translates a list guardians Ethereum addresses to Orbs addresses
-    /// Used by the Election contract
-	function getOrbsAddresses(address[] calldata ethereumAddrs) external view returns (address[] memory orbsAddr);
-
-	/// @dev Translates a list guardians Orbs addresses to Ethereum addresses
-	/// Used by the Election contract
-	function getEthereumAddresses(address[] calldata orbsAddrs) external view returns (address[] memory ethereumAddr);
-
-	/// @dev Resolves the ethereum address for a guardian, given an Ethereum/Orbs address
-	function resolveGuardianAddress(address ethereumOrOrbsAddress) external view returns (address mainAddress);
+	/// @dev Resolves the guardian address for a guardian, given a Guardian/Orbs address
+	function resolveGuardianAddress(address guardianOrOrbsAddress) external view returns (address guardianAddress);
 
 }

@@ -8,7 +8,7 @@ interface IElections {
 	// Election state change events
 	event GuardianVotedUnready(address guardian);
 	event GuardianVotedOut(address guardian);
-	event StakeChanged(address addr, uint256 selfStake, uint256 delegated_stake, uint256 effective_stake);
+	event StakeChanged(address addr, uint256 selfStake, uint256 delegatedStake, uint256 effectiveStake);
 	event GuardianStatusUpdated(address addr, bool readyToSync, bool readyForCommittee);
 
 	// Vote out / Vote unready
@@ -37,6 +37,8 @@ interface IElections {
 	/// @dev Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted out
 	function readyForCommittee() external;
 
+	function initReadyForCommittee(address[] calldata guardians) external /* onlyInitializationAdmin */;
+
 	/// @dev Called to test if a guardian calling readyForCommittee() will lead to joining the committee
 	function canJoinCommittee(address addr) external view returns (bool);
 
@@ -55,6 +57,10 @@ interface IElections {
 	/// @dev Returns the subject address the addr has voted-out against
 	function getVoteOutVote(address addr) external view returns (address);
 
+	/// @dev returns the current committee
+	/// used also by the rewards and fees contracts
+	function getCommittee() external view returns (address[] memory addrs, uint256[] memory weights, address[] memory orbsAddrs, bool[] memory certification, bytes4[] memory ips);
+
 	/*
 	 * Methods restricted to other Orbs contracts
 	 */
@@ -70,7 +76,7 @@ interface IElections {
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was unregistered
-	function guardianUnregistered(address addr) external                      /* onlyGuardiansRegistrationContract */;
+	function guardianUnregistered(address addr) external /* onlyGuardiansRegistrationContract */;
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change

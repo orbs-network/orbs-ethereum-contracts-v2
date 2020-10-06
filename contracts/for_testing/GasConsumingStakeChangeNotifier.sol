@@ -8,7 +8,7 @@ import "../IStakeChangeNotifier.sol";
 contract GasConsumingStakeChangeNotifier is IStakeChangeNotifier {
 
     uint counter;
-    mapping (uint => uint) state;
+    mapping(uint => uint) state;
 
     function consumeGas() private {
         for (uint i = 0; i < 400; i++) {

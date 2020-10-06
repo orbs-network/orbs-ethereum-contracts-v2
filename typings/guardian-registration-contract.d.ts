@@ -5,11 +5,11 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface GuardianRegisteredEvent {
-    addr: string,
+    guardian: string,
 }
 
 export interface GuardianDataUpdatedEvent {
-    addr: string,
+    guardian: string,
     isRegistered: boolean,
     ip: string,
     orbsAddr: string,
@@ -18,11 +18,11 @@ export interface GuardianDataUpdatedEvent {
 }
 
 export interface GuardianUnregisteredEvent {
-    addr: string
+    guardian: string
 }
 
 export interface GuardianMetadataChangedEvent {
-    addr: string,
+    guardian: string,
     key: string,
     oldValue: string,
     newValue: string,
@@ -37,8 +37,8 @@ export interface GuardiansRegistrationContract extends OwnedContract {
     resolveGuardianAddress(ethereumOrOrbs: string, params?: TransactionConfig): Promise<string>;
     setMetadata(key: string, value: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getMetadata(addr: string, key: string, params?: TransactionConfig): Promise<string>;
-    getGuardianData(addr: string, params?: TransactionConfig): Promise<{ip: string, orbsAddr: string, name: string, website: string, registration_time: BN|string, last_update_time: BN|string}>;
-    getOrbsAddresses(addrs: string[], params?: TransactionConfig): Promise<string[]>;
-    getEthereumAddresses(addrs: string[], params?: TransactionConfig): Promise<string[]>;
+    getGuardianData(addr: string, params?: TransactionConfig): Promise<{ip: string, orbsAddr: string, name: string, website: string, registrationTime: BN|string, lastUpdateTime: BN|string}>;
+    getGuardiansOrbsAddress(addrs: string[], params?: TransactionConfig): Promise<string[]>;
+    getGuardianAddresses(addrs: string[], params?: TransactionConfig): Promise<string[]>;
 }
 

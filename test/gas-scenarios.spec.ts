@@ -37,13 +37,13 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     const poolAmount = fromTokenUnits(1000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
+    await d.stakingRewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
     tlog("Staking pools topped up");
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.rewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
-    await d.rewards.setCertifiedCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.feesAndBootstrapRewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.feesAndBootstrapRewards.setCertifiedCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
     tlog("Bootstrap pools topped up");
 
     let committee: Participant[] = [];
@@ -96,14 +96,12 @@ describe('gas usage scenarios', async () => {
     it("New delegator stake increase, lowest committee jumps one rank higher. No reward distribution.", async () => {
         const {d, committee} = await fullCommittee();
 
-        await d.committee.setMaxTimeBetweenRewardAssignments(24*60*60, {from: d.functionalManager.address});
-
         const delegator = d.newParticipant("delegator");
         await delegator.delegate(committee[committee.length - 1]);
 
         d.resetGasRecording();
         let r = await delegator.stake(bn(1));
-        expect(r).to.have.a.guardianCommitteeChangeEvent({
+        expect(r).to.have.a.committeeChangeEvent({
             addr: committee[committee.length - 1].address
         });
         expect(r).to.not.have.a.bootstrapRewardsAssignedEvent();
@@ -140,7 +138,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await delegator.stake(1);
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         d.logGasUsageSummary("New delegator stakes", [delegator]);
     });
@@ -202,7 +200,7 @@ describe('gas usage scenarios', async () => {
         const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
 
         let r = await v.readyToSync();
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
 
         d.resetGasRecording();
         r = await v.readyForCommittee();
@@ -230,7 +228,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteUnready(committee[1].address, 0xFFFFFFFF,{from: committee[0].orbsAddress});
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
         expect(r).to.have.a.voteUnreadyCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address
@@ -270,7 +268,7 @@ describe('gas usage scenarios', async () => {
 
         d.resetGasRecording();
         let r = await d.elections.voteOut(committee[1].address, {from: committee[0].address});
-        expect(r).to.not.have.a.guardianCommitteeChangeEvent();
+        expect(r).to.not.have.a.committeeChangeEvent();
         expect(r).to.have.a.voteOutCastedEvent({
             voter: committee[0].address,
             subject: committee[1].address

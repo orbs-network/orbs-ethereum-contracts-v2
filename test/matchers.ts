@@ -25,7 +25,7 @@ import {
   VoteOutTimeoutSecondsChangedEvent,
   MinSelfStakePercentMilleChangedEvent,
   VoteUnreadyPercentMilleThresholdChangedEvent,
-  VoteOutPercentMilleThresholdChangedEvent, StakeChangedEvent,
+  VoteOutPercentMilleThresholdChangedEvent, StakeChangedEvent, GuardianStatusUpdatedEvent
 } from "../typings/elections-contract";
 import { MigratedStakeEvent, StakedEvent, UnstakedEvent } from "../typings/staking-contract";
 import {
@@ -34,25 +34,6 @@ import {
   ManagerChangedEvent
 } from "../typings/contract-registry-contract";
 import {ProtocolVersionChangedEvent} from "../typings/protocol-contract";
-import {
-  AnnualStakingRewardsRateChangedEvent,
-  BootstrapRewardsWithdrawnEvent,
-  CertifiedCommitteeAnnualBootstrapChangedEvent,
-  FeesWithdrawnEvent,
-  GeneralCommitteeAnnualBootstrapChangedEvent,
-  GuardianStakingRewardAssignedEvent,
-  DefaultDelegatorsStakingRewardsChangedEvent,
-  StakingRewardAssignedEvent,
-  RewardsBalanceMigratedEvent,
-  RewardsBalanceMigrationAcceptedEvent,
-  StakingRewardsClaimedEvent,
-  RewardDistributionDeactivatedEvent,
-  RewardDistributionActivatedEvent,
-  GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
-  MaxDelegatorsStakingRewardsChangedEvent
-} from "../typings/rewards-contract";
-import {BootstrapRewardsAssignedEvent} from "../typings/rewards-contract";
-import {FeesAssignedEvent} from "../typings/rewards-contract";
 import {
   GuardianDataUpdatedEvent, GuardianMetadataChangedEvent,
   GuardianRegisteredEvent,
@@ -63,11 +44,8 @@ import {
     DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
 } from "../typings/delegations-contract";
 import {
-  CommitteeSnapshotEvent,
   MaxCommitteeSizeChangedEvent,
-  MaxTimeBetweenRewardAssignmentsChangedEvent,
-  GuardianCommitteeChangeEvent,
-  GuardianStatusUpdatedEvent
+  CommitteeChangeEvent, CommitteeSnapshotEvent,
 } from "../typings/committee-contract";
 import {GuardianCertificationUpdateEvent} from "../typings/certification-contract";
 import {Contract} from "../eth";
@@ -94,6 +72,23 @@ import {
   StakeMigrationNotificationSkippedEvent
 } from "../typings/stake-change-handler-contract";
 import {Driver} from "./driver";
+import {
+  AnnualStakingRewardsRateChangedEvent,
+  DefaultDelegatorsStakingRewardsChangedEvent, GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
+  GuardianStakingRewardAssignedEvent,
+  MaxDelegatorsStakingRewardsChangedEvent, RewardDistributionActivatedEvent, RewardDistributionDeactivatedEvent,
+  StakingRewardAssignedEvent,
+  StakingRewardsBalanceMigratedEvent,
+  StakingRewardsBalanceMigrationAcceptedEvent, StakingRewardsClaimedEvent
+} from "../typings/staking-rewards-contract";
+import {
+  BootstrapRewardsAssignedEvent,
+  BootstrapRewardsWithdrawnEvent, CertifiedCommitteeAnnualBootstrapChangedEvent,
+  FeesAndBootstrapRewardsBalanceMigratedEvent,
+  FeesAndBootstrapRewardsBalanceMigrationAcceptedEvent,
+  FeesAssignedEvent,
+  FeesWithdrawnEvent, GeneralCommitteeAnnualBootstrapChangedEvent
+} from "../typings/fees-and-bootstrap-rewards-contract";
 
 function bnEq(b1, b2, approx?: number) {
   b1 = new BN(b1);
@@ -194,9 +189,15 @@ const TransposeKeys = {
   "CommitteeSnapshot": "addrs",
 };
 
-export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeSnapshotEvent> & {addrs: string[]}) {
+interface CommitteeData {
+  addrs: string[],
+  weights: (number|BN)[],
+  certification: boolean[]
+}
+
+export async function expectCommittee(d: Driver, expectedCommittee: Partial<CommitteeData> & {addrs: string[]}) {
   const curCommittee: any = await d.committee.getCommittee();
-  const actualCommittee: CommitteeSnapshotEvent = {
+  const actualCommittee: CommitteeData = {
     addrs: curCommittee.addrs,
     weights: curCommittee.weights,
     certification: curCommittee.certification
@@ -217,7 +218,6 @@ export const chaiEventMatchersPlugin = function(chai) {
         )
     );
   }
-  chai.Assertion.overwriteMethod("haveCommittee", containEvent(function(o) {return [o];}));
 
   chai.Assertion.addChainableMethod("withinContract", function (this: any, contract: Contract) {
     chai.util.flag(this, "contractAddress", contract.address);
@@ -233,8 +233,8 @@ declare global {
     export interface TypeComparison {
       delegatedEvent(data?: Partial<DelegatedEvent>): void;
       delegatedStakeChangedEvent(data?: Partial<DelegatedStakeChangedEvent>): void;
+      committeeChangeEvent(data?: Partial<CommitteeChangeEvent>): void;
       committeeSnapshotEvent(data?: Partial<CommitteeSnapshotEvent>): void;
-      guardianCommitteeChangeEvent(data?: Partial<GuardianCommitteeChangeEvent>): void;
       guardianRegisteredEvent(data?: Partial<GuardianRegisteredEvent>): void;
       guardianMetadataChangedEvent(data?: Partial<GuardianMetadataChangedEvent>): void;
       guardianUnregisteredEvent(data?: Partial<GuardianUnregisteredEvent>): void;
@@ -264,7 +264,6 @@ declare global {
       voteUnreadyPercentMilleThresholdChangedEvent(data?: Partial<VoteOutPercentMilleThresholdChangedEvent>);
       lockedEvent(data?: Partial<LockedEvent>);
       unlockedEvent(data?: Partial<UnlockedEvent>);
-      maxTimeBetweenRewardAssignmentsChangedEvent(data?: Partial<MaxTimeBetweenRewardAssignmentsChangedEvent>)
       maxCommitteeSizeChangedEvent(data?: Partial<MaxCommitteeSizeChangedEvent>);
       feesWithdrawnEvent(data?: Partial<FeesWithdrawnEvent>);
       feesWithdrawnFromBucketEvent(data?: Partial<FeesWithdrawnFromBucketEvent>);
@@ -284,8 +283,10 @@ declare global {
       subscriberRemovedEvent(data?: Partial<SubscriberRemovedEvent>);
       genesisRefTimeDelayChangedEvent(data?: Partial<GenesisRefTimeDelayChangedEvent>);
       minimumInitialVcPaymentChangedEvent(data?: Partial<MinimumInitialVcPaymentChangedEvent>);
-      rewardsBalanceMigratedEvent(data?: Partial<RewardsBalanceMigratedEvent>);
-      rewardsBalanceMigrationAcceptedEvent(data?: Partial<RewardsBalanceMigrationAcceptedEvent>);
+      stakingRewardsBalanceMigratedEvent(data?: Partial<StakingRewardsBalanceMigratedEvent>);
+      feesAndBootstrapRewardsBalanceMigratedEvent(data?: Partial<FeesAndBootstrapRewardsBalanceMigratedEvent>);
+      stakingRewardsBalanceMigrationAcceptedEvent(data?: Partial<StakingRewardsBalanceMigrationAcceptedEvent>);
+      feesAndBootstrapRewardsBalanceMigrationAcceptedEvent(data?: Partial<FeesAndBootstrapRewardsBalanceMigrationAcceptedEvent>);
       stakeChangeNotificationFailedEvent(data?: Partial<StakeChangeNotificationFailedEvent>);
       stakeChangeBatchNotificationFailedEvent(data?: Partial<StakeChangeBatchNotificationFailedEvent>);
       stakeMigrationNotificationFailedEvent(data?: Partial<StakeMigrationNotificationFailedEvent>);
@@ -313,7 +314,6 @@ declare global {
 
     export interface Assertion {
       bignumber: Assertion;
-      haveCommittee(data: CommitteeSnapshotEvent);
     }
   }
 }

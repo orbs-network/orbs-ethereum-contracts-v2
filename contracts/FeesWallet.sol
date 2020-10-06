@@ -6,32 +6,23 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/IMigratableFeesWallet.sol";
-import "./ContractRegistryAccessor.sol";
 import "./spec_interfaces/IFeesWallet.sol";
-import "./spec_interfaces/IRewards.sol";
-import "./Lockable.sol";
 import "./ManagedContract.sol";
-
 
 /// @title Fees Wallet contract interface, manages the fee buckets
 contract FeesWallet is IFeesWallet, ManagedContract {
     using SafeMath for uint256;
 
-    event FeesWithdrawnFromBucket(uint256 bucketId, uint256 withdrawn, uint256 total);
-    event FeesAddedToBucket(uint256 bucketId, uint256 added, uint256 total);
-
-    IERC20 token;
-
     uint256 constant BUCKET_TIME_PERIOD = 30 days;
     uint constant MAX_FEE_BUCKET_ITERATIONS = 24;
 
-    mapping(uint256 => uint256) buckets;
-    uint256 lastCollectedAt;
+    IERC20 public token;
+    mapping(uint256 => uint256) public buckets;
+    uint256 public lastCollectedAt;
 
     modifier onlyRewardsContract() {
-        require(msg.sender == address(rewardsContract), "caller is not the rewards contract");
+        require(msg.sender == rewardsContract, "caller is not the rewards contract");
 
         _;
     }
@@ -40,6 +31,10 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         token = _token;
         lastCollectedAt = now;
     }
+
+    /*
+     *   External methods
+     */
 
     /// @dev collect fees from the buckets since the last call and transfers the amount back.
     /// Called by: only Rewards contract.
@@ -59,6 +54,75 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     function getOutstandingFees() external override view returns (uint256 outstandingFees)  {
         (outstandingFees,,,) = _getOutstandingFees();
+    }
+
+    /// @dev Called by: subscriptions contract.
+    /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract).
+    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external override onlyWhenActive {
+        uint256 bucket = _bucketTime(fromTimestamp);
+        require(bucket >= _bucketTime(block.timestamp), "FeeWallet::cannot fill bucket from the past");
+
+        uint256 _amount = amount;
+
+        // add the partial amount to the first bucket
+        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD - fromTimestamp % BUCKET_TIME_PERIOD).div(BUCKET_TIME_PERIOD));
+        fillFeeBucket(bucket, bucketAmount);
+        _amount = _amount.sub(bucketAmount);
+
+        // following buckets are added with the monthly rate
+        while (_amount > 0) {
+            bucket = bucket.add(BUCKET_TIME_PERIOD);
+            bucketAmount = Math.min(monthlyRate, _amount);
+            fillFeeBucket(bucket, bucketAmount);
+
+            _amount = _amount.sub(bucketAmount);
+        }
+
+        require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet");
+    }
+
+    /*
+     * Governance functions
+     */
+
+    /// @dev migrates the fees of bucket starting at startTimestamp.
+    /// bucketStartTime must be a bucket's start time.
+    /// Calls acceptBucketMigration in the destination contract.
+    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external override onlyMigrationManager {
+        require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
+
+        uint bucketAmount = buckets[bucketStartTime];
+        if (bucketAmount == 0) return;
+
+        buckets[bucketStartTime] = 0;
+        emit FeesWithdrawnFromBucket(bucketStartTime, bucketAmount, 0);
+
+        token.approve(address(destination), bucketAmount);
+        destination.acceptBucketMigration(bucketStartTime, bucketAmount);
+    }
+
+    /// @dev Called by the old FeesWallet contract.
+    /// Part of the IMigratableFeesWallet interface.
+    function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external override {
+        require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
+        fillFeeBucket(bucketStartTime, amount);
+        require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet on bucket migration");
+    }
+
+    /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
+    function emergencyWithdraw() external override onlyMigrationManager {
+        emit EmergencyWithdrawal(msg.sender);
+        require(token.transfer(msg.sender, token.balanceOf(address(this))), "IFeesWallet::emergencyWithdraw - transfer failed (fee token)");
+    }
+
+    /*
+    * Private methods
+    */
+
+    function fillFeeBucket(uint256 bucketId, uint256 amount) private {
+        uint256 bucketTotal = buckets[bucketId].add(amount);
+        buckets[bucketId] = bucketTotal;
+        emit FeesAddedToBucket(bucketId, amount, bucketTotal);
     }
 
     function _getOutstandingFees() private view returns (uint256 outstandingFees, uint[] memory bucketsWithdrawn, uint[] memory withdrawnAmounts, uint[] memory newTotals)  {
@@ -84,7 +148,6 @@ contract FeesWallet is IFeesWallet, ManagedContract {
             outstandingFees += amount;
             bucketTotal = bucketTotal.sub(amount);
 
-
             bucketsWithdrawn[bucketsPayed] = bucketStart;
             withdrawnAmounts[bucketsPayed] = amount;
             newTotals[bucketsPayed] = bucketTotal;
@@ -94,86 +157,16 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         }
     }
 
-    /*
-     *   External methods
-     */
-
-    /// @dev Called by: subscriptions contract.
-    /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract).
-    function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external override {
-        uint256 bucket = _bucketTime(fromTimestamp);
-        require(bucket >= _bucketTime(block.timestamp), "FeeWallet::cannot fill bucket from the past");
-
-        uint256 _amount = amount;
-
-        // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD - fromTimestamp % BUCKET_TIME_PERIOD).div(BUCKET_TIME_PERIOD));
-        fillFeeBucket(bucket, bucketAmount);
-        _amount = _amount.sub(bucketAmount);
-
-        // following buckets are added with the monthly rate
-        while (_amount > 0) {
-            bucket = bucket.add(BUCKET_TIME_PERIOD);
-            bucketAmount = Math.min(monthlyRate, _amount);
-            fillFeeBucket(bucket, bucketAmount);
-
-            _amount = _amount.sub(bucketAmount);
-        }
-
-        require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet");
-    }
-
-    function fillFeeBucket(uint256 bucketId, uint256 amount) private {
-        uint256 bucketTotal = buckets[bucketId].add(amount);
-        buckets[bucketId] = bucketTotal;
-        emit FeesAddedToBucket(bucketId, amount, bucketTotal);
-    }
-
-    /// @dev Called by the old FeesWallet contract.
-    /// Part of the IMigratableFeesWallet interface.
-    function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external override {
-        require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
-        fillFeeBucket(bucketStartTime, amount);
-        require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet on bucket migration");
-    }
-
-    /*
-     * General governance
-     */
-
-    /// @dev migrates the fees of bucket starting at startTimestamp.
-    /// bucketStartTime must be a bucket's start time.
-    /// Calls acceptBucketMigration in the destination contract.
-    function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external override onlyMigrationManager {
-        require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
-
-        uint bucketAmount = buckets[bucketStartTime];
-        if (bucketAmount == 0) return;
-
-        buckets[bucketStartTime] = 0;
-        emit FeesWithdrawnFromBucket(bucketStartTime, bucketAmount, 0);
-
-        token.approve(address(destination), bucketAmount);
-        destination.acceptBucketMigration(bucketStartTime, bucketAmount);
-    }
-
-    /*
-     * Emergency
-     */
-
-    /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external override onlyMigrationManager {
-        emit EmergencyWithdrawal(msg.sender);
-        require(token.transfer(msg.sender, token.balanceOf(address(this))), "IFeesWallet::emergencyWithdraw - transfer failed (fee token)");
-    }
-
     function _bucketTime(uint256 time) private pure returns (uint256) {
         return time - time % BUCKET_TIME_PERIOD;
     }
 
-    IRewards rewardsContract;
-    function refreshContracts() external override {
-        rewardsContract = IRewards(getRewardsContract());
-    }
+    /*
+     * Contracts topology / registry interface
+     */
 
+    address rewardsContract;
+    function refreshContracts() external override {
+        rewardsContract = getFeesAndBootstrapRewardsContract();
+    }
 }
