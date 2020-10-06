@@ -4,6 +4,7 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./SafeMath48.sol";
+import "./SafeMath96.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -16,7 +17,7 @@ import "./ManagedContract.sol";
 
 contract StakingRewards is IStakingRewards, ManagedContract {
     using SafeMath for uint256;
-    using SafeMath for uint96;
+    using SafeMath96 for uint96;
     using SafeMath48 for uint48;
 
     uint256 constant PERCENT_MILLIE_BASE = 100000;
@@ -320,10 +321,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         _stakingRewardsState = stakingRewardsState;
         if (_settings.rewardAllocationActive) {
             uint delta = calcStakingRewardPerWeightDelta(totalCommitteeWeight, block.timestamp.sub(stakingRewardsState.lastAssigned), _settings);
-            _stakingRewardsState.stakingRewardsPerWeight = uint96(stakingRewardsState.stakingRewardsPerWeight.add(delta));
+            _stakingRewardsState.stakingRewardsPerWeight = stakingRewardsState.stakingRewardsPerWeight.add(delta);
             _stakingRewardsState.lastAssigned = uint32(block.timestamp);
             allocatedRewards = delta.mul(totalCommitteeWeight).div(TOKEN_BASE);
-            _stakingRewardsState.unclaimedStakingRewards = uint96(_stakingRewardsState.unclaimedStakingRewards.add(allocatedRewards));
+            _stakingRewardsState.unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards.add(allocatedRewards);
         }
     }
 
@@ -367,7 +368,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
                 .div(PERCENT_MILLIE_BASE)
                 .div(TOKEN_BASE);
 
-            guardianStakingRewards.delegatorRewardsPerToken = uint96(guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta));
+            guardianStakingRewards.delegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta);
             guardianStakingRewards.balance = guardianStakingRewards.balance.add(toMilliOrbs(guardianRewards));
 
             rewardsAdded = guardianRewards;
