@@ -194,7 +194,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function getStakingRewardsWalletAllocatedTokens() external override view returns (uint256 allocated) {
         (, uint96 unclaimedStakingRewards) = getStakingRewardsState();
-        return unclaimedStakingRewards.sub(stakingRewardsWithdrawnFromWallet);
+        return uint256(unclaimedStakingRewards).sub(stakingRewardsWithdrawnFromWallet);
     }
 
     /*
