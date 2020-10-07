@@ -23,18 +23,6 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     uint constant TOKEN_GRANULARITY = 1000000000000000;
 
-    modifier onlyCommitteeContract() {
-        require(msg.sender == address(committeeContract), "caller is not the elections contract");
-
-        _;
-    }
-
-    modifier onlyDelegationsContract() {
-        require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
-
-        _;
-    }
-
     struct Settings {
         uint48 annualCap;
         uint32 annualRateInPercentMille;
@@ -98,6 +86,18 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         }
     }
 
+    modifier onlyCommitteeContract() {
+        require(msg.sender == address(committeeContract), "caller is not the elections contract");
+
+        _;
+    }
+
+    modifier onlyDelegationsContract() {
+        require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
+
+        _;
+    }
+    
     /*
     * External functions
     */
@@ -164,7 +164,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         return (fromMilliOrbs(rewards.balance), rewards.lastDelegatorRewardsPerToken);
     }
 
-    function getStakingRewardsState() public view returns (
+    function getStakingRewardsState() public override view returns (
         uint96 stakingRewardsPerWeight,
         uint96 unclaimedStakingRewards
     ) {
@@ -279,6 +279,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function getAnnualStakingRewardsCap() external override view returns (uint256) {
         return fromMilliOrbs(settings.annualCap);
+    }
+
+    function isRewardAllocationActive() external override view returns (bool) {
+        return settings.rewardAllocationActive;
     }
 
     function getSettings() external override view returns (

@@ -46,10 +46,11 @@ export interface ElectionsContract extends OwnedContract {
   getVoteUnreadyPercentMilleThreshold(): Promise<number>;
   getVoteOutPercentMilleThreshold(): Promise<number>;
 
-  getVoteOutStatus(subjectAddr: string): Promise<[
-    number|BN /* votedStake */,
-    number|BN /* totalDelegatedStake */
-  ]>;
+  getVoteOutStatus(subjectAddr: string): Promise<{
+    isVotedOut: boolean,
+    votedStake: number | BN,
+    totalDelegatedStake: number | BN
+  }>;
 
   getVoteUnreadyStatus(subjectAddr: string): Promise<{
     committee: string[],

@@ -15,12 +15,6 @@ contract Committee is ICommittee, ManagedContract {
 	uint96 constant CERTIFICATION_MASK = 1 << 95;
 	uint96 constant WEIGHT_MASK = ~CERTIFICATION_MASK;
 
-	modifier onlyElectionsContract() {
-		require(msg.sender == electionsContract, "caller is not the elections");
-
-		_;
-	}
-
 	struct CommitteeMember {
 		address addr;
 		uint96 weightAndCertifiedBit;
@@ -44,6 +38,12 @@ contract Committee is ICommittee, ManagedContract {
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint8 _maxCommitteeSize) ManagedContract(_contractRegistry, _registryAdmin) public {
 		setMaxCommitteeSize(_maxCommitteeSize);
+	}
+
+	modifier onlyElectionsContract() {
+		require(msg.sender == electionsContract, "caller is not the elections");
+
+		_;
 	}
 
 	/*

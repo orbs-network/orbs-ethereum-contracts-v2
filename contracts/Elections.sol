@@ -18,8 +18,8 @@ import "./ManagedContract.sol";
 contract Elections is IElections, ManagedContract {
 	using SafeMath for uint256;
 
-	mapping(address => mapping(address => uint256)) votedUnreadyVotes; // by => to => timestamp
-	mapping(address => uint256) votersStake;
+	mapping(address => mapping(address => uint256)) voteUnreadyVotes; // by => to => expiration
+	mapping(address => uint256) public votersStake;
 	mapping(address => address) voteOutVotes; // by => to
 	mapping(address => uint256) accumulatedStakesForVoteOut; // addr => total stake
 	mapping(address => bool) votedOutGuardians;
@@ -31,7 +31,13 @@ contract Elections is IElections, ManagedContract {
 		uint32 voteUnreadyPercentMilleThreshold;
 		uint32 voteOutPercentMilleThreshold;
 	}
-	Settings public settings;
+	Settings settings;
+
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint32 voteUnreadyPercentMilleThreshold, uint32 voteOutPercentMilleThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
+		setMinSelfStakePercentMille(minSelfStakePercentMille);
+		setVoteOutPercentMilleThreshold(voteOutPercentMilleThreshold);
+		setVoteUnreadyPercentMilleThreshold(voteUnreadyPercentMilleThreshold);
+	}
 
 	modifier onlyDelegationsContract() {
 		require(msg.sender == address(delegationsContract), "caller is not the delegations contract");
@@ -45,26 +51,16 @@ contract Elections is IElections, ManagedContract {
 		_;
 	}
 
-	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint32 minSelfStakePercentMille, uint32 voteUnreadyPercentMilleThreshold, uint32 voteOutPercentMilleThreshold) ManagedContract(_contractRegistry, _registryAdmin) public {
-		setMinSelfStakePercentMille(minSelfStakePercentMille);
-		setVoteOutPercentMilleThreshold(voteOutPercentMilleThreshold);
-		setVoteUnreadyPercentMilleThreshold(voteUnreadyPercentMilleThreshold);
-	}
-
-	/// @dev Called by: guardian registration contract
-	/// Notifies a new guardian was registered
-	function guardianRegistered(address addr) external override {}
-
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was unregistered
-	function guardianUnregistered(address addr) external override onlyGuardiansRegistrationContract {
+	function guardianUnregistered(address addr) external override onlyGuardiansRegistrationContract onlyWhenActive {
 		emit GuardianStatusUpdated(addr, false, false);
 		committeeContract.removeMember(addr);
 	}
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies on a guardian certification change
-	function guardianCertificationChanged(address addr, bool isCertified) external override {
+	function guardianCertificationChanged(address addr, bool isCertified) external override onlyWhenActive {
 		committeeContract.memberCertificationChange(addr, isCertified);
 	}
 
@@ -72,7 +68,7 @@ contract Elections is IElections, ManagedContract {
 		require(!isVotedOut(addr), "caller is voted-out");
 	}
 
-	function readyForCommittee() external override {
+	function readyForCommittee() external override onlyWhenActive {
 		_readyForCommittee(msg.sender);
 	}
 
@@ -104,7 +100,7 @@ contract Elections is IElections, ManagedContract {
 		return committeeContract.checkAddMember(guardianAddr, effectiveStake);
 	}
 
-	function readyToSync() external override {
+	function readyToSync() external override onlyWhenActive {
 		address guardianAddr = guardianRegistrationContract.resolveGuardianAddress(msg.sender); // this validates registration
 		require(!isVotedOut(guardianAddr), "caller is voted-out");
 
@@ -115,7 +111,7 @@ contract Elections is IElections, ManagedContract {
 
 	function clearCommitteeUnreadyVotes(address[] memory committee, address votee) private {
 		for (uint i = 0; i < committee.length; i++) {
-			votedUnreadyVotes[committee[i]][votee] = 0; // clear vote-outs
+			voteUnreadyVotes[committee[i]][votee] = 0; // clear vote-outs
 		}
 	}
 
@@ -143,18 +139,15 @@ contract Elections is IElections, ManagedContract {
 				totalCertifiedStake = totalCertifiedStake.add(memberStake);
 			}
 
-			uint256 expiration = votedUnreadyVotes[member][votee];
-			if (expiration != 0) {
-				if (now < expiration) {
-					// Vote is valid
-					totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
-					if (certification[i]) {
-						totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
-					}
-				} else {
-					// Vote is stale, delete from state
-					votedUnreadyVotes[member][votee] = 0;
+			(bool valid, uint256 expiration) = getVoteUnreadyVote(member, votee);
+			if (valid) {
+				totalVoteUnreadyStake = totalVoteUnreadyStake.add(memberStake);
+				if (certification[i]) {
+					totalCertifiedVoteUnreadyStake = totalCertifiedVoteUnreadyStake.add(memberStake);
 				}
+			} else if (expiration != 0) {
+				// Vote is stale, delete from state
+				delete voteUnreadyVotes[member][votee];
 			}
 		}
 
@@ -163,9 +156,9 @@ contract Elections is IElections, ManagedContract {
 	}
 
 	function voteUnready(address subjectAddr, uint voteExpiration) external override onlyWhenActive {
-		require(voteExpiration >= now, "vote expiration time must not be in the past");
+		require(voteExpiration >= block.timestamp, "vote expiration time must not be in the past");
 		address sender = guardianRegistrationContract.resolveGuardianAddress(msg.sender);
-		votedUnreadyVotes[sender][subjectAddr] = voteExpiration;
+		voteUnreadyVotes[sender][subjectAddr] = voteExpiration;
 		emit VoteUnreadyCasted(sender, subjectAddr, voteExpiration);
 
 		(address[] memory generalCommittee, uint256[] memory generalWeights, bool[] memory certification) = committeeContract.getCommittee();
@@ -212,8 +205,13 @@ contract Elections is IElections, ManagedContract {
 		return selfDelegating ? totalDelegatedStake : 0;
 	}
 
-	function getVoteOutVote(address addr) external override view returns (address) {
-		return voteOutVotes[addr];
+	function getVoteOutVote(address voter) external override view returns (address) {
+		return voteOutVotes[voter];
+	}
+
+	function getVoteUnreadyVote(address voter, address subjectAddr) public override view returns (bool valid, uint256 expiration) {
+		expiration = voteUnreadyVotes[voter][subjectAddr];
+		valid = expiration != 0 && block.timestamp < expiration;
 	}
 
 	function _applyStakesToVoteOutBy(address voter, uint256 currentVoterStake, uint256 totalGovernanceStake, Settings memory _settings) private {
@@ -313,7 +311,8 @@ contract Elections is IElections, ManagedContract {
 		return settings.voteUnreadyPercentMilleThreshold;
 	}
 
-	function getVoteOutStatus(address subjectAddr) external override view returns (uint votedStake, uint totalDelegatedStake) {
+	function getVoteOutStatus(address subjectAddr) external override view returns (bool votedOut, uint votedStake, uint totalDelegatedStake) {
+		votedOut = isVotedOut(subjectAddr);
 		votedStake = accumulatedStakesForVoteOut[subjectAddr];
 		totalDelegatedStake = delegationsContract.getTotalDelegatedStake();
 	}
@@ -336,7 +335,7 @@ contract Elections is IElections, ManagedContract {
 		votes = new bool[](committee.length);
 		for (uint i = 0; i < committee.length; i++) {
 			address memberAddr = committee[i];
-			if (now < votedUnreadyVotes[memberAddr][subjectAddr]) {
+			if (block.timestamp < voteUnreadyVotes[memberAddr][subjectAddr]) {
 				votes[i] = true;
 			}
 		}

@@ -316,9 +316,8 @@ describe('gas usage scenarios', async () => {
         d.resetGasRecording();
         let r = await d.delegations.importDelegations(
             delegations.map(d => d.address),
-            delegate.address,
-            false
-        , {from: d.migrationManager.address});
+            delegate.address
+        , {from: d.initializationAdmin.address});
         expect(r).to.have.a.delegationsImportedEvent({
             from: delegations.map(d => d.address),
             to: delegate.address

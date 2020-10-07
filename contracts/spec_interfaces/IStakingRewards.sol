@@ -43,6 +43,11 @@ interface IStakingRewards {
         uint256 lastDelegatorRewardsPerToken
     );
 
+    function getStakingRewardsState() external view returns (
+        uint96 stakingRewardsPerWeight,
+        uint96 unclaimedStakingRewards
+    );
+
     function getCurrentStakingRewardsRatePercentMille() external returns (uint256);
 
     /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
@@ -90,6 +95,8 @@ interface IStakingRewards {
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
     function getAnnualStakingRewardsCap() external view returns (uint256);
+
+    function isRewardAllocationActive() external view returns (bool);
 
     /// @dev Returns the contract's settings
     function getSettings() external view returns (

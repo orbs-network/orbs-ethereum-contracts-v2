@@ -44,12 +44,14 @@ interface IElections {
 
 	/// @dev Returns the governance voteOut status of a guardian.
 	/// A guardian is voted out if votedStake / totalDelegatedStake (in percent mille) > threshold  
-	function getVoteOutStatus(address subjectAddr) external view returns (uint votedStake, uint totalDelegatedStake);
+	function getVoteOutStatus(address subjectAddr) external view returns (bool votedOut, uint votedStake, uint totalDelegatedStake);
 
 	/// @dev Returns the current vote-unready status of a subject guardian.
 	/// votes indicates wether the specific committee member voted the guardian unready
 	function getVoteUnreadyStatus(address subjectAddr) external view returns
 		(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee);
+
+	function getVoteUnreadyVote(address voter, address subjectAddr) external view returns (bool valid, uint256 expiration);
 
 	/// @dev Returns an address effective stake
 	function getEffectiveStake(address addr) external view returns (uint effectiveStake);
@@ -69,10 +71,6 @@ interface IElections {
 	/// Notifies a delegated stake change event
 	/// total_delegated_stake = 0 if addr delegates to another guardian
 	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external /* onlyDelegationsContract onlyWhenActive */;
-
-	/// @dev Called by: guardian registration contract
-	/// Notifies a new guardian was registered
-	function guardianRegistered(address addr) external;
 
 	/// @dev Called by: guardian registration contract
 	/// Notifies a new guardian was unregistered
