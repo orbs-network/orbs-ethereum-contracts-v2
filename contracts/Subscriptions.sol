@@ -20,6 +20,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     struct VirtualChain {
         string name;
         string tier;
+        uint256 rate;
         uint expiresAt;
         uint256 genRefTime;
         address owner;
@@ -70,6 +71,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
         (string memory name,
         string memory tier,
+        uint256 rate,
         uint expiresAt,
         uint256 genRefTime,
         address owner,
@@ -79,6 +81,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         virtualChains[vcId] = VirtualChain({
             name: name,
             tier: tier,
+            rate: rate,
             expiresAt: expiresAt,
             genRefTime: genRefTime,
             owner: owner,
@@ -90,7 +93,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
             nextVcId = vcId + 1;
         }
 
-        emit SubscriptionChanged(vcId, owner, name, genRefTime, tier, expiresAt, isCertified, deploymentSubset);
+        emit SubscriptionChanged(vcId, owner, name, genRefTime, tier, rate, expiresAt, isCertified, deploymentSubset);
     }
 
     function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external override onlyWhenActive {
@@ -127,6 +130,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
             genRefTime: now + settings.genesisRefTimeDelay,
             owner: owner,
             tier: tier,
+            rate: rate,
             deploymentSubset: deploymentSubset,
             isCertified: isCertified
         });
@@ -146,6 +150,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     function getVcData(uint256 vcId) external override view returns (
         string memory name,
         string memory tier,
+        uint256 rate,
         uint expiresAt,
         uint256 genRefTime,
         address owner,
@@ -155,6 +160,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         VirtualChain memory vc = virtualChains[vcId];
         name = vc.name;
         tier = vc.tier;
+        rate = vc.rate;
         expiresAt = vc.expiresAt;
         genRefTime = vc.genRefTime;
         owner = vc.owner;
@@ -218,12 +224,14 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         feesWallet.fillFeeBuckets(amount, rate, fromTimestamp);
 
         vc.expiresAt = fromTimestamp.add(amount.mul(30 days).div(rate));
+        vc.rate = rate;
 
         // commit new expiration timestamp to storage
         virtualChains[vcId].expiresAt = vc.expiresAt;
+        virtualChains[vcId].rate = vc.rate;
 
-        emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
-        emit Payment(vcId, payer, amount, vc.tier, rate);
+        emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.rate, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
+        emit Payment(vcId, payer, amount, vc.tier, vc.rate);
     }
 
     /*

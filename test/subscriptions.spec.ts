@@ -320,6 +320,41 @@ describe('subscriptions-high-level-flows', async () => {
     expect(newExpiresAt).to.be.bignumber.equal(bn(await getBlockTimestamp(d, r.blockNumber) + 1));
   });
 
+  it('updates vc data on rate change', async () => {
+    const d = await Driver.new();
+    const orbitonPerSecond = 30*24*60*60;
+    const subs = await d.newSubscriber("tier", orbitonPerSecond);
+
+    const owner = d.newParticipant();
+
+    const oneSecondsWorth = 1;
+
+    await d.subscriptions.setMinimumInitialVcPayment(oneSecondsWorth, {from: d.functionalManager.address});
+
+    await owner.assignAndApproveOrbs(oneSecondsWorth, subs.address);
+    let r = await subs.createVC("vc-name", oneSecondsWorth, false, "main", {from: owner.address});
+    const vcid = bn(subscriptionChangedEvents(r)[0].vcId);
+    const expiresAtOrig = bn(subscriptionChangedEvents(r)[0].expiresAt);
+
+    // vc expires after one second
+    expect(expiresAtOrig).to.be.bignumber.equal(bn(await getBlockTimestamp(d, r.blockNumber) + 1));
+
+    // wait until after expiration
+    await sleep(3 * 1000);
+
+    const subs2 = await d.newSubscriber("tier", orbitonPerSecond*2);
+    await owner.assignAndApproveOrbs(oneSecondsWorth*2, subs2.address);
+    r = await subs2.extendSubscription(vcid, oneSecondsWorth*2, {from: owner.address});
+    const newExpiresAt = bn(subscriptionChangedEvents(r)[0].expiresAt);
+
+    // vc expires only 1 second after being extended
+    expect(newExpiresAt).to.be.bignumber.equal(bn(await getBlockTimestamp(d, r.blockNumber) + 1));
+    expect(r).to.have.a.subscriptionChangedEvent({
+      rate: bn(orbitonPerSecond*2)
+    });
+    expect((await d.subscriptions.getVcData(vcid))[2]).to.bignumber.eq(bn(orbitonPerSecond*2));
+  });
+
   it('does not extend if tier does not match', async () => {
     const d = await Driver.new();
     const orbitonPerSecond = 30*24*60*60;
