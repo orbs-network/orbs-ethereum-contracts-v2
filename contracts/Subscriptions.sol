@@ -143,7 +143,6 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external override onlySubscriber onlyWhenActive {
-        require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
         _extendSubscription(vcId, amount, tier, rate, payer);
     }
 
