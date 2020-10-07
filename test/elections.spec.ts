@@ -28,14 +28,14 @@ describe('elections-high-level-flows', async () => {
 
         let r = await v.readyToSync();
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v.address,
+            guardian: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
         r = await v.readyForCommittee();
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v.address,
+            guardian: v.address,
             readyToSync: true,
             readyForCommittee: true
         });
@@ -50,7 +50,7 @@ describe('elections-high-level-flows', async () => {
         await expectRejected(d.elections.initReadyForCommittee([v1.address, v2.address], {from: d.migrationManager.address}), /sender is not the initialization admin/);
         const r = await d.elections.initReadyForCommittee([v1.address, v2.address], {from: d.initializationAdmin.address});
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v1.address,
+            guardian: v1.address,
             readyToSync: true,
             readyForCommittee: true
         });
@@ -59,7 +59,7 @@ describe('elections-high-level-flows', async () => {
             inCommittee: true
         });
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v2.address,
+            guardian: v2.address,
             readyToSync: true,
             readyForCommittee: true
         });
@@ -107,7 +107,7 @@ describe('elections-high-level-flows', async () => {
 
         let r = await v1.readyForCommittee();
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v1.address,
+            guardian: v1.address,
             readyToSync: true,
             readyForCommittee: true
         });
@@ -135,28 +135,28 @@ describe('elections-high-level-flows', async () => {
 
         let r = await d.elections.readyToSync({from: v.orbsAddress});
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v.address,
+            guardian: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
         r = await d.elections.readyToSync({from: v.address});
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v.address,
+            guardian: v.address,
             readyToSync: true,
             readyForCommittee: false
         });
 
         r = await d.elections.readyForCommittee({from: v.orbsAddress});
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v.address,
+            guardian: v.address,
             readyToSync: true,
             readyForCommittee: true
         });
 
         r = await d.elections.readyForCommittee({from: v.address});
         expect(r).to.have.a.guardianStatusUpdatedEvent({
-            addr: v.address,
+            guardian: v.address,
             readyToSync: true,
             readyForCommittee: true
         });
@@ -359,7 +359,7 @@ describe('elections-high-level-flows', async () => {
                 guardian: votedOutGuardian.address
             });
             expect(r).to.have.a.guardianStatusUpdatedEvent({
-                addr: votedOutGuardian.address,
+                guardian: votedOutGuardian.address,
                 readyToSync: false,
                 readyForCommittee: false
             });

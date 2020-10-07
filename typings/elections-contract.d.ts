@@ -4,7 +4,7 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface GuardianStatusUpdatedEvent {
-  addr: string;
+  guardian: string;
   readyToSync: boolean;
   readyForCommittee: boolean;
 }
