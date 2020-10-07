@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 
 /// @title Subscriptions contract interface
 interface ISubscriptions {
-    event SubscriptionChanged(uint256 indexed vcId, address owner, string name, uint256 genRefTime, string tier, uint256 rate, uint256 expiresAt, bool isCertified, string deploymentSubset);
+    event SubscriptionChanged(uint256 indexed vcId, address owner, string name, uint256 genRefTime, string tier, uint256 expiresAt, bool isCertified, string deploymentSubset);
     event Payment(uint256 indexed vcId, address by, uint256 amount, string tier, uint256 rate);
     event VcConfigRecordChanged(uint256 indexed vcId, string key, string value);
     event VcCreated(uint256 indexed vcId);
@@ -20,7 +20,7 @@ interface ISubscriptions {
 
     /// @dev Called by: authorized subscriber (plan) contracts
     /// Extends the subscription of an existing VC.
-    function extendSubscription(uint256 vcId, uint256 amount, address payer) external;
+    function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external;
 
     /// @dev called by VC owner to set a VC config record. Emits a VcConfigRecordChanged event.
     function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external /* onlyVcOwner */;
@@ -35,7 +35,6 @@ interface ISubscriptions {
     function getVcData(uint256 vcId) external view returns (
         string memory name,
         string memory tier,
-        uint256 rate,
         uint expiresAt,
         uint256 genRefTime,
         address owner,
