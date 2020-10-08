@@ -8,16 +8,7 @@ import "./Initializable.sol";
 
 contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializable {
 
-    IContractRegistry contractRegistry;
-
-    function isManager(string memory role) internal view returns (bool) {
-        IContractRegistry _contractRegistry = contractRegistry;
-        return isAdmin() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
-    }
-
-    function isAdmin() internal view returns (bool) {
-        return msg.sender == registryAdmin() || msg.sender == initializationAdmin() || msg.sender == address(contractRegistry);
-    }
+    IContractRegistry private contractRegistry;
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) public {
         require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
@@ -31,12 +22,13 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
         _;
     }
 
-    event ContractRegistryAddressUpdated(address addr);
+    function isManager(string memory role) internal view returns (bool) {
+        IContractRegistry _contractRegistry = contractRegistry;
+        return isAdmin() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
+    }
 
-    function setContractRegistry(IContractRegistry newContractRegistry) public onlyAdmin {
-        require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
-        contractRegistry = newContractRegistry;
-        emit ContractRegistryAddressUpdated(address(newContractRegistry));
+    function isAdmin() internal view returns (bool) {
+        return msg.sender == registryAdmin() || msg.sender == initializationAdmin() || msg.sender == address(contractRegistry);
     }
 
     function getProtocolContract() internal view returns (address) {
@@ -97,6 +89,22 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     function getStakingContractHandler() internal view returns (address) {
         return contractRegistry.getContract("stakingContractHandler");
+    }
+
+    /*
+    * Governance functions
+    */
+
+    event ContractRegistryAddressUpdated(address addr);
+
+    function setContractRegistry(IContractRegistry newContractRegistry) public onlyAdmin {
+        require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
+        contractRegistry = newContractRegistry;
+        emit ContractRegistryAddressUpdated(address(newContractRegistry));
+    }
+
+    function getContractRegistry() public view returns (IContractRegistry) {
+        return contractRegistry;
     }
 
 }

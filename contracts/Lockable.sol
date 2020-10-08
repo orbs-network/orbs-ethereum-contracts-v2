@@ -12,7 +12,7 @@ contract Lockable is ILockable, ContractRegistryAccessor {
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) ContractRegistryAccessor(_contractRegistry, _registryAdmin) public {}
 
     modifier onlyLockOwner() {
-        require(msg.sender == registryAdmin() || msg.sender == address(contractRegistry), "caller is not a lock owner");
+        require(msg.sender == registryAdmin() || msg.sender == address(getContractRegistry()), "caller is not a lock owner");
 
         _;
     }

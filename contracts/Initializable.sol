@@ -18,6 +18,10 @@ contract Initializable {
         _;
     }
 
+    /*
+    * External functions
+    */
+
     function initializationAdmin() public view returns (address) {
         return _initializationAdmin;
     }

@@ -113,8 +113,7 @@ contract Elections is IElections, ManagedContract {
 		valid = expiration != 0 && block.timestamp < expiration;
 	}
 
-	function getVoteUnreadyStatus(address subject) external override view returns
-	(address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee) {
+	function getVoteUnreadyStatus(address subject) external override view returns (address[] memory committee, uint256[] memory weights, bool[] memory certification, bool[] memory votes, bool subjectInCommittee, bool subjectInCertifiedCommittee) {
 		(committee, weights, certification) = committeeContract.getCommittee();
 
 		votes = new bool[](committee.length);
@@ -263,9 +262,8 @@ contract Elections is IElections, ManagedContract {
 
 		emit GuardianStatusUpdated(guardian, true, true);
 
-		bool isCertified = certificationContract.isGuardianCertified(guardian);
 		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
-		committeeContract.addMember(guardian, effectiveStake, isCertified);
+		committeeContract.addMember(guardian, effectiveStake, certificationContract.isGuardianCertified(guardian));
 	}
 
 	function calcEffectiveStake(uint256 selfStake, uint256 delegatedStake, Settings memory _settings) private pure returns (uint256) {
