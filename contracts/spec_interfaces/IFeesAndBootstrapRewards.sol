@@ -81,6 +81,8 @@ interface IFeesAndBootstrapRewards {
     /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
     function setCertifiedCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
 
+    function isRewardAllocationActive() external view returns (bool);
+
     /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
     function migrateRewardsBalance(address guardian) external;
 

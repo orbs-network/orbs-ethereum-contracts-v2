@@ -8,15 +8,19 @@ contract Initializable {
 
     event InitializationComplete();
 
+    constructor() public{
+        _initializationAdmin = msg.sender;
+    }
+
     modifier onlyInitializationAdmin() {
         require(msg.sender == initializationAdmin(), "sender is not the initialization admin");
 
         _;
     }
 
-    constructor() public{
-        _initializationAdmin = msg.sender;
-    }
+    /*
+    * External functions
+    */
 
     function initializationAdmin() public view returns (address) {
         return _initializationAdmin;

@@ -4,7 +4,7 @@ import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
 export interface GuardianStatusUpdatedEvent {
-  addr: string;
+  guardian: string;
   readyToSync: boolean;
   readyForCommittee: boolean;
 }
@@ -46,10 +46,11 @@ export interface ElectionsContract extends OwnedContract {
   getVoteUnreadyPercentMilleThreshold(): Promise<number>;
   getVoteOutPercentMilleThreshold(): Promise<number>;
 
-  getVoteOutStatus(subjectAddr: string): Promise<[
-    number|BN /* votedStake */,
-    number|BN /* totalDelegatedStake */
-  ]>;
+  getVoteOutStatus(subjectAddr: string): Promise<{
+    isVotedOut: boolean,
+    votedStake: number | BN,
+    totalDelegatedStake: number | BN
+  }>;
 
   getVoteUnreadyStatus(subjectAddr: string): Promise<{
     committee: string[],

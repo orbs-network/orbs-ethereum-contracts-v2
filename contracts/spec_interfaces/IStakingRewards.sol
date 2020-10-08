@@ -43,11 +43,16 @@ interface IStakingRewards {
         uint256 lastDelegatorRewardsPerToken
     );
 
+    function getStakingRewardsState() external view returns (
+        uint96 stakingRewardsPerWeight,
+        uint96 unclaimedStakingRewards
+    );
+
     function getCurrentStakingRewardsRatePercentMille() external returns (uint256);
 
     /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
     /// Triggers update of the member rewards
-    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee) external /* onlyCommitteeContract */;
+    function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool inCommitteeAfter) external /* onlyCommitteeContract */;
 
     /// @dev called by the Delegation contract upon expected change in a committee member delegator stake
     /// Triggers update of the delegator and guardian staking rewards
@@ -90,6 +95,8 @@ interface IStakingRewards {
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
     function getAnnualStakingRewardsCap() external view returns (uint256);
+
+    function isRewardAllocationActive() external view returns (bool);
 
     /// @dev Returns the contract's settings
     function getSettings() external view returns (
