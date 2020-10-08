@@ -75,6 +75,131 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
 
 describe('gas usage scenarios', async () => {
+    it("New delegator stakes and delegates (tetra flow)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const delegator = d.newParticipant("delegator");
+        const amount = BASE_STAKE.mul(bn(1000));
+        await delegator.assignOrbs(amount.mul(bn(2)));
+
+        d.resetGasRecording();
+
+        await delegator.delegate(committee[committee.length - 1]);
+        await delegator.approveAndStake(amount);
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("(DELEGATION) New delegator stake increase, lowest committee member gets to top", [delegator]);
+    });
+
+    it("Delegator increases stake (tetra flow)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const delegator = d.newParticipant("delegator");
+        const amount = BASE_STAKE.mul(bn(1000));
+        await delegator.assignOrbs(amount.mul(bn(3)));
+        await delegator.delegate(committee[committee.length - 1]);
+        await delegator.approveAndStake(amount);
+
+        d.resetGasRecording();
+
+        await delegator.approveAndStake(amount);
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("New delegator stake increase, lowest committee member gets to top", [delegator]);
+    });
+
+    it("Claim staking rewards (delegator - first time)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const delegator = d.newParticipant("delegator");
+        const amount = BASE_STAKE;
+        await delegator.delegate(committee[committee.length - 1]);
+        await delegator.stake(amount.mul(bn(3)));
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+
+        d.resetGasRecording();
+
+        await d.stakingRewards.claimStakingRewards(delegator.address, {from: delegator.address});
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("Claim staking rewards (delegator - first time)", [delegator]);
+    });
+
+    it("Claim staking rewards (delegator - second time)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const delegator = d.newParticipant("delegator");
+        const amount = BASE_STAKE;
+        await delegator.delegate(committee[committee.length - 1]);
+        await delegator.stake(amount.mul(bn(3)));
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+        await d.stakingRewards.claimStakingRewards(delegator.address, {from: delegator.address});
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+
+        d.resetGasRecording();
+
+        await d.stakingRewards.claimStakingRewards(delegator.address, {from: delegator.address});
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("Claim staking rewards (delegator - second time)", [delegator]);
+    });
+
+    it("Claim staking rewards (guardian)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+
+        d.resetGasRecording();
+
+        await d.stakingRewards.claimStakingRewards(committee[0].address, {from: committee[0].address});
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("Claim staking rewards (guardian)", [committee[0]]);
+    });
+
+    it("Withdraw bootstrap rewards", async () => {
+        const {d, committee} = await fullCommittee();
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+
+        d.resetGasRecording();
+
+        await d.feesAndBootstrapRewards.withdrawBootstrapFunds(committee[0].address, {from: committee[0].address});
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("Withdraw bootstrap rewards", [committee[0]]);
+    });
+
+    it("Withdraw fees", async () => {
+        const {d, committee} = await fullCommittee();
+
+        await evmIncreaseTime(d.web3, 30*24*60*60);
+
+        d.resetGasRecording();
+
+        await d.feesAndBootstrapRewards.withdrawFees(committee[0].address, {from: committee[0].address});
+
+        // const ge = gasReportEvents(r);
+        // ge.forEach(e => console.log(JSON.stringify(e)));
+
+        d.logGasUsageSummary("Withdraw fees", [committee[0]]);
+    });
+
     it("New delegator stake increase, lowest committee member gets to top", async () => {
         const {d, committee} = await fullCommittee();
 

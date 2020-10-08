@@ -565,14 +565,36 @@ export class Participant {
         return staking.stake(amount, {from: this.address});
     }
 
-    private async assignAndApprove(amount: number|BN, to: string, token: ERC20Contract) {
+    async approveAndStake(amount: number|BN, staking?: StakingContract) : Promise<TransactionReceipt> {
+        staking = staking || this.driver.staking;
+        await this.approveOrbs(amount, staking.address);
+        return staking.stake(amount, {from: this.address});
+    }
+
+    private async assign(amount: number|BN, token: ERC20Contract) {
         await token.assign(this.address, amount);
+    }
+
+    private async approve(amount: number|BN, to: string, token: ERC20Contract) {
         await token.approve(to, amount, {from: this.address});
+    }
+
+    private async assignAndApprove(amount: number|BN, to: string, token: ERC20Contract) {
+        await this.assign(amount, token);
+        await this.approve(amount, to, token);
     }
 
     private async assignAndTransfer(amount: number|BN, to: string, token: ERC20Contract) {
         await token.assign(this.address, amount);
         await token.transfer(to, amount, {from: this.address});
+    }
+
+    async assignOrbs(amount: number|BN) {
+        return this.assign(amount, this.driver.erc20);
+    }
+
+    async approveOrbs(amount: number|BN, to: string) {
+        return this.approve(amount, to, this.driver.erc20);
     }
 
     async assignAndApproveOrbs(amount: number|BN, to: string) {

@@ -100,7 +100,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		CommitteeStats memory _committeeStats = committeeStats;
 
-		stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false);
+		stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, true);
 		feesAndBootstrapRewardsContract.committeeMembershipWillChange(addr, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		_committeeStats.generalCommitteeSize++;
@@ -271,7 +271,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		(uint weight, bool certification) = getWeightCertification(member);
 
-		stakingRewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true);
+		stakingRewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, false);
 		feesAndBootstrapRewardsContract.committeeMembershipWillChange(member.addr, true, certification, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		delete membersStatus[member.addr];
