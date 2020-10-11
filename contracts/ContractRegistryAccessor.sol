@@ -8,7 +8,13 @@ import "./Initializable.sol";
 
 contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializable {
 
-    IContractRegistry contractRegistry;
+    IContractRegistry private contractRegistry;
+
+    constructor(IContractRegistry _contractRegistry, address _registryAdmin) public {
+        require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
+        setContractRegistry(_contractRegistry);
+        _transferRegistryManagement(_registryAdmin);
+    }
 
     modifier onlyAdmin {
         require(isAdmin(), "sender is not an admin (registryManger or initializationAdmin)");
@@ -23,20 +29,6 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     function isAdmin() internal view returns (bool) {
         return msg.sender == registryAdmin() || msg.sender == initializationAdmin() || msg.sender == address(contractRegistry);
-    }
-
-    constructor(IContractRegistry _contractRegistry, address _registryAdmin) public {
-        require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
-        setContractRegistry(_contractRegistry);
-        _transferRegistryManagement(_registryAdmin);
-    }
-
-    event ContractRegistryAddressUpdated(address addr);
-
-    function setContractRegistry(IContractRegistry newContractRegistry) public onlyAdmin {
-        require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
-        contractRegistry = newContractRegistry;
-        emit ContractRegistryAddressUpdated(address(newContractRegistry));
     }
 
     function getProtocolContract() internal view returns (address) {
@@ -97,6 +89,22 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     function getStakingContractHandler() internal view returns (address) {
         return contractRegistry.getContract("stakingContractHandler");
+    }
+
+    /*
+    * Governance functions
+    */
+
+    event ContractRegistryAddressUpdated(address addr);
+
+    function setContractRegistry(IContractRegistry newContractRegistry) public onlyAdmin {
+        require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
+        contractRegistry = newContractRegistry;
+        emit ContractRegistryAddressUpdated(address(newContractRegistry));
+    }
+
+    function getContractRegistry() public view returns (IContractRegistry) {
+        return contractRegistry;
     }
 
 }

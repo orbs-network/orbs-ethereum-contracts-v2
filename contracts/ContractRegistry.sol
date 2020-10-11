@@ -14,6 +14,11 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 	address[] managedContractAddresses;
 	mapping(string => address) managers;
 
+	constructor(address _previousContractRegistry, address registryAdmin) public {
+		previousContractRegistry = _previousContractRegistry;
+		_transferRegistryManagement(registryAdmin);
+	}
+
 	modifier onlyAdmin {
 		require(msg.sender == registryAdmin() || msg.sender == initializationAdmin(), "sender is not an admin (registryAdmin or initializationAdmin when initialization in progress)");
 
@@ -24,11 +29,6 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 		require(msg.sender == registryAdmin() || msg.sender == initializationAdmin() || msg.sender == managers["migrationManager"], "sender is not an admin (registryAdmin or initializationAdmin when initialization in progress) and not the migration manager");
 
 		_;
-	}
-
-	constructor(address _previousContractRegistry, address registryAdmin) public {
-		previousContractRegistry = _previousContractRegistry;
-		_transferRegistryManagement(registryAdmin);
 	}
 
 	/*

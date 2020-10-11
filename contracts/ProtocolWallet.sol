@@ -16,18 +16,18 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     uint256 public lastWithdrawal;
     uint256 maxAnnualRate;
 
-    modifier onlyClient() {
-        require(msg.sender == client, "caller is not the wallet client");
-
-        _;
-    }
-
     constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
         client = _client;
         lastWithdrawal = now;
 
         setMaxAnnualRate(_maxAnnualRate);
+    }
+
+    modifier onlyClient() {
+        require(msg.sender == client, "caller is not the wallet client");
+
+        _;
     }
 
     /*

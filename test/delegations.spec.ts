@@ -5,7 +5,7 @@ import {
     Driver,
 } from "./driver";
 import chai from "chai";
-import {bn, contractId, expectRejected} from "./helpers";
+import {bn, contractId, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
@@ -41,8 +41,8 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(100),
             delegatedStake: bn(100),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: p1.address,
+            delegatorContributedStake: bn(100)
         });
 
         const p2 = d.newParticipant();
@@ -51,15 +51,15 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(0),
             delegatedStake: bn(0),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(0)]
+            delegator: p1.address,
+            delegatorContributedStake: bn(0)
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p2.address,
             selfDelegatedStake: bn(0),
             delegatedStake: bn(100),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: p1.address,
+            delegatorContributedStake: bn(100)
         });
 
         r = await p1.delegate(p1);
@@ -67,8 +67,8 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(100),
             delegatedStake: bn(100),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: p1.address,
+            delegatorContributedStake: bn(100)
         });
     });
 
@@ -81,8 +81,8 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(100),
             delegatedStake: bn(100),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: p1.address,
+            delegatorContributedStake: bn(100)
         });
 
         const p2 = d.newParticipant();
@@ -98,8 +98,8 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(100),
             delegatedStake: bn(200),
-            delegators: [p2.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: p2.address,
+            delegatorContributedStake: bn(100)
         });
 
         r = await p2.stake(11);
@@ -107,8 +107,8 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(100),
             delegatedStake: bn(211),
-            delegators: [p2.address],
-            delegatorTotalStakes: [bn(111)]
+            delegator: p2.address,
+            delegatorContributedStake: bn(111)
         });
 
         const p3 = d.newParticipant();
@@ -122,15 +122,15 @@ describe('delegations-contract', async () => {
             addr: p3.address,
             selfDelegatedStake: bn(0),
             delegatedStake: bn(0),
-            delegators: [p3.address],
-            delegatorTotalStakes: [bn(0)]
+            delegator: p3.address,
+            delegatorContributedStake: bn(0)
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
             selfDelegatedStake: bn(100),
             delegatedStake: bn(311),
-            delegators: [p3.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: p3.address,
+            delegatorContributedStake: bn(100)
         });
 
         const p4 = d.newParticipant();
@@ -148,29 +148,29 @@ describe('delegations-contract', async () => {
             addr: p1.address,
             selfDelegatedStake: bn(200),
             delegatedStake: bn(411),
-            delegators: [p1.address],
-            delegatorTotalStakes: [bn(200)]
+            delegator: p1.address,
+            delegatorContributedStake: bn(200)
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
             selfDelegatedStake: bn(200),
             delegatedStake: bn(611),
-            delegators: [p2.address],
-            delegatorTotalStakes: [bn(311)]
+            delegator: p2.address,
+            delegatorContributedStake: bn(311)
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p1.address,
             selfDelegatedStake: bn(200),
             delegatedStake: bn(911),
-            delegators: [p3.address],
-            delegatorTotalStakes: [bn(400)]
+            delegator: p3.address,
+            delegatorContributedStake: bn(400)
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: p4.address,
             selfDelegatedStake: bn(500),
             delegatedStake: bn(500),
-            delegators: [p4.address],
-            delegatorTotalStakes: [bn(500)]
+            delegator: p4.address,
+            delegatorContributedStake: bn(500)
         });
     });
 
@@ -186,20 +186,20 @@ describe('delegations-contract', async () => {
         r = await d1.delegate(v1);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v1.address,
-            delegators: [d1.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: d1.address,
+            delegatorContributedStake: bn(100)
         });
 
         r = await d1.delegate(v2);
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v2.address,
-            delegators: [d1.address],
-            delegatorTotalStakes: [bn(100)]
+            delegator: d1.address,
+            delegatorContributedStake: bn(100)
         });
         expect(r).to.have.a.delegatedStakeChangedEvent({
             addr: v1.address,
-            delegators: [d1.address],
-            delegatorTotalStakes: [bn(0)]
+            delegator: d1.address,
+            delegatorContributedStake: bn(0)
         });
     });
 
@@ -300,9 +300,10 @@ describe('delegations-contract', async () => {
 
     });
 
-    const importDelegationsTestGenerator = (notifyElections: boolean) => {
+    const importDelegationsTestGenerator = () => {
         return async () => {
-            const d = await Driver.new();
+            const d = await Driver.new({callInitializationComplete: false});
+            await d.stakingRewards.deactivateRewardDistribution({from: d.migrationManager.address});
 
             await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
 
@@ -322,10 +323,8 @@ describe('delegations-contract', async () => {
 
             expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(200));
 
-            let r = await d.delegations.importDelegations([d1.address], v1.address, notifyElections, {from: d.migrationManager.address});
-            notifyElections ?
-                await expectCommittee(d,  {addrs: [v1.address, v2.address]}) :
-                expect(r).to.not.have.a.committeeChangeEvent();
+            let r = await d.delegations.importDelegations([d1.address], v1.address, {from: d.initializationAdmin.address});
+            expect(r).to.not.have.a.committeeChangeEvent();
 
             expect(r).to.have.a.delegationsImportedEvent({
                 from: [d1.address],
@@ -336,16 +335,14 @@ describe('delegations-contract', async () => {
                 addr: v1.address,
                 selfDelegatedStake: bn(100),
                 delegatedStake: bn(200),
-                delegators: [d1.address],
-                delegatorTotalStakes: [bn(100)]
+                delegator: d1.address,
+                delegatorContributedStake: bn(100)
             });
 
             expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(300));
 
-            r = await d.delegations.importDelegations([d2.address, d3.address], v2.address, notifyElections, {from: d.migrationManager.address});
-            notifyElections ?
-                await expectCommittee(d,  {addrs: [v2.address, v1.address]}) :
-                expect(r).to.not.have.a.committeeChangeEvent();
+            r = await d.delegations.importDelegations([d2.address, d3.address], v2.address, {from: d.initializationAdmin.address});
+            expect(r).to.not.have.a.committeeChangeEvent();
 
             expect(r).to.have.a.delegationsImportedEvent({
                 from: [d2.address, d3.address],
@@ -356,33 +353,83 @@ describe('delegations-contract', async () => {
             expect(r).to.have.a.delegatedStakeChangedEvent({
                 addr: v2.address,
                 selfDelegatedStake: bn(100),
+                delegatedStake: bn(300),
+                delegator: d2.address,
+                delegatorContributedStake: bn(200)
+            });
+            expect(r).to.have.a.delegatedStakeChangedEvent({
+                addr: v2.address,
+                selfDelegatedStake: bn(100),
                 delegatedStake: bn(600),
-                delegators: [d2.address, d3.address],
-                delegatorTotalStakes: [bn(200), bn(300)]
+                delegator: d3.address,
+                delegatorContributedStake: bn(300)
             });
 
             expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(800));
 
             // import a delegation when already delegated should fail
 
-            await expectRejected(d.delegations.importDelegations([d1.address], v2.address, notifyElections, {from: d.migrationManager.address}),
+            await expectRejected(d.delegations.importDelegations([d1.address], v2.address, {from: d.initializationAdmin.address}),
                 /import allowed only for uninitialized accounts. existing delegation detected/);
 
-            await expectRejected(d.delegations.importDelegations([v2.address], v1.address, notifyElections, {from: d.migrationManager.address}),
+            await expectRejected(d.delegations.importDelegations([v2.address], v1.address, {from: d.initializationAdmin.address}),
                 /import allowed only for uninitialized accounts. existing stake detected/);
 
-            if (!notifyElections) { // manual notification refresh:
-                r = await d.delegations.refreshStakeNotification(v1.address);
-                await expectCommittee(d,  {addrs: [v1.address, v2.address]});
+            r = await d.delegations.refreshStake(v1.address);
+            await expectCommittee(d,  {addrs: [v1.address, v2.address]});
 
-                r = await d.delegations.refreshStakeNotification(v2.address);
-                await expectCommittee(d,  {addrs: [v2.address, v1.address]});
-            }
+            r = await d.delegations.refreshStake(v2.address);
+            await expectCommittee(d,  {addrs: [v2.address, v1.address]});
         };
     };
 
-    // it('imports a delegation for a delegator with an existing stake (without elections notification)', importDelegationsTestGenerator(false));
-    it('imports a delegation for a delegator with an existing stake (with    elections notification)', importDelegationsTestGenerator(true));
+    it('imports a delegation for a delegator with an existing stake', importDelegationsTestGenerator());
+
+    it('does not import delegations when rewards have been assigned', async () => {
+        const d = await Driver.new({callInitializationComplete: false});
+
+        const g = d.newParticipant();
+        const poolAmount = fromTokenUnits(1000000000000);
+        await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
+        await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
+        await d.stakingRewards.setAnnualStakingRewardsRate(1200, fromTokenUnits(1000000), {from: d.functionalManager.address});
+
+        const {v} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
+        await evmIncreaseTime(d.web3, 365*24*60*60);
+        const p = d.newParticipant();
+        const p2 = d.newParticipant();
+        await expectRejected(d.delegations.importDelegations([p.address], p2.address, {from: d.initializationAdmin.address}), /no rewards may be allocated prior to importing delegations/);
+    });
+
+    it('allows the initialization manager to init a delegation at any time', async () => {
+        const d = await Driver.new();
+
+        let p = d.newParticipant();
+        let p2 = d.newParticipant();
+        let r = await d.delegations.initDelegation(p.address, p2.address, {from: d.initializationAdmin.address});
+        expect(r).to.have.a.delegatedEvent({
+            from: p.address,
+            to: p2.address
+        });
+        expect(r).to.have.a.delegationInitializedEvent({
+            from: p.address,
+            to: p2.address
+        });
+
+        await d.stakingRewards.deactivateRewardDistribution({from: d.migrationManager.address});
+
+        p = d.newParticipant();
+        p2 = d.newParticipant();
+        r = await d.delegations.initDelegation(p.address, p2.address, {from: d.initializationAdmin.address});
+        expect(r).to.have.a.delegatedEvent({
+            from: p.address,
+            to: p2.address
+        });
+        expect(r).to.have.a.delegationInitializedEvent({
+            from: p.address,
+            to: p2.address
+        });
+    });
 
     it('tracks uncappedStakes and totalDelegateStakes correctly on importDelegations', async () => {
         const d = await Driver.new();
@@ -400,39 +447,36 @@ describe('delegations-contract', async () => {
 
         await d.stakingContractHandler.setNotifyDelegations(true, {from: d.migrationManager.address});
 
-        await d.delegations.importDelegations([d1.address], d2.address, false, {from: d.migrationManager.address});
+        await d.delegations.importDelegations([d1.address], d2.address, {from: d.initializationAdmin.address});
         expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(100));
-        expect(await d.delegations.uncappedStakes(d1.address)).to.be.bignumber.equal(bn(0));
-        expect(await d.delegations.uncappedStakes(d2.address)).to.be.bignumber.equal(bn(100));
-        expect(await d.delegations.uncappedStakes(d3.address)).to.be.bignumber.equal(bn(0));
+        expect(await d.delegations.uncappedDelegatedStake(d1.address)).to.be.bignumber.equal(bn(0));
+        expect(await d.delegations.uncappedDelegatedStake(d2.address)).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedDelegatedStake(d3.address)).to.be.bignumber.equal(bn(0));
 
-        await d.delegations.importDelegations([d3.address], d1.address, false, {from: d.migrationManager.address});
+        await d.delegations.importDelegations([d3.address], d1.address, {from: d.initializationAdmin.address});
         expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(100));
-        expect(await d.delegations.uncappedStakes(d1.address)).to.be.bignumber.equal(bn(300));
-        expect(await d.delegations.uncappedStakes(d2.address)).to.be.bignumber.equal(bn(100));
-        expect(await d.delegations.uncappedStakes(d3.address)).to.be.bignumber.equal(bn(0));
+        expect(await d.delegations.uncappedDelegatedStake(d1.address)).to.be.bignumber.equal(bn(300));
+        expect(await d.delegations.uncappedDelegatedStake(d2.address)).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedDelegatedStake(d3.address)).to.be.bignumber.equal(bn(0));
 
-        await d.delegations.importDelegations([d2.address], d3.address, false, {from: d.migrationManager.address});
+        await d.delegations.importDelegations([d2.address], d3.address, {from: d.initializationAdmin.address});
         expect(await d.delegations.getTotalDelegatedStake()).to.be.bignumber.equal(bn(0));
-        expect(await d.delegations.uncappedStakes(d1.address)).to.be.bignumber.equal(bn(300));
-        expect(await d.delegations.uncappedStakes(d2.address)).to.be.bignumber.equal(bn(100));
-        expect(await d.delegations.uncappedStakes(d3.address)).to.be.bignumber.equal(bn(200));
+        expect(await d.delegations.uncappedDelegatedStake(d1.address)).to.be.bignumber.equal(bn(300));
+        expect(await d.delegations.uncappedDelegatedStake(d2.address)).to.be.bignumber.equal(bn(100));
+        expect(await d.delegations.uncappedDelegatedStake(d3.address)).to.be.bignumber.equal(bn(200));
     });
 
-    it('ensures only the migration owner can import a delegation and finalize imports', async () => {
+    it('ensures only the initialization admin can import a delegation', async () => {
        const d = await Driver.new();
 
        const d1 = d.newParticipant();
        const v1 = d.newParticipant();
 
-       await expectRejected(d.delegations.importDelegations([d1.address], v1.address, false, {from: d.functionalManager.address}), /sender is not the migration manager/);
-       await d.delegations.importDelegations([d1.address], v1.address, false, {from: d.migrationManager.address});
+       await expectRejected(d.delegations.importDelegations([d1.address], v1.address, {from: d.functionalManager.address}), /sender is not the initialization admin/);
+       await d.delegations.importDelegations([d1.address], v1.address, {from: d.initializationAdmin.address});
 
-       await expectRejected(d.delegations.finalizeDelegationImport({from: d.functionalManager.address}), /sender is not the migration manager/);
-       let r = await d.delegations.finalizeDelegationImport({from: d.migrationManager.address});
-       expect(r).to.have.a.delegationImportFinalizedEvent({});
-
-       await expectRejected(d.delegations.importDelegations([d1.address], v1.address, false, {from: d.migrationManager.address}), /delegation import was finalized/);
+       await d.delegations.initializationComplete({from: d.initializationAdmin.address});
+       await expectRejected(d.delegations.importDelegations([d1.address], v1.address, {from: d.migrationManager.address}), /sender is not the initialization admin/);
     });
 
     it('properly handles a delegation when self stake of delegator is not yet initialized', async () => {

@@ -15,12 +15,6 @@ contract Committee is ICommittee, ManagedContract {
 	uint96 constant CERTIFICATION_MASK = 1 << 95;
 	uint96 constant WEIGHT_MASK = ~CERTIFICATION_MASK;
 
-	modifier onlyElectionsContract() {
-		require(msg.sender == electionsContract, "caller is not the elections");
-
-		_;
-	}
-
 	struct CommitteeMember {
 		address addr;
 		uint96 weightAndCertifiedBit;
@@ -44,6 +38,12 @@ contract Committee is ICommittee, ManagedContract {
 
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin, uint8 _maxCommitteeSize) ManagedContract(_contractRegistry, _registryAdmin) public {
 		setMaxCommitteeSize(_maxCommitteeSize);
+	}
+
+	modifier onlyElectionsContract() {
+		require(msg.sender == electionsContract, "caller is not the elections");
+
+		_;
 	}
 
 	/*
@@ -100,7 +100,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		CommitteeStats memory _committeeStats = committeeStats;
 
-		stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false);
+		stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, true);
 		feesAndBootstrapRewardsContract.committeeMembershipWillChange(addr, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		_committeeStats.generalCommitteeSize++;
@@ -271,7 +271,7 @@ contract Committee is ICommittee, ManagedContract {
 
 		(uint weight, bool certification) = getWeightCertification(member);
 
-		stakingRewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true);
+		stakingRewardsContract.committeeMembershipWillChange(member.addr, weight, _committeeStats.totalWeight, true, false);
 		feesAndBootstrapRewardsContract.committeeMembershipWillChange(member.addr, true, certification, certification, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
 
 		delete membersStatus[member.addr];

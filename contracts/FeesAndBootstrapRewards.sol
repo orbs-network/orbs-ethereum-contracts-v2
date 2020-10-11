@@ -48,12 +48,6 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
-    modifier onlyCommitteeContract() {
-        require(msg.sender == address(committeeContract), "caller is not the elections contract");
-
-        _;
-    }
-
     constructor(
         IContractRegistry _contractRegistry,
         address _registryAdmin,
@@ -70,6 +64,12 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         erc20 = _erc20;
         bootstrapToken = _bootstrapToken;
+    }
+
+    modifier onlyCommitteeContract() {
+        require(msg.sender == address(committeeContract), "caller is not the elections contract");
+
+        _;
     }
 
     /*
@@ -227,6 +227,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         emit EmergencyWithdrawal(msg.sender);
         require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
         require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
+    }
+
+    function isRewardAllocationActive() external override view returns (bool) {
+        return settings.rewardAllocationActive;
     }
 
     /*

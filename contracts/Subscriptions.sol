@@ -20,7 +20,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     struct VirtualChain {
         string name;
         string tier;
-        uint256 rate;
+        uint256 rate; // TODO get rate from subscriber when extending, don't keep in state
         uint expiresAt;
         uint256 genRefTime;
         address owner;
@@ -236,5 +236,4 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
         protocolContract = IProtocol(getProtocolContract());
     }
-
 }

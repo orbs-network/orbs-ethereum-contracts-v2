@@ -21,15 +21,15 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     mapping(uint256 => uint256) public buckets;
     uint256 public lastCollectedAt;
 
+    constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
+        token = _token;
+        lastCollectedAt = now;
+    }
+
     modifier onlyRewardsContract() {
         require(msg.sender == rewardsContract, "caller is not the rewards contract");
 
         _;
-    }
-
-    constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
-        token = _token;
-        lastCollectedAt = now;
     }
 
     /*
