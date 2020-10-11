@@ -44,7 +44,7 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor {
         ISubscriptions subs = ISubscriptions(getSubscriptionsContract());
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from vc payer to subscriber");
         require(erc20.approve(address(subs), amount), "failed to approve subscription fees to subscriptions by subscriber");
-        subs.extendSubscription(vcId, amount, msg.sender);
+        subs.extendSubscription(vcId, amount, tier, monthlyRate, msg.sender);
     }
 
 }
