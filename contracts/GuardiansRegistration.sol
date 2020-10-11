@@ -8,12 +8,6 @@ import "./ManagedContract.sol";
 
 contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 
-	modifier onlyRegisteredGuardian {
-		require(isRegistered(msg.sender), "Guardian is not registered");
-
-		_;
-	}
-
 	struct Guardian {
 		address orbsAddr;
 		bytes4 ip;
@@ -36,6 +30,12 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		}
 	}
 
+	modifier onlyRegisteredGuardian {
+		require(isRegistered(msg.sender), "Guardian is not registered");
+
+		_;
+	}
+
 	/*
      * External methods
      */
@@ -48,8 +48,6 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		emit GuardianRegistered(msg.sender);
 
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
-
-		electionsContract.guardianRegistered(msg.sender);
 	}
 
     /// @dev Called by a participant who wishes to update its properties

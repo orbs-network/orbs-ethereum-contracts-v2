@@ -4,11 +4,13 @@ pragma solidity 0.6.12;
 
 /// @title An interface for staking contracts.
 interface IStakingContractHandler {
-    event StakeChangeNotificationSkipped(address stakeOwner);
+    event StakeChangeNotificationSkipped(address indexed stakeOwner);
     event StakeChangeBatchNotificationSkipped(address[] stakeOwners);
-    event StakeMigrationNotificationSkipped(address stakeOwner);
+    event StakeMigrationNotificationSkipped(address indexed stakeOwner);
 
-    event NotifyDelegationsChanged(bool notifyDelegations);
+    /*
+    * External functions
+    */
 
     /// @dev Returns the stake of the specified stake owner (excluding unstaked tokens).
     /// @param _stakeOwner address The address to check.
@@ -19,5 +21,13 @@ interface IStakingContractHandler {
     /// @return uint256 The total staked tokens of all stake owners.
     function getTotalStakedTokens() external view returns (uint256);
 
+    /*
+    * Governance functions
+    */
+
+    event NotifyDelegationsChanged(bool notifyDelegations);
+
     function setNotifyDelegations(bool notifyDelegations) external; /* onlyMigrationManager */
+
+    function getNotifyDelegations() external returns (bool);
 }

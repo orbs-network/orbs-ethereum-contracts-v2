@@ -20,7 +20,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     struct VirtualChain {
         string name;
         string tier;
-        uint256 rate;
+        uint256 rate; // TODO get rate from subscriber when extending, don't keep in state
         uint expiresAt;
         uint256 genRefTime;
         address owner;
@@ -54,6 +54,12 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         for (uint i = 0; i < vcIds.length; i++) {
             importSubscription(vcIds[i], previousSubscriptionsContract);
         }
+    }
+
+    modifier onlySubscriber {
+        require(authorizedSubscribers[msg.sender], "sender must be an authorized subscriber");
+
+        _;
     }
 
     /*
@@ -112,8 +118,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit SubscriberRemoved(addr);
     }
 
-    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlyWhenActive returns (uint, uint) {
-        require(authorizedSubscribers[msg.sender], "must be an authorized subscriber");
+    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlySubscriber onlyWhenActive returns (uint, uint) {
         require(owner != address(0), "vc owner cannot be the zero address");
         require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
         require(amount >= settings.minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
@@ -133,12 +138,12 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
         emit VcCreated(vcId);
 
-        _extendSubscription(vcId, amount, owner);
+        _extendSubscription(vcId, amount, tier, rate, owner);
         return (vcId, vc.genRefTime);
     }
 
-    function extendSubscription(uint256 vcId, uint256 amount, address payer) external override onlyWhenActive {
-        _extendSubscription(vcId, amount, payer);
+    function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external override onlySubscriber onlyWhenActive {
+        _extendSubscription(vcId, amount, tier, rate, payer);
     }
 
     function getVcData(uint256 vcId) external override view returns (
@@ -205,20 +210,24 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     * Private functions
     */
 
-    function _extendSubscription(uint256 vcId, uint256 amount, address payer) private {
+    function _extendSubscription(uint256 vcId, uint256 amount, string memory tier, uint256 rate, address payer) private {
         VirtualChain memory vc = virtualChains[vcId];
+        require(vc.genRefTime != 0, "vc does not exist");
+        require(keccak256(bytes(tier)) == keccak256(bytes(virtualChains[vcId].tier)), "given tier must match the VC tier");
 
         IFeesWallet feesWallet = vc.isCertified ? certifiedFeesWallet : generalFeesWallet;
         require(erc20.transferFrom(msg.sender, address(this), amount), "failed to transfer subscription fees from subscriber to subscriptions");
         require(erc20.approve(address(feesWallet), amount), "failed to approve rewards to acquire subscription fees");
 
         uint fromTimestamp = vc.expiresAt > now ? vc.expiresAt : now;
-        feesWallet.fillFeeBuckets(amount, vc.rate, fromTimestamp);
+        feesWallet.fillFeeBuckets(amount, rate, fromTimestamp);
 
-        vc.expiresAt = fromTimestamp.add(amount.mul(30 days).div(vc.rate));
+        vc.expiresAt = fromTimestamp.add(amount.mul(30 days).div(rate));
+        vc.rate = rate;
 
         // commit new expiration timestamp to storage
         virtualChains[vcId].expiresAt = vc.expiresAt;
+        virtualChains[vcId].rate = vc.rate;
 
         emit SubscriptionChanged(vcId, vc.owner, vc.name, vc.genRefTime, vc.tier, vc.rate, vc.expiresAt, vc.isCertified, vc.deploymentSubset);
         emit Payment(vcId, payer, amount, vc.tier, vc.rate);
@@ -236,5 +245,4 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         certifiedFeesWallet = IFeesWallet(getCertifiedFeesWallet());
         protocolContract = IProtocol(getProtocolContract());
     }
-
 }

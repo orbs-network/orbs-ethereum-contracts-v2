@@ -61,6 +61,7 @@ export interface SubscriptionsContract extends OwnedContract {
   addSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
   removeSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcConfigRecord(vcId: number|BN, key: string, value: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  extendSubscription(vcId: number, amount: number|BN, tier: string, rate: number|BN, payer: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getVcConfigRecord(vcId: number|BN, key: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcOwner(vcId: number|BN, owner: string, params?: TransactionConfig): Promise<TransactionReceipt>;

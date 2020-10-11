@@ -40,8 +40,8 @@ import {
   GuardianUnregisteredEvent
 } from "../typings/guardian-registration-contract";
 import {
-    DelegatedEvent,
-    DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationsImportedEvent
+  DelegatedEvent,
+  DelegatedStakeChangedEvent, DelegationImportFinalizedEvent, DelegationInitializedEvent, DelegationsImportedEvent
 } from "../typings/delegations-contract";
 import {
   MaxCommitteeSizeChangedEvent,
@@ -278,6 +278,7 @@ declare global {
       emergencyWithdrawalEvent(data?: Partial<EmergencyWithdrawalEvent>);
       delegationImportFinalizedEvent(data?: Partial<DelegationImportFinalizedEvent>);
       delegationsImportedEvent(data?: Partial<DelegationsImportedEvent>);
+      delegationInitializedEvent(data?: Partial<DelegationInitializedEvent>);
       transferEvent(data?: Partial<{from: string, to: string, value: string|BN}>);
       subscriberAddedEvent(data?: Partial<SubscriberAddedEvent>);
       subscriberRemovedEvent(data?: Partial<SubscriberRemovedEvent>);
