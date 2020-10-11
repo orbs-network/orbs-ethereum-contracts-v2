@@ -3,6 +3,7 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./SafeMath96.sol";
 import "./spec_interfaces/IElections.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./IStakeChangeNotifier.sol";
@@ -12,7 +13,7 @@ import "./ManagedContract.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
-	using SafeMath for uint96; // TODO SafeMath96
+	using SafeMath96 for uint96;
 
 	address constant public VOID_ADDR = address(-1);
 
