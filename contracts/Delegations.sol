@@ -3,6 +3,7 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./SafeMath96.sol";
 import "./spec_interfaces/IElections.sol";
 import "./spec_interfaces/IDelegation.sol";
 import "./IStakeChangeNotifier.sol";
@@ -12,7 +13,7 @@ import "./ManagedContract.sol";
 
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
-	using SafeMath for uint96; // TODO SafeMath96
+	using SafeMath96 for uint96;
 
 	address constant public VOID_ADDR = address(-1);
 
@@ -241,31 +242,33 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 		totalDelegatedStake = _totalDelegatedStake;
 
-		IElections _electionsContract = electionsContract;
-
-		_electionsContract.delegatedStakeChange(
-			prevDelegate,
-			vars.prevDelegateStatusAfter.selfDelegatedStake,
-			vars.prevDelegateStatusAfter.delegatedStake,
-			_totalDelegatedStake
-		);
-
-		_electionsContract.delegatedStakeChange(
-			to,
-			vars.newDelegateStatusAfter.selfDelegatedStake,
-			vars.newDelegateStatusAfter.delegatedStake,
-			_totalDelegatedStake
-		);
-
 		emit Delegated(from, to);
 
-		if (delegatorStake != 0 && prevDelegate != to) {
+		IElections _electionsContract = electionsContract;
+
+		if (vars.prevDelegateStatusBefore.delegatedStake != vars.prevDelegateStatusAfter.delegatedStake) {
+			_electionsContract.delegatedStakeChange(
+				prevDelegate,
+				vars.prevDelegateStatusAfter.selfDelegatedStake,
+				vars.prevDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake
+			);
+
 			emit DelegatedStakeChanged(
 				prevDelegate,
 				vars.prevDelegateStatusAfter.selfDelegatedStake,
 				vars.prevDelegateStatusAfter.delegatedStake,
 				from,
 				0
+			);
+		}
+
+		if (vars.newDelegateStatusBefore.delegatedStake != vars.newDelegateStatusAfter.delegatedStake) {
+			_electionsContract.delegatedStakeChange(
+				to,
+				vars.newDelegateStatusAfter.selfDelegatedStake,
+				vars.newDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake
 			);
 
 			emit DelegatedStakeChanged(
