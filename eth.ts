@@ -29,7 +29,6 @@ export const defaultWeb3Provider = () => process.env.GANACHE_CORE ?
             total_accounts: 400,
             gasPrice: 1,
             gasLimit: "0x7fffffff",
-            // logger: console,
             ...(ETHERUM_FORK_URL ? {fork: ETHERUM_FORK_URL} : {})
         }))
     :
@@ -70,11 +69,10 @@ export class Web3Driver{
         let txHash;
         for (let attempt = 0; attempt < 5; attempt++) {
             try {
-                const deployTx = new this.web3.eth.Contract(abi).deploy({
+                web3Contract = await new this.web3.eth.Contract(abi).deploy({
                     data: compiledContracts[contractName].bytecode,
                     arguments: args || []
-                });
-                web3Contract = await deployTx.send({
+                }).send({
                     from: accounts[0],
                     gasPrice: GAS_PRICE_DEPLOY,
                     gas: GAS_LIMIT,
