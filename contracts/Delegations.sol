@@ -242,31 +242,33 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 		totalDelegatedStake = _totalDelegatedStake;
 
-		IElections _electionsContract = electionsContract;
-
-		_electionsContract.delegatedStakeChange(
-			prevDelegate,
-			vars.prevDelegateStatusAfter.selfDelegatedStake,
-			vars.prevDelegateStatusAfter.delegatedStake,
-			_totalDelegatedStake
-		);
-
-		_electionsContract.delegatedStakeChange(
-			to,
-			vars.newDelegateStatusAfter.selfDelegatedStake,
-			vars.newDelegateStatusAfter.delegatedStake,
-			_totalDelegatedStake
-		);
-
 		emit Delegated(from, to);
 
-		if (delegatorStake != 0 && prevDelegate != to) {
+		IElections _electionsContract = electionsContract;
+
+		if (vars.prevDelegateStatusBefore.delegatedStake != vars.prevDelegateStatusAfter.delegatedStake) {
+			_electionsContract.delegatedStakeChange(
+				prevDelegate,
+				vars.prevDelegateStatusAfter.selfDelegatedStake,
+				vars.prevDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake
+			);
+
 			emit DelegatedStakeChanged(
 				prevDelegate,
 				vars.prevDelegateStatusAfter.selfDelegatedStake,
 				vars.prevDelegateStatusAfter.delegatedStake,
 				from,
 				0
+			);
+		}
+
+		if (vars.newDelegateStatusBefore.delegatedStake != vars.newDelegateStatusAfter.delegatedStake) {
+			_electionsContract.delegatedStakeChange(
+				to,
+				vars.newDelegateStatusAfter.selfDelegatedStake,
+				vars.newDelegateStatusAfter.delegatedStake,
+				_totalDelegatedStake
 			);
 
 			emit DelegatedStakeChanged(
