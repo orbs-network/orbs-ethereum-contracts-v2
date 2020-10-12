@@ -10,6 +10,7 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 export const ETHEREUM_URL = process.env.ETHEREUM_URL || "http://localhost:7545";
 
 const ETHEREUM_MNEMONIC = process.env.ETHEREUM_MNEMONIC || "vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid";
+const ETHERUM_FORK_URL = process.env.ETHEREUM_FORK_URL || "";
 
 const GAS_LIMIT = parseInt(process.env.GAS_LIMIT  || '7000000');
 const GAS_PRICE = parseInt(process.env.GAS_PRICE  || '1000000000'); // default: 1 Gwei
@@ -27,7 +28,8 @@ export const defaultWeb3Provider = () => process.env.GANACHE_CORE ?
             default_balance_ether: 100,
             total_accounts: 400,
             gasPrice: 1,
-            gasLimit: "0x7fffffff"
+            gasLimit: "0x7fffffff",
+            ...(ETHERUM_FORK_URL ? {fork: ETHERUM_FORK_URL} : {})
         }))
     :
         new Web3(new HDWalletProvider(
