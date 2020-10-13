@@ -452,7 +452,7 @@ describe.only('rewards', async () => {
 
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: total
+            claimed: total
         });
         expect(r).to.have.approx().a.stakedEvent({
             stakeOwner: c0.address,
@@ -540,20 +540,20 @@ describe.only('rewards', async () => {
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: cTotal
+            claimed: cTotal
         });
 
         r = await d.stakingRewards.claimStakingRewards(d0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: d0.address,
-            amount: dTotal
+            claimed: dTotal
         });
 
         expect(cTotal).to.be.bignumber.gt(bn(0));
         expect(dTotal).to.be.bignumber.gt(bn(0));
     });
 
-    it('emits StakingRewardAssigned events', async () => {
+    it('emits StakingRewardsAssigned and StakingRewardsClaimed events', async () => {
         const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const c0 = committee[0];
@@ -579,15 +579,55 @@ describe.only('rewards', async () => {
         expect(r).to.have.a.approx().guardianStakingRewardsAssignedEvent({
             guardian: c0.address,
             amount: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
+            totalAwarded: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
             delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
             stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
         });
         expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
             delegator: d0.address,
             amount: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
+            totalAwarded: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
             guardian: c0.address,
             delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
         });
+        
+        const guardianRewards = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance);
+        const delegatorRewards = bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).balance);
+        r = await d.stakingRewards.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            addr: c0.address,
+            claimed: guardianRewards.add(delegatorRewards),
+            claimedGuardianRewards: guardianRewards,
+            claimedDelegatorRewards: delegatorRewards,
+            totalClaimed: guardianRewards.add(delegatorRewards),
+            totalClaimedGuardianRewards: guardianRewards,
+            totalClaimedDelegatorRewards: delegatorRewards
+        });
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const guardianRewards2 = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance);
+        const delegatorRewards2 = bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).balance);
+
+        r = await d.stakingRewards.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().guardianStakingRewardsAssignedEvent({
+            guardian: c0.address,
+            totalAwarded: guardianRewards.add(guardianRewards2),
+        });
+        expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
+            delegator: c0.address,
+            totalAwarded: delegatorRewards.add(delegatorRewards2),
+        });
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            addr: c0.address,
+            claimed: guardianRewards2.add(delegatorRewards2),
+            claimedGuardianRewards: guardianRewards2,
+            claimedDelegatorRewards: delegatorRewards2,
+            totalClaimed: guardianRewards.add(delegatorRewards).add(guardianRewards2).add(delegatorRewards2),
+            totalClaimedGuardianRewards: guardianRewards.add(guardianRewards2),
+            totalClaimedDelegatorRewards: delegatorRewards.add(delegatorRewards2)
+        });
+
     });
 
     it('tracks total unclaimed staking rewards', async () => {
@@ -642,13 +682,13 @@ describe.only('rewards', async () => {
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: c0Total
+            claimed: c0Total
         });
 
         r = await d.stakingRewards.claimStakingRewards(c1.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c1.address,
-            amount: c1Total
+            claimed: c1Total
         });
 
         expect(c0Total).to.be.bignumber.gt(bn(0));
@@ -699,19 +739,19 @@ describe.only('rewards', async () => {
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: c0Total
+            claimed: c0Total
         });
 
         r = await d.stakingRewards.claimStakingRewards(c2.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c2.address,
-            amount: c2Total
+            claimed: c2Total
         });
 
         r = await d.stakingRewards.claimStakingRewards(c3.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c3.address,
-            amount: c3Total
+            claimed: c3Total
         });
 
         expect(c0Total).to.be.bignumber.gt(bn(0));
@@ -1057,13 +1097,13 @@ describe.only('rewards', async () => {
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: cTotal
+            claimed: cTotal
         });
 
         r = await d.stakingRewards.claimStakingRewards(d0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: d0.address,
-            amount: dTotal
+            claimed: dTotal
         });
 
         expect(cTotal).to.be.bignumber.gt(bn(0));

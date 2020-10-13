@@ -10,6 +10,7 @@ export interface StakingRewardsAllocatedEvent {
 export interface GuardianStakingRewardsAssignedEvent {
     guardian: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
     delegatorRewardsPerToken: (string|BN),
     stakingRewardsPerWeight: (string|BN)
 }
@@ -17,6 +18,7 @@ export interface GuardianStakingRewardsAssignedEvent {
 export interface DelegatorStakingRewardsAssignedEvent {
     delegator: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
     guardian: string,
     delegatorRewardsPerToken: (string|BN)
 }
@@ -45,7 +47,12 @@ export interface StakingRewardsBalanceMigrationAcceptedEvent {
 
 export interface StakingRewardsClaimedEvent {
     addr: string;
-    amount: number|BN;
+    claimed: number|BN;
+    claimedDelegatorRewards: number|BN;
+    claimedGuardianRewards: number|BN;
+    totalClaimed: number|BN;
+    totalClaimedDelegatorRewards: number|BN;
+    totalClaimedGuardianRewards: number|BN;
 }
 
 export interface AnnualStakingRewardsRateChangedEvent {
