@@ -47,10 +47,8 @@ export interface StakingRewardsBalanceMigrationAcceptedEvent {
 
 export interface StakingRewardsClaimedEvent {
     addr: string;
-    claimed: number|BN;
     claimedDelegatorRewards: number|BN;
     claimedGuardianRewards: number|BN;
-    totalClaimed: number|BN;
     totalClaimedDelegatorRewards: number|BN;
     totalClaimedGuardianRewards: number|BN;
 }

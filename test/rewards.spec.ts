@@ -19,9 +19,11 @@ import {
     toMilliOrbs
 } from "./helpers";
 import {
-    stakingRewardsAssignedEvents,
+    stakingRewardsAssignedEvents, stakingRewardsClaimedEvents,
 } from "./event-parsing";
 import {chaiEventMatchersPlugin} from "./matchers";
+import {StakingRewardsClaimedEvent} from "../typings/staking-rewards-contract";
+import {TransactionReceipt} from "web3-core";
 
 declare const web3: Web3;
 
@@ -160,7 +162,12 @@ function expectApproxEq(actual: BN|string|number, expected: BN|string|number) {
     assert(bn(actual).sub(bn(expected)).abs().lte(BN.max(bn(actual), bn(expected)).div(bn(50))), `Expected ${actual.toString()} to approx. equal ${expected.toString()}`);
 }
 
-describe.only('rewards', async () => {
+function getTotalClaimedFromEvent(r: TransactionReceipt): BN {
+    const event: StakingRewardsClaimedEvent = stakingRewardsClaimedEvents(r)[0];
+    return bn(event.claimedDelegatorRewards).add(bn(event.claimedGuardianRewards));
+}
+
+describe('rewards', async () => {
 
     // Bootstrap and fees
 
@@ -452,8 +459,9 @@ describe.only('rewards', async () => {
 
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            claimed: total
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(total);
+
         expect(r).to.have.approx().a.stakedEvent({
             stakeOwner: c0.address,
             amount: total
@@ -540,14 +548,14 @@ describe.only('rewards', async () => {
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            claimed: cTotal
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(cTotal);
 
         r = await d.stakingRewards.claimStakingRewards(d0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: d0.address,
-            claimed: dTotal
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(dTotal);
 
         expect(cTotal).to.be.bignumber.gt(bn(0));
         expect(dTotal).to.be.bignumber.gt(bn(0));
@@ -596,13 +604,12 @@ describe.only('rewards', async () => {
         r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
             addr: c0.address,
-            claimed: guardianRewards.add(delegatorRewards),
             claimedGuardianRewards: guardianRewards,
             claimedDelegatorRewards: delegatorRewards,
-            totalClaimed: guardianRewards.add(delegatorRewards),
             totalClaimedGuardianRewards: guardianRewards,
             totalClaimedDelegatorRewards: delegatorRewards
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(guardianRewards.add(delegatorRewards));
 
         await evmIncreaseTimeForQueries(d.web3, PERIOD);
 
@@ -620,14 +627,12 @@ describe.only('rewards', async () => {
         });
         expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
             addr: c0.address,
-            claimed: guardianRewards2.add(delegatorRewards2),
             claimedGuardianRewards: guardianRewards2,
             claimedDelegatorRewards: delegatorRewards2,
-            totalClaimed: guardianRewards.add(delegatorRewards).add(guardianRewards2).add(delegatorRewards2),
             totalClaimedGuardianRewards: guardianRewards.add(guardianRewards2),
             totalClaimedDelegatorRewards: delegatorRewards.add(delegatorRewards2)
         });
-
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(guardianRewards2.add(delegatorRewards2));
     });
 
     it('tracks total unclaimed staking rewards', async () => {
@@ -681,15 +686,15 @@ describe.only('rewards', async () => {
         // Claim entire amount
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c0.address,
-            claimed: c0Total
+            addr: c0.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(c0Total);
 
         r = await d.stakingRewards.claimStakingRewards(c1.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c1.address,
-            claimed: c1Total
+            addr: c1.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(c1Total);
 
         expect(c0Total).to.be.bignumber.gt(bn(0));
         expect(c1Total).to.be.bignumber.gt(bn(0));
@@ -738,21 +743,21 @@ describe.only('rewards', async () => {
         // Claim entire amount
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c0.address,
-            claimed: c0Total
+            addr: c0.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(c0Total);
 
         r = await d.stakingRewards.claimStakingRewards(c2.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c2.address,
-            claimed: c2Total
+            addr: c2.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(c2Total);
 
         r = await d.stakingRewards.claimStakingRewards(c3.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c3.address,
-            claimed: c3Total
+            addr: c3.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(c3Total);
 
         expect(c0Total).to.be.bignumber.gt(bn(0));
         expect(c3Total).to.be.bignumber.gt(bn(0));
@@ -1096,15 +1101,15 @@ describe.only('rewards', async () => {
         // Claim entire amount
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c0.address,
-            claimed: cTotal
+            addr: c0.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(cTotal);
 
         r = await d.stakingRewards.claimStakingRewards(d0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: d0.address,
-            claimed: dTotal
+            addr: d0.address
         });
+        expect(getTotalClaimedFromEvent(r)).to.bignumber.eq(dTotal);
 
         expect(cTotal).to.be.bignumber.gt(bn(0));
         expect(dTotal).to.be.bignumber.gt(bn(0));

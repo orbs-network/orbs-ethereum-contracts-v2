@@ -149,8 +149,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         amounts[0] = total;
         stakingContract.distributeRewards(total, addrs, amounts);
 
-        uint256 totalClaimed = claimedGuardianRewards.add(claimedDelegatorRewards);
-        emit StakingRewardsClaimed(addr, total, delegatorRewards, guardianRewards, totalClaimed, claimedDelegatorRewards, claimedGuardianRewards);
+        emit StakingRewardsClaimed(addr, delegatorRewards, guardianRewards, claimedDelegatorRewards, claimedGuardianRewards);
     }
 
     function getGuardianStakingRewardsData(address guardian) external override view returns (
