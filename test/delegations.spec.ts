@@ -5,7 +5,7 @@ import {
     Driver,
 } from "./driver";
 import chai from "chai";
-import {bn, contractId, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
+import {bn, contractId, evmIncreaseTime, expectRejected, fromMilliOrbs} from "./helpers";
 import {TransactionReceipt} from "web3-core";
 import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
@@ -389,12 +389,12 @@ describe('delegations-contract', async () => {
         const d = await Driver.new({callInitializationComplete: false});
 
         const g = d.newParticipant();
-        const poolAmount = fromTokenUnits(1000000000000);
+        const poolAmount = fromMilliOrbs(1000000000000);
         await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
         await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
-        await d.stakingRewards.setAnnualStakingRewardsRate(1200, fromTokenUnits(1000000), {from: d.functionalManager.address});
+        await d.stakingRewards.setAnnualStakingRewardsRate(1200, fromMilliOrbs(1000000), {from: d.functionalManager.address});
 
-        const {v} = await d.newGuardian(fromTokenUnits(1000), false, false, true);
+        const {v} = await d.newGuardian(fromMilliOrbs(1000), false, false, true);
         await evmIncreaseTime(d.web3, 365*24*60*60);
         const p = d.newParticipant();
         const p2 = d.newParticipant();

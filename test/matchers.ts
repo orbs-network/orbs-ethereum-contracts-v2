@@ -75,11 +75,11 @@ import {Driver} from "./driver";
 import {
   AnnualStakingRewardsRateChangedEvent,
   DefaultDelegatorsStakingRewardsChangedEvent, GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent,
-  GuardianStakingRewardAssignedEvent,
+  GuardianStakingRewardsAssignedEvent,
   MaxDelegatorsStakingRewardsChangedEvent, RewardDistributionActivatedEvent, RewardDistributionDeactivatedEvent,
-  StakingRewardAssignedEvent,
+  DelegatorStakingRewardsAssignedEvent,
   StakingRewardsBalanceMigratedEvent,
-  StakingRewardsBalanceMigrationAcceptedEvent, StakingRewardsClaimedEvent
+  StakingRewardsBalanceMigrationAcceptedEvent, StakingRewardsClaimedEvent, StakingRewardsAllocatedEvent
 } from "../typings/staking-rewards-contract";
 import {
   BootstrapRewardsAssignedEvent,
@@ -253,8 +253,9 @@ declare global {
       guardianVotedOutEvent(data?: Partial<GuardianVotedOutEvent>): void;
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
+      stakingRewardsAllocatedEvent(data?: Partial<StakingRewardsAllocatedEvent>);
+      delegatorStakingRewardsAssignedEvent(data?: Partial<DelegatorStakingRewardsAssignedEvent>);
       guardianCertificationUpdateEvent(data?: Partial<GuardianCertificationUpdateEvent>)
-      stakingRewardsAssignedEvent(data?: Partial<StakingRewardAssignedEvent>);
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)
       feesAddedToBucketEvent(data?: Partial<FeesAddedToBucketEvent>);
       bootstrapRewardsAssignedEvent(data?: Partial<BootstrapRewardsAssignedEvent>)
@@ -302,7 +303,7 @@ declare global {
       certifiedCommitteeAnnualBootstrapChangedEvent(data?: Partial<CertifiedCommitteeAnnualBootstrapChangedEvent>);
       contractRegistryUpdatedEvent(data?: Partial<ContractRegistryUpdatedEvent>);
       notifyDelegationsChangedEvent(data?: Partial<NotifyDelegationsChangedEvent>);
-      guardianStakingRewardAssignedEvent(data?: Partial<GuardianStakingRewardAssignedEvent>);
+      guardianStakingRewardsAssignedEvent(data?: Partial<GuardianStakingRewardsAssignedEvent>);
       stakeChangedEvent(data?: Partial<StakeChangedEvent>);
       stakingRewardsClaimedEvent(data?: Partial<StakingRewardsClaimedEvent>);
       rewardDistributionDeactivatedEvent(data?: Partial<RewardDistributionDeactivatedEvent>);

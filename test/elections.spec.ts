@@ -1,7 +1,7 @@
 import 'mocha';
 
 import BN from "bn.js";
-import {bn, evmIncreaseTime, expectRejected, fromTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, expectRejected, fromMilliOrbs} from "./helpers";
 import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 import {
     defaultDriverOptions,
@@ -24,7 +24,7 @@ describe('elections-high-level-flows', async () => {
     it('emits events on readyForCommittee and readyToSync', async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newGuardian(fromTokenUnits(10), false, false, false);
+        const {v} = await d.newGuardian(fromMilliOrbs(10), false, false, false);
 
         let r = await v.readyToSync();
         expect(r).to.have.a.guardianStatusUpdatedEvent({
@@ -76,12 +76,12 @@ describe('elections-high-level-flows', async () => {
     it('gets committee info', async () => {
         const d = await Driver.new();
 
-        const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, true);
-        const {v: v2} = await d.newGuardian(fromTokenUnits(20), true, false, true);
+        const {v: v1} = await d.newGuardian(fromMilliOrbs(10), false, false, true);
+        const {v: v2} = await d.newGuardian(fromMilliOrbs(20), true, false, true);
 
         const committee = [
-            {v: v1, stake: fromTokenUnits(10), certified: false},
-            {v: v2, stake: fromTokenUnits(20), certified: true}
+            {v: v1, stake: fromMilliOrbs(10), certified: false},
+            {v: v2, stake: fromMilliOrbs(20), certified: true}
         ];
 
         let r = await d.elections.getCommittee();
@@ -99,8 +99,8 @@ describe('elections-high-level-flows', async () => {
     it('canJoinCommittee returns true if readyForCommittee would result in entrance to committee', async () => {
         const d = await Driver.new({maxCommitteeSize: 1});
 
-        const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, false);
-        const {v: v2} = await d.newGuardian(fromTokenUnits(9), false, false, false);
+        const {v: v1} = await d.newGuardian(fromMilliOrbs(10), false, false, false);
+        const {v: v2} = await d.newGuardian(fromMilliOrbs(9), false, false, false);
 
         expect(await d.elections.canJoinCommittee(v1.address)).to.be.true;
         expect(await d.elections.canJoinCommittee(v1.orbsAddress)).to.be.true;
@@ -122,7 +122,7 @@ describe('elections-high-level-flows', async () => {
         expect(await d.elections.canJoinCommittee(v2.address)).to.be.false;
         expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.false;
 
-        await v2.stake(fromTokenUnits(2));
+        await v2.stake(fromMilliOrbs(2));
 
         expect(await d.elections.canJoinCommittee(v2.address)).to.be.true;
         expect(await d.elections.canJoinCommittee(v2.orbsAddress)).to.be.true;
@@ -131,7 +131,7 @@ describe('elections-high-level-flows', async () => {
     it('allows sending readyForCommittee and readyToSync form both guardian and orbs address', async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newGuardian(fromTokenUnits(10), false, false, false);
+        const {v} = await d.newGuardian(fromMilliOrbs(10), false, false, false);
 
         let r = await d.elections.readyToSync({from: v.orbsAddress});
         expect(r).to.have.a.guardianStatusUpdatedEvent({

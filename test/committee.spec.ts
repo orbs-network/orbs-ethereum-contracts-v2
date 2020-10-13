@@ -3,7 +3,7 @@ import 'mocha';
 import * as _ from "lodash";
 import Web3 from "web3";
 declare const web3: Web3;
-import {bn, evmIncreaseTime, expectRejected, fromTokenUnits, minAddress} from "./helpers";
+import {bn, evmIncreaseTime, expectRejected, fromMilliOrbs, minAddress} from "./helpers";
 import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
 import BN from "bn.js";
@@ -317,7 +317,7 @@ describe('committee', async () => {
 
         const maxCommitteeSize = bn(await d.committee.getMaxCommitteeSize());
 
-        const committee: Participant[] = await Promise.all(_.range(maxCommitteeSize.toNumber()).map(async (i) => (await d.newGuardian(fromTokenUnits(100 + i), false, false, true)).v));
+        const committee: Participant[] = await Promise.all(_.range(maxCommitteeSize.toNumber()).map(async (i) => (await d.newGuardian(fromMilliOrbs(100 + i), false, false, true)).v));
 
         await expectRejected(d.committee.setMaxCommitteeSize(maxCommitteeSize.sub(bn(1)), {from: d.migrationManager.address}), /sender is not the functional manager/);
         let r = await d.committee.setMaxCommitteeSize(maxCommitteeSize.sub(bn(1)), {from: d.registryAdmin.address});
@@ -337,19 +337,19 @@ describe('committee', async () => {
     it("allows only elections to notify committee on changes", async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
+        const {v} = await d.newGuardian(fromMilliOrbs(10), true, false, true);
         const notElections = d.newParticipant().address;
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: notElections}), /caller is not the elections/);
+        await expectRejected(d.committee.memberWeightChange(v.address, fromMilliOrbs(1), {from: notElections}), /caller is not the elections/);
         await expectRejected(d.committee.memberCertificationChange(v.address, true, {from: notElections}), /caller is not the elections/);
         const v2 = d.newParticipant();
-        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: notElections}), /caller is not the elections/);
+        await expectRejected(d.committee.addMember(v2.address, fromMilliOrbs(10), true, {from: notElections}), /caller is not the elections/);
         await expectRejected(d.committee.removeMember(v2.address, {from: notElections}), /caller is not the elections/);
     });
 
     it("allows committee methods to be called only when active", async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
+        const {v} = await d.newGuardian(fromMilliOrbs(10), true, false, true);
         const v2 = d.newParticipant();
 
         const elections = d.newParticipant().address;
@@ -357,16 +357,16 @@ describe('committee', async () => {
 
         await d.committee.lock({from: d.registryAdmin.address});
 
-        await expectRejected(d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.memberWeightChange(v.address, fromMilliOrbs(1), {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.memberCertificationChange(v.address, true, {from: elections}), /contract is locked for this operation/);
-        await expectRejected(d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections}), /contract is locked for this operation/);
+        await expectRejected(d.committee.addMember(v2.address, fromMilliOrbs(10), true, {from: elections}), /contract is locked for this operation/);
         await expectRejected(d.committee.removeMember(v2.address, {from: elections}), /contract is locked for this operation/);
 
         await d.committee.unlock({from: d.registryAdmin.address});
 
-        await d.committee.memberWeightChange(v.address, fromTokenUnits(1), {from: elections});
+        await d.committee.memberWeightChange(v.address, fromMilliOrbs(1), {from: elections});
         await d.committee.memberCertificationChange(v.address, true, {from: elections});
-        await d.committee.addMember(v2.address, fromTokenUnits(10), true, {from: elections});
+        await d.committee.addMember(v2.address, fromMilliOrbs(10), true, {from: elections});
         await d.committee.removeMember(v2.address, {from: elections});
 
     });
@@ -379,7 +379,7 @@ describe('committee', async () => {
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
-        let r = await d.committee.memberWeightChange(nonRegistered.address, fromTokenUnits(1), {from: elections});
+        let r = await d.committee.memberWeightChange(nonRegistered.address, fromMilliOrbs(1), {from: elections});
         expect(r).to.not.have.a.committeeChangeEvent();
 
         r = await d.committee.memberCertificationChange(nonRegistered.address, true,{from: elections});
@@ -389,12 +389,12 @@ describe('committee', async () => {
     it("handles adding existing member", async () => {
         const d = await Driver.new();
 
-        const {v} = await d.newGuardian(fromTokenUnits(10), true, false, true);
+        const {v} = await d.newGuardian(fromMilliOrbs(10), true, false, true);
 
         const elections = d.newParticipant().address;
         await d.contractRegistry.setContract("elections", elections, false,{from: d.registryAdmin.address});
 
-        const r = await d.committee.addMember(v.address, fromTokenUnits(5), false, {from: elections});
+        const r = await d.committee.addMember(v.address, fromMilliOrbs(5), false, {from: elections});
         expect(r).to.not.have.a.committeeChangeEvent();
     });
 
@@ -470,11 +470,11 @@ describe('committee', async () => {
     it("emits committee snapshot", async () => {
         const d = await Driver.new();
 
-        const {v: v1} = await d.newGuardian(fromTokenUnits(10), false, false, true);
-        const {v: v2} = await d.newGuardian(fromTokenUnits(20), true, false, true);
+        const {v: v1} = await d.newGuardian(fromMilliOrbs(10), false, false, true);
+        const {v: v2} = await d.newGuardian(fromMilliOrbs(20), true, false, true);
 
         const addrs = [v1.address, v2.address];
-        const weights = [fromTokenUnits(10), fromTokenUnits(20)];
+        const weights = [fromMilliOrbs(10), fromMilliOrbs(20)];
         const certification = [false, true];
 
         const r = await d.committee.emitCommitteeSnapshot();
@@ -485,12 +485,12 @@ describe('committee', async () => {
         });
         expect(r).to.have.a.committeeChangeEvent({
             addr: v1.address,
-            weight: fromTokenUnits(10),
+            weight: fromMilliOrbs(10),
             certification: false
         });
         expect(r).to.have.a.committeeChangeEvent({
             addr: v2.address,
-            weight: fromTokenUnits(20),
+            weight: fromMilliOrbs(20),
             certification: true
         });
     })

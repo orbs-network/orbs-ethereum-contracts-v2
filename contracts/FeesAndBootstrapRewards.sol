@@ -3,7 +3,7 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./SafeMath48.sol";
+import "./SafeMath96.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -15,15 +15,14 @@ import "./ManagedContract.sol";
 
 contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     using SafeMath for uint256;
-    using SafeMath48 for uint48;
+    using SafeMath96 for uint96;
 
-    uint constant TOKEN_GRANULARITY = 1000000000000000;
     uint256 constant PERCENT_MILLIE_BASE = 100000;
     uint256 constant TOKEN_BASE = 1e18;
 
     struct Settings {
-        uint48 generalCommitteeAnnualBootstrap;
-        uint48 certifiedCommitteeAnnualBootstrap;
+        uint96 generalCommitteeAnnualBootstrap;
+        uint96 certifiedCommitteeAnnualBootstrap;
         bool rewardAllocationActive;
     }
     Settings settings;
@@ -32,19 +31,19 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     IERC20 public erc20;
 
     struct FeesAndBootstrapState {
-        uint48 certifiedFeesPerMember;
-        uint48 generalFeesPerMember;
-        uint48 certifiedBootstrapPerMember;
-        uint48 generalBootstrapPerMember;
+        uint96 certifiedFeesPerMember;
+        uint96 generalFeesPerMember;
+        uint96 certifiedBootstrapPerMember;
+        uint96 generalBootstrapPerMember;
         uint32 lastAssigned;
     }
     FeesAndBootstrapState public feesAndBootstrapState;
 
     struct FeesAndBootstrap {
-        uint48 feeBalance;
-        uint48 lastFeesPerMember;
-        uint48 bootstrapBalance;
-        uint48 lastBootstrapPerMember;
+        uint96 feeBalance;
+        uint96 lastFeesPerMember;
+        uint96 bootstrapBalance;
+        uint96 lastBootstrapPerMember;
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
@@ -82,12 +81,12 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     function getFeesAndBootstrapBalance(address guardian) external override view returns (uint256 feeBalance, uint256 bootstrapBalance) {
         FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian);
-        return (fromMilliToken(guardianFeesAndBootstrap.feeBalance), fromMilliToken(guardianFeesAndBootstrap.bootstrapBalance));
+        return (guardianFeesAndBootstrap.feeBalance, guardianFeesAndBootstrap.bootstrapBalance);
     }
 
     function withdrawBootstrapFunds(address guardian) external override onlyWhenActive {
         updateGuardianFeesAndBootstrap(guardian);
-        uint256 amount = fromMilliToken(feesAndBootstrap[guardian].bootstrapBalance);
+        uint256 amount = feesAndBootstrap[guardian].bootstrapBalance;
         feesAndBootstrap[guardian].bootstrapBalance = 0;
         emit BootstrapRewardsWithdrawn(guardian, amount);
 
@@ -97,7 +96,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     function withdrawFees(address guardian) external override onlyWhenActive {
         updateGuardianFeesAndBootstrap(guardian);
 
-        uint256 amount = fromMilliToken(feesAndBootstrap[guardian].feeBalance);
+        uint256 amount = feesAndBootstrap[guardian].feeBalance;
         feesAndBootstrap[guardian].feeBalance = 0;
         emit FeesWithdrawn(guardian, amount);
         require(erc20.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
@@ -112,10 +111,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     ) {
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = committeeContract.getCommitteeStats();
         (FeesAndBootstrapState memory _feesAndBootstrapState,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees(), settings);
-        certifiedFeesPerMember = fromMilliToken(_feesAndBootstrapState.certifiedFeesPerMember);
-        generalFeesPerMember = fromMilliToken(_feesAndBootstrapState.generalFeesPerMember);
-        certifiedBootstrapPerMember = fromMilliToken(_feesAndBootstrapState.certifiedBootstrapPerMember);
-        generalBootstrapPerMember = fromMilliToken(_feesAndBootstrapState.generalBootstrapPerMember);
+        certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember;
+        generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember;
+        certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember;
+        generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember;
         lastAssigned = _feesAndBootstrapState.lastAssigned;
     }
 
@@ -127,10 +126,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     ) {
         FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian);
         return (
-        fromMilliToken(guardianFeesAndBootstrap.feeBalance),
-        fromMilliToken(guardianFeesAndBootstrap.lastFeesPerMember),
-        fromMilliToken(guardianFeesAndBootstrap.bootstrapBalance),
-        fromMilliToken(guardianFeesAndBootstrap.lastBootstrapPerMember)
+            guardianFeesAndBootstrap.feeBalance,
+            guardianFeesAndBootstrap.lastFeesPerMember,
+            guardianFeesAndBootstrap.bootstrapBalance,
+            guardianFeesAndBootstrap.lastBootstrapPerMember
         );
     }
 
@@ -147,8 +146,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         updateGuardianFeesAndBootstrap(guardian);
 
         FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardian];
-        uint256 fees = fromMilliToken(guardianFeesAndBootstrap.feeBalance);
-        uint256 bootstrap = fromMilliToken(guardianFeesAndBootstrap.bootstrapBalance);
+        uint256 fees = guardianFeesAndBootstrap.feeBalance;
+        uint256 bootstrap = guardianFeesAndBootstrap.bootstrapBalance;
 
         guardianFeesAndBootstrap.feeBalance = 0;
         guardianFeesAndBootstrap.bootstrapBalance = 0;
@@ -163,8 +162,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrap) external override {
         FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardian];
-        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(toMilliToken(fees));
-        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(toMilliToken(bootstrap));
+        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(fees);
+        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrap);
         feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
 
         if (fees > 0) {
@@ -200,8 +199,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         bool rewardAllocationActive
     ) {
         Settings memory _settings = settings;
-        generalCommitteeAnnualBootstrap = fromMilliToken(_settings.generalCommitteeAnnualBootstrap);
-        certifiedCommitteeAnnualBootstrap = fromMilliToken(_settings.certifiedCommitteeAnnualBootstrap);
+        generalCommitteeAnnualBootstrap = _settings.generalCommitteeAnnualBootstrap;
+        certifiedCommitteeAnnualBootstrap = _settings.certifiedCommitteeAnnualBootstrap;
         rewardAllocationActive = _settings.rewardAllocationActive;
     }
 
@@ -211,7 +210,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     function getGeneralCommitteeAnnualBootstrap() external override view returns (uint256) {
-        return fromMilliToken(settings.generalCommitteeAnnualBootstrap);
+        return settings.generalCommitteeAnnualBootstrap;
     }
 
     function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) external override onlyFunctionalManager {
@@ -220,7 +219,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     function getCertifiedCommitteeAnnualBootstrap() external override view returns (uint256) {
-        return fromMilliToken(settings.certifiedCommitteeAnnualBootstrap);
+        return settings.certifiedCommitteeAnnualBootstrap;
     }
 
     function emergencyWithdraw() external override onlyMigrationManager {
@@ -243,21 +242,21 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         _feesAndBootstrapState = feesAndBootstrapState;
 
         if (_settings.rewardAllocationActive) {
-            uint48 generalFeesDelta = generalCommitteeSize == 0 ? 0 : toMilliToken(collectedGeneralFees.div(generalCommitteeSize));
-            uint48 certifiedFeesDelta = generalFeesDelta.add(certifiedCommitteeSize == 0 ? 0 : toMilliToken(collectedCertifiedFees.div(certifiedCommitteeSize)));
+            uint256 generalFeesDelta = generalCommitteeSize == 0 ? 0 : collectedGeneralFees.div(generalCommitteeSize);
+            uint256 certifiedFeesDelta = generalFeesDelta.add(certifiedCommitteeSize == 0 ? 0 : collectedCertifiedFees.div(certifiedCommitteeSize));
 
             _feesAndBootstrapState.generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember.add(generalFeesDelta);
             _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember.add(certifiedFeesDelta);
 
             uint duration = block.timestamp.sub(_feesAndBootstrapState.lastAssigned);
-            uint48 generalBootstrapDelta = toMilliToken(fromMilliToken(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days));
-            uint48 certifiedBootstrapDelta = generalBootstrapDelta.add(toMilliToken(fromMilliToken(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days)));
+            uint256 generalBootstrapDelta = uint256(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days);
+            uint256 certifiedBootstrapDelta = generalBootstrapDelta.add(uint256(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days));
 
             _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember.add(generalBootstrapDelta);
             _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember.add(certifiedBootstrapDelta);
             _feesAndBootstrapState.lastAssigned = uint32(block.timestamp);
 
-            allocatedBootstrap = fromMilliToken(generalBootstrapDelta).mul(generalCommitteeSize).add(fromMilliToken(certifiedBootstrapDelta).mul(certifiedCommitteeSize));
+            allocatedBootstrap = generalBootstrapDelta.mul(generalCommitteeSize).add(certifiedBootstrapDelta.mul(certifiedCommitteeSize));
         }
     }
 
@@ -288,13 +287,11 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         guardianFeesAndBootstrap = feesAndBootstrap[guardian];
 
         if (inCommittee) {
-            uint48 bootstrapAmount = (isCertified ? _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember).sub(guardianFeesAndBootstrap.lastBootstrapPerMember);
-            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrapAmount);
-            addedBootstrapAmount = fromMilliToken(bootstrapAmount);
+            addedBootstrapAmount = (isCertified ? _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember).sub(guardianFeesAndBootstrap.lastBootstrapPerMember);
+            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(addedBootstrapAmount);
 
-            uint48 feesAmount = (isCertified ? _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember).sub(guardianFeesAndBootstrap.lastFeesPerMember);
-            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(feesAmount);
-            addedFeesAmount = fromMilliToken(feesAmount);
+            addedFeesAmount = (isCertified ? _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember).sub(guardianFeesAndBootstrap.lastFeesPerMember);
+            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(addedFeesAmount);
         }
 
         guardianFeesAndBootstrap.lastBootstrapPerMember = nextCertification ?  _feesAndBootstrapState.certifiedBootstrapPerMember : _feesAndBootstrapState.generalBootstrapPerMember;
@@ -330,21 +327,17 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     // Governance and misc.
 
     function _setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) private {
-        settings.generalCommitteeAnnualBootstrap = toMilliToken(annualAmount);
+        require(uint256(uint96(annualAmount)) == annualAmount, "annualAmount must fit in uint96");
+
+        settings.generalCommitteeAnnualBootstrap = uint96(annualAmount);
         emit GeneralCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
     function _setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) private {
-        settings.certifiedCommitteeAnnualBootstrap = toMilliToken(annualAmount);
+        require(uint256(uint96(annualAmount)) == annualAmount, "annualAmount must fit in uint96");
+
+        settings.certifiedCommitteeAnnualBootstrap = uint96(annualAmount);
         emit CertifiedCommitteeAnnualBootstrapChanged(annualAmount);
-    }
-
-    function toMilliToken(uint256 v) internal pure returns (uint48) {
-        return uint48(v / TOKEN_GRANULARITY);
-    }
-
-    function fromMilliToken(uint48 v) internal pure returns (uint256) {
-        return uint256(v) * TOKEN_GRANULARITY;
     }
 
     /*

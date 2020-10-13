@@ -9,7 +9,7 @@ import {
 } from "./driver";
 import chai from "chai";
 import {createVC} from "./consumer-macros";
-import {bn, evmIncreaseTime, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, evmIncreaseTime, fromMilliOrbs, toMilliOrbs} from "./helpers";
 import {feesAssignedEvents, gasReportEvents} from "./event-parsing";
 import {chaiEventMatchersPlugin, expectCommittee} from "./matchers";
 
@@ -21,7 +21,7 @@ chai.use(chaiEventMatchersPlugin);
 const expect = chai.expect;
 const assert = chai.assert;
 
-const BASE_STAKE = fromTokenUnits(1000000);
+const BASE_STAKE = fromMilliOrbs(1000000);
 const MAX_COMMITTEE = 22;
 
 const t0 = Date.now();
@@ -34,7 +34,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
     tlog("Driver created");
 
     const g = d.newParticipant();
-    const poolAmount = fromTokenUnits(1000000);
+    const poolAmount = fromMilliOrbs(1000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
     await d.stakingRewards.setAnnualStakingRewardsRate(12000, poolAmount, {from: d.functionalManager.address});
@@ -42,20 +42,20 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 
     await g.assignAndApproveExternalToken(poolAmount, d.bootstrapRewardsWallet.address);
     await d.bootstrapRewardsWallet.topUp(poolAmount, {from: g.address});
-    await d.feesAndBootstrapRewards.setGeneralCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
-    await d.feesAndBootstrapRewards.setCertifiedCommitteeAnnualBootstrap(fromTokenUnits(12000), {from: d.functionalManager.address});
+    await d.feesAndBootstrapRewards.setGeneralCommitteeAnnualBootstrap(fromMilliOrbs(12000), {from: d.functionalManager.address});
+    await d.feesAndBootstrapRewards.setCertifiedCommitteeAnnualBootstrap(fromMilliOrbs(12000), {from: d.functionalManager.address});
     tlog("Bootstrap pools topped up");
 
     let committee: Participant[] = [];
     for (let i = 0; i < MAX_COMMITTEE; i++) {
-        const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(1 + (committeeEvenStakes ? 0 : i))), true, false, false);
+        const {v} = await d.newGuardian(BASE_STAKE.add(fromMilliOrbs(1 + (committeeEvenStakes ? 0 : i))), true, false, false);
         committee = [v].concat(committee);
     }
     tlog("Committee created");
 
     await Promise.all(_.shuffle(committee).map(v => v.readyForCommittee()));
 
-    const monthlyRate = fromTokenUnits(1000);
+    const monthlyRate = fromMilliOrbs(1000);
     const subs = await d.newSubscriber('defaultTier', monthlyRate);
     const appOwner = d.newParticipant();
 
@@ -286,7 +286,7 @@ describe('gas usage scenarios', async () => {
     it("Guardian sends ready-to-sync for first time", async () => {
         const {d} = await fullCommittee();
 
-        const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
+        const {v} = await d.newGuardian(BASE_STAKE.add(fromMilliOrbs(1)), true, false, false);
 
         d.resetGasRecording();
         await v.readyToSync();
@@ -296,7 +296,7 @@ describe('gas usage scenarios', async () => {
     it("Guardian sends ready-to-sync for second time", async () => {
         const {d} = await fullCommittee();
 
-        const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(1)), true, false, false);
+        const {v} = await d.newGuardian(BASE_STAKE.add(fromMilliOrbs(1)), true, false, false);
 
         await v.readyToSync();
 
@@ -308,7 +308,7 @@ describe('gas usage scenarios', async () => {
     it("New guardian sends ready-for-committee and immediately gets to top", async () => {
         const {d, committee} = await fullCommittee();
 
-        const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
+        const {v} = await d.newGuardian(BASE_STAKE.add(fromMilliOrbs(committee.length + 1)), true, false, false);
 
         d.resetGasRecording();
         let r = await v.readyForCommittee();
@@ -322,7 +322,7 @@ describe('gas usage scenarios', async () => {
     it("Ready-to-sync guardian sends ready-for-committee and jumps to top of committee", async () => {
         const {d, committee} = await fullCommittee();
 
-        const {v} = await d.newGuardian(BASE_STAKE.add(fromTokenUnits(committee.length + 1)), true, false, false);
+        const {v} = await d.newGuardian(BASE_STAKE.add(fromMilliOrbs(committee.length + 1)), true, false, false);
 
         let r = await v.readyToSync();
         expect(r).to.not.have.a.committeeChangeEvent();

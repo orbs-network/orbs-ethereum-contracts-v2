@@ -5,10 +5,10 @@ pragma solidity 0.6.12;
 /// @title Staking rewards contract interface
 interface IStakingRewards {
 
-    event StakingRewardsAssigned(address indexed addr, uint256 amount);
-    event GuardianStakingRewardsAssigned(address indexed guardian, uint256 amount, uint256 delegatorRewardsPerToken);
+    event DelegatorStakingRewardsAssigned(address indexed delegator, uint256 amount, address guardian, uint256 delegatorRewardsPerToken);
+    event GuardianStakingRewardsAssigned(address indexed guardian, uint256 amount, uint256 delegatorRewardsPerToken, uint256 stakingRewardsPerWeight);
     event StakingRewardsClaimed(address indexed addr, uint256 amount);
-    event StakingRewardAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
+    event StakingRewardsAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
     event GuardianDelegatorsStakingRewardsPercentMilleUpdated(address indexed guardian, uint256 delegatorsStakingRewardsPercentMille);
 
     /*
