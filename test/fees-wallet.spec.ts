@@ -6,7 +6,7 @@ import chai from "chai";
 import {
   feesAddedToBucketEvents,
 } from "./event-parsing";
-import {bn, bnSum, contractId, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, contractId, evmIncreaseTime, expectRejected, fromMilliOrbs, toMilliOrbs} from "./helpers";
 import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));

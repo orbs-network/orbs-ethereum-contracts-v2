@@ -6,10 +6,10 @@ import {
     Participant,
 } from './driver';
 import {MonthlySubscriptionPlanContract} from "../typings/monthly-subscription-plan-contract";
-import {bn, fromTokenUnits} from "./helpers";
+import {bn, fromMilliOrbs} from "./helpers";
 
 export async function createVC(d : Driver, isCertified?: boolean, subscriber?: MonthlySubscriptionPlanContract, monthlyRate?: number|BN, appOwner?: Participant) {
-    const rate: BN = monthlyRate != null ? bn(monthlyRate) : fromTokenUnits(1000);
+    const rate: BN = monthlyRate != null ? bn(monthlyRate) : fromMilliOrbs(1000);
     const firstPayment = rate.mul(bn(20));
 
     subscriber = subscriber || await d.newSubscriber('defaultTier', rate);

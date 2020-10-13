@@ -25,13 +25,6 @@ library SafeMath96 {
      * Requirements:
      * - Addition cannot overflow.
      */
-    function add(uint96 a, uint96 b) internal pure returns (uint96) {
-        uint96 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-
     function add(uint96 a, uint256 b) internal pure returns (uint96) {
         require(uint256(uint96(b)) == b, "SafeMath: addition overflow");
         uint96 c = a + uint96(b);
@@ -49,10 +42,6 @@ library SafeMath96 {
      * Requirements:
      * - Subtraction cannot overflow.
      */
-    function sub(uint96 a, uint96 b) internal pure returns (uint96) {
-        return sub(a, b, "SafeMath: subtraction overflow");
-    }
-
     function sub(uint96 a, uint256 b) internal pure returns (uint96) {
         require(uint256(uint96(b)) == b, "SafeMath: subtraction overflow");
         return sub(a, uint96(b), "SafeMath: subtraction overflow");

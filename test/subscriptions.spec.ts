@@ -5,7 +5,7 @@ import {defaultDriverOptions, DEPLOYMENT_SUBSET_CANARY, DEPLOYMENT_SUBSET_MAIN, 
 import chai from "chai";
 import {subscriptionChangedEvents} from "./event-parsing";
 import {chaiEventMatchersPlugin} from "./matchers";
-import {bn, expectRejected, fromTokenUnits, getBlockTimestamp} from "./helpers";
+import {bn, expectRejected, fromMilliOrbs, getBlockTimestamp} from "./helpers";
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);
 
@@ -406,7 +406,7 @@ describe('subscriptions-high-level-flows', async () => {
     await sleep(3 * 1000);
 
     await owner.assignAndApproveOrbs(oneSecondsWorth, subs.address);
-    await expectRejected(d.subscriptions.extendSubscription(vcid, oneSecondsWorth, "tier", fromTokenUnits(1000), owner.address, {from: owner.address}), /sender must be an authorized subscriber/);
+    await expectRejected(d.subscriptions.extendSubscription(vcid, oneSecondsWorth, "tier", fromMilliOrbs(1000), owner.address, {from: owner.address}), /sender must be an authorized subscriber/);
   });
 
   it('extends subscription before expiration', async () => {

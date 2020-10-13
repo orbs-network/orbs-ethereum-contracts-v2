@@ -8,6 +8,7 @@ import {
 } from "../typings/fees-wallet-contract";
 
 const elections = compiledContracts["Elections"];
+const stakingRewards = compiledContracts["StakingRewards"];
 const committee = compiledContracts["Committee"];
 const guardiansRegistration = compiledContracts["GuardiansRegistration"];
 const certification = compiledContracts["Certification"];
@@ -76,5 +77,6 @@ export const minSelfStakePercentMilleChangedEvents = (txResult, contractAddress?
 export const banningLockTimeoutSecondsChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningLockTimeoutSecondsChanged(uint32,uint32)");
 export const voteOutPercentMilleThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "VoteOutPercentMilleThresholdChanged(uint32,uint32)");
 export const banningPercentMilleThresholdChangedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "BanningPercentMilleThresholdChanged(uint32,uint32)");
+export const stakingRewardsClaimedEvents = (txResult, contractAddress?: string) => parseLogs(txResult, stakingRewards, "StakingRewardsClaimed(address,uint256,uint256,uint256,uint256)");
 
 export const gasReportEvents = (txResult, contractAddress?: string) => parseLogs(txResult, elections, "GasReport(string,uint256)", contractAddress);

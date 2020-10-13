@@ -4,7 +4,7 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
-import {bn, bnSum, evmIncreaseTime, expectRejected, fromTokenUnits, toTokenUnits} from "./helpers";
+import {bn, bnSum, evmIncreaseTime, expectRejected, fromMilliOrbs, toMilliOrbs} from "./helpers";
 import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));

@@ -2,15 +2,25 @@ import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
-export interface GuardianStakingRewardAssignedEvent {
-    guardian: string,
-    amount: (string|BN),
-    delegatorRewardsPerToken: (string|BN)
+export interface StakingRewardsAllocatedEvent {
+    allocatedRewards: (string|BN);
+    stakingRewardsPerWeight: (string|BN);
 }
 
-export interface StakingRewardAssignedEvent {
-    addr: string,
+export interface GuardianStakingRewardsAssignedEvent {
+    guardian: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
+    delegatorRewardsPerToken: (string|BN),
+    stakingRewardsPerWeight: (string|BN)
+}
+
+export interface DelegatorStakingRewardsAssignedEvent {
+    delegator: string,
+    amount: (string|BN),
+    totalAwarded: (string|BN),
+    guardian: string,
+    delegatorRewardsPerToken: (string|BN)
 }
 
 export interface DefaultDelegatorsStakingRewardsChangedEvent {
@@ -37,7 +47,10 @@ export interface StakingRewardsBalanceMigrationAcceptedEvent {
 
 export interface StakingRewardsClaimedEvent {
     addr: string;
-    amount: number|BN;
+    claimedDelegatorRewards: number|BN;
+    claimedGuardianRewards: number|BN;
+    totalClaimedDelegatorRewards: number|BN;
+    totalClaimedGuardianRewards: number|BN;
 }
 
 export interface AnnualStakingRewardsRateChangedEvent {
@@ -89,7 +102,18 @@ export interface StakingRewardsContract extends OwnedContract {
         lastStakingRewardsPerWeight: string
     }>;
 
+    guardiansStakingRewards(guardian: string, params?: TransactionConfig): Promise<{
+        balance: string,
+        delegatorRewardsPerToken: string,
+        lastStakingRewardsPerWeight: string
+    }>;
+
     getDelegatorStakingRewardsData(delegator: string, params?: TransactionConfig): Promise<{
+        balance: string,
+        lastDelegatorRewardsPerToken: string
+    }>;
+
+    delegatorsStakingRewards(delegator: string, params?: TransactionConfig): Promise<{
         balance: string,
         lastDelegatorRewardsPerToken: string
     }>;
@@ -101,6 +125,12 @@ export interface StakingRewardsContract extends OwnedContract {
     getStakingRewardsState(): Promise<{
         stakingRewardsPerWeight: string,
         unclaimedStakingRewards: string
+    }>;
+
+    stakingRewardsState(): Promise<{
+        stakingRewardsPerWeight: string,
+        unclaimedStakingRewards: string,
+        lastAssigned: string
     }>;
 
     getSettings(): Promise<{

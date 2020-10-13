@@ -64,11 +64,11 @@ export async function getBlockTimestamp(d: Driver, blockHashOrBlockNumber: Block
     );
 }
 
-export function fromTokenUnits(n: (number|BN)): BN {
+export function fromMilliOrbs(n: (number|BN)): BN {
     return bn(n).mul(bn("1000000000000000"));
 }
 
-export function toTokenUnits(n: (number|BN)): BN {
+export function toMilliOrbs(n: (number|BN)): BN {
     return bn(n).div(bn("1000000000000000"));
 }
 

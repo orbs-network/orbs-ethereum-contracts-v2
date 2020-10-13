@@ -15,13 +15,15 @@ import {
     evmIncreaseTime,
     evmIncreaseTimeForQueries,
     expectRejected,
-    fromTokenUnits,
-    toTokenUnits
+    fromMilliOrbs,
+    toMilliOrbs
 } from "./helpers";
 import {
-    stakingRewardsAssignedEvents,
+    stakingRewardsAssignedEvents, stakingRewardsClaimedEvents,
 } from "./event-parsing";
 import {chaiEventMatchersPlugin} from "./matchers";
+import {StakingRewardsClaimedEvent} from "../typings/staking-rewards-contract";
+import {TransactionReceipt} from "web3-core";
 
 declare const web3: Web3;
 
@@ -31,18 +33,18 @@ chai.use(chaiEventMatchersPlugin);
 const expect = chai.expect;
 const assert = chai.assert;
 
-const BASE_STAKE = fromTokenUnits(1000);
+const BASE_STAKE = fromMilliOrbs(1000);
 const MONTH_IN_SECONDS = 30*24*60*60;
 const MAX_COMMITTEE = 4;
 
-const GENERAL_FEES_MONTHLY_RATE = fromTokenUnits(1000);
-const CERTIFIED_FEES_MONTHLY_RATE = fromTokenUnits(2000);
+const GENERAL_FEES_MONTHLY_RATE = fromMilliOrbs(1000);
+const CERTIFIED_FEES_MONTHLY_RATE = fromMilliOrbs(2000);
 
-const GENERAL_ANNUAL_BOOTSTRAP = fromTokenUnits(12000);
-const CERTIFIED_ANNUAL_BOOTSTRAP = fromTokenUnits(15000);
+const GENERAL_ANNUAL_BOOTSTRAP = fromMilliOrbs(12000);
+const CERTIFIED_ANNUAL_BOOTSTRAP = fromMilliOrbs(15000);
 
 const STAKING_REWARDS_ANNUAL_RATE = bn(12000);
-const STAKING_REWARDS_ANNUAL_CAP = fromTokenUnits(10000)
+const STAKING_REWARDS_ANNUAL_CAP = fromMilliOrbs(10000)
 
 const MIN_SELF_STAKE_PERCENT_MILLE = bn(13000);
 
@@ -64,7 +66,7 @@ async function fullCommittee(stakes?: BN[] | null, numVCs=2, opts?: {
     const d = await Driver.new({maxCommitteeSize: MAX_COMMITTEE, minSelfStakePercentMille: minSelfStakePercentMille.toNumber(), defaultDelegatorsStakingRewardsPercentMille: DELEGATOR_REWARDS_PERCENT_MILLE});
 
     const g = d.newParticipant();
-    const poolAmount = fromTokenUnits(1000000000000);
+    const poolAmount = fromMilliOrbs(1000000000000);
     await g.assignAndApproveOrbs(poolAmount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(poolAmount, {from: g.address});
     let r = await d.stakingRewards.setAnnualStakingRewardsRate(stakingRewardsAnnualRate, stakingRewardsAnnualCap, {from: d.functionalManager.address});
@@ -122,8 +124,8 @@ function certifiedBootstrapForDuration(duration: number): BN {
     return rewardsForDuration(duration, 1, CERTIFIED_ANNUAL_BOOTSTRAP.add(GENERAL_ANNUAL_BOOTSTRAP).div(bn(12)));
 }
 
-function roundTo48(x: BN): BN {
-    return fromTokenUnits(toTokenUnits(x));
+function roundToMilliOrbs(x: BN): BN {
+    return fromMilliOrbs(toMilliOrbs(x));
 }
 
 async function stakingRewardsForDuration(d: Driver, duration: number, delegator: Participant, guardian: Participant): Promise<{delegatorRewards: BN, guardianRewards: BN}> {
@@ -144,9 +146,9 @@ async function stakingRewardsForDuration(d: Driver, duration: number, delegator:
 
     const totalRewards = guardianWeight.mul(actualRate).mul(bn(duration)).div(bn(YEAR_IN_SECONDS * 100000));
     const totalDelegatorRewards = totalRewards.mul(ratio).div(bn(100000));
-    let guardianRewards = roundTo48(totalRewards.mul(bn(100000).sub(ratio)).div(bn(100000)));
-    const delegatorRewards = roundTo48(totalDelegatorRewards.mul(delegatorStake).div(guardianDelegatedStake));
-    guardianRewards = guardianRewards.add(roundTo48(totalDelegatorRewards.mul(guardianStake).div(guardianDelegatedStake)))
+    let guardianRewards = totalRewards.mul(bn(100000).sub(ratio)).div(bn(100000));
+    const delegatorRewards = totalDelegatorRewards.mul(delegatorStake).div(guardianDelegatedStake);
+    guardianRewards = guardianRewards.add(totalDelegatorRewards.mul(guardianStake).div(guardianDelegatedStake))
 
     return {
         delegatorRewards,
@@ -155,7 +157,14 @@ async function stakingRewardsForDuration(d: Driver, duration: number, delegator:
 }
 
 function expectApproxEq(actual: BN|string|number, expected: BN|string|number) {
+    actual = roundToMilliOrbs(bn(actual));
+    expected = roundToMilliOrbs(bn(expected));
     assert(bn(actual).sub(bn(expected)).abs().lte(BN.max(bn(actual), bn(expected)).div(bn(50))), `Expected ${actual.toString()} to approx. equal ${expected.toString()}`);
+}
+
+function getTotalClaimedFromEvent(r: TransactionReceipt): BN {
+    const event: StakingRewardsClaimedEvent = stakingRewardsClaimedEvents(r)[0];
+    return bn(event.claimedDelegatorRewards).add(bn(event.claimedGuardianRewards));
 }
 
 describe('rewards', async () => {
@@ -368,7 +377,7 @@ describe('rewards', async () => {
     });
 
     it('erc20 of bootstrap token is total bootstrap balance', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(4000), fromTokenUnits(3000), fromTokenUnits(2000), fromTokenUnits(1000)], 1);
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const PERIOD = MONTH_IN_SECONDS * 2;
 
@@ -388,7 +397,7 @@ describe('rewards', async () => {
     // Staking rewards
 
     it('assigns staking rewards to committee member, accommodate for participation and stake changes', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(4000), fromTokenUnits(3000), fromTokenUnits(2000), fromTokenUnits(1000)], 1);
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const c0 = committee[0];
 
@@ -401,7 +410,7 @@ describe('rewards', async () => {
         let total = (await stakingRewardsForDuration(d, MONTH_IN_SECONDS, c0, c0)).guardianRewards;
         expectApproxEq(await d.stakingRewards.getStakingRewardsBalance(c0.address), total);
 
-        await c0.unstake(fromTokenUnits(2000));
+        await c0.unstake(fromMilliOrbs(2000));
 
         expectApproxEq(await d.stakingRewards.getStakingRewardsBalance(c0.address), total);
 
@@ -412,7 +421,7 @@ describe('rewards', async () => {
         total = total.add((await stakingRewardsForDuration(d, MONTH_IN_SECONDS, c0, c0)).guardianRewards)
         expectApproxEq(await d.stakingRewards.getStakingRewardsBalance(c0.address), total);
 
-        await c0.stake(fromTokenUnits(2000));
+        await c0.stake(fromMilliOrbs(2000));
 
         // In committee, stake 4000
 
@@ -450,8 +459,9 @@ describe('rewards', async () => {
 
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: total
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), total);
+
         expect(r).to.have.approx().a.stakedEvent({
             stakeOwner: c0.address,
             amount: total
@@ -461,14 +471,14 @@ describe('rewards', async () => {
     });
 
     it('assigns staking rewards to delegator, accommodate for delegation and stake changes', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(4000), fromTokenUnits(3000), fromTokenUnits(2000), fromTokenUnits(1000)], 1);
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const c0 = committee[0];
         let delegation = c0;
 
         const d0 = d.newParticipant();
         await d0.delegate(delegation);
-        await d0.stake(fromTokenUnits(1000));
+        await d0.stake(fromMilliOrbs(1000));
 
         const PERIOD = MONTH_IN_SECONDS * 2;
 
@@ -491,12 +501,12 @@ describe('rewards', async () => {
         // In committee, d0 [stake: 1000] -> c0 [stake: 4000]
         await checkAndUpdate();
 
-        await c0.unstake(fromTokenUnits(2000));
+        await c0.unstake(fromMilliOrbs(2000));
 
         // In committee, d0 [stake: 1000] -> c0 [stake: 2000]
         await checkAndUpdate();
 
-        await c0.stake(fromTokenUnits(2000));
+        await c0.stake(fromMilliOrbs(2000));
 
         // In committee, d0 [stake: 1000] -> c0 [stake: 4000]
         await checkAndUpdate();
@@ -517,7 +527,7 @@ describe('rewards', async () => {
         // In committee, d0 [stake: 1000] -> c1 [stake: 3000]
         await checkAndUpdate();
 
-        await d0.stake(fromTokenUnits(1000));
+        await d0.stake(fromMilliOrbs(1000));
 
         // In committee, d0 [stake: 2000] -> c1 [stake: 3000]
         await checkAndUpdate();
@@ -538,21 +548,95 @@ describe('rewards', async () => {
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: c0.address,
-            amount: cTotal
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), cTotal);
 
         r = await d.stakingRewards.claimStakingRewards(d0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
             addr: d0.address,
-            amount: dTotal
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), dTotal);
 
         expect(cTotal).to.be.bignumber.gt(bn(0));
         expect(dTotal).to.be.bignumber.gt(bn(0));
     });
 
+    it('emits StakingRewardsAssigned and StakingRewardsClaimed events', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const c0 = committee[0];
+        let delegation = c0;
+
+        const d0 = d.newParticipant();
+        await d0.delegate(delegation);
+        await d0.stake(fromMilliOrbs(1000));
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        const allocatedBefore = bn((await d.stakingRewards.getStakingRewardsState()).unclaimedStakingRewards);
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const allocatedAfter = bn((await d.stakingRewards.getStakingRewardsState()).unclaimedStakingRewards);
+
+        let r = await d0.stake(fromMilliOrbs(1000));
+        expect(r).to.have.a.approx().stakingRewardsAllocatedEvent({
+            stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
+            allocatedRewards: allocatedAfter.sub(allocatedBefore)
+        });
+        expect(r).to.have.a.approx().guardianStakingRewardsAssignedEvent({
+            guardian: c0.address,
+            amount: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
+            totalAwarded: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
+            delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
+            stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
+        });
+        expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
+            delegator: d0.address,
+            amount: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
+            totalAwarded: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
+            guardian: c0.address,
+            delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
+        });
+        
+        const guardianRewards = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance);
+        const delegatorRewards = bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).balance);
+        r = await d.stakingRewards.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            addr: c0.address,
+            claimedGuardianRewards: guardianRewards,
+            claimedDelegatorRewards: delegatorRewards,
+            totalClaimedGuardianRewards: guardianRewards,
+            totalClaimedDelegatorRewards: delegatorRewards
+        });
+        expectApproxEq(getTotalClaimedFromEvent(r), guardianRewards.add(delegatorRewards));
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const guardianRewards2 = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance);
+        const delegatorRewards2 = bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).balance);
+
+        r = await d.stakingRewards.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().guardianStakingRewardsAssignedEvent({
+            guardian: c0.address,
+            totalAwarded: guardianRewards.add(guardianRewards2),
+        });
+        expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
+            delegator: c0.address,
+            totalAwarded: delegatorRewards.add(delegatorRewards2),
+        });
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            addr: c0.address,
+            claimedGuardianRewards: guardianRewards2,
+            claimedDelegatorRewards: delegatorRewards2,
+            totalClaimedGuardianRewards: guardianRewards.add(guardianRewards2),
+            totalClaimedDelegatorRewards: delegatorRewards.add(delegatorRewards2)
+        });
+        expectApproxEq(getTotalClaimedFromEvent(r), guardianRewards2.add(delegatorRewards2));
+    });
+
     it('tracks total unclaimed staking rewards', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(4000), fromTokenUnits(3000), fromTokenUnits(2000), fromTokenUnits(1000)], 1);
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const PERIOD = MONTH_IN_SECONDS * 2;
 
@@ -566,7 +650,7 @@ describe('rewards', async () => {
     });
 
     it('properly assigns staking rewards to a guardian who becomes a delegator', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(4000), fromTokenUnits(3000), fromTokenUnits(2000), fromTokenUnits(1000)], 1);
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const c0 = committee[0];
         const c1 = committee[1];
@@ -602,22 +686,22 @@ describe('rewards', async () => {
         // Claim entire amount
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c0.address,
-            amount: c0Total
+            addr: c0.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), c0Total);
 
         r = await d.stakingRewards.claimStakingRewards(c1.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c1.address,
-            amount: c1Total
+            addr: c1.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), c1Total);
 
         expect(c0Total).to.be.bignumber.gt(bn(0));
         expect(c1Total).to.be.bignumber.gt(bn(0));
     });
 
     it('properly handles a change in maxCommitteeSize', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(4000), fromTokenUnits(3000), fromTokenUnits(2000), fromTokenUnits(1000)], 1);
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
         const c0 = committee[0];
         const c2 = committee[2];
@@ -659,21 +743,21 @@ describe('rewards', async () => {
         // Claim entire amount
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c0.address,
-            amount: c0Total
+            addr: c0.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), c0Total);
 
         r = await d.stakingRewards.claimStakingRewards(c2.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c2.address,
-            amount: c2Total
+            addr: c2.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), c2Total);
 
         r = await d.stakingRewards.claimStakingRewards(c3.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c3.address,
-            amount: c3Total
+            addr: c3.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), c3Total);
 
         expect(c0Total).to.be.bignumber.gt(bn(0));
         expect(c3Total).to.be.bignumber.gt(bn(0));
@@ -696,10 +780,10 @@ describe('rewards', async () => {
     })
 
     it('enforces effective stake limit (min self stake)', async () => {
-        const {d, committee} = await fullCommittee([fromTokenUnits(MIN_SELF_STAKE_PERCENT_MILLE), bn(1), bn(1), bn(1)], 1, {stakingRewardsAnnualCap: fromTokenUnits(100000000000)});
+        const {d, committee} = await fullCommittee([fromMilliOrbs(MIN_SELF_STAKE_PERCENT_MILLE), bn(1), bn(1), bn(1)], 1, {stakingRewardsAnnualCap: fromMilliOrbs(100000000000)});
         const c0 = committee[0];
         const d0 = d.newParticipant();
-        const dStake = fromTokenUnits(bn(100000).sub(MIN_SELF_STAKE_PERCENT_MILLE));
+        const dStake = fromMilliOrbs(bn(100000).sub(MIN_SELF_STAKE_PERCENT_MILLE));
         await d0.stake(dStake);
         await d0.delegate(c0);
 
@@ -757,8 +841,8 @@ describe('rewards', async () => {
 
     it('gets settings from feesAndBootstrapRewards', async () => {
         const opts = {
-            generalCommitteeAnnualBootstrap: fromTokenUnits(10),
-            certifiedCommitteeAnnualBootstrap: fromTokenUnits(20),
+            generalCommitteeAnnualBootstrap: fromMilliOrbs(10),
+            certifiedCommitteeAnnualBootstrap: fromMilliOrbs(20),
         };
         const d = await Driver.new(opts as any);
 
@@ -771,7 +855,7 @@ describe('rewards', async () => {
         const opts = {
             defaultDelegatorsStakingRewardsPercentMille: 3,
             stakingRewardsAnnualRateInPercentMille: 4,
-            stakingRewardsAnnualCap: fromTokenUnits(50)
+            stakingRewardsAnnualCap: fromMilliOrbs(50)
         };
         const d = await Driver.new(opts as any);
 
@@ -828,8 +912,8 @@ describe('rewards', async () => {
         const c0StakingBalance = bn(await d.stakingRewards.getStakingRewardsBalance(c0.address));
         expect(c0StakingBalance).to.be.bignumber.greaterThan(bn(0));
 
-        const c0GuardianStakingBalance = fromTokenUnits((await (d.stakingRewards as any).guardiansStakingRewards(c0.address)).balance);
-        const c0DelegatorStakingBalance = fromTokenUnits((await (d.stakingRewards as any).delegatorsStakingRewards(c0.address)).balance);
+        const c0GuardianStakingBalance = bn((await (d.stakingRewards as any).guardiansStakingRewards(c0.address)).balance);
+        const c0DelegatorStakingBalance = bn((await (d.stakingRewards as any).delegatorsStakingRewards(c0.address)).balance);
 
         expectApproxEq(c0GuardianStakingBalance.add(c0DelegatorStakingBalance), c0StakingBalance);
 
@@ -971,7 +1055,7 @@ describe('rewards', async () => {
         const {d, committee} = await fullCommittee();
 
         const d0 = d.newParticipant();
-        await d0.stake(fromTokenUnits(1000));
+        await d0.stake(fromMilliOrbs(1000));
         const c0 = committee[0];
         await d0.delegate(c0);
 
@@ -1017,15 +1101,15 @@ describe('rewards', async () => {
         // Claim entire amount
         let r = await d.stakingRewards.claimStakingRewards(c0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: c0.address,
-            amount: cTotal
+            addr: c0.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), cTotal);
 
         r = await d.stakingRewards.claimStakingRewards(d0.address);
         expect(r).to.have.approx().a.stakingRewardsClaimedEvent({
-            addr: d0.address,
-            amount: dTotal
+            addr: d0.address
         });
+        expectApproxEq(getTotalClaimedFromEvent(r), dTotal);
 
         expect(cTotal).to.be.bignumber.gt(bn(0));
         expect(dTotal).to.be.bignumber.gt(bn(0));

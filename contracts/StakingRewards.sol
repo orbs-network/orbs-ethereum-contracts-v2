@@ -3,7 +3,6 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./SafeMath48.sol";
 import "./SafeMath96.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -18,15 +17,12 @@ import "./ManagedContract.sol";
 contract StakingRewards is IStakingRewards, ManagedContract {
     using SafeMath for uint256;
     using SafeMath96 for uint96;
-    using SafeMath48 for uint48;
 
     uint256 constant PERCENT_MILLIE_BASE = 100000;
     uint256 constant TOKEN_BASE = 1e18;
 
-    uint constant TOKEN_GRANULARITY = 1000000000000000;
-
     struct Settings {
-        uint48 annualCap;
+        uint96 annualCap;
         uint32 annualRateInPercentMille;
         uint32 defaultDelegatorsStakingRewardsPercentMille;
         uint32 maxDelegatorsStakingRewardsPercentMille;
@@ -48,7 +44,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     struct GuardianStakingRewards {
         uint96 delegatorRewardsPerToken;
         uint96 lastStakingRewardsPerWeight;
-        uint48 balance;
+        uint96 balance;
+        uint96 claimed;
     }
     mapping(address => GuardianStakingRewards) public guardiansStakingRewards;
 
@@ -59,8 +56,9 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     mapping(address => GuardianRewardSettings) public guardiansRewardSettings;
 
     struct DelegatorStakingRewards {
-        uint48 balance;
+        uint96 balance;
         uint96 lastDelegatorRewardsPerToken;
+        uint96 claimed;
     }
     mapping(address => DelegatorStakingRewards) public delegatorsStakingRewards;
 
@@ -118,7 +116,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
         StakingRewardsState memory _stakingRewardsState = _updateStakingRewardsState(totalCommitteeWeight, _settings);
         GuardianStakingRewards memory guardianStakingRewards = _updateGuardianStakingRewards(guardian, inCommittee, inCommittee, weight, guardianDelegatedStake, _stakingRewardsState, _settings);
-        _updateDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
+        _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, guardianStakingRewards);
 
         if (nextGuardian != guardian) {
             (inCommittee, weight, , totalCommitteeWeight) = committeeContract.getMemberInfo(nextGuardian);
@@ -130,11 +128,16 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function getStakingRewardsBalance(address addr) external override view returns (uint256) {
         DelegatorStakingRewards memory delegatorStakingRewards = getDelegatorStakingRewards(addr);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(addr); // TODO consider removing, data in state must be up to date at this point
-        return fromMilliOrbs(delegatorStakingRewards.balance.add(guardianStakingRewards.balance));
+        return delegatorStakingRewards.balance.add(guardianStakingRewards.balance);
     }
 
     function claimStakingRewards(address addr) external override onlyWhenActive {
         (uint256 guardianRewards, uint256 delegatorRewards) = claimStakingRewardsLocally(addr);
+
+        uint96 claimedGuardianRewards = guardiansStakingRewards[addr].claimed.add(guardianRewards);
+        guardiansStakingRewards[addr].claimed = claimedGuardianRewards;
+        uint96 claimedDelegatorRewards = delegatorsStakingRewards[addr].claimed.add(delegatorRewards);
+        delegatorsStakingRewards[addr].claimed = claimedDelegatorRewards;
 
         uint256 total = delegatorRewards.add(guardianRewards);
 
@@ -146,24 +149,26 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         amounts[0] = total;
         stakingContract.distributeRewards(total, addrs, amounts);
 
-        emit StakingRewardsClaimed(addr, total);
+        emit StakingRewardsClaimed(addr, delegatorRewards, guardianRewards, claimedDelegatorRewards, claimedGuardianRewards);
     }
 
     function getGuardianStakingRewardsData(address guardian) external override view returns (
         uint256 balance,
+        uint256 claimed,
         uint256 delegatorRewardsPerToken,
         uint256 lastStakingRewardsPerWeight
     ) {
         GuardianStakingRewards memory rewards = getGuardianStakingRewards(guardian);
-        return (fromMilliOrbs(rewards.balance), rewards.delegatorRewardsPerToken, rewards.lastStakingRewardsPerWeight);
+        return (rewards.balance, rewards.claimed, rewards.delegatorRewardsPerToken, rewards.lastStakingRewardsPerWeight);
     }
 
     function getDelegatorStakingRewardsData(address delegator) external override view returns (
         uint256 balance,
+        uint256 claimed,
         uint256 lastDelegatorRewardsPerToken
     ) {
         DelegatorStakingRewards memory rewards = getDelegatorStakingRewards(delegator);
-        return (fromMilliOrbs(rewards.balance), rewards.lastDelegatorRewardsPerToken);
+        return (rewards.balance, rewards.claimed, rewards.lastDelegatorRewardsPerToken);
     }
 
     function getStakingRewardsState() public override view returns (
@@ -216,8 +221,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external override {
-        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(toMilliOrbs(guardianStakingRewards));
-        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(toMilliOrbs(delegatorStakingRewards));
+        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(guardianStakingRewards);
+        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(delegatorStakingRewards);
 
         uint orbsTransferAmount = guardianStakingRewards.add(delegatorStakingRewards);
         if (orbsTransferAmount > 0) {
@@ -280,7 +285,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     function getAnnualStakingRewardsCap() external override view returns (uint256) {
-        return fromMilliOrbs(settings.annualCap);
+        return settings.annualCap;
     }
 
     function isRewardAllocationActive() external override view returns (bool) {
@@ -295,7 +300,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         bool rewardAllocationActive
     ) {
         Settings memory _settings = settings;
-        annualStakingRewardsCap = fromMilliOrbs(_settings.annualCap);
+        annualStakingRewardsCap = _settings.annualCap;
         annualStakingRewardsRatePercentMille = _settings.annualRateInPercentMille;
         defaultDelegatorsStakingRewardsPercentMille = _settings.defaultDelegatorsStakingRewardsPercentMille;
         maxDelegatorsStakingRewardsPercentMille = _settings.maxDelegatorsStakingRewardsPercentMille;
@@ -309,7 +314,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     // Global state
 
     function _getAnnualRate(uint256 totalCommitteeWeight, Settings memory _settings) private pure returns (uint256) {
-        return totalCommitteeWeight == 0 ? 0 : Math.min(uint(_settings.annualRateInPercentMille), fromMilliOrbs(_settings.annualCap).mul(PERCENT_MILLIE_BASE).div(totalCommitteeWeight));
+        return totalCommitteeWeight == 0 ? 0 : Math.min(uint(_settings.annualRateInPercentMille), uint256(_settings.annualCap).mul(PERCENT_MILLIE_BASE).div(totalCommitteeWeight));
     }
 
     function calcStakingRewardPerWeightDelta(uint256 totalCommitteeWeight, uint duration, Settings memory _settings) private pure returns (uint256 stakingRewardsPerTokenDelta) {
@@ -340,7 +345,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         uint allocatedRewards;
         (_stakingRewardsState, allocatedRewards) = _getStakingRewardsState(totalCommitteeWeight, _settings);
         stakingRewardsState = _stakingRewardsState;
-        emit StakingRewardAllocated(allocatedRewards, _stakingRewardsState.stakingRewardsPerWeight);
+        emit StakingRewardsAllocated(allocatedRewards, _stakingRewardsState.stakingRewardsPerWeight);
     }
 
     function updateStakingRewardsState() private returns (StakingRewardsState memory _stakingRewardsState) {
@@ -367,15 +372,13 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
             uint256 guardianCutPercentMille = PERCENT_MILLIE_BASE.sub(delegatorRewardsRatioPercentMille);
 
-            uint256 guardianRewards = totalRewards
-                .mul(guardianCutPercentMille)
-                .div(PERCENT_MILLIE_BASE)
-                .div(TOKEN_BASE);
+            rewardsAdded = totalRewards
+                    .mul(guardianCutPercentMille)
+                    .div(PERCENT_MILLIE_BASE)
+                    .div(TOKEN_BASE);
 
             guardianStakingRewards.delegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta);
-            guardianStakingRewards.balance = guardianStakingRewards.balance.add(toMilliOrbs(guardianRewards));
-
-            rewardsAdded = guardianRewards;
+            guardianStakingRewards.balance = guardianStakingRewards.balance.add(rewardsAdded);
         }
 
         guardianStakingRewards.lastStakingRewardsPerWeight = inCommitteeAfter ? _stakingRewardsState.stakingRewardsPerWeight : 0;
@@ -395,7 +398,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         uint256 guardianStakingRewardsAdded;
         (guardianStakingRewards, guardianStakingRewardsAdded) = _getGuardianStakingRewards(guardian, inCommittee, inCommitteeAfter, guardianWeight, guardianDelegatedStake, _stakingRewardsState, _settings);
         guardiansStakingRewards[guardian] = guardianStakingRewards;
-        emit GuardianStakingRewardsAssigned(guardian, guardianStakingRewardsAdded, guardianStakingRewards.delegatorRewardsPerToken);
+        emit GuardianStakingRewardsAssigned(guardian, guardianStakingRewardsAdded, guardianStakingRewards.claimed.add(guardianStakingRewards.balance), guardianStakingRewards.delegatorRewardsPerToken, _stakingRewardsState.stakingRewardsPerWeight);
     }
 
     function updateGuardianStakingRewards(address guardian, StakingRewardsState memory _stakingRewardsState, Settings memory _settings) private returns (GuardianStakingRewards memory guardianStakingRewards) {
@@ -408,15 +411,13 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function _getDelegatorStakingRewards(address delegator, uint256 delegatorStake, GuardianStakingRewards memory guardianStakingRewards) private view returns (DelegatorStakingRewards memory delegatorStakingRewards, uint256 delegatorRewardsAdded) {
         delegatorStakingRewards = delegatorsStakingRewards[delegator];
 
-        uint256 amount = uint256(guardianStakingRewards.delegatorRewardsPerToken)
-            .sub(delegatorStakingRewards.lastDelegatorRewardsPerToken)
-            .mul(delegatorStake)
-            .div(TOKEN_BASE);
+        delegatorRewardsAdded = uint256(guardianStakingRewards.delegatorRewardsPerToken)
+                .sub(delegatorStakingRewards.lastDelegatorRewardsPerToken)
+                .mul(delegatorStake)
+                .div(TOKEN_BASE);
 
-        delegatorStakingRewards.balance = delegatorStakingRewards.balance.add(toMilliOrbs(amount));
+        delegatorStakingRewards.balance = delegatorStakingRewards.balance.add(delegatorRewardsAdded);
         delegatorStakingRewards.lastDelegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken;
-
-        delegatorRewardsAdded = amount;
     }
 
     function getDelegatorStakingRewards(address delegator) private view returns (DelegatorStakingRewards memory delegatorStakingRewards) {
@@ -426,11 +427,13 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         (delegatorStakingRewards,) = _getDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
     }
 
-    function _updateDelegatorStakingRewards(address delegator, uint256 delegatorStake, GuardianStakingRewards memory guardianStakingRewards) private {
+    function _updateDelegatorStakingRewards(address delegator, uint256 delegatorStake, address guardian, GuardianStakingRewards memory guardianStakingRewards) private {
         uint256 delegatorStakingRewardsAdded;
-        (delegatorsStakingRewards[delegator], delegatorStakingRewardsAdded) = _getDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
+        DelegatorStakingRewards memory delegatorStakingRewards;
+        (delegatorStakingRewards, delegatorStakingRewardsAdded) = _getDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
+        delegatorsStakingRewards[delegator] = delegatorStakingRewards;
 
-        emit StakingRewardsAssigned(delegator, delegatorStakingRewardsAdded);
+        emit DelegatorStakingRewardsAssigned(delegator, delegatorStakingRewardsAdded, delegatorStakingRewards.claimed.add(delegatorStakingRewards.balance), guardian, guardianStakingRewards.delegatorRewardsPerToken);
     }
 
     function updateDelegatorStakingRewards(address delegator) private {
@@ -442,7 +445,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         (address guardian, uint delegatorStake) = delegationsContract.getDelegationInfo(delegator);
         GuardianStakingRewards memory guardianRewards = updateGuardianStakingRewards(guardian, _stakingRewardsState, _settings);
 
-        _updateDelegatorStakingRewards(delegator, delegatorStake, guardianRewards);
+        _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, guardianRewards);
     }
 
     // Guardian settings
@@ -462,9 +465,11 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     // Governance and misc.
 
     function _setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) private {
+        require(uint256(uint96(annualCap)) == annualCap, "annualCap must fit in uint96");
+
         Settings memory _settings = settings;
         _settings.annualRateInPercentMille = uint32(annualRateInPercentMille);
-        _settings.annualCap = toMilliOrbs(annualCap);
+        _settings.annualCap = uint96(annualCap);
         settings = _settings;
 
         emit AnnualStakingRewardsRateChanged(annualRateInPercentMille, annualCap);
@@ -482,10 +487,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function claimStakingRewardsLocally(address addr) private returns (uint256 guardianRewards, uint256 delegatorRewards) {
         updateDelegatorStakingRewards(addr);
 
-        guardianRewards = fromMilliOrbs(guardiansStakingRewards[addr].balance);
+        guardianRewards = guardiansStakingRewards[addr].balance;
         guardiansStakingRewards[addr].balance = 0;
 
-        delegatorRewards = fromMilliOrbs(delegatorsStakingRewards[addr].balance);
+        delegatorRewards = delegatorsStakingRewards[addr].balance;
         delegatorsStakingRewards[addr].balance = 0;
 
         uint256 total = delegatorRewards.add(guardianRewards);
@@ -501,14 +506,6 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
         stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.sub(total);
         stakingRewardsState.unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards.sub(total);
-    }
-
-    function toMilliOrbs(uint256 v) private pure returns (uint48) {
-        return uint48(v / TOKEN_GRANULARITY);
-    }
-
-    function fromMilliOrbs(uint48 v) private pure returns (uint256) {
-        return uint256(v) * TOKEN_GRANULARITY;
     }
 
     /*
