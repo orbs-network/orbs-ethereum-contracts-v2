@@ -350,11 +350,11 @@ export class Driver {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
         }
 
-        if (!(await stakingRewards.isInitializationComplete())) {
+        if (!(await stakingRewards.isInitializationComplete()) && !(await stakingRewards.isRewardAllocationActive())) {
             await stakingRewards.activateRewardDistribution(await web3.now());
         }
 
-        if (!(await feesAndBootstrapRewards.isInitializationComplete())) {
+        if (!(await feesAndBootstrapRewards.isInitializationComplete()) && !(await feesAndBootstrapRewards.isRewardAllocationActive())) {
             await feesAndBootstrapRewards.activateRewardDistribution(await web3.now());
         }
 
