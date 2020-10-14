@@ -11,24 +11,17 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	struct Guardian {
 		address orbsAddr;
 		bytes4 ip;
+		uint32 registrationTime;
+		uint32 lastUpdateTime;
 		string name;
 		string website;
-		uint256 registrationTime;
-		uint256 lastUpdateTime;
 	}
 	mapping(address => Guardian) guardians;
 	mapping(address => address) orbsAddressToGuardianAddress;
 	mapping(bytes4 => address) public ipToGuardian;
 	mapping(address => mapping(string => string)) guardianMetadata;
 
-	constructor(IContractRegistry _contractRegistry, address _registryAdmin, IGuardiansRegistration previousContract, address[] memory guardiansToMigrate) ManagedContract(_contractRegistry, _registryAdmin) public {
-		require(previousContract != IGuardiansRegistration(0) || guardiansToMigrate.length == 0, "A guardian address list was provided for migration without the previous contract");
-
-		for (uint i = 0; i < guardiansToMigrate.length; i++) {
-			migrateGuardianData(previousContract, guardiansToMigrate[i]);
-			migrateGuardianMetadata(previousContract, guardiansToMigrate[i]);
-		}
-	}
+	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
 
 	modifier onlyRegisteredGuardian {
 		require(isRegistered(msg.sender), "Guardian is not registered");
@@ -44,7 +37,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external override onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerGuardian: Guardian is already registered");
 
-		guardians[msg.sender].registrationTime = now;
+		guardians[msg.sender].registrationTime = uint32(block.timestamp);
 		emit GuardianRegistered(msg.sender);
 
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
@@ -129,6 +122,18 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	}
 
 	/*
+	 * Governance
+	 */
+
+	function migrateGuardian(address guardian, IGuardiansRegistration previousContract) external override onlyInitializationAdmin {
+		require(guardian != address(0), "guardian must not be the zero address");
+		require(previousContract != IGuardiansRegistration(0), "previousContract must not be the zero address");
+
+		migrateGuardianData(previousContract, guardian);
+		migrateGuardianMetadata(previousContract, guardian);
+	}
+
+	/*
 	 * Private methods
 	 */
 
@@ -150,7 +155,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		guardians[guardianAddr].ip = ip;
 		guardians[guardianAddr].name = name;
 		guardians[guardianAddr].website = website;
-		guardians[guardianAddr].lastUpdateTime = now;
+		guardians[guardianAddr].lastUpdateTime = uint32(block.timestamp);
 
         emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website);
     }
@@ -168,9 +173,9 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 			ip: ip,
 			name: name,
 			website: website,
-			registrationTime: registrationTime,
-			lastUpdateTime: lastUpdateTime
-			});
+			registrationTime: uint32(registrationTime),
+			lastUpdateTime: uint32(lastUpdateTime)
+		});
 		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
 		ipToGuardian[ip] = guardianAddress;
 

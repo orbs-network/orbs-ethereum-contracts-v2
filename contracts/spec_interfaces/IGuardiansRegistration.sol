@@ -52,4 +52,10 @@ interface IGuardiansRegistration {
 	/// @dev Resolves the guardian address for a guardian, given a Guardian/Orbs address
 	function resolveGuardianAddress(address guardianOrOrbsAddress) external view returns (address guardianAddress);
 
+	/*
+	 * Governance functions
+	 */
+
+	function migrateGuardian(address guardian, IGuardiansRegistration previousContract) external /* onlyInitializationAdmin */;
+
 }
