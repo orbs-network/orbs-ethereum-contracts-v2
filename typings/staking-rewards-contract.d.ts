@@ -140,4 +140,6 @@ export interface StakingRewardsContract extends OwnedContract {
         maxDelegatorsStakingRewardsPercentMille: string,
         rewardAllocationActive: boolean
     }>;
+
+    isRewardAllocationActive(): Promise<boolean>;
 }
