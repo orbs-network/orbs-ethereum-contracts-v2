@@ -82,4 +82,6 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
         certifiedCommitteeAnnualBootstrap: string,
         rewardAllocationActive: boolean
     }>;
+
+    isRewardAllocationActive(): Promise<boolean>;
 }

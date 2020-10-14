@@ -299,7 +299,7 @@ export class Driver {
         const guardiansRegistration = options.guardiansRegistrationAddress ?
             await web3.getExisting('GuardiansRegistration', options.guardiansRegistrationAddress, session)
             :
-            await web3.deploy('GuardiansRegistration', [contractRegistry.address, registryAdmin, ZERO_ADDR, []], null, session);
+            await web3.deploy('GuardiansRegistration', [contractRegistry.address, registryAdmin], null, session);
 
         const generalFeesWallet = options.generalFeesWalletAddress ?
             await web3.getExisting('FeesWallet', options.generalFeesWalletAddress, session)
@@ -350,11 +350,11 @@ export class Driver {
             await protocol.createDeploymentSubset(DEPLOYMENT_SUBSET_MAIN, 1, {from: functionalManager});
         }
 
-        if (!(await stakingRewards.isInitializationComplete())) {
+        if (!(await stakingRewards.isInitializationComplete()) && !(await stakingRewards.isRewardAllocationActive())) {
             await stakingRewards.activateRewardDistribution(await web3.now());
         }
 
-        if (!(await feesAndBootstrapRewards.isInitializationComplete())) {
+        if (!(await feesAndBootstrapRewards.isInitializationComplete()) && !(await feesAndBootstrapRewards.isRewardAllocationActive())) {
             await feesAndBootstrapRewards.activateRewardDistribution(await web3.now());
         }
 

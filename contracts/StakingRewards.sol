@@ -238,6 +238,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
+        require(!settings.rewardAllocationActive, "reward distribution is already activated");
+
         stakingRewardsState.lastAssigned = uint32(startTime);
         settings.rewardAllocationActive = true;
 

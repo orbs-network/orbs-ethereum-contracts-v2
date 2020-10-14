@@ -95,12 +95,13 @@ export class Web3Driver{
             }
 
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName})
-            this.log("Deployed " + contractName + " at " + web3Contract.options.address);
 
             while (txHash == null) {
                 await new Promise((resolve) => setTimeout(resolve, 10));
             }
 
+            const txReceipt = await this.web3.eth.getTransactionReceipt(txHash);
+            this.log("Deployed " + contractName + " at " + web3Contract.options.address + ` [gas: ${txReceipt.gasUsed}]`);
             return new Contract(this, session, abi, web3Contract.options.address, txHash) as Contracts[N];
         }
 
@@ -209,6 +210,7 @@ export class Contract {
             }
             if (action == "send") {
                 this.session.gasRecorder.record(ret);
+                this.web3.log(`Called contract method "${method}" [gas: ${ret.gasUsed}]`);
             }
             return ret;
         }

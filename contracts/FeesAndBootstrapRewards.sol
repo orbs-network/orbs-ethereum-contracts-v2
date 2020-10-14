@@ -177,6 +177,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
+        require(!settings.rewardAllocationActive, "reward distribution is already activated");
+
         feesAndBootstrapState.lastAssigned = uint32(startTime);
         settings.rewardAllocationActive = true;
 
