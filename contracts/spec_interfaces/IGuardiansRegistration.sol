@@ -56,6 +56,6 @@ interface IGuardiansRegistration {
 	 * Governance functions
 	 */
 
-	function migrateGuardian(address guardian, IGuardiansRegistration previousContract) external /* onlyInitializationAdmin */;
+	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistration previousContract) external /* onlyInitializationAdmin */;
 
 }

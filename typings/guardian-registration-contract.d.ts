@@ -40,6 +40,6 @@ export interface GuardiansRegistrationContract extends OwnedContract {
     getGuardianData(addr: string, params?: TransactionConfig): Promise<{ip: string, orbsAddr: string, name: string, website: string, registrationTime: BN|string, lastUpdateTime: BN|string}>;
     getGuardiansOrbsAddress(addrs: string[], params?: TransactionConfig): Promise<string[]>;
     getGuardianAddresses(addrs: string[], params?: TransactionConfig): Promise<string[]>;
-    migrateGuardian(guardian: string, previousContract: string): Promise<TransactionReceipt>;
+    migrateGuardians(guardians: string[], previousContract: string): Promise<TransactionReceipt>;
 }
 

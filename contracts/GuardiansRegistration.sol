@@ -125,12 +125,14 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	 * Governance
 	 */
 
-	function migrateGuardian(address guardian, IGuardiansRegistration previousContract) external override onlyInitializationAdmin {
-		require(guardian != address(0), "guardian must not be the zero address");
+	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistration previousContract) external override onlyInitializationAdmin {
 		require(previousContract != IGuardiansRegistration(0), "previousContract must not be the zero address");
 
-		migrateGuardianData(previousContract, guardian);
-		migrateGuardianMetadata(previousContract, guardian);
+		for (uint i = 0; i < guardiansToMigrate.length; i++) {
+			require(guardiansToMigrate[i] != address(0), "guardian must not be the zero address");
+			migrateGuardianData(previousContract, guardiansToMigrate[i]);
+			migrateGuardianMetadata(previousContract, guardiansToMigrate[i]);
+		}
 	}
 
 	/*
