@@ -24,6 +24,7 @@ if (-e $dir and -d $dir) {
 } else {
     mkdir $dir;
 }
+
 foreach $contract (@contracts) {
     $dir = "../multi/".$contract;
     if (-e $dir and -d $dir) {
@@ -38,18 +39,16 @@ foreach $contract (@contracts) {
         $file_name_path =~ /\/([A-Za-z0-9]*.sol)/;
         $file_name = $1;
         if ($file_name_path =~ /openz.*(contracts.*sol)/) {
-            $file_name_path = "openzeppelin/".$1;
-#            $file_name_path = "node_modules\/\\".$file_name_path;
+            $file_name_path = "node_modules\/\\\@openzeppelin\/".$1;
         }
-        open($orig, '<', "../".$file_name_path);
+        @orig = `cat ../$file_name_path`;
         open($fixed, '>', "../multi/".$contract."/".$file_name);
-        foreach $line (<$orig>) {
+        foreach $line (@orig) {
             if ($line =~ /import.*(\/[A-Za-z0-9]*.sol)/) {
                 $line = "import \".".$1."\";\n";
             }
             print $fixed $line;
         }
-        close($orig);
         close($fixed);
     }
 }
