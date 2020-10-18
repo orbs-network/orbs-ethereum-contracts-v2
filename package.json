@@ -9,7 +9,7 @@
     "test-ropsten": "export ETHEREUM_URL=https://ropsten.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-kovan": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && export WEB3_DRIVER_VERBOSE=true && npm run prepublish && mocha --bail --exit --full-trace -r ./tsinit.js --exclude ./test/gas-scenarios.spec.ts ./test/*.spec.ts --timeout 1200000000",
     "test-gas-scenarios": "export GANACHE_CORE=true && npm run prepublish && mocha --exit --full-trace -r ./tsinit.js ./test/gas-scenarios.spec.ts --timeout 600000",
-    "coverage": "export ETHEREUM_URL=http://localhost:8555 && truffle run coverage",
+    "coverage": "export TEST_COVERAGE=true && export GAS_LIMIT=1000000000 && truffle run coverage",
     "prepublish": "echo 'Compiling .sol and .ts...' && rm -rf ./release/ && tsc --project tsconfig.json --declaration --declarationMap --skipLibCheck --outDir ./release && truffle compile && mkdir -p release/build/contracts release/typings && cp -r build/contracts/. release/build/contracts && cp -r typings/. release/typings && ./extractAbi.sh",
     "migrate": "truffle migrate --reset",
     "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log",

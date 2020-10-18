@@ -29,6 +29,7 @@ export const defaultWeb3Provider = () => process.env.GANACHE_CORE ?
             total_accounts: 400,
             gasPrice: 1,
             gasLimit: "0x7fffffff",
+            allowUnlimitedContractSize: process.env.TEST_COVERAGE == "true",
             ...(ETHERUM_FORK_URL ? {fork: ETHERUM_FORK_URL} : {})
         }))
     :
