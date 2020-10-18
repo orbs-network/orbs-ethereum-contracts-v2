@@ -16,7 +16,8 @@
     "ProtocolWallet",
     "StakingContractHandler",
     "StakingRewards",
-    "Subscriptions"
+    "Subscriptions",
+    "MonthlySubscriptionPlan"
     );
 
 $dir = "../multi/";

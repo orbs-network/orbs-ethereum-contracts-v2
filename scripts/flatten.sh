@@ -18,6 +18,7 @@ declare -a CONTRACTS=(
     "StakingContractHandler"
     "StakingRewards"
     "Subscriptions"
+    "MonthlySubscriptionPlan"
 )
 
 mkdir -p ${OUTPUT}
