@@ -47,6 +47,12 @@ contract Elections is IElections, ManagedContract {
 		_;
 	}
 
+	modifier onlyCertificationContract() {
+		require(msg.sender == address(certificationContract), "caller is not the certification contract");
+
+		_;
+	}
+
 	/*
 	 * External functions
 	 */
@@ -195,9 +201,9 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.removeMember(guardian);
 	}
 
-	/// @dev Called by: guardian registration contract
+	/// @dev Called by: guardian registration contract§
 	/// Notifies on a guardian certification change
-	function guardianCertificationChanged(address guardian, bool isCertified) external override onlyWhenActive {
+	function guardianCertificationChanged(address guardian, bool isCertified) external override onlyCertificationContract onlyWhenActive {
 		committeeContract.memberCertificationChange(guardian, isCertified);
 	}
 
@@ -386,4 +392,4 @@ contract Elections is IElections, ManagedContract {
 		certificationContract = ICertification(getCertificationContract());
 	}
 
-}
+}ª
