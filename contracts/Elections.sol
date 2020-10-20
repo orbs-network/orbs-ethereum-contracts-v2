@@ -392,4 +392,4 @@ contract Elections is IElections, ManagedContract {
 		certificationContract = ICertification(getCertificationContract());
 	}
 
-}ª
+}
