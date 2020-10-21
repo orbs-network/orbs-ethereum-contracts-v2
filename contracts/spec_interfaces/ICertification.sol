@@ -10,9 +10,13 @@ interface ICertification /* is Ownable */ {
      * External methods
      */
 
-	/// @dev Returns the certification status of a guardian
+	/// Returns the certification status of a guardian
+	/// @param guardian - the guardian to query
 	function isGuardianCertified(address guardian) external view returns (bool isCertified);
 
-	/// @dev Sets the guardian certification status
-	function setGuardianCertification(address guardian, bool isCertified) external /* Owner only */ ;
+	/// Sets the guardian certification status
+	/// @dev governance function called only by the functional manager
+	/// @param guardian - the guardian to query
+	/// @param isCertified bool indication wether the guardian is certified
+	function setGuardianCertification(address guardian, bool isCertified) external /* onlyFunctionalManager */ ;
 }
