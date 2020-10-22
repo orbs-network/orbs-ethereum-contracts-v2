@@ -199,6 +199,18 @@ describe('rewards', async () => {
         expectApproxEq(await committee[1].getBootstrapBalance(), generalBootstrapForDuration(DURATION / 4));
 
         let r = await committee[0].readyToSync(); // leaves committee
+        expect(r).to.have.a.approx().feesAllocatedEvent({
+            allocatedGeneralFees: bn(await committee[0].getFeeBalance()).mul(bn(MAX_COMMITTEE)),
+            generalFeesPerMember: bn(await committee[0].getFeeBalance()),
+            allocatedCertifiedFees: certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE).sub(generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)).mul(bn(MAX_COMMITTEE)),
+            certifiedFeesPerMember: bn(0)
+        });
+        expect(r).to.have.a.approx().bootstrapRewardsAllocatedEvent({
+            allocatedGeneralBootstrapRewards: bn(await committee[0].getBootstrapBalance()).mul(bn(MAX_COMMITTEE)),
+            generalBootstrapRewardsPerMember: bn(await committee[0].getBootstrapBalance()),
+            allocatedCertifiedBootstrapRewards: generalBootstrapForDuration(DURATION / 4).mul(bn(MAX_COMMITTEE)),
+            certifiedBootstrapRewardsPerMember: certifiedBootstrapForDuration(DURATION / 4),
+        });
         expect(r).to.have.a.approx().feesAssignedEvent({guardian: committee[0].address, amount: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)});
         expect(r).to.have.a.approx().bootstrapRewardsAssignedEvent({guardian: committee[0].address, amount: generalBootstrapForDuration(DURATION / 4)});
 
@@ -302,7 +314,20 @@ describe('rewards', async () => {
         expectApproxEq(await committee[1].getFeeBalance(), certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE));
         expectApproxEq(await committee[1].getBootstrapBalance(), certifiedBootstrapForDuration(DURATION / 4));
 
-        await committee[0].becomeNotCertified(); // leaves certified committee
+        let r = await committee[0].becomeNotCertified(); // leaves certified committee
+        expect(r).to.have.a.approx().feesAllocatedEvent({
+            allocatedGeneralFees: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE).mul(bn(MAX_COMMITTEE)),
+            generalFeesPerMember: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE),
+            allocatedCertifiedFees: certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE).sub(generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)).mul(bn(MAX_COMMITTEE)),
+            certifiedFeesPerMember: certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE)
+        });
+        expect(r).to.have.a.approx().bootstrapRewardsAllocatedEvent({
+            allocatedGeneralBootstrapRewards: generalBootstrapForDuration(DURATION / 4).mul(bn(MAX_COMMITTEE)),
+            generalBootstrapRewardsPerMember: generalBootstrapForDuration(DURATION / 4),
+            allocatedCertifiedBootstrapRewards: certifiedBootstrapForDuration(DURATION / 4).mul(bn(MAX_COMMITTEE)),
+            certifiedBootstrapRewardsPerMember: certifiedBootstrapForDuration(DURATION / 4),
+        });
+
 
         expectApproxEq(await committee[0].getFeeBalance(), certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE));
         expectApproxEq(await committee[0].getBootstrapBalance(), certifiedBootstrapForDuration(DURATION / 4));
