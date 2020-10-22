@@ -396,6 +396,14 @@ describe('rewards', async () => {
 
     // Staking rewards
 
+    it('successfully claims 0 staking rewards ', async () => {
+        const d = await Driver.new();
+
+        const p = d.newParticipant();
+        const r = await d.stakingRewards.claimStakingRewards(p.address);
+        expect(r).to.not.have.a.stakingRewardsClaimedEvent();
+    });
+
     it('assigns staking rewards to committee member, accommodate for participation and stake changes', async () => {
         const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
