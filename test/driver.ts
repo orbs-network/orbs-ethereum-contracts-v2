@@ -210,6 +210,7 @@ export class Driver {
         const registryAdmin = accounts[1];
         const migrationManager = accounts[2];
         const functionalManager = accounts[3];
+        const certificationManager = accounts[4];
 
         const contractRegistry = options.contractRegistryAddress ?
             await web3.getExisting('ContractRegistry', options.contractRegistryAddress, session)
@@ -334,6 +335,7 @@ export class Driver {
 
         await contractRegistry.setManager("migrationManager", migrationManager, {from: registryAdmin});
         await contractRegistry.setManager("functionalManager", functionalManager, {from: registryAdmin});
+        await contractRegistry.setManager("certificationManager", certificationManager, {from: registryAdmin});
 
         for (const wallet of [stakingRewardsWallet, bootstrapRewardsWallet]) {
             if ((await wallet.migrationOwner()) != migrationManager) {
@@ -483,11 +485,15 @@ export class Driver {
     }
 
     get migrationManager(): Participant {
-        return new Participant("migration-owner", "migration-owner-website", this.accounts[2], this.accounts[2], this);
+        return new Participant("migration-manager", "migration-manager-website", this.accounts[2], this.accounts[2], this);
     }
 
     get functionalManager(): Participant {
-        return new Participant("functional-owner", "functional-owner-website", this.accounts[3], this.accounts[3], this);
+        return new Participant("functional-manager", "functional-manager-website", this.accounts[3], this.accounts[3], this);
+    }
+
+    get certificationManager(): Participant {
+        return new Participant("certification-manager", "certification-manager-website", this.accounts[4], this.accounts[4], this);
     }
 
     subscribers: any[] = [];
