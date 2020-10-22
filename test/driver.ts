@@ -644,11 +644,11 @@ export class Participant {
     }
 
     async becomeCertified() {
-        return await this.driver.certification.setGuardianCertification(this.address, true, {from: this.driver.functionalManager.address});
+        return await this.driver.certification.setGuardianCertification(this.address, true, {from: this.driver.certificationManager.address});
     }
 
     async becomeNotCertified() {
-        return await this.driver.certification.setGuardianCertification(this.address, false, {from: this.driver.functionalManager.address});
+        return await this.driver.certification.setGuardianCertification(this.address, false, {from: this.driver.certificationManager.address});
     }
 
     async becomeGuardian(stake: number|BN, certified: boolean, signalReadyToSync: boolean, signalReadyForCommittee: boolean): Promise<TransactionReceipt> {
