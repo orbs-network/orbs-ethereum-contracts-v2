@@ -1,4 +1,5 @@
 import {ContractRegistryKey} from "./test/driver";
+import {ContractName} from "./typings/contracts";
 
 export function getAbiByContractRegistryKey(key: ContractRegistryKey): object {
     switch (key) {
@@ -22,6 +23,8 @@ export function getAbiByContractRegistryKey(key: ContractRegistryKey): object {
             return require('./abi/StakingRewards.abi.json');
         case 'feesAndBootstrapRewards':
             return require('./abi/FeesAndBootstrapRewards.abi.json');
+        case 'bootstrapRewardsWallet':
+            return require('./abi/ProtocolWallet.abi.json');
         case 'stakingRewardsWallet':
             return require('./abi/ProtocolWallet.abi.json');
         case 'generalFeesWallet':
@@ -33,6 +36,10 @@ export function getAbiByContractRegistryKey(key: ContractRegistryKey): object {
         default:
             assertUnreachable(key, `No such contract registry key: ${key}`);
     }
+}
+
+export function getAbiByContractName(key: ContractName): object {
+    return require(`./abi/${key}.abi.json`);
 }
 
 function assertUnreachable(x: never, msg: string): never {
