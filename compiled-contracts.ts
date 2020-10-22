@@ -5,7 +5,7 @@ export type CompiledContracts = {[contractName: string]: any};
 
 const EXCLUDE = ["IElections.json"];
 
-function loadCompiledContracts(baseDir: string): CompiledContracts {
+export function loadCompiledContracts(baseDir = path.join(__dirname, 'build', 'contracts')): CompiledContracts {
     const artifacts: CompiledContracts = {};
     for (const fname of fs.readdirSync(baseDir)) {
         if (EXCLUDE.includes(fname)) continue;
@@ -41,5 +41,5 @@ function listEventsDefinitions(contracts: CompiledContracts): EventDefinition[] 
     return defs;
 }
 
-export const compiledContracts = loadCompiledContracts(path.join(__dirname, 'build', 'contracts'));
+export const compiledContracts = loadCompiledContracts();
 export const eventDefinitions = listEventsDefinitions(compiledContracts);

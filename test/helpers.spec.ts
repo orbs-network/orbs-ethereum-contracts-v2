@@ -2,9 +2,11 @@ import chai from "chai";
 const expect = chai.expect;
 
 import {getAbiByContractName, getAbiByContractRegistryKey} from "../abi-loader";
-import {compiledContracts} from "../compiled-contracts";
+import {loadCompiledContracts} from "../compiled-contracts";
 
 describe("helpers tests", async () => {
+
+    const compiledContracts = loadCompiledContracts();
 
     it("should return the ABI by the registry key name", async () => {
         expect(getAbiByContractRegistryKey('protocol')).to.deep.eq(compiledContracts.Protocol.abi);
