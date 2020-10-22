@@ -31,7 +31,7 @@ function listEventsDefinitions(contracts: CompiledContracts): EventDefinition[] 
         const eventDefs: EventDefinition[] = contract.abi
             .filter(x => x.type == 'event')
             .map(e => ({
-                contractName: contractName,
+                contractName,
                 name: e.name,
                 signature: e.name + "(" + e.inputs.map(input => input.type).join(',') + ")"
             }));

@@ -4,12 +4,12 @@ import * as _ from "lodash";
 import BN from "bn.js";
 import {Driver, DEPLOYMENT_SUBSET_MAIN, Participant} from "./driver";
 import chai from "chai";
+const expect = chai.expect;
+
 import {chaiEventMatchersPlugin} from "./matchers";
 
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);
-
-const expect = chai.expect;
 
 describe('testkit', async () => {
 
@@ -98,6 +98,5 @@ describe('testkit', async () => {
     expect(d.bootstrapRewardsWallet.address).to.equal(bootstrapRewardsWalletAddress);
     expect(d.guardiansRegistration.address).to.equal(guardiansRegistrationAddress);
   });
-
 
 });

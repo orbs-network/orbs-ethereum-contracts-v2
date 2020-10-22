@@ -1,6 +1,6 @@
 import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
-import { ContractName, ContractName4Testkit } from "../test/driver";
+import { ContractRegistryKey, ContractRegistryKey4Testkit } from "../test/driver";
 import {OwnedContract} from "./base-contract";
 
 export interface ContractRegistryContract extends OwnedContract {
