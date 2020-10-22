@@ -181,7 +181,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards;
     }
 
-    function getCurrentStakingRewardsRatePercentMille() external override returns (uint256) {
+    function getCurrentStakingRewardsRatePercentMille() external override view returns (uint256) {
         (, , uint totalCommitteeWeight) = committeeContract.getCommitteeStats();
         return _getAnnualRate(totalCommitteeWeight, settings);
     }
