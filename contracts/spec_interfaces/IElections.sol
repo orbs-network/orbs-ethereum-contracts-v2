@@ -70,8 +70,8 @@ interface IElections {
 	/// @return weights is a list of the current committee members weight
 	/// @return certification is a list of bool indicating the committee members certification
 	/// @return votes is a list of bool indicating the members that votes the subject unready
-	/// @return subjectInCommittee indicates that teh subject is in the committee
-	/// @return subjectInCommittee indicates that teh subject is in the certified committee
+	/// @return subjectInCommittee indicates that the subject is in the committee
+	/// @return subjectInCertifiedCommittee indicates that the subject is in the certified committee
 	function getVoteUnreadyStatus(address subject) external view returns (
 		address[] memory committee,
 		uint256[] memory weights,

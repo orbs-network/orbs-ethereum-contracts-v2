@@ -42,7 +42,7 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/// Returns a delegtor's info
 	/// @param addr is the address to query
 	/// @return delegation is the address the addr delegated to
-	/// @return delegatedStake is the addr delegated stake
+	/// @return delegatorStake is the stake of the delegator as reflected in the delegation contract
 	function getDelegationInfo(address addr) external view returns (address delegation, uint256 delegatorStake);
 
 	/// Returns the total delegated stake

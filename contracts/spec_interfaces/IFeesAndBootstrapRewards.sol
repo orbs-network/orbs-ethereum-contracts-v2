@@ -35,7 +35,12 @@ interface IFeesAndBootstrapRewards {
         uint256 bootstrapBalance
     );
 
-    /// 
+    /// Returns an estimation of the fees and bootstrap a guardian will be entitled to for a duration of time
+    /// The estimation is based on the current system state and there for only provides an estimation
+    /// @param guardian is the guardian address
+    /// @param duration is the amount of time in seconds for which the estimation is calculated
+    /// @return estimatedFees is the estimated received fees for the duration
+    /// @return estimatedBootstrapRewards is the estimated received bootstrap for the duration
     function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external view returns (
         uint256 estimatedFees,
         uint256 estimatedBootstrapRewards
@@ -110,25 +115,47 @@ interface IFeesAndBootstrapRewards {
         bool rewardAllocationActive
     );
 
+    /// Returns the general committee annual bootstrap award
+    /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
     function getGeneralCommitteeAnnualBootstrap() external view returns (uint256);
 
-    /// @dev Assigns rewards and sets a new monthly rate for the geenral commitee bootstrap.
-    function setGeneralCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
+	/// Sets the annual rate for the general committee bootstrap
+	/// @dev governance function called only by the functional manager
+    /// @dev updates the global bootstrap and fees state before updating  
+	/// @param annualAmount is the annual general committee bootstrap award
+    function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) external /* onlyFunctionalManager */;
 
+    /// Returns the certified committee annual bootstrap reward
+    /// @return certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap
     function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256);
 
-    /// @dev Assigns rewards and sets a new monthly rate for the certification commitee bootstrap.
-    function setCertifiedCommitteeAnnualBootstrap(uint256 annual_amount) external /* onlyFunctionalManager */;
+	/// Sets the annual rate for the certified committee bootstrap
+	/// @dev governance function called only by the functional manager
+    /// @dev updates the global bootstrap and fees state before updating  
+	/// @param annualAmount is the annual certified committee bootstrap award
+    function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) external /* onlyFunctionalManager */;
 
+    /// Returns the rewards allocation activation status
+    /// @return rewardAllocationActive is the activation status
     function isRewardAllocationActive() external view returns (bool);
 
-    /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
+    /// Migrates the rewards balance to a new FeesAndBootstrap contract
+    /// @dev The new rewards contract is determined according to the contracts registry
+    /// @dev No impact of the calling contract is the currently configured contract in the registry
+    /// @param guardian is the guardian to migrate
     function migrateRewardsBalance(address guardian) external;
 
-    /// @dev accepts guardian's balance migration from a previous rewards contarct.
+    /// Accepts guardian's balance migration from a previous rewards contract
+    /// @dev the function may be called by any caller that approves the amounts provided for transfer
+    /// @param guardian is the guardian migrated
+    /// @param fees is the guardian fees balance 
+    /// @param bootstrapRewards is the guardian bootstrap balance
     function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrapRewards) external;
 
-    /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
+    /// Performs emergency withdrawal of the contract balance
+    /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens
+	/// @dev governance function called only by the migration manager
+    /// @param token is the ERC20 token to withdraw
     function emergencyWithdraw(address token) external; /* onlyMigrationManager */
 }
 

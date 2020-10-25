@@ -89,6 +89,6 @@ interface ICommittee {
 	/// Imports the committee members from a previous committee contract during migration
 	/// @dev initialization function called only by the initializationManager
 	/// @dev does not update the reward contract to avoid incorrect notifications 
-	/// @param previousCommitteeContract is teh address of the previous committee contract
+	/// @param previousCommitteeContract is the address of the previous committee contract
 	function importMembers(ICommittee previousCommitteeContract) external /* onlyInitializationAdmin */;
 }
