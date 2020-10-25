@@ -204,6 +204,18 @@ describe('rewards', async () => {
         expectApproxEq(await committee[1].getBootstrapBalance(), generalBootstrapForDuration(DURATION / 4));
 
         let r = await committee[0].readyToSync(); // leaves committee
+        expect(r).to.have.a.approx().feesAllocatedEvent({
+            allocatedGeneralFees: bn(await committee[0].getFeeBalance()).mul(bn(MAX_COMMITTEE)),
+            generalFeesPerMember: bn(await committee[0].getFeeBalance()),
+            allocatedCertifiedFees: certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE).sub(generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)).mul(bn(MAX_COMMITTEE)),
+            certifiedFeesPerMember: bn(0)
+        });
+        expect(r).to.have.a.approx().bootstrapRewardsAllocatedEvent({
+            allocatedGeneralBootstrapRewards: bn(await committee[0].getBootstrapBalance()).mul(bn(MAX_COMMITTEE)),
+            generalBootstrapRewardsPerMember: bn(await committee[0].getBootstrapBalance()),
+            allocatedCertifiedBootstrapRewards: bn(0),
+            certifiedBootstrapRewardsPerMember: certifiedBootstrapForDuration(DURATION / 4),
+        });
         expect(r).to.have.a.approx().feesAssignedEvent({guardian: committee[0].address, amount: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)});
         expect(r).to.have.a.approx().bootstrapRewardsAssignedEvent({guardian: committee[0].address, amount: generalBootstrapForDuration(DURATION / 4)});
 
@@ -307,7 +319,20 @@ describe('rewards', async () => {
         expectApproxEq(await committee[1].getFeeBalance(), certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE));
         expectApproxEq(await committee[1].getBootstrapBalance(), certifiedBootstrapForDuration(DURATION / 4));
 
-        await committee[0].becomeNotCertified(); // leaves certified committee
+        let r = await committee[0].becomeNotCertified(); // leaves certified committee
+        expect(r).to.have.a.approx().feesAllocatedEvent({
+            allocatedGeneralFees: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE).mul(bn(MAX_COMMITTEE)),
+            generalFeesPerMember: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE),
+            allocatedCertifiedFees: certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE).sub(generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)).mul(bn(MAX_COMMITTEE)),
+            certifiedFeesPerMember: certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE)
+        });
+        expect(r).to.have.a.approx().bootstrapRewardsAllocatedEvent({
+            allocatedGeneralBootstrapRewards: generalBootstrapForDuration(DURATION / 4).mul(bn(MAX_COMMITTEE)),
+            generalBootstrapRewardsPerMember: generalBootstrapForDuration(DURATION / 4),
+            allocatedCertifiedBootstrapRewards: certifiedBootstrapForDuration(DURATION / 4).mul(bn(MAX_COMMITTEE)),
+            certifiedBootstrapRewardsPerMember: certifiedBootstrapForDuration(DURATION / 4),
+        });
+
 
         expectApproxEq(await committee[0].getFeeBalance(), certifiedFeesForDuration(DURATION / 4, MAX_COMMITTEE, MAX_COMMITTEE));
         expectApproxEq(await committee[0].getBootstrapBalance(), certifiedBootstrapForDuration(DURATION / 4));
@@ -400,6 +425,14 @@ describe('rewards', async () => {
     });
 
     // Staking rewards
+
+    it('successfully claims 0 staking rewards ', async () => {
+        const d = await Driver.new();
+
+        const p = d.newParticipant();
+        const r = await d.stakingRewards.claimStakingRewards(p.address);
+        expect(r).to.not.have.a.stakingRewardsClaimedEvent();
+    });
 
     it('assigns staking rewards to committee member, accommodate for participation and stake changes', async () => {
         const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
@@ -865,13 +898,15 @@ describe('rewards', async () => {
         await p.assignAndTransferOrbs(bn(1000), d.feesAndBootstrapRewards.address);
         await p.assignAndTransferExternalToken(bn(2000), d.feesAndBootstrapRewards.address);
 
-        await expectRejected(d.feesAndBootstrapRewards.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
-        let r = await d.feesAndBootstrapRewards.emergencyWithdraw({from: d.migrationManager.address});
-        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
-
+        await expectRejected(d.feesAndBootstrapRewards.emergencyWithdraw(d.erc20.address,{from: d.functionalManager.address}), /sender is not the migration manager/);
+        let r = await d.feesAndBootstrapRewards.emergencyWithdraw(d.erc20.address, {from: d.migrationManager.address});
+        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address, token: d.erc20.address});
         expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(bn(1000));
-        expect(await d.bootstrapToken.balanceOf(d.migrationManager.address)).to.bignumber.eq(bn(2000));
         expect(await d.erc20.balanceOf(d.feesAndBootstrapRewards.address)).to.bignumber.eq(bn(0));
+
+        r = await d.feesAndBootstrapRewards.emergencyWithdraw(d.bootstrapToken.address, {from: d.migrationManager.address});
+        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address, token: d.bootstrapToken.address});
+        expect(await d.bootstrapToken.balanceOf(d.migrationManager.address)).to.bignumber.eq(bn(2000));
         expect(await d.bootstrapToken.balanceOf(d.feesAndBootstrapRewards.address)).to.bignumber.eq(bn(0));
     });
 
@@ -880,9 +915,9 @@ describe('rewards', async () => {
         const p = d.newParticipant();
         await p.assignAndTransferOrbs(bn(1000), d.stakingRewards.address);
 
-        await expectRejected(d.stakingRewards.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
-        let r = await d.stakingRewards.emergencyWithdraw({from: d.migrationManager.address});
-        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
+        await expectRejected(d.stakingRewards.emergencyWithdraw(d.erc20.address, {from: d.functionalManager.address}), /sender is not the migration manager/);
+        let r = await d.stakingRewards.emergencyWithdraw(d.erc20.address, {from: d.migrationManager.address});
+        expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address, token: d.erc20.address});
 
         expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(bn(1000));
         expect(await d.erc20.balanceOf(d.stakingRewards.address)).to.bignumber.eq(bn(0));

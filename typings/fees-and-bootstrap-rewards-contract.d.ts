@@ -50,6 +50,20 @@ export interface RewardDistributionActivatedEvent {
     startTime: number|BN
 }
 
+export interface FeesAllocatedEvent {
+    allocatedGeneralFees: number|BN|string;
+    generalFeesPerMember: number|BN|string;
+    allocatedCertifiedFees: number|BN|string;
+    certifiedFeesPerMember: number|BN|string;
+}
+
+export interface BootstrapRewardsAllocatedEvent {
+    allocatedGeneralBootstrapRewards: number|BN|string;
+    generalBootstrapRewardsPerMember: number|BN|string;
+    allocatedCertifiedBootstrapRewards: number|BN|string;
+    certifiedBootstrapRewardsPerMember: number|BN|string;
+}
+
 export interface FeesAndBootstrapRewardsContract extends OwnedContract {
     deactivateRewardDistribution(params?: TransactionConfig): Promise<TransactionReceipt>;
 
@@ -62,7 +76,7 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
     withdrawBootstrapFunds(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getBootstrapBalance(address: string): Promise<string>;
 
-    emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
+    emergencyWithdraw(token: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     // fees
     withdrawFees(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;

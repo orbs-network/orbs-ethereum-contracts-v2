@@ -120,7 +120,7 @@ export interface StakingRewardsContract extends OwnedContract {
         lastDelegatorRewardsPerToken: string
     }>;
 
-    emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
+    emergencyWithdraw(token: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 

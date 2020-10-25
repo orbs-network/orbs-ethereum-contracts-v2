@@ -12,11 +12,6 @@ import "./ManagedContract.sol";
 contract Subscriptions is ISubscriptions, ManagedContract {
     using SafeMath for uint256;
 
-    enum CommitteeType {
-        General,
-        Certification
-    }
-
     struct VirtualChain {
         string name;
         string tier;

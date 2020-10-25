@@ -66,8 +66,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         IContractRegistry _contractRegistry,
         address _registryAdmin,
         IERC20 _erc20,
-        uint annualRateInPercentMille,
-        uint annualCap,
+        uint32 annualRateInPercentMille,
+        uint96 annualCap,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
         uint32 maxDelegatorsStakingRewardsPercentMille,
         IStakingRewards previousRewardsContract,
@@ -133,13 +133,15 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function claimStakingRewards(address addr) external override onlyWhenActive {
         (uint256 guardianRewards, uint256 delegatorRewards) = claimStakingRewardsLocally(addr);
+        uint256 total = delegatorRewards.add(guardianRewards);
+        if (total == 0) {
+            return;
+        }
 
         uint96 claimedGuardianRewards = guardiansStakingRewards[addr].claimed.add(guardianRewards);
         guardiansStakingRewards[addr].claimed = claimedGuardianRewards;
         uint96 claimedDelegatorRewards = delegatorsStakingRewards[addr].claimed.add(delegatorRewards);
         delegatorsStakingRewards[addr].claimed = claimedDelegatorRewards;
-
-        uint256 total = delegatorRewards.add(guardianRewards);
 
         require(erc20.approve(address(stakingContract), total), "claimStakingRewards: approve failed");
 
@@ -191,7 +193,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards;
     }
 
-    function getCurrentStakingRewardsRatePercentMille() external override returns (uint256) {
+    function getCurrentStakingRewardsRatePercentMille() external override view returns (uint256) {
         (, , uint totalCommitteeWeight) = committeeContract.getCommitteeStats();
         return _getAnnualRate(totalCommitteeWeight, settings);
     }
@@ -242,9 +244,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         emit StakingRewardsBalanceMigrationAccepted(msg.sender, addr, guardianStakingRewards, delegatorStakingRewards);
     }
 
-    function emergencyWithdraw() external override onlyMigrationManager {
-        emit EmergencyWithdrawal(msg.sender);
-        require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (orbs token)");
+    function emergencyWithdraw(address token) external override onlyMigrationManager {
+        IERC20 _token = IERC20(token);
+        emit EmergencyWithdrawal(msg.sender, token);
+        require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "StakingRewards::emergencyWithdraw - transfer failed");
     }
 
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
@@ -287,7 +290,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         return settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external override onlyFunctionalManager {
+    function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external override onlyFunctionalManager {
         updateStakingRewardsState();
         return _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
     }
@@ -476,12 +479,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     // Governance and misc.
 
-    function _setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) private {
-        require(uint256(uint96(annualCap)) == annualCap, "annualCap must fit in uint96");
-
+    function _setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) private {
         Settings memory _settings = settings;
-        _settings.annualRateInPercentMille = uint32(annualRateInPercentMille);
-        _settings.annualCap = uint96(annualCap);
+        _settings.annualRateInPercentMille = annualRateInPercentMille;
+        _settings.annualCap = annualCap;
         settings = _settings;
 
         emit AnnualStakingRewardsRateChanged(annualRateInPercentMille, annualCap);

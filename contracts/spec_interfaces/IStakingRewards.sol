@@ -55,7 +55,7 @@ interface IStakingRewards {
         uint96 unclaimedStakingRewards
     );
 
-    function getCurrentStakingRewardsRatePercentMille() external returns (uint256);
+    function getCurrentStakingRewardsRatePercentMille() external view returns (uint256);
 
     /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
     /// Triggers update of the member rewards
@@ -76,7 +76,7 @@ interface IStakingRewards {
     event RewardDistributionDeactivated();
     event StakingRewardsBalanceMigrated(address indexed addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, address toRewardsContract);
     event StakingRewardsBalanceMigrationAccepted(address from, address indexed addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards);
-    event EmergencyWithdrawal(address addr);
+    event EmergencyWithdrawal(address addr, address token);
 
     /// @dev activates reward distribution, all rewards will be distributed up
     /// assuming the last assignment was on startTime (the time the old contarct was deactivated)
@@ -97,7 +97,7 @@ interface IStakingRewards {
     function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
     /// @dev Sets a new annual rate and cap for the staking reward.
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
+    function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external /* onlyFunctionalManager */;
 
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
@@ -121,6 +121,6 @@ interface IStakingRewards {
     function acceptRewardsBalanceMigration(address guardian, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
-    function emergencyWithdraw() external /* onlyMigrationManager */;
+    function emergencyWithdraw(address token) external /* onlyMigrationManager */;
 }
 

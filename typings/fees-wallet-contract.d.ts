@@ -20,7 +20,7 @@ export interface FeesWalletContract extends OwnedContract {
     collectFees(params?: TransactionConfig): Promise<TransactionReceipt>;
     emergencyWithdrawal(params?: TransactionConfig): Promise<TransactionReceipt>;
     migrateBucket(destination: string, bucektStartTime: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-    emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
+    emergencyWithdraw(token: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 }

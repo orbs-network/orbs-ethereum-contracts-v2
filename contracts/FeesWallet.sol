@@ -23,7 +23,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
         token = _token;
-        lastCollectedAt = now;
+        lastCollectedAt = block.timestamp;
     }
 
     modifier onlyRewardsContract() {
@@ -65,7 +65,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         uint256 _amount = amount;
 
         // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD - fromTimestamp % BUCKET_TIME_PERIOD).div(BUCKET_TIME_PERIOD));
+        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD.sub(fromTimestamp % BUCKET_TIME_PERIOD)).div(BUCKET_TIME_PERIOD));
         fillFeeBucket(bucket, bucketAmount);
         _amount = _amount.sub(bucketAmount);
 
@@ -110,9 +110,10 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external override onlyMigrationManager {
-        emit EmergencyWithdrawal(msg.sender);
-        require(token.transfer(msg.sender, token.balanceOf(address(this))), "IFeesWallet::emergencyWithdraw - transfer failed (fee token)");
+    function emergencyWithdraw(address token) external override onlyMigrationManager {
+        IERC20 _token = IERC20(token);
+        emit EmergencyWithdrawal(msg.sender, token);
+        require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "FeesWallet::emergencyWithdraw - transfer failed");
     }
 
     /*
@@ -144,8 +145,8 @@ contract FeesWallet is IFeesWallet, ManagedContract {
             uint256 remainingBucketTime = bucketEnd.sub(_lastCollectedAt);
 
             uint256 bucketTotal = buckets[bucketStart];
-            uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
-            outstandingFees += amount;
+            uint256 amount = bucketTotal.mul(bucketDuration).div(remainingBucketTime);
+            outstandingFees = outstandingFees.add(amount);
             bucketTotal = bucketTotal.sub(amount);
 
             bucketsWithdrawn[bucketsPayed] = bucketStart;
@@ -158,7 +159,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     function _bucketTime(uint256 time) private pure returns (uint256) {
-        return time - time % BUCKET_TIME_PERIOD;
+        return time.sub(time % BUCKET_TIME_PERIOD);
     }
 
     /*
