@@ -159,8 +159,7 @@ contract Committee is ICommittee, ManagedContract {
 		totalCommitteeWeight = committeeStats.totalWeight;
 	}
 
-	function migrateMembers(ICommittee previousCommitteeContract) external override onlyInitializationAdmin {
-		require(stakingRewardsContract == IStakingRewards(0) && feesAndBootstrapRewardsContract == IFeesAndBootstrapRewards(0), "Reward contract addresses must be uninitialized for committee migration");
+	function importMembers(ICommittee previousCommitteeContract) external override onlyInitializationAdmin {
 		(address[] memory addrs, uint256[] memory weights, bool[] memory certification) = previousCommitteeContract.getCommittee();
 		for (uint i = 0; i < addrs.length; i++) {
 			_addMember(addrs[i], weights[i], certification[i], false);

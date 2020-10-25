@@ -51,5 +51,5 @@ interface ICommittee {
 
 	function getMaxCommitteeSize() external view returns (uint8);
 
-	function migrateMembers(ICommittee previousCommitteeContract) external /* onlyInitializationAdmin */;
+	function importMembers(ICommittee previousCommitteeContract) external /* onlyInitializationAdmin */;
 }

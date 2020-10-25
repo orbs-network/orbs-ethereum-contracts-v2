@@ -502,7 +502,7 @@ describe('committee', async () => {
         const {v: v2} = await d.newGuardian(2000, true, false, true);
         const newCommittee = await d.web3.deploy('Committee', [d.contractRegistry.address, d.registryAdmin.address, defaultDriverOptions.maxCommitteeSize]);
 
-        const r = await newCommittee.migrateMembers(d.committee.address, {from: d.initializationAdmin.address});
+        const r = await newCommittee.importMembers(d.committee.address, {from: d.initializationAdmin.address});
         expect(r).to.have.a.committeeChangeEvent({
             addr: v1.address,
             weight: bn(1000),
