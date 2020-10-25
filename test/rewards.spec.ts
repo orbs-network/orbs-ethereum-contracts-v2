@@ -172,7 +172,7 @@ async function totalStakingRewardsBalance(d: Driver, p: Participant): Promise<BN
     return bn(balances.delegatorStakingRewardsBalance).add(bn(balances.guardianStakingRewardsBalance));
 }
 
-describe('rewards', async () => {
+describe.only('rewards', async () => {
 
     // Bootstrap and fees
 
@@ -422,6 +422,31 @@ describe('rewards', async () => {
             total = total.add(bn(await c.getBootstrapBalance()));
         }
         expect(await d.bootstrapToken.balanceOf(d.feesAndBootstrapRewards.address)).to.bignumber.eq(total);
+    });
+
+    it('properly estimates guardian and delegator future rewards', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0 = committee[0];
+
+        const expectedFees = await generalFeesForDuration(PERIOD, MAX_COMMITTEE);
+        const expectedBootstrap = await generalBootstrapForDuration(PERIOD);
+
+        expect(expectedFees).to.be.bignumber.gt(bn(0));
+        expect(expectedBootstrap).to.be.bignumber.gt(bn(0));
+
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD)).estimatedFees, expectedFees);
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD)).estimatedBootstrapRewards, expectedBootstrap);
+
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD * 2)).estimatedFees, expectedFees.mul(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD * 2)).estimatedBootstrapRewards, expectedBootstrap.mul(bn(2)));
+
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD / 2)).estimatedFees, expectedFees.div(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD / 2)).estimatedBootstrapRewards, expectedBootstrap.div(bn(2)));
     });
 
     // Staking rewards

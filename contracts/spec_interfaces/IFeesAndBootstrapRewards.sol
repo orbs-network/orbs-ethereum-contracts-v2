@@ -24,6 +24,11 @@ interface IFeesAndBootstrapRewards {
         uint256 bootstrapBalance
     );
 
+    function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external view returns (
+        uint256 estimatedFees,
+        uint256 estimatedBootstrapRewards
+    );
+
     /// @dev Transfer all of msg.sender's outstanding balance to their account
     function withdrawFees(address guardian) external;
 

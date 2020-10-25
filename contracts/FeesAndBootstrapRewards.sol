@@ -80,8 +80,15 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     function getFeesAndBootstrapBalance(address guardian) external override view returns (uint256 feeBalance, uint256 bootstrapBalance) {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian);
+        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (guardianFeesAndBootstrap.feeBalance, guardianFeesAndBootstrap.bootstrapBalance);
+    }
+
+    function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external override view returns (uint256 estimatedFees, uint256 estimatedBootstrapRewards) {
+        FeesAndBootstrap memory guardianFeesAndBootstrapNow = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        FeesAndBootstrap memory guardianFeesAndBootstrapFuture = getGuardianFeesAndBootstrap(guardian, block.timestamp.add(duration));
+        estimatedFees = guardianFeesAndBootstrapFuture.feeBalance.sub(guardianFeesAndBootstrapNow.feeBalance);
+        estimatedBootstrapRewards = guardianFeesAndBootstrapFuture.bootstrapBalance.sub(guardianFeesAndBootstrapNow.bootstrapBalance);
     }
 
     function withdrawBootstrapFunds(address guardian) external override onlyWhenActive {
@@ -110,7 +117,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 lastAssigned
     ) {
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = committeeContract.getCommitteeStats();
-        (FeesAndBootstrapState memory _feesAndBootstrapState,,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees(), settings);
+        (FeesAndBootstrapState memory _feesAndBootstrapState,,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(block.timestamp), certifiedFeesWallet.getOutstandingFees(block.timestamp), block.timestamp, settings);
         certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember;
         generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember;
         certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember;
@@ -124,7 +131,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 bootstrapBalance,
         uint256 lastBootstrapPerMember
     ) {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian);
+        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (
             guardianFeesAndBootstrap.feeBalance,
             guardianFeesAndBootstrap.lastFeesPerMember,
@@ -240,7 +247,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     // Global state
 
-    function _getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize, uint256 collectedGeneralFees, uint256 collectedCertifiedFees, Settings memory _settings) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState, uint256 allocatedGeneralBootstrap, uint256 allocatedCertifiedBootstrap) {
+    function _getFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize, uint256 collectedGeneralFees, uint256 collectedCertifiedFees, uint256 currentTime, Settings memory _settings) private view returns (FeesAndBootstrapState memory _feesAndBootstrapState, uint256 allocatedGeneralBootstrap, uint256 allocatedCertifiedBootstrap) {
         _feesAndBootstrapState = feesAndBootstrapState;
 
         if (_settings.rewardAllocationActive) {
@@ -250,13 +257,13 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
             _feesAndBootstrapState.generalFeesPerMember = _feesAndBootstrapState.generalFeesPerMember.add(generalFeesDelta);
             _feesAndBootstrapState.certifiedFeesPerMember = _feesAndBootstrapState.certifiedFeesPerMember.add(certifiedFeesDelta);
 
-            uint duration = block.timestamp.sub(_feesAndBootstrapState.lastAssigned);
+            uint duration = currentTime.sub(_feesAndBootstrapState.lastAssigned);
             uint256 generalBootstrapDelta = uint256(_settings.generalCommitteeAnnualBootstrap).mul(duration).div(365 days);
             uint256 certifiedBootstrapDelta = generalBootstrapDelta.add(uint256(_settings.certifiedCommitteeAnnualBootstrap).mul(duration).div(365 days));
 
             _feesAndBootstrapState.generalBootstrapPerMember = _feesAndBootstrapState.generalBootstrapPerMember.add(generalBootstrapDelta);
             _feesAndBootstrapState.certifiedBootstrapPerMember = _feesAndBootstrapState.certifiedBootstrapPerMember.add(certifiedBootstrapDelta);
-            _feesAndBootstrapState.lastAssigned = uint32(block.timestamp);
+            _feesAndBootstrapState.lastAssigned = uint32(currentTime);
 
             allocatedGeneralBootstrap = generalBootstrapDelta.mul(generalCommitteeSize);
             allocatedCertifiedBootstrap = certifiedBootstrapDelta.mul(certifiedCommitteeSize);
@@ -274,7 +281,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 allocatedGeneralBootstrap;
         uint256 allocatedCertifiedBootstrap;
 
-        (_feesAndBootstrapState, allocatedGeneralBootstrap, allocatedCertifiedBootstrap) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, collectedGeneralFees, collectedCertifiedFees, _settings);
+        (_feesAndBootstrapState, allocatedGeneralBootstrap, allocatedCertifiedBootstrap) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, collectedGeneralFees, collectedCertifiedFees, block.timestamp, _settings);
         bootstrapRewardsWallet.withdraw(allocatedGeneralBootstrap.add(allocatedCertifiedBootstrap));
 
         feesAndBootstrapState = _feesAndBootstrapState;
@@ -316,10 +323,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         emit FeesAssigned(guardian, addedFeesAmount);
     }
 
-    function getGuardianFeesAndBootstrap(address guardian) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap) {
+    function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap) {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
-        (FeesAndBootstrapState memory _feesAndBootstrapState,,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(), certifiedFeesWallet.getOutstandingFees(), settings);
+        (FeesAndBootstrapState memory _feesAndBootstrapState,,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(currentTime), certifiedFeesWallet.getOutstandingFees(currentTime), currentTime, settings);
         (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
         (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, isCertified, _feesAndBootstrapState);
     }

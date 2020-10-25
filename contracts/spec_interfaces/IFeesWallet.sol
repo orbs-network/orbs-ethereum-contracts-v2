@@ -23,7 +23,7 @@ interface IFeesWallet {
     function collectFees() external returns (uint256 collectedFees) /* onlyRewardsContract */;
 
     /// @dev Returns the amount of fees that are currently available for withdrawal
-    function getOutstandingFees() external view returns (uint256 outstandingFees);
+    function getOutstandingFees(uint256 currentTime) external view returns (uint256 outstandingFees);
 
     /*
      * General governance
