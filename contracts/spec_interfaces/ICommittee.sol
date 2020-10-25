@@ -50,4 +50,6 @@ interface ICommittee {
 	function setMaxCommitteeSize(uint8 maxCommitteeSize) external /* onlyFunctionalManager onlyWhenActive */;
 
 	function getMaxCommitteeSize() external view returns (uint8);
+
+	function migrateMembers(ICommittee previousCommitteeContract) external /* onlyInitializationAdmin */;
 }

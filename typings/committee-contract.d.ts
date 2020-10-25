@@ -33,6 +33,6 @@ export interface CommitteeContract extends OwnedContract {
     getMaxCommitteeSize(): Promise<number>;
     getMemberInfo(addr: string): Promise<{inCommittee: boolean, weight: string, isCertified: boolean, totalCommitteeWeight: string}>
     emitCommitteeSnapshot(): Promise<TransactionReceipt>;
-
+    migrateMembers(previousCommitteeContract: string, TransactionConfig): Promise<TransactionReceipt>;
     getTopology(): Promise<TransactionReceipt>;
 }

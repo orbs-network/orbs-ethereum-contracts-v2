@@ -493,5 +493,25 @@ describe('committee', async () => {
             weight: fromMilliOrbs(20),
             certification: true
         });
+    });
+
+    it('migrates members from previous committee contract', async () => {
+        const d = await Driver.new();
+
+        const {v: v1} = await d.newGuardian(1000, false, false, true);
+        const {v: v2} = await d.newGuardian(2000, true, false, true);
+        const newCommittee = await d.web3.deploy('Committee', [d.contractRegistry.address, d.registryAdmin.address, defaultDriverOptions.maxCommitteeSize]);
+
+        const r = await newCommittee.migrateMembers(d.committee.address, {from: d.initializationAdmin.address});
+        expect(r).to.have.a.committeeChangeEvent({
+            addr: v1.address,
+            weight: bn(1000),
+            certification: false
+        });
+        expect(r).to.have.a.committeeChangeEvent({
+            addr: v2.address,
+            weight: bn(2000),
+            certification: true
+        });
     })
 });
