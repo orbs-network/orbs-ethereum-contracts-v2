@@ -50,7 +50,7 @@ interface IStakingRewards {
         uint96 unclaimedStakingRewards
     );
 
-    function getCurrentStakingRewardsRatePercentMille() external returns (uint256);
+    function getCurrentStakingRewardsRatePercentMille() external view returns (uint256);
 
     /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
     /// Triggers update of the member rewards
