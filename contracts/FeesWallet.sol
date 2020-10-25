@@ -65,7 +65,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         uint256 _amount = amount;
 
         // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD - fromTimestamp % BUCKET_TIME_PERIOD).div(BUCKET_TIME_PERIOD));
+        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD.sub(fromTimestamp % BUCKET_TIME_PERIOD)).div(BUCKET_TIME_PERIOD));
         fillFeeBucket(bucket, bucketAmount);
         _amount = _amount.sub(bucketAmount);
 
@@ -144,8 +144,8 @@ contract FeesWallet is IFeesWallet, ManagedContract {
             uint256 remainingBucketTime = bucketEnd.sub(_lastCollectedAt);
 
             uint256 bucketTotal = buckets[bucketStart];
-            uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
-            outstandingFees += amount;
+            uint256 amount = bucketTotal.mul(bucketDuration).div(remainingBucketTime);
+            outstandingFees = outstandingFees.add(amount);
             bucketTotal = bucketTotal.sub(amount);
 
             bucketsWithdrawn[bucketsPayed] = bucketStart;
@@ -158,7 +158,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     function _bucketTime(uint256 time) private pure returns (uint256) {
-        return time - time % BUCKET_TIME_PERIOD;
+        return time.sub(time % BUCKET_TIME_PERIOD);
     }
 
     /*
