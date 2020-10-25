@@ -424,6 +424,31 @@ describe('rewards', async () => {
         expect(await d.bootstrapToken.balanceOf(d.feesAndBootstrapRewards.address)).to.bignumber.eq(total);
     });
 
+    it('properly estimates guardian and delegator future rewards', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0 = committee[0];
+
+        const expectedFees = await generalFeesForDuration(PERIOD, MAX_COMMITTEE);
+        const expectedBootstrap = await generalBootstrapForDuration(PERIOD);
+
+        expect(expectedFees).to.be.bignumber.gt(bn(0));
+        expect(expectedBootstrap).to.be.bignumber.gt(bn(0));
+
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD)).estimatedFees, expectedFees);
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD)).estimatedBootstrapRewards, expectedBootstrap);
+
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD * 2)).estimatedFees, expectedFees.mul(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD * 2)).estimatedBootstrapRewards, expectedBootstrap.mul(bn(2)));
+
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD / 2)).estimatedFees, expectedFees.div(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD / 2)).estimatedBootstrapRewards, expectedBootstrap.div(bn(2)));
+    });
+
     // Staking rewards
 
     it('successfully claims 0 staking rewards ', async () => {
@@ -704,6 +729,31 @@ describe('rewards', async () => {
 
         expectApproxEq((await d.stakingRewards.getStakingRewardsBalance(c0.address)).delegatorStakingRewardsBalance, expectedDelegatorRewards);
         expectApproxEq((await d.stakingRewards.getStakingRewardsBalance(c0.address)).guardianStakingRewardsBalance, expectedGuardianRewards);
+    });
+
+    it('properly estimates guardian and delegator future rewards', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0 = committee[0];
+
+        const expectedDelegatorRewards = (await stakingRewardsForDuration(d, PERIOD, c0, c0)).delegatorRewards;
+        const expectedGuardianRewards = (await stakingRewardsForDuration(d, PERIOD, c0, c0)).guardianRewards.sub(expectedDelegatorRewards);
+
+        expect(expectedDelegatorRewards).to.be.bignumber.gt(bn(0));
+        expect(expectedGuardianRewards).to.be.bignumber.gt(bn(0));
+
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD)).estimatedDelegatorStakingRewards, expectedDelegatorRewards);
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD)).estimatedGuardianStakingRewards, expectedGuardianRewards);
+
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD * 2)).estimatedDelegatorStakingRewards, expectedDelegatorRewards.mul(bn(2)));
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD * 2)).estimatedGuardianStakingRewards, expectedGuardianRewards.mul(bn(2)));
+
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD / 2)).estimatedDelegatorStakingRewards, expectedDelegatorRewards.div(bn(2)));
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD / 2)).estimatedGuardianStakingRewards, expectedGuardianRewards.div(bn(2)));
     });
 
     it('properly assigns staking rewards to a guardian who becomes a delegator', async () => {

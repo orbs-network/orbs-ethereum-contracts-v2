@@ -88,6 +88,8 @@ export interface StakingRewardsContract extends OwnedContract {
 
     getStakingRewardsBalance(address: string): Promise<{delegatorStakingRewardsBalance: string, guardianStakingRewardsBalance: string}>;
 
+    estimateFutureRewards(address: string, duration: number): Promise<{estimatedDelegatorStakingRewards: string, estimatedGuardianStakingRewards: string}>;
+
     getLastRewardAssignmentTime(): Promise<string>;
 
     migrateRewardsBalance(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;

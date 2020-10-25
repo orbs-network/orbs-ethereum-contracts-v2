@@ -83,6 +83,8 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
     getFeesAndBootstrapBalance(address: string): Promise<{feeBalance: string, bootstrapBalance: string}>;
     getFeesAndBootstrapData(address: string): Promise<{feeBalance: string, lastFeesPerMember:string, bootstrapBalance: string, lastBootstrapPerMember: string}>;
 
+    estimateFutureFeesAndBootstrapRewards(guardian: string, duration: number): Promise<{estimatedFees: number, estimatedBootstrapRewards: number}>;
+
     emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
 
     migrateRewardsBalance(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
