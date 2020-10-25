@@ -142,14 +142,14 @@ contract Committee is ICommittee, ManagedContract {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool memberRemoved, uint256 memberEffectiveStake, bool isCertified) {
+	function removeMember(address addr) external override onlyElectionsContract onlyWhenActive returns (bool memberRemoved, uint removedMemberWeight, bool removedMemberCertified) {
 		MemberStatus memory status = membersStatus[addr];
 		if (!status.inCommittee) {
 			return (false, 0, false);
 		}
 
 		memberRemoved = true;
-		(memberEffectiveStake, isCertified) = getWeightCertification(committee[status.pos]);
+		(removedMemberWeight, removedMemberCertified) = getWeightCertification(committee[status.pos]);
 
 		committeeStats = removeMemberAtPos(status.pos, true, committeeStats);
 	}
