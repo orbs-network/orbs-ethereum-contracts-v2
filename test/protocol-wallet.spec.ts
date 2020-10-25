@@ -174,9 +174,9 @@ describe('protocol-wallet-contract', async () => {
     await p.assignAndApproveOrbs(amount, d.stakingRewardsWallet.address);
     await d.stakingRewardsWallet.topUp(amount, {from: p.address});
 
-    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw({from: d.functionalManager.address}), /caller is not the migrationOwner/);
-    let r = await d.stakingRewardsWallet.emergencyWithdraw({from: d.migrationManager.address});
-    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
+    await expectRejected(d.stakingRewardsWallet.emergencyWithdraw(d.erc20.address, {from: d.functionalManager.address}), /caller is not the migrationOwner/);
+    let r = await d.stakingRewardsWallet.emergencyWithdraw(d.erc20.address, {from: d.migrationManager.address});
+    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address, token: d.erc20.address});
 
     expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(amount);
   });

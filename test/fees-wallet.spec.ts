@@ -178,9 +178,9 @@ describe('fees-wallet-contract', async () => {
 
     await d.generalFeesWallet.fillFeeBuckets(amount, 500, now, {from: assigner.address});
 
-    await expectRejected(d.generalFeesWallet.emergencyWithdraw({from: d.functionalManager.address}), /sender is not the migration manager/);
-    let r = await d.generalFeesWallet.emergencyWithdraw({from: d.migrationManager.address});
-    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address});
+    await expectRejected(d.generalFeesWallet.emergencyWithdraw(d.erc20.address, {from: d.functionalManager.address}), /sender is not the migration manager/);
+    let r = await d.generalFeesWallet.emergencyWithdraw(d.erc20.address,{from: d.migrationManager.address});
+    expect(r).to.have.a.emergencyWithdrawalEvent({addr: d.migrationManager.address, token: d.erc20.address});
 
     expect(await d.erc20.balanceOf(d.migrationManager.address)).to.bignumber.eq(amount);
   });

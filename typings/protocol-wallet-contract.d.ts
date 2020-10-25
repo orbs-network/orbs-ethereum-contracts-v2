@@ -18,6 +18,7 @@ interface MaxAnnualRateSetEvent {
 
 interface EmergencyWithdrawalEvent {
   addr: string;
+  token: string;
 }
 
 
@@ -28,7 +29,7 @@ export interface ProtocolWalletContract extends OwnedContract {
   topUp(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   withdraw(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   setMaxAnnualRate(annualRate: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
-  emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
+  emergencyWithdraw(token: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setClient(client: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   transferMigrationOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   claimMigrationOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;

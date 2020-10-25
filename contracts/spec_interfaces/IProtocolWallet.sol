@@ -29,7 +29,7 @@ interface IProtocolWallet {
 
     event ClientSet(address client);
     event MaxAnnualRateSet(uint256 maxAnnualRate);
-    event EmergencyWithdrawal(address addr);
+    event EmergencyWithdrawal(address addr, address token);
     event OutstandingTokensReset(uint256 startTime);
 
     /// @dev Sets a new transfer rate for the Orbs pool.
@@ -38,11 +38,11 @@ interface IProtocolWallet {
     function getMaxAnnualRate() external view returns (uint256);
 
     /// @dev transfer the entire pool's balance to a new wallet.
-    function emergencyWithdraw() external; /* onlyMigrationManager */
+    function emergencyWithdraw(address token) external; /* onlyMigrationManager */
 
     /// @dev sets the address of the new contract
     function setClient(address client) external; /* onlyFunctionalManager */
 
     function resetOutstandingTokens(uint256 startTime) external; /* onlyMigrationOwner */
 
-    }
+}

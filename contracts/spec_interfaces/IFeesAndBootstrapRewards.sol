@@ -54,7 +54,7 @@ interface IFeesAndBootstrapRewards {
     event RewardDistributionDeactivated();
     event FeesAndBootstrapRewardsBalanceMigrated(address indexed guardian, uint256 fees, uint256 bootstrapRewards, address toRewardsContract);
     event FeesAndBootstrapRewardsBalanceMigrationAccepted(address from, address indexed guardian, uint256 fees, uint256 bootstrapRewards);
-    event EmergencyWithdrawal(address addr);
+    event EmergencyWithdrawal(address addr, address token);
 
     /// @dev deactivates reward distribution, all rewards will be distributed up
     /// deactivate moment.
@@ -90,6 +90,6 @@ interface IFeesAndBootstrapRewards {
     function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrapRewards) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
-    function emergencyWithdraw() external; /* onlyMigrationManager */
+    function emergencyWithdraw(address token) external; /* onlyMigrationManager */
 }
 
