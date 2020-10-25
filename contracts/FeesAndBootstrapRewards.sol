@@ -28,7 +28,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     Settings settings;
 
     IERC20 public bootstrapToken;
-    IERC20 public erc20;
+    IERC20 public feesToken;
 
     struct FeesAndBootstrapState {
         uint96 certifiedFeesPerMember;
@@ -50,18 +50,18 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     constructor(
         IContractRegistry _contractRegistry,
         address _registryAdmin,
-        IERC20 _erc20,
+        IERC20 _feesToken,
         IERC20 _bootstrapToken,
         uint generalCommitteeAnnualBootstrap,
         uint certifiedCommitteeAnnualBootstrap
     ) ManagedContract(_contractRegistry, _registryAdmin) public {
         require(address(_bootstrapToken) != address(0), "bootstrapToken must not be 0");
-        require(address(_erc20) != address(0), "erc20 must not be 0");
+        require(address(_feesToken) != address(0), "feeToken must not be 0");
 
         _setGeneralCommitteeAnnualBootstrap(generalCommitteeAnnualBootstrap);
         _setCertifiedCommitteeAnnualBootstrap(certifiedCommitteeAnnualBootstrap);
 
-        erc20 = _erc20;
+        feesToken = _feesToken;
         bootstrapToken = _bootstrapToken;
     }
 
@@ -106,7 +106,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 amount = feesAndBootstrap[guardian].feeBalance;
         feesAndBootstrap[guardian].feeBalance = 0;
         emit FeesWithdrawn(guardian, amount);
-        require(erc20.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
+        require(feesToken.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
     }
 
     function getFeesAndBootstrapState() external override view returns (
@@ -160,7 +160,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         guardianFeesAndBootstrap.bootstrapBalance = 0;
         feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
 
-        require(erc20.approve(address(currentRewardsContract), fees), "migrateRewardsBalance: approve failed");
+        require(feesToken.approve(address(currentRewardsContract), fees), "migrateRewardsBalance: approve failed");
         require(bootstrapToken.approve(address(currentRewardsContract), bootstrap), "migrateRewardsBalance: approve failed");
         currentRewardsContract.acceptRewardsBalanceMigration(guardian, fees, bootstrap);
 
@@ -174,7 +174,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
 
         if (fees > 0) {
-            require(erc20.transferFrom(msg.sender, address(this), fees), "acceptRewardBalanceMigration: transfer failed");
+            require(feesToken.transferFrom(msg.sender, address(this), fees), "acceptRewardBalanceMigration: transfer failed");
         }
         if (bootstrap > 0) {
             require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
@@ -231,9 +231,9 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         return settings.certifiedCommitteeAnnualBootstrap;
     }
 
-    function emergencyWithdraw(address token) external override onlyMigrationManager {
-        IERC20 _token = IERC20(token);
-        emit EmergencyWithdrawal(msg.sender, token);
+    function emergencyWithdraw(address erc20) external override onlyMigrationManager {
+        IERC20 _token = IERC20(erc20);
+        emit EmergencyWithdrawal(msg.sender, address(_token));
         require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed");
     }
 

@@ -111,9 +111,9 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw(address token) external override onlyMigrationManager {
-        IERC20 _token = IERC20(token);
-        emit EmergencyWithdrawal(msg.sender, token);
+    function emergencyWithdraw(address erc20) external override onlyMigrationManager {
+        IERC20 _token = IERC20(erc20);
+        emit EmergencyWithdrawal(msg.sender, address(_token));
         require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "FeesWallet::emergencyWithdraw - transfer failed");
     }
 
