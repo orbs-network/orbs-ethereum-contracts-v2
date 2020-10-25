@@ -85,50 +85,7 @@ contract Committee is ICommittee, ManagedContract {
 	}
 
 	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool memberAdded) {
-		MemberStatus memory status = membersStatus[addr];
-
-		if (status.inCommittee) {
-			return false;
-		}
-
-		(bool qualified, uint entryPos) = qualifiesToEnterCommittee(addr, weight, maxCommitteeSize);
-		if (!qualified) {
-			return false;
-		}
-
-		memberAdded = true;
-
-		CommitteeStats memory _committeeStats = committeeStats;
-
-		stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, true);
-		feesAndBootstrapRewardsContract.committeeMembershipWillChange(addr, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
-
-		_committeeStats.generalCommitteeSize++;
-		if (isCertified) _committeeStats.certifiedCommitteeSize++;
-		_committeeStats.totalWeight = uint96(_committeeStats.totalWeight.add(weight));
-
-		CommitteeMember memory newMember = CommitteeMember({
-			addr: addr,
-			weightAndCertifiedBit: packWeightCertification(weight, isCertified)
-		});
-
-		if (entryPos < committee.length) {
-			CommitteeMember memory removed = committee[entryPos];
-			unpackWeightCertification(removed.weightAndCertifiedBit);
-
-			_committeeStats = removeMemberAtPos(entryPos, false, _committeeStats);
-			committee[entryPos] = newMember;
-		} else {
-			committee.push(newMember);
-		}
-
-		status.inCommittee = true;
-		status.pos = uint32(entryPos);
-		membersStatus[addr] = status;
-
-		committeeStats = _committeeStats;
-
-		emit CommitteeChange(addr, weight, isCertified, true);
+		return _addMember(addr, weight, isCertified, true);
 	}
 
 	function checkAddMember(address addr, uint256 weight) external view override returns (bool wouldAddMember) {
@@ -202,9 +159,65 @@ contract Committee is ICommittee, ManagedContract {
 		totalCommitteeWeight = committeeStats.totalWeight;
 	}
 
+	function importMembers(ICommittee previousCommitteeContract) external override onlyInitializationAdmin {
+		(address[] memory addrs, uint256[] memory weights, bool[] memory certification) = previousCommitteeContract.getCommittee();
+		for (uint i = 0; i < addrs.length; i++) {
+			_addMember(addrs[i], weights[i], certification[i], false);
+		}
+	}
+
 	/*
 	 * Private
 	 */
+
+	function _addMember(address addr, uint256 weight, bool isCertified, bool notifyRewards) private returns (bool memberAdded) {
+		MemberStatus memory status = membersStatus[addr];
+
+		if (status.inCommittee) {
+			return false;
+		}
+
+		(bool qualified, uint entryPos) = qualifiesToEnterCommittee(addr, weight, maxCommitteeSize);
+		if (!qualified) {
+			return false;
+		}
+
+		memberAdded = true;
+
+		CommitteeStats memory _committeeStats = committeeStats;
+
+		if (notifyRewards) {
+			stakingRewardsContract.committeeMembershipWillChange(addr, weight, _committeeStats.totalWeight, false, true);
+			feesAndBootstrapRewardsContract.committeeMembershipWillChange(addr, false, isCertified, isCertified, _committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize);
+		}
+
+		_committeeStats.generalCommitteeSize++;
+		if (isCertified) _committeeStats.certifiedCommitteeSize++;
+		_committeeStats.totalWeight = uint96(_committeeStats.totalWeight.add(weight));
+
+		CommitteeMember memory newMember = CommitteeMember({
+			addr: addr,
+			weightAndCertifiedBit: packWeightCertification(weight, isCertified)
+			});
+
+		if (entryPos < committee.length) {
+			CommitteeMember memory removed = committee[entryPos];
+			unpackWeightCertification(removed.weightAndCertifiedBit);
+
+			_committeeStats = removeMemberAtPos(entryPos, false, _committeeStats);
+			committee[entryPos] = newMember;
+		} else {
+			committee.push(newMember);
+		}
+
+		status.inCommittee = true;
+		status.pos = uint32(entryPos);
+		membersStatus[addr] = status;
+
+		committeeStats = _committeeStats;
+
+		emit CommitteeChange(addr, weight, isCertified, true);
+	}
 
 	function packWeightCertification(uint256 weight, bool certification) private pure returns (uint96 weightAndCertified) {
 		return uint96(weight) | (certification ? CERTIFICATION_MASK : 0);
