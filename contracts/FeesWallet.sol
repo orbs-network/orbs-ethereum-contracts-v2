@@ -144,7 +144,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
             uint256 remainingBucketTime = bucketEnd.sub(_lastCollectedAt);
 
             uint256 bucketTotal = buckets[bucketStart];
-            uint256 amount = bucketTotal.mul(bucketDuration.div(remainingBucketTime));
+            uint256 amount = bucketTotal.mul(bucketDuration).div(remainingBucketTime);
             outstandingFees = outstandingFees.add(amount);
             bucketTotal = bucketTotal.sub(amount);
 
