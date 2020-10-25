@@ -23,7 +23,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
         token = _token;
-        lastCollectedAt = now;
+        lastCollectedAt = block.timestamp;
     }
 
     modifier onlyRewardsContract() {

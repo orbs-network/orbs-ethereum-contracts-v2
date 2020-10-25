@@ -19,7 +19,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
         client = _client;
-        lastWithdrawal = now;
+        lastWithdrawal = block.timestamp;
 
         setMaxAnnualRate(_maxAnnualRate);
     }
@@ -42,18 +42,18 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUp(uint256 amount) external override {
-        emit FundsAddedToPool(amount, getBalance() + amount);
+        emit FundsAddedToPool(amount, getBalance().add(amount));
         require(token.transferFrom(msg.sender, address(this), amount), "ProtocolWallet::topUp - insufficient allowance");
     }
 
     /// @dev withdraws from the pool to a spender, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external override onlyClient {
-        uint duration = now - lastWithdrawal;
+        uint duration = block.timestamp.sub(lastWithdrawal);
         uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
         require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
-        lastWithdrawal = now;
+        lastWithdrawal = block.timestamp;
         if (amount > 0) {
             require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
         }
@@ -75,6 +75,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// @dev Sets a new transfer rate for the Orbs pool.
     function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner { //TODO add test
+        require(startTime >= block.timestamp, "start time must not be in the past");
         lastWithdrawal = startTime;
         emit OutstandingTokensReset(startTime);
     }
