@@ -4,8 +4,10 @@ pragma solidity 0.6.12;
 
 /// @title Rewards contract interface
 interface IFeesAndBootstrapRewards {
+    event FeesAllocated(uint256 allocatedGeneralFees, uint256 generalFeesPerMember, uint256 allocatedCertifiedFees, uint256 certifiedFeesPerMember);
     event FeesAssigned(address indexed guardian, uint256 amount);
     event FeesWithdrawn(address indexed guardian, uint256 amount);
+    event BootstrapRewardsAllocated(uint256 allocatedGeneralBootstrapRewards, uint256 generalBootstrapRewardsPerMember, uint256 allocatedCertifiedBootstrapRewards, uint256 certifiedBootstrapRewardsPerMember);
     event BootstrapRewardsAssigned(address indexed guardian, uint256 amount);
     event BootstrapRewardsWithdrawn(address indexed guardian, uint256 amount);
 
