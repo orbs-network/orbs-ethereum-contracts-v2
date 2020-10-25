@@ -224,10 +224,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         return settings.certifiedCommitteeAnnualBootstrap;
     }
 
-    function emergencyWithdraw() external override onlyMigrationManager {
-        emit EmergencyWithdrawal(msg.sender);
-        require(erc20.transfer(msg.sender, erc20.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (fee token)");
-        require(bootstrapToken.transfer(msg.sender, bootstrapToken.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed (bootstrap token)");
+    function emergencyWithdraw(address token) external override onlyMigrationManager {
+        IERC20 _token = IERC20(token);
+        emit EmergencyWithdrawal(msg.sender, token);
+        require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "Rewards::emergencyWithdraw - transfer failed");
     }
 
     function isRewardAllocationActive() external override view returns (bool) {
