@@ -86,7 +86,7 @@ export interface StakingRewardsContract extends OwnedContract {
 
     setGuardianDelegatorsStakingRewardsPercentMille(delegatorsStakingRewardsPercentMille: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    getStakingRewardsBalance(address: string): Promise<string>;
+    getStakingRewardsBalance(address: string): Promise<{delegatorStakingRewardsBalance: string, guardianStakingRewardsBalance: string}>;
 
     getLastRewardAssignmentTime(): Promise<string>;
 

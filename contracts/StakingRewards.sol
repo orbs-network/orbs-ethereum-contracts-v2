@@ -125,10 +125,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         }
     }
 
-    function getStakingRewardsBalance(address addr) external override view returns (uint256) {
+    function getStakingRewardsBalance(address addr) external override view returns (uint256 delegatorStakingRewardsBalance, uint256 guardianStakingRewardsBalance) {
         DelegatorStakingRewards memory delegatorStakingRewards = getDelegatorStakingRewards(addr);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(addr); // TODO consider removing, data in state must be up to date at this point
-        return delegatorStakingRewards.balance.add(guardianStakingRewards.balance);
+        return (delegatorStakingRewards.balance, guardianStakingRewards.balance);
     }
 
     function claimStakingRewards(address addr) external override onlyWhenActive {

@@ -16,7 +16,7 @@ interface IStakingRewards {
      */
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
-    function getStakingRewardsBalance(address addr) external view returns (uint256 balance);
+    function getStakingRewardsBalance(address addr) external view returns (uint256 guardianStakingRewardsBalance, uint256 delegatorStakingRewardsBalance);
 
     /// @dev Allows Guardian to set a different delegator staking reward cut than the default
     /// delegatorRewardsPercentMille accepts values between 0 - maxDelegatorsStakingRewardsPercentMille
