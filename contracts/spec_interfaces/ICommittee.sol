@@ -21,7 +21,7 @@ interface ICommittee {
 
 	/// @dev Called by: Elections contract
 	/// Notifies a a member removal for example due to voteOut / voteUnready
-	function removeMember(address addr) external returns (bool memberRemoved, uint removedMemberEffectiveStake, bool removedMemberCertified)/* onlyElectionContract */;
+	function removeMember(address addr) external returns (bool memberRemoved, uint removedMemberWeight, bool removedMemberCertified)/* onlyElectionContract */;
 
 	/// @dev Called by: Elections contract
 	/// Notifies a new member applicable for committee (due to registration, unbanning, certification change)
