@@ -208,7 +208,7 @@ describe('rewards', async () => {
         expect(r).to.have.a.approx().bootstrapRewardsAllocatedEvent({
             allocatedGeneralBootstrapRewards: bn(await committee[0].getBootstrapBalance()).mul(bn(MAX_COMMITTEE)),
             generalBootstrapRewardsPerMember: bn(await committee[0].getBootstrapBalance()),
-            allocatedCertifiedBootstrapRewards: generalBootstrapForDuration(DURATION / 4).mul(bn(MAX_COMMITTEE)),
+            allocatedCertifiedBootstrapRewards: bn(0),
             certifiedBootstrapRewardsPerMember: certifiedBootstrapForDuration(DURATION / 4),
         });
         expect(r).to.have.a.approx().feesAssignedEvent({guardian: committee[0].address, amount: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)});
