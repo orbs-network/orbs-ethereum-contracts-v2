@@ -15,27 +15,49 @@ interface IFeesAndBootstrapRewards {
     * External functions
     */
 
-    /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
-    /// Triggers update of the member rewards
+    /// Triggers update of the guardian rewards
+	/// @dev Called by: the Committee contract
+    /// @dev called upon expected change in the committee membership of the guardian
+    /// @param guardian is the guardian address
+    /// @param inCommittee indicates whether the guardian is in the committee prior to the change
+    /// @param isCertified indicates whether the guardian is certified prior to the change
+    /// @param nextCertification indicates whether after the change, the guardian is certified
+    /// @param generalCommitteeSize indicates the general committee size prior to the change
+    /// @param certifiedCommitteeSize indicates the certified committee size prior to the change
     function committeeMembershipWillChange(address guardian, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) external /* onlyCommitteeContract */;
 
+    /// Returns the fees and bootstrap balances of a guardian
+    /// @dev calculates the up to date balances (differ from the state)
+    /// @return feeBalance the guardian's fees balance
+    /// @return bootstrapBalance the guardian's bootstrap balance
     function getFeesAndBootstrapBalance(address guardian) external view returns (
         uint256 feeBalance,
         uint256 bootstrapBalance
     );
 
+    /// 
     function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external view returns (
         uint256 estimatedFees,
         uint256 estimatedBootstrapRewards
     );
 
-    /// @dev Transfer all of msg.sender's outstanding balance to their account
+    /// Transfers the guardian Fees balance to their account
+    /// @dev One may withdraw for another guardian
+    /// @param guardian is the guardian address
     function withdrawFees(address guardian) external;
 
-    /// @dev Transfer all of msg.sender's outstanding balance to their account
+    /// Transfers the guardian bootstrap balance to their account
+    /// @dev One may withdraw for another guardian
+    /// @param guardian is the guardian address
     function withdrawBootstrapFunds(address guardian) external;
 
-    /// @dev Returns the global Fees and Bootstrap rewards state 
+    /// Returns the current global Fees and Bootstrap rewards state 
+    /// @dev calculated to the latest block, may differ from the state read
+    /// @return certifiedFeesPerMember represents the fees a certified committee member from day 0 would have receive
+    /// @return generalFeesPerMember represents the fees a non-certified committee member from day 0 would have receive
+    /// @return certifiedBootstrapPerMember represents the bootstrap fund a certified committee member from day 0 would have receive
+    /// @return generalBootstrapPerMember represents the bootstrap fund a non-certified committee member from day 0 would have receive
+    /// @return lastAssigned is the time the calculation was done to (typically the latest block time)
     function getFeesAndBootstrapState() external view returns (
         uint256 certifiedFeesPerMember,
         uint256 generalFeesPerMember,
@@ -44,6 +66,12 @@ interface IFeesAndBootstrapRewards {
         uint256 lastAssigned
     );
 
+    /// Returns the current guardian Fees and Bootstrap rewards state 
+    /// @dev calculated to the latest block, may differ from the state read
+    /// @return feeBalance is the guardian fees balance 
+    /// @return lastFeesPerMember is the FeesPerMember on the last update based on the guardian certification state
+    /// @return bootstrapBalance is the guardian bootstrap balance 
+    /// @return lastBootstrapPerMember is the FeesPerMember on the last BootstrapPerMember based on the guardian certification state
     function getFeesAndBootstrapData(address guardian) external view returns (
         uint256 feeBalance,
         uint256 lastFeesPerMember,
@@ -63,15 +91,19 @@ interface IFeesAndBootstrapRewards {
     event FeesAndBootstrapRewardsBalanceMigrationAccepted(address from, address indexed guardian, uint256 fees, uint256 bootstrapRewards);
     event EmergencyWithdrawal(address addr, address token);
 
-    /// @dev deactivates reward distribution, all rewards will be distributed up
-    /// deactivate moment.
+    /// Deactivates fees and bootstrap allocation
+    /// @dev guardians updates remain active based on the current perMember value
     function deactivateRewardDistribution() external /* onlyMigrationManager */;
 
-    /// @dev activates reward distribution, all rewards will be distributed up
-    /// assuming the last assignment was on startTime (the time the old contarct was deactivated)
+    /// Activates fees and bootstrap allocation
+    /// @dev On migrations, startTime should be set as the previous contract deactivation time.
+    /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
 
-    /// @dev Returns the contract's settings
+    /// Returns the contract's settings
+    /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
+    /// @return certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap
+    /// @return rewardAllocationActive indicates the rewards allocation activation state 
     function getSettings() external view returns (
         uint generalCommitteeAnnualBootstrap,
         uint certifiedCommitteeAnnualBootstrap,
