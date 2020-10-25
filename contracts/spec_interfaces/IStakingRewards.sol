@@ -92,7 +92,7 @@ interface IStakingRewards {
     function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
     /// @dev Sets a new annual rate and cap for the staking reward.
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
+    function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external /* onlyFunctionalManager */;
 
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
