@@ -66,8 +66,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         IContractRegistry _contractRegistry,
         address _registryAdmin,
         IERC20 _erc20,
-        uint annualRateInPercentMille,
-        uint annualCap,
+        uint32 annualRateInPercentMille,
+        uint96 annualCap,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
         uint32 maxDelegatorsStakingRewardsPercentMille,
         IStakingRewards previousRewardsContract,
@@ -277,7 +277,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         return settings.maxDelegatorsStakingRewardsPercentMille;
     }
 
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external override onlyFunctionalManager {
+    function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external override onlyFunctionalManager {
         updateStakingRewardsState();
         return _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
     }
@@ -466,12 +466,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     // Governance and misc.
 
-    function _setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) private {
-        require(uint256(uint96(annualCap)) == annualCap, "annualCap must fit in uint96");
-
+    function _setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) private {
         Settings memory _settings = settings;
-        _settings.annualRateInPercentMille = uint32(annualRateInPercentMille);
-        _settings.annualCap = uint96(annualCap);
+        _settings.annualRateInPercentMille = annualRateInPercentMille;
+        _settings.annualCap = annualCap;
         settings = _settings;
 
         emit AnnualStakingRewardsRateChanged(annualRateInPercentMille, annualCap);
