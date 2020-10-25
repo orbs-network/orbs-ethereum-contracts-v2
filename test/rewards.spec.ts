@@ -172,7 +172,7 @@ async function totalStakingRewardsBalance(d: Driver, p: Participant): Promise<BN
     return bn(balances.delegatorStakingRewardsBalance).add(bn(balances.guardianStakingRewardsBalance));
 }
 
-describe.only('rewards', async () => {
+describe('rewards', async () => {
 
     // Bootstrap and fees
 
