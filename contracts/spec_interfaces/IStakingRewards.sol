@@ -45,6 +45,11 @@ interface IStakingRewards {
         uint256 lastDelegatorRewardsPerToken
     );
 
+    function estimateFutureRewards(address addr, uint256 duration) external view returns (
+        uint256 estimatedDelegatorStakingRewards,
+        uint256 estimatedGuardianStakingRewards
+    );
+
     function getStakingRewardsState() external view returns (
         uint96 stakingRewardsPerWeight,
         uint96 unclaimedStakingRewards

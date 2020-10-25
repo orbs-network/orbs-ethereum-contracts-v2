@@ -673,6 +673,31 @@ describe('rewards', async () => {
         expectApproxEq((await d.stakingRewards.getStakingRewardsBalance(c0.address)).guardianStakingRewardsBalance, expectedGuardianRewards);
     });
 
+    it('properly estimates guardian and delegator future rewards', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0 = committee[0];
+
+        const expectedDelegatorRewards = (await stakingRewardsForDuration(d, PERIOD, c0, c0)).delegatorRewards;
+        const expectedGuardianRewards = (await stakingRewardsForDuration(d, PERIOD, c0, c0)).guardianRewards.sub(expectedDelegatorRewards);
+
+        expect(expectedDelegatorRewards).to.be.bignumber.gt(bn(0));
+        expect(expectedGuardianRewards).to.be.bignumber.gt(bn(0));
+
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD)).estimatedDelegatorStakingRewards, expectedDelegatorRewards);
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD)).estimatedGuardianStakingRewards, expectedGuardianRewards);
+
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD * 2)).estimatedDelegatorStakingRewards, expectedDelegatorRewards.mul(bn(2)));
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD * 2)).estimatedGuardianStakingRewards, expectedGuardianRewards.mul(bn(2)));
+
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD / 2)).estimatedDelegatorStakingRewards, expectedDelegatorRewards.div(bn(2)));
+        expectApproxEq((await d.stakingRewards.estimateFutureRewards(c0.address, PERIOD / 2)).estimatedGuardianStakingRewards, expectedGuardianRewards.div(bn(2)));
+    });
+
     it('properly assigns staking rewards to a guardian who becomes a delegator', async () => {
         const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
 
