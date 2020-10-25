@@ -9,6 +9,12 @@ import "./ManagedContract.sol";
 contract Certification is ICertification, ManagedContract {
     mapping(address => bool) guardianCertification;
 
+    modifier onlyCertificationManager {
+        require(isManager("certificationManager"), "sender is not the certification manager");
+
+        _;
+    }
+
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
 
     /*
@@ -19,7 +25,7 @@ contract Certification is ICertification, ManagedContract {
         return guardianCertification[guardian];
     }
 
-    function setGuardianCertification(address guardian, bool isCertified) external override onlyFunctionalManager onlyWhenActive {
+    function setGuardianCertification(address guardian, bool isCertified) external override onlyCertificationManager onlyWhenActive {
         guardianCertification[guardian] = isCertified;
         emit GuardianCertificationUpdate(guardian, isCertified);
         electionsContract.guardianCertificationChanged(guardian, isCertified);
