@@ -133,13 +133,15 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function claimStakingRewards(address addr) external override onlyWhenActive {
         (uint256 guardianRewards, uint256 delegatorRewards) = claimStakingRewardsLocally(addr);
+        uint256 total = delegatorRewards.add(guardianRewards);
+        if (total == 0) {
+            return;
+        }
 
         uint96 claimedGuardianRewards = guardiansStakingRewards[addr].claimed.add(guardianRewards);
         guardiansStakingRewards[addr].claimed = claimedGuardianRewards;
         uint96 claimedDelegatorRewards = delegatorsStakingRewards[addr].claimed.add(delegatorRewards);
         delegatorsStakingRewards[addr].claimed = claimedDelegatorRewards;
-
-        uint256 total = delegatorRewards.add(guardianRewards);
 
         require(erc20.approve(address(stakingContract), total), "claimStakingRewards: approve failed");
 
