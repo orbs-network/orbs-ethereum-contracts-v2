@@ -30,7 +30,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
     Settings settings;
 
-    IERC20 public erc20;
+    IERC20 public token;
 
     struct StakingRewardsState {
         uint96 stakingRewardsPerWeight;
@@ -65,7 +65,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     constructor(
         IContractRegistry _contractRegistry,
         address _registryAdmin,
-        IERC20 _erc20,
+        IERC20 _token,
         uint32 annualRateInPercentMille,
         uint96 annualCap,
         uint32 defaultDelegatorsStakingRewardsPercentMille,
@@ -73,13 +73,13 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         IStakingRewards previousRewardsContract,
         address[] memory guardiansToMigrate
     ) ManagedContract(_contractRegistry, _registryAdmin) public {
-        require(address(_erc20) != address(0), "erc20 must not be 0");
+        require(address(_token) != address(0), "token must not be 0");
 
         _setAnnualStakingRewardsRate(annualRateInPercentMille, annualCap);
         setMaxDelegatorsStakingRewardsPercentMille(maxDelegatorsStakingRewardsPercentMille);
         setDefaultDelegatorsStakingRewardsPercentMille(defaultDelegatorsStakingRewardsPercentMille);
 
-        erc20 = _erc20;
+        token = _token;
 
         if (address(previousRewardsContract) != address(0)) {
             migrateGuardiansSettings(previousRewardsContract, guardiansToMigrate);
@@ -143,7 +143,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         uint96 claimedDelegatorRewards = delegatorsStakingRewards[addr].claimed.add(delegatorRewards);
         delegatorsStakingRewards[addr].claimed = claimedDelegatorRewards;
 
-        require(erc20.approve(address(stakingContract), total), "claimStakingRewards: approve failed");
+        require(token.approve(address(stakingContract), total), "claimStakingRewards: approve failed");
 
         address[] memory addrs = new address[](1);
         addrs[0] = addr;
@@ -226,7 +226,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
         (uint256 guardianRewards, uint256 delegatorRewards) = claimStakingRewardsLocally(addr);
 
-        require(erc20.approve(address(currentRewardsContract), guardianRewards.add(delegatorRewards)), "migrateRewardsBalance: approve failed");
+        require(token.approve(address(currentRewardsContract), guardianRewards.add(delegatorRewards)), "migrateRewardsBalance: approve failed");
         currentRewardsContract.acceptRewardsBalanceMigration(addr, guardianRewards, delegatorRewards);
 
         emit StakingRewardsBalanceMigrated(addr, guardianRewards, delegatorRewards, address(currentRewardsContract));
@@ -238,15 +238,15 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
         uint orbsTransferAmount = guardianStakingRewards.add(delegatorStakingRewards);
         if (orbsTransferAmount > 0) {
-            require(erc20.transferFrom(msg.sender, address(this), orbsTransferAmount), "acceptRewardBalanceMigration: transfer failed");
+            require(token.transferFrom(msg.sender, address(this), orbsTransferAmount), "acceptRewardBalanceMigration: transfer failed");
         }
 
         emit StakingRewardsBalanceMigrationAccepted(msg.sender, addr, guardianStakingRewards, delegatorStakingRewards);
     }
 
-    function emergencyWithdraw(address token) external override onlyMigrationManager {
-        IERC20 _token = IERC20(token);
-        emit EmergencyWithdrawal(msg.sender, token);
+    function emergencyWithdraw(address erc20) external override onlyMigrationManager {
+        IERC20 _token = IERC20(erc20);
+        emit EmergencyWithdrawal(msg.sender, address(_token));
         require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "StakingRewards::emergencyWithdraw - transfer failed");
     }
 

@@ -81,9 +81,9 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// @dev transfer the entire pool's balance to a new wallet.
-    function emergencyWithdraw(address token) external override onlyMigrationOwner {
-        IERC20 _token = IERC20(token);
-        emit EmergencyWithdrawal(msg.sender, token);
+    function emergencyWithdraw(address erc20) external override onlyMigrationOwner {
+        IERC20 _token = IERC20(erc20);
+        emit EmergencyWithdrawal(msg.sender, address(_token));
         require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "FeesWallet::emergencyWithdraw - transfer failed");
     }
 
