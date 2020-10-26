@@ -97,10 +97,12 @@ interface IFeesAndBootstrapRewards {
     event EmergencyWithdrawal(address addr, address token);
 
     /// Deactivates fees and bootstrap allocation
+	/// @dev governance function called only by the migration manager
     /// @dev guardians updates remain active based on the current perMember value
     function deactivateRewardDistribution() external /* onlyMigrationManager */;
 
     /// Activates fees and bootstrap allocation
+	/// @dev governance function called only by the initialization manager
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
