@@ -126,7 +126,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     function getStakingRewardsBalance(address addr) external override view returns (uint256 delegatorStakingRewardsBalance, uint256 guardianStakingRewardsBalance) {
-        DelegatorStakingRewards memory delegatorStakingRewards = getDelegatorStakingRewards(addr, block.timestamp);
+        (DelegatorStakingRewards memory delegatorStakingRewards,,) = getDelegatorStakingRewards(addr, block.timestamp);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(addr, block.timestamp); // TODO consider removing, data in state must be up to date at this point
         return (delegatorStakingRewards.balance, guardianStakingRewards.balance);
     }
@@ -167,17 +167,19 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function getDelegatorStakingRewardsData(address delegator) external override view returns (
         uint256 balance,
         uint256 claimed,
-        uint256 lastDelegatorRewardsPerToken
+        uint256 lastDelegatorRewardsPerToken,
+        address guardian,
+        uint256 stake
     ) {
-        DelegatorStakingRewards memory rewards = getDelegatorStakingRewards(delegator, block.timestamp);
-        return (rewards.balance, rewards.claimed, rewards.lastDelegatorRewardsPerToken);
+        (DelegatorStakingRewards memory rewards, address _guardian, uint256 _stake) = getDelegatorStakingRewards(delegator, block.timestamp);
+        return (rewards.balance, rewards.claimed, rewards.lastDelegatorRewardsPerToken, _guardian, _stake);
     }
 
     function estimateFutureRewards(address addr, uint256 duration) external override view returns (uint256 estimatedDelegatorStakingRewards, uint256 estimatedGuardianStakingRewards) {
         GuardianStakingRewards memory guardianRewardsNow = getGuardianStakingRewards(addr, block.timestamp);
-        DelegatorStakingRewards memory delegatorRewardsNow = getDelegatorStakingRewards(addr, block.timestamp);
+        (DelegatorStakingRewards memory delegatorRewardsNow,,) = getDelegatorStakingRewards(addr, block.timestamp);
         GuardianStakingRewards memory guardianRewardsFuture = getGuardianStakingRewards(addr, block.timestamp.add(duration));
-        DelegatorStakingRewards memory delegatorRewardsFuture = getDelegatorStakingRewards(addr, block.timestamp.add(duration));
+        (DelegatorStakingRewards memory delegatorRewardsFuture,,) = getDelegatorStakingRewards(addr, block.timestamp.add(duration));
 
         estimatedDelegatorStakingRewards = delegatorRewardsFuture.balance.sub(delegatorRewardsNow.balance);
         estimatedGuardianStakingRewards = guardianRewardsFuture.balance.sub(guardianRewardsNow.balance);
@@ -435,8 +437,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         delegatorStakingRewards.lastDelegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken;
     }
 
-    function getDelegatorStakingRewards(address delegator, uint256 currentTime) private view returns (DelegatorStakingRewards memory delegatorStakingRewards) {
-        (address guardian, uint256 delegatorStake) = delegationsContract.getDelegationInfo(delegator);
+    function getDelegatorStakingRewards(address delegator, uint256 currentTime) private view returns (DelegatorStakingRewards memory delegatorStakingRewards, address guardian, uint256 delegatorStake) {
+        (guardian, delegatorStake) = delegationsContract.getDelegationInfo(delegator);
         GuardianStakingRewards memory guardianStakingRewards = getGuardianStakingRewards(guardian, currentTime);
 
         (delegatorStakingRewards,) = _getDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
@@ -448,7 +450,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         (delegatorStakingRewards, delegatorStakingRewardsAdded) = _getDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
         delegatorsStakingRewards[delegator] = delegatorStakingRewards;
 
-        emit DelegatorStakingRewardsAssigned(delegator, delegatorStakingRewardsAdded, delegatorStakingRewards.claimed.add(delegatorStakingRewards.balance), guardian, guardianStakingRewards.delegatorRewardsPerToken);
+        emit DelegatorStakingRewardsAssigned(delegator, delegatorStakingRewardsAdded, delegatorStakingRewards.claimed.add(delegatorStakingRewards.balance), guardian, delegatorStake, guardianStakingRewards.delegatorRewardsPerToken);
     }
 
     function updateDelegatorStakingRewards(address delegator) private {

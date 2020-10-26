@@ -5,7 +5,7 @@ pragma solidity 0.6.12;
 /// @title Staking rewards contract interface
 interface IStakingRewards {
 
-    event DelegatorStakingRewardsAssigned(address indexed delegator, uint256 amount, uint256 totalAwarded, address guardian, uint256 delegatorRewardsPerToken);
+    event DelegatorStakingRewardsAssigned(address indexed delegator, uint256 amount, uint256 totalAwarded, address guardian, uint256 stake, uint256 delegatorRewardsPerToken);
     event GuardianStakingRewardsAssigned(address indexed guardian, uint256 amount, uint256 totalAwarded, uint256 delegatorRewardsPerToken, uint256 stakingRewardsPerWeight);
     event StakingRewardsClaimed(address indexed addr, uint256 claimedDelegatorRewards, uint256 claimedGuardianRewards, uint256 totalClaimedDelegatorRewards, uint256 totalClaimedGuardianRewards);
     event StakingRewardsAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
@@ -42,7 +42,9 @@ interface IStakingRewards {
     function getDelegatorStakingRewardsData(address delegator) external view returns (
         uint256 balance,
         uint256 claimed,
-        uint256 lastDelegatorRewardsPerToken
+        uint256 lastDelegatorRewardsPerToken,
+        address guardian,
+        uint256 stake
     );
 
     function estimateFutureRewards(address addr, uint256 duration) external view returns (

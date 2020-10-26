@@ -41,9 +41,11 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     struct FeesAndBootstrap {
         uint96 feeBalance;
-        uint96 lastFeesPerMember;
         uint96 bootstrapBalance;
+        uint96 lastFeesPerMember;
         uint96 lastBootstrapPerMember;
+        uint96 withdrawnFees;
+        uint96 withdrawnBootstrap;
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
@@ -95,7 +97,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         updateGuardianFeesAndBootstrap(guardian);
         uint256 amount = feesAndBootstrap[guardian].bootstrapBalance;
         feesAndBootstrap[guardian].bootstrapBalance = 0;
-        emit BootstrapRewardsWithdrawn(guardian, amount);
+        feesAndBootstrap[guardian].withdrawnBootstrap = feesAndBootstrap[guardian].withdrawnBootstrap.add(amount);
+        emit BootstrapRewardsWithdrawn(guardian, amount, feesAndBootstrap[guardian].withdrawnBootstrap);
 
         require(bootstrapToken.transfer(guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
@@ -105,7 +108,9 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         uint256 amount = feesAndBootstrap[guardian].feeBalance;
         feesAndBootstrap[guardian].feeBalance = 0;
-        emit FeesWithdrawn(guardian, amount);
+        feesAndBootstrap[guardian].withdrawnFees = feesAndBootstrap[guardian].withdrawnFees.add(amount);
+
+        emit FeesWithdrawn(guardian, amount, feesAndBootstrap[guardian].withdrawnFees);
         require(feesToken.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
     }
 
@@ -129,14 +134,18 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 feeBalance,
         uint256 lastFeesPerMember,
         uint256 bootstrapBalance,
-        uint256 lastBootstrapPerMember
+        uint256 lastBootstrapPerMember,
+        uint256 withdrawnFees,
+        uint256 withdrawnBootstrap
     ) {
         FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (
             guardianFeesAndBootstrap.feeBalance,
             guardianFeesAndBootstrap.lastFeesPerMember,
             guardianFeesAndBootstrap.bootstrapBalance,
-            guardianFeesAndBootstrap.lastBootstrapPerMember
+            guardianFeesAndBootstrap.lastBootstrapPerMember,
+            guardianFeesAndBootstrap.withdrawnFees,
+            guardianFeesAndBootstrap.withdrawnBootstrap
         );
     }
 
@@ -317,10 +326,12 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 addedFeesAmount;
 
         FeesAndBootstrapState memory _feesAndBootstrapState = _updateFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
-        (feesAndBootstrap[guardian], addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        (guardianFeesAndBootstrap, addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
+        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
 
-        emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount);
-        emit FeesAssigned(guardian, addedFeesAmount);
+        emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount, guardianFeesAndBootstrap.withdrawnBootstrap.add(guardianFeesAndBootstrap.bootstrapBalance), isCertified, guardianFeesAndBootstrap.lastBootstrapPerMember);
+        emit FeesAssigned(guardian, addedFeesAmount, guardianFeesAndBootstrap.withdrawnFees.add(guardianFeesAndBootstrap.feeBalance), isCertified, guardianFeesAndBootstrap.lastFeesPerMember);
     }
 
     function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap) {

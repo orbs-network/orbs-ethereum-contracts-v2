@@ -5,21 +5,29 @@ import {OwnedContract} from "./base-contract";
 export interface FeesAssignedEvent {
     guardian: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
+    certification: boolean,
+    feesPerMember: (string|BN)
 }
 
 export interface BootstrapRewardsAssignedEvent {
     guardian: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
+    certification: boolean,
+    bootstrapPerMember: (string|BN)
 }
 
 export interface FeesWithdrawnEvent {
     guardian: string,
     amount: (string|BN),
+    totalWithdrawn: (string|BN)
 }
 
 export interface BootstrapRewardsWithdrawnEvent {
     guardian: string,
-    amount: string|BN
+    amount: string|BN,
+    totalWithdrawn: (string|BN)
 }
 
 export interface FeesAndBootstrapRewardsBalanceMigratedEvent {
@@ -81,7 +89,14 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
     // fees
     withdrawFees(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getFeesAndBootstrapBalance(address: string): Promise<{feeBalance: string, bootstrapBalance: string}>;
-    getFeesAndBootstrapData(address: string): Promise<{feeBalance: string, lastFeesPerMember:string, bootstrapBalance: string, lastBootstrapPerMember: string}>;
+    getFeesAndBootstrapData(address: string): Promise<{
+        feeBalance: string,
+        lastFeesPerMember:string,
+        bootstrapBalance: string,
+        lastBootstrapPerMember: string,
+        withdrawnFees: string,
+        withdrawnBootstrap: string
+    }>;
 
     estimateFutureFeesAndBootstrapRewards(guardian: string, duration: number): Promise<{estimatedFees: number, estimatedBootstrapRewards: number}>;
 

@@ -12,6 +12,7 @@ export interface GuardianStakingRewardsAssignedEvent {
     amount: (string|BN),
     totalAwarded: (string|BN),
     delegatorRewardsPerToken: (string|BN),
+    weightInCommittee: (string|BN),
     stakingRewardsPerWeight: (string|BN)
 }
 
@@ -20,6 +21,7 @@ export interface DelegatorStakingRewardsAssignedEvent {
     amount: (string|BN),
     totalAwarded: (string|BN),
     guardian: string,
+    stake: (string|BN),
     delegatorRewardsPerToken: (string|BN)
 }
 
@@ -100,8 +102,10 @@ export interface StakingRewardsContract extends OwnedContract {
 
     getGuardianStakingRewardsData(guardian: string, params?: TransactionConfig): Promise<{
         balance: string,
+        claimed: string,
         delegatorRewardsPerToken: string,
-        lastStakingRewardsPerWeight: string
+        lastStakingRewardsPerWeight: string,
+        weightInCommittee: string
     }>;
 
     guardiansStakingRewards(guardian: string, params?: TransactionConfig): Promise<{
@@ -112,7 +116,10 @@ export interface StakingRewardsContract extends OwnedContract {
 
     getDelegatorStakingRewardsData(delegator: string, params?: TransactionConfig): Promise<{
         balance: string,
-        lastDelegatorRewardsPerToken: string
+        claimed: string,
+        lastDelegatorRewardsPerToken: string,
+        guardian: string,
+        stake: string
     }>;
 
     delegatorsStakingRewards(delegator: string, params?: TransactionConfig): Promise<{
