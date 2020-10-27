@@ -11,15 +11,20 @@ interface IProtocolWallet {
     * External functions
     */
 
-    /// @dev Returns the address of the underlying staked token.
-    /// @return balance uint256 the balance
+    /// Returns the address of the underlying staked token
+    /// @return balance is the wallet balance
     function getBalance() external view returns (uint256 balance);
 
-    /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
+    /// Transfers the given amount of orbs tokens form the sender to this contract an updates the pool
+    /// @dev assumes the caller approved the amount prior to calling
+    /// @param amount is the amount to add to the wallet
     function topUp(uint256 amount) external;
 
-    /// @dev Withdraw from pool to a the sender's address, limited by the pool's MaxRate.
-    /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
+    /// Withdraws from pool to the client address, limited by the pool's MaxRate.
+    /// @dev may only be called by the wallet client
+    /// @dev no more than MaxRate x time period since the last withdraw may be withdrawn
+    /// @dev allocation that wasn't withdrawn can not be withdrawn in the next call
+    /// @param amount is the amount to withdraw
     function withdraw(uint256 amount) external; /* onlyClient */
 
 
@@ -32,17 +37,31 @@ interface IProtocolWallet {
     event EmergencyWithdrawal(address addr, address token);
     event OutstandingTokensReset(uint256 startTime);
 
-    /// @dev Sets a new transfer rate for the Orbs pool.
-    function setMaxAnnualRate(uint256 annual_rate) external; /* onlyMigrationManager */
+    /// Sets a new annual withdraw rate for the pool
+	/// @dev governance function called only by the migration owner
+    /// @dev the rate for a duration is duration x annualRate / 1 year 
+    /// @param annualRate is the maximum annual rate that can be withdrawn
+    function setMaxAnnualRate(uint256 annualRate) external; /* onlyMigrationOwner */
 
+    /// Returns the annual withdraw rate of the pool
+    /// @return annualRate is the maximum annual rate that can be withdrawn
     function getMaxAnnualRate() external view returns (uint256);
 
-    /// @dev transfer the entire pool's balance to a new wallet.
-    function emergencyWithdraw(address token) external; /* onlyMigrationManager */
+    /// Emergency withdraw the wallet funds
+	/// @dev governance function called only by the migration owner
+    /// @dev used in emergencies, when a migration to a new wallet is needed
+    /// @param token is the erc20 address of the token to withdraw
+    function emergencyWithdraw(address token) external; /* onlyMigrationOwner */
 
-    /// @dev sets the address of the new contract
-    function setClient(address client) external; /* onlyFunctionalManager */
+    /// Sets the address of the client that can withdraw funds
+	/// @dev governance function called only by the functional owner
+    /// @param client is the address of the new client
+    function setClient(address client) external; /* onlyFunctionalOwner */
 
+    /// Resets the outstanding tokens to new start time
+	/// @dev governance function called only by the migration owner
+    /// @dev the next duration will be calculated starting from the given time
+    /// @param startTime is the time to set as the last withdrawal time
     function resetOutstandingTokens(uint256 startTime) external; /* onlyMigrationOwner */
 
 }

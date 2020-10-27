@@ -15,23 +15,44 @@ interface IStakingRewards {
      * External functions
      */
 
-    /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
+    /// Returns the currently reward balance of the given address.
+    /// @dev calculates the up to date balances (differ from the state)
+    /// @param addr is the address to query
+    /// @return guardianStakingRewardsBalance the rewards awarded to the guardian role
+    /// @return delegatorStakingRewardsBalance the rewards awarded to the guardian role  
     function getStakingRewardsBalance(address addr) external view returns (uint256 guardianStakingRewardsBalance, uint256 delegatorStakingRewardsBalance);
 
-    /// @dev Allows Guardian to set a different delegator staking reward cut than the default
-    /// delegatorRewardsPercentMille accepts values between 0 - maxDelegatorsStakingRewardsPercentMille
+    /// Sets ths guardian's delegators staking reward portion
+    /// @dev by default uses the defaultDelegatorsStakingRewardsPercentMille
+    /// @param delegatorRewardsPercentMille is the delegators portion in percent-mille (0 - maxDelegatorsStakingRewardsPercentMille)
     function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external;
 
-    /// @dev Returns the guardian's delegatorRewardsPercentMille
+    /// Returns a guardian's delegators staking reward portion
+    /// @dev If not explicitly set, returns the defaultDelegatorsStakingRewardsPercentMille
+    /// @return delegatorRewardsPercentMille is the delegators portion in percent-mille
     function getGuardianDelegatorsStakingRewardsPercentMille(address guardian) external view returns (uint256 delegatorRewardsRatioPercentMille);
 
-    /// @dev Claims the staking rewards balance of addr by staking
+    /// Claims the staking rewards balance of an addr, staking the rewards
+    /// @dev Claimed rewards are staked in the staking contract using the distributeRewards interface
+    /// @dev includes the rewards for both the delegator and guardian roles
+    /// @dev calculates the up to date rewards prior to distribute them to the staking contract 
+    /// @param addr is the address to claim rewards for
     function claimStakingRewards(address addr) external;
 
-    /// @dev Returns the amount of ORBS tokens in the staking wallet that were allocated
-    /// but not yet claimed. The staking wallet balance must always larger than the allocated value.
+    /// Returns the amount of ORBS tokens in the staking rewards wallet allocated to staking rewards
+    /// @dev The staking wallet balance must always larger than the allocated value
+    /// @return allocated is the amount of tokens allocated in the staking rewards wallet
     function getStakingRewardsWalletAllocatedTokens() external view returns (uint256 allocated);
 
+    /// Returns the current guardian staking rewards state 
+    /// @dev calculated to the latest block, may differ from the state read
+    /// @dev notice that the guardian rewards are the rewards for the guardian role as guardian and do not include delegation rewards
+    /// @dev use getDelegatorStakingRewardsData to get the guardian's rewards as delegator
+    /// @param guardian is the guardian to claim rewards for
+    /// @return balance is the staking rewards balance for the guardian role
+    /// @return claimed is the staking rewards for the guardian role that were claimed
+    /// @return delegatorRewardsPerToken is the potential reward per token assigned to a guardian's delegator that delegated from day zero
+    /// @return lastStakingRewardsPerWeight is the up to date stakingRewardsPerWeight used for the guardian state calculation
     function getGuardianStakingRewardsData(address guardian) external view returns (
         uint256 balance,
         uint256 claimed,
@@ -39,30 +60,67 @@ interface IStakingRewards {
         uint256 lastStakingRewardsPerWeight
     );
 
+    /// Returns the current delegator staking rewards state 
+    /// @dev calculated to the latest block, may differ from the state read
+    /// @param addr is the address to claim rewards for
+    /// @return balance is the staking rewards balance for the delegator role
+    /// @return claimed is the staking rewards for the delegator role that were claimed
+    /// @return lastDelegatorRewardsPerToken is the up to date delegatorRewardsPerToken used for the delegator state calculation
     function getDelegatorStakingRewardsData(address delegator) external view returns (
         uint256 balance,
         uint256 claimed,
         uint256 lastDelegatorRewardsPerToken
     );
 
+    /// Returns an estimation for the delegator and guardian staking rewards for a given duration
+    /// @dev the returned value is an estimation, assuming no change in the PoS state
+    /// @dev the period calculated for start from the current block time until the current time + duration.
+    /// @param addr is the address to estimate rewards for
+    /// @param duration is the duration to calculate for in seconds
+    /// @return estimatedDelegatorStakingRewards is the estimated reward for the delegator role
+    /// @return estimatedGuardianStakingRewards is the estimated reward for the guardian role
     function estimateFutureRewards(address addr, uint256 duration) external view returns (
         uint256 estimatedDelegatorStakingRewards,
         uint256 estimatedGuardianStakingRewards
     );
 
+    /// Returns the current global staking rewards state 
+    /// @dev calculated to the latest block, may differ from the state read
+    /// @return stakingRewardsPerWeight is the potential reward per committee weight assigned to a guardian was in the committee from day zero 
+    /// @return unclaimedStakingRewards is the of tokens that were assigned to participants and not claimed yet
     function getStakingRewardsState() external view returns (
         uint96 stakingRewardsPerWeight,
         uint96 unclaimedStakingRewards
     );
 
+    /// Returns the current annual staking reward rate
+    /// @dev calculated based on the current total committee weight
+    /// @return stakingRewardsRatePercentMille is the current staking reward rate in percent-mille
     function getCurrentStakingRewardsRatePercentMille() external view returns (uint256);
 
-    /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
-    /// Triggers update of the member rewards
+    /// Notifies an expected change in the committee membership of the guardian
+	/// @dev Called only by: the Committee contract
+    /// @dev called upon expected change in the committee membership of the guardian
+    /// @dev triggers update of the global rewards state and the guardian rewards state
+    /// @dev updates the rewards state based on the committee state prior to the change
+    /// @param guardian is the guardian who's committee membership is updated
+    /// @param weight is the weight of the guardian prior to the change
+    /// @param totalCommitteeWeight is the total committee weight prior to the change
+    /// @param inCommittee indicates whether the guardian was in the committee prior to the change
+    /// @param inCommitteeAfter indicates whether the guardian is in the committee after the change
     function committeeMembershipWillChange(address guardian, uint256 weight, uint256 totalCommitteeWeight, bool inCommittee, bool inCommitteeAfter) external /* onlyCommitteeContract */;
 
-    /// @dev called by the Delegation contract upon expected change in a committee member delegator stake
-    /// Triggers update of the delegator and guardian staking rewards
+    /// Notifies an expected change in a delegator and his guardian delegation state
+	/// @dev Called only by: the Delegation contract
+    /// @dev called upon expected change in a delegator's delegation state 
+    /// @dev triggers update of the global rewards state, the guardian rewards state and the delegator rewards state
+    /// @dev on delegation change, updates also the new guardian and the delegator's lastDelegatorRewardsPerToken accordingly
+    /// @param guardian is the delegator's guardian prior to the change
+    /// @param delegatedStake is the delegated stake of the delegator's guardian prior to the change
+    /// @param delegator is the delegator about to change delegation state
+    /// @param delegatorStake is the stake of the delegator
+    /// @param nextGuardian is the delegator's guardian after to the change
+    /// @param nextGuardianDelegatedStake is the delegated stake of the delegator's guardian after to the change
     function delegationWillChange(address guardian, uint256 delegatedStake, address delegator, uint256 delegatorStake, address nextGuardian, uint256 nextGuardianDelegatedStake) external /* onlyDelegationsContract */;
 
     /*
@@ -78,34 +136,59 @@ interface IStakingRewards {
     event StakingRewardsBalanceMigrationAccepted(address from, address indexed addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards);
     event EmergencyWithdrawal(address addr, address token);
 
-    /// @dev activates reward distribution, all rewards will be distributed up
-    /// assuming the last assignment was on startTime (the time the old contarct was deactivated)
-    function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
-
-    /// @dev deactivates reward distribution, all rewards will be distributed up
-    /// deactivate moment.
+    /// Deactivates fees and bootstrap allocation
+	/// @dev governance function called only by the migration manager
+    /// @dev guardians updates remain active based on the current perMember value
     function deactivateRewardDistribution() external /* onlyMigrationManager */;
 
-    /// @dev Sets the default cut of the delegators staking reward.
-    function setDefaultDelegatorsStakingRewardsPercentMille(uint32 defaultDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+    /// Activates staking rewards allocation
+	/// @dev governance function called only by the initialization manager
+    /// @dev On migrations, startTime should be set as the previous contract deactivation time.
+    /// @param startTime sets the last assignment time
+    function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
 
+    /// Sets the default delegators staking reward portion 
+	/// @dev governance function called only by the functional manager
+    /// @param defaultDelegatorsStakingRewardsPercentMille is the default delegators portion in percent-mille(0 - maxDelegatorsStakingRewardsPercentMille)
+    function setDefaultDelegatorsStakingRewardsPercentMille(uint32 defaultDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager */;
+
+    /// Returns the default delegators staking reward portion
+    /// @return defaultDelegatorsStakingRewardsPercentMille is the default delegators portion in percent-mille
     function getDefaultDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
-    /// @dev Sets the maximum cut of the delegators staking reward.
-    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+    /// Sets the maximum delegators staking reward portion 
+	/// @dev governance function called only by the functional manager
+    /// @param maxDelegatorsStakingRewardsPercentMille is the maximum delegators portion in percent-mille(0 - 100,000)
+    function setMaxDelegatorsStakingRewardsPercentMille(uint32 maxDelegatorsStakingRewardsPercentMille) external /* onlyFunctionalManager */;
 
+    /// Returns the default delegators staking reward portion
+    /// @return maxDelegatorsStakingRewardsPercentMille is the maximum delegators portion in percent-mille
     function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
-    /// @dev Sets a new annual rate and cap for the staking reward.
+    /// Sets the annual rate and cap for the staking reward
+	/// @dev governance function called only by the functional manager
+    /// @param annualRateInPercentMille is the annual rate in percent-mille
+    /// @param annualCap is the annual staking rewards cap
     function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external /* onlyFunctionalManager */;
 
+    /// Returns the annual staking reward rate 
+    /// @return annualRateInPercentMille is the annual rate in percent-mille
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
+    /// Returns the annual staking rewards cap
+    /// @return annualCap is the annual rate in percent-mille
     function getAnnualStakingRewardsCap() external view returns (uint256);
 
+    /// Checks if rewards allocation is active
+    /// @return rewardAllocationActive is a bool that indicates that rewards allocation is active
     function isRewardAllocationActive() external view returns (bool);
 
-    /// @dev Returns the contract's settings
+    /// Returns the contract's settings
+    /// @return annualCap is the annual rate in percent-mille
+    /// @return annualRateInPercentMille is the annual rate in percent-mille
+    /// @return defaultDelegatorsStakingRewardsPercentMille is the default delegators portion in percent-mille
+    /// @return maxDelegatorsStakingRewardsPercentMille is the maximum delegators portion in percent-mille
+    /// @return rewardAllocationActive is a bool that indicates that rewards allocation is active
     function getSettings() external view returns (
         uint annualStakingRewardsCap,
         uint32 annualStakingRewardsRatePercentMille,
@@ -114,13 +197,24 @@ interface IStakingRewards {
         bool rewardAllocationActive
     );
 
-    /// @dev migrates the staking rewards balance of the guardian to the rewards contract as set in the registry.
-    function migrateRewardsBalance(address guardian) external;
+    /// Migrates the staking rewards balance of a given address to a new staking rewards contract
+    /// @dev The new rewards contract is determined according to the contracts registry
+    /// @dev No impact of the calling contract if the currently configured contract in the registry
+    /// @dev may be called also while the contract is locked
+    /// @param addr is the address to migrate
+    function migrateRewardsBalance(address addr) external;
 
-    /// @dev accepts guardian's balance migration from a previous rewards contarct.
-    function acceptRewardsBalanceMigration(address guardian, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external;
+    /// Accepts an address balance migration from a previous rewards contract
+    /// @dev the function may be called by any caller that approves the amounts provided for transfer
+    /// @param addr is the migrated address
+    /// @param guardianStakingRewards is the received guardian rewards balance  
+    /// @param delegatorStakingRewards is the received delegator rewards balance
+    function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external;
 
-    /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
+    /// Performs emergency withdrawal of the contract balance
+    /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens
+	/// @dev governance function called only by the migration manager
+    /// @param token is the ERC20 token to withdraw
     function emergencyWithdraw(address token) external /* onlyMigrationManager */;
 }
 

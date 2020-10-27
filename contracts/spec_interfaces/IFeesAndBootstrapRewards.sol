@@ -18,7 +18,7 @@ interface IFeesAndBootstrapRewards {
     /// Triggers update of the guardian rewards
 	/// @dev Called by: the Committee contract
     /// @dev called upon expected change in the committee membership of the guardian
-    /// @param guardian is the guardian address
+    /// @param guardian is the guardian who's committee membership is updated
     /// @param inCommittee indicates whether the guardian is in the committee prior to the change
     /// @param isCertified indicates whether the guardian is certified prior to the change
     /// @param nextCertification indicates whether after the change, the guardian is certified
@@ -143,15 +143,16 @@ interface IFeesAndBootstrapRewards {
 
     /// Migrates the rewards balance to a new FeesAndBootstrap contract
     /// @dev The new rewards contract is determined according to the contracts registry
-    /// @dev No impact of the calling contract is the currently configured contract in the registry
+    /// @dev No impact of the calling contract if the currently configured contract in the registry
+    /// @dev may be called also while the contract is locked
     /// @param guardian is the guardian to migrate
     function migrateRewardsBalance(address guardian) external;
 
     /// Accepts guardian's balance migration from a previous rewards contract
     /// @dev the function may be called by any caller that approves the amounts provided for transfer
-    /// @param guardian is the guardian migrated
-    /// @param fees is the guardian fees balance 
-    /// @param bootstrapRewards is the guardian bootstrap balance
+    /// @param guardian is the migrated guardian
+    /// @param fees is the received guardian fees balance 
+    /// @param bootstrapRewards is the received guardian bootstrap balance
     function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrapRewards) external;
 
     /// Performs emergency withdrawal of the contract balance

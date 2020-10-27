@@ -19,17 +19,18 @@ interface IElections {
 	 * External functions
 	 */
 
-	/// Called by a guardian when ready to start syncing with other nodes
+	/// Notifies that the guardian is ready to sync with other nodes
 	/// @dev ready to sync state is not managed in the contract that only emits an event
 	/// @dev readyToSync clears the readyForCommittee state
 	function readyToSync() external;
 
-	/// Called by a guardian when ready to join the committee, typically after syncing is complete or after being voted out
-	/// @dev a guardian calling readyForCommittee that is qualified to join the committee is added.
+	/// Notifies that the guardian is ready to join the committee
+	/// @dev a qualified guardian calling readyForCommittee is added to the committee
 	function readyForCommittee() external;
 
-	/// Called to test if a guardian calling readyForCommittee() will lead to joining the committee
-	/// @dev called periodically by guardians to check if they are qualified to join the committee.
+	/// Checks if a guardian is qualified to join the committee
+	/// @dev when true, calling readyForCommittee() will result in adding the guardian to the committee
+	/// @dev called periodically by guardians to check if they are qualified to join the committee
 	/// @param guardian is the guardian to check
 	/// @return canJoin indicating that the guardian can join the current committee
 	function canJoinCommittee(address guardian) external view returns (bool);

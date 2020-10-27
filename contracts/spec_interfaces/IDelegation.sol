@@ -33,13 +33,12 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/// @return delegatedStake is the address delegated stake
 	function getDelegatedStake(address addr) external view returns (uint256);
 
-	/// Returns the delegated stake of an addr 
-	/// @dev an address that is not self delegating has a 0 delegated stake
+	/// Returns the delegate address of the given address
 	/// @param addr is the address to query
-	/// @return delegatedStake is the addr delegated stake
+	/// @return delegation is the address the addr delegated to
 	function getDelegation(address addr) external view returns (address);
 
-	/// Returns a delegtor's info
+	/// Returns a delegator info
 	/// @param addr is the address to query
 	/// @return delegation is the address the addr delegated to
 	/// @return delegatorStake is the stake of the delegator as reflected in the delegation contract
@@ -47,8 +46,8 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 
 	/// Returns the total delegated stake
 	/// @dev delegatedStake - the total stake delegated to an address that is self delegating
-	/// @dev the delegated stake of a non self-delegated address is 0.
-	/// @return totalDelegatedStake is the total delegatedStake of all the addresses.
+	/// @dev the delegated stake of a non self-delegated address is 0
+	/// @return totalDelegatedStake is the total delegatedStake of all the addresses
 	function getTotalDelegatedStake() external view returns (uint256) ;
 
 	/*
@@ -59,19 +58,18 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 
 	event DelegationInitialized(address indexed from, address indexed to);
 
-	/// Imports delegations during initial migration. 
-	/// @dev initialization function called only by the initializationManager.
-	/// @dev Does not update the Rewards or Election contracts.
-	/// @dev assumes deactivated Rewards.
-	/// @param from is a list of delegator addresses.
-	/// @param to - the address the the delegators delegate to.
+	/// Imports delegations during initial migration
+	/// @dev initialization function called only by the initializationManager
+	/// @dev Does not update the Rewards or Election contracts
+	/// @dev assumes deactivated Rewards
+	/// @param from is a list of delegator addresses
+	/// @param to is the address the delegators delegate to
 	function importDelegations(address[] calldata from, address to) external /* onlyMigrationManager onlyDuringDelegationImport */;
 
-	/// Imports delegations during initial migration, operates 
-	/// @dev initialization function called only by the initializationManager.
-	/// @dev Does not update the Rewards or Election contracts.
-	/// @dev assumes deactivated Rewards.
-	/// @param from is a list of delegator addresses.
-	/// @param to - the address the the delegators delegate to.
+	/// Initializes the delegation of an address during initial migration 
+	/// @dev initialization function called only by the initializationManager
+	/// @dev behaves identically to a delegate transaction sent by the delegator
+	/// @param from is the delegator addresses
+	/// @param to is the delegator delegates to
 	function initDelegation(address from, address to) external /* onlyInitializationAdmin */;
 }
