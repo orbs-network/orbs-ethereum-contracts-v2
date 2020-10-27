@@ -18,9 +18,9 @@ interface IStakingRewards {
     /// Returns the currently reward balance of the given address.
     /// @dev calculates the up to date balances (differ from the state)
     /// @param addr is the address to query
-    /// @return guardianStakingRewardsBalance the rewards awarded to the guardian role
     /// @return delegatorStakingRewardsBalance the rewards awarded to the guardian role  
-    function getStakingRewardsBalance(address addr) external view returns (uint256 guardianStakingRewardsBalance, uint256 delegatorStakingRewardsBalance);
+    /// @return guardianStakingRewardsBalance the rewards awarded to the guardian role
+    function getStakingRewardsBalance(address addr) external view returns (uint256 delegatorStakingRewardsBalance, uint256 guardianStakingRewardsBalance);
 
     /// Sets ths guardian's delegators staking reward portion
     /// @dev by default uses the defaultDelegatorsStakingRewardsPercentMille
@@ -29,7 +29,7 @@ interface IStakingRewards {
 
     /// Returns a guardian's delegators staking reward portion
     /// @dev If not explicitly set, returns the defaultDelegatorsStakingRewardsPercentMille
-    /// @return delegatorRewardsPercentMille is the delegators portion in percent-mille
+    /// @return delegatorRewardsRatioPercentMille is the delegators portion in percent-mille
     function getGuardianDelegatorsStakingRewardsPercentMille(address guardian) external view returns (uint256 delegatorRewardsRatioPercentMille);
 
     /// Claims the staking rewards balance of an addr, staking the rewards
@@ -48,7 +48,7 @@ interface IStakingRewards {
     /// @dev calculated to the latest block, may differ from the state read
     /// @dev notice that the guardian rewards are the rewards for the guardian role as guardian and do not include delegation rewards
     /// @dev use getDelegatorStakingRewardsData to get the guardian's rewards as delegator
-    /// @param guardian is the guardian to claim rewards for
+    /// @param guardian is the guardian to query
     /// @return balance is the staking rewards balance for the guardian role
     /// @return claimed is the staking rewards for the guardian role that were claimed
     /// @return delegatorRewardsPerToken is the potential reward per token assigned to a guardian's delegator that delegated from day zero
@@ -62,7 +62,7 @@ interface IStakingRewards {
 
     /// Returns the current delegator staking rewards state 
     /// @dev calculated to the latest block, may differ from the state read
-    /// @param addr is the address to claim rewards for
+    /// @param delegator is the delegator to query
     /// @return balance is the staking rewards balance for the delegator role
     /// @return claimed is the staking rewards for the delegator role that were claimed
     /// @return lastDelegatorRewardsPerToken is the up to date delegatorRewardsPerToken used for the delegator state calculation
@@ -172,11 +172,11 @@ interface IStakingRewards {
     function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external /* onlyFunctionalManager */;
 
     /// Returns the annual staking reward rate 
-    /// @return annualRateInPercentMille is the annual rate in percent-mille
+    /// @return annualStakingRewardsRatePercentMille is the annual rate in percent-mille
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
     /// Returns the annual staking rewards cap
-    /// @return annualCap is the annual rate in percent-mille
+    /// @return annualStakingRewardsCap is the annual rate in percent-mille
     function getAnnualStakingRewardsCap() external view returns (uint256);
 
     /// Checks if rewards allocation is active
@@ -184,8 +184,8 @@ interface IStakingRewards {
     function isRewardAllocationActive() external view returns (bool);
 
     /// Returns the contract's settings
-    /// @return annualCap is the annual rate in percent-mille
-    /// @return annualRateInPercentMille is the annual rate in percent-mille
+    /// @return annualStakingRewardsCap is the annual rate in percent-mille
+    /// @return annualStakingRewardsRatePercentMille is the annual rate in percent-mille
     /// @return defaultDelegatorsStakingRewardsPercentMille is the default delegators portion in percent-mille
     /// @return maxDelegatorsStakingRewardsPercentMille is the maximum delegators portion in percent-mille
     /// @return rewardAllocationActive is a bool that indicates that rewards allocation is active

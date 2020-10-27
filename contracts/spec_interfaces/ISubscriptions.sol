@@ -26,7 +26,7 @@ interface ISubscriptions {
     /// @param deploymentSubset indicates the code deployment subset the virtual chain uses such as main or canary
     /// @return vcId is the virtual chain ID allocated to the new virtual chain
     /// @return genRefTime is the virtual chain genesis reference time that determines the first block committee
-    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlySubscriber onlyWhenActive returns (uint vcId, uint genRefTime);
+    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint vcId, uint genRefTime);
 
     /// Extends the subscription of an existing VC.
     /// @dev Called only by: an authorized subscription plan contract
@@ -104,7 +104,7 @@ interface ISubscriptions {
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalManager */;
 
     /// Returns the genesis reference time delay
-    /// @return newGenesisRefTimeDelay is the delay time in seconds
+    /// @return genesisRefTimeDelay is the delay time in seconds
     function getGenesisRefTimeDelay() external view returns (uint256);
 
     /// Sets the minimum initial virtual chain payment 
@@ -117,7 +117,7 @@ interface ISubscriptions {
     function getMinimumInitialVcPayment() external view returns (uint256);
 
     /// Returns the settings of this contract
-    /// @return newGenesisRefTimeDelay is the delay time in seconds
+    /// @return genesisRefTimeDelay is the delay time in seconds
     /// @return minimumInitialVcPayment is the minimum payment required for the initial subscription
     function getSettings() external view returns(
         uint genesisRefTimeDelay,

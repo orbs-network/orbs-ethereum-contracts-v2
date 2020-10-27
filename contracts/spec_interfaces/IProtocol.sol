@@ -17,8 +17,8 @@ interface IProtocol {
     /// Returns the current protocol version for a given deployment subset to query
 	/// @dev an unexisting deployment subset returns protocol version 0
     /// @param deploymentSubset is the name of the deployment subset
-    /// @return protocolVersion is the current protocol version of the deployment subset
-    function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256);
+    /// @return currentVersion is the current protocol version of the deployment subset
+    function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256 currentVersion);
 
     /*
      *   Governance functions
