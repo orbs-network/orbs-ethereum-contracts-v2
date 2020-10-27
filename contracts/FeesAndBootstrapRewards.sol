@@ -97,8 +97,9 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         updateGuardianFeesAndBootstrap(guardian);
         uint256 amount = feesAndBootstrap[guardian].bootstrapBalance;
         feesAndBootstrap[guardian].bootstrapBalance = 0;
-        feesAndBootstrap[guardian].withdrawnBootstrap = feesAndBootstrap[guardian].withdrawnBootstrap.add(amount);
-        emit BootstrapRewardsWithdrawn(guardian, amount, feesAndBootstrap[guardian].withdrawnBootstrap);
+        uint96 withdrawnBootstrap = feesAndBootstrap[guardian].withdrawnBootstrap.add(amount);
+        feesAndBootstrap[guardian].withdrawnBootstrap = withdrawnBootstrap;
+        emit BootstrapRewardsWithdrawn(guardian, amount, withdrawnBootstrap);
 
         require(bootstrapToken.transfer(guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
@@ -108,9 +109,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         uint256 amount = feesAndBootstrap[guardian].feeBalance;
         feesAndBootstrap[guardian].feeBalance = 0;
-        feesAndBootstrap[guardian].withdrawnFees = feesAndBootstrap[guardian].withdrawnFees.add(amount);
+        uint96 withdrawnFees = feesAndBootstrap[guardian].withdrawnFees.add(amount);
+        feesAndBootstrap[guardian].withdrawnFees = withdrawnFees;
 
-        emit FeesWithdrawn(guardian, amount, feesAndBootstrap[guardian].withdrawnFees);
+        emit FeesWithdrawn(guardian, amount, withdrawnFees);
         require(feesToken.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
     }
 
