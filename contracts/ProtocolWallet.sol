@@ -49,7 +49,10 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     /// @dev withdraws from the pool to a spender, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external override onlyClient {
-        uint duration = block.timestamp.sub(lastWithdrawal);
+        uint256 _lastWithdrawal = lastWithdrawal;
+        require(_lastWithdrawal <= block.timestamp, "withdrawal is not yet active");
+
+        uint duration = block.timestamp.sub(_lastWithdrawal);
         uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
         require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
@@ -75,7 +78,6 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// @dev Sets a new transfer rate for the Orbs pool.
     function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner { //TODO add test
-        require(startTime >= block.timestamp, "start time must not be in the past");
         lastWithdrawal = startTime;
         emit OutstandingTokensReset(startTime);
     }
