@@ -487,6 +487,10 @@ describe('rewards', async () => {
         expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).feeBalance, expectedFees);
         expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).withdrawnFees, expectedFees);
         expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).lastFeesPerMember, expectedFees.mul(bn(2)));
+
+        expect((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).certified).to.be.false;
+        await c0.becomeCertified();
+        expect((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).certified).to.be.true;
     });
 
     // Staking rewards

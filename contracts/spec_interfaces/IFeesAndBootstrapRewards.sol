@@ -50,7 +50,8 @@ interface IFeesAndBootstrapRewards {
         uint256 bootstrapBalance,
         uint256 lastBootstrapPerMember,
         uint256 withdrawnFees,
-        uint256 withdrawnBootstrap
+        uint256 withdrawnBootstrap,
+        bool certified
     );
 
     /*

@@ -95,7 +95,8 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
         bootstrapBalance: string,
         lastBootstrapPerMember: string,
         withdrawnFees: string,
-        withdrawnBootstrap: string
+        withdrawnBootstrap: string,
+        certified: bool
     }>;
 
     estimateFutureFeesAndBootstrapRewards(guardian: string, duration: number): Promise<{estimatedFees: number, estimatedBootstrapRewards: number}>;
