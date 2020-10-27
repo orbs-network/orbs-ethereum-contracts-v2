@@ -139,7 +139,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 withdrawnBootstrap,
         bool certified
     ) {
-        (FeesAndBootstrap memory guardianFeesAndBootstrap, bool certified) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        (guardianFeesAndBootstrap, certified) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (
             guardianFeesAndBootstrap.feeBalance,
             guardianFeesAndBootstrap.lastFeesPerMember,

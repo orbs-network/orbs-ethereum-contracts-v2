@@ -686,7 +686,11 @@ describe('rewards', async () => {
 
         const allocatedAfter = bn((await d.stakingRewards.getStakingRewardsState()).unclaimedStakingRewards);
 
+        const c0_delegatorRewardsPerToken_period1 = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).delegatorRewardsPerToken);
+        const stakingRewardsPerWeight_period1 = bn((await d.stakingRewards.getStakingRewardsState()).stakingRewardsPerWeight);
+
         let r = await d0.stake(fromMilliOrbs(1000));
+
         expect(r).to.have.a.approx().stakingRewardsAllocatedEvent({
             stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
             allocatedRewards: allocatedAfter.sub(allocatedBefore)
@@ -695,16 +699,18 @@ describe('rewards', async () => {
             guardian: c0.address,
             amount: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
             totalAwarded: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
-            delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
-            stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
+            delegatorRewardsPerToken: c0_delegatorRewardsPerToken_period1,
+            delegatorRewardsPerTokenDelta: c0_delegatorRewardsPerToken_period1,
+            stakingRewardsPerWeight: stakingRewardsPerWeight_period1,
+            stakingRewardsPerWeightDelta: stakingRewardsPerWeight_period1,
         });
         expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
             delegator: d0.address,
             amount: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
             totalAwarded: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
             guardian: c0.address,
-            stake: fromMilliOrbs(1000),
-            delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
+            delegatorRewardsPerToken: c0_delegatorRewardsPerToken_period1,
+            delegatorRewardsPerTokenDelta: c0_delegatorRewardsPerToken_period1,
         });
         
         const guardianRewards = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance);
@@ -728,10 +734,13 @@ describe('rewards', async () => {
         expect(r).to.have.a.approx().guardianStakingRewardsAssignedEvent({
             guardian: c0.address,
             totalAwarded: guardianRewards.add(guardianRewards2),
+            delegatorRewardsPerTokenDelta: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken).sub(c0_delegatorRewardsPerToken_period1),
+            stakingRewardsPerWeightDelta: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight).sub(stakingRewardsPerWeight_period1),
         });
         expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
             delegator: c0.address,
             totalAwarded: delegatorRewards.add(delegatorRewards2),
+            delegatorRewardsPerTokenDelta: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken).sub(c0_delegatorRewardsPerToken_period1),
         });
         expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
             addr: c0.address,
@@ -806,17 +815,19 @@ describe('rewards', async () => {
         expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).claimed), c0_expectedGuardianRewards)
         expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance), c0_expectedGuardianRewards)
         expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).lastStakingRewardsPerWeight), (await d.stakingRewards.getStakingRewardsState()).stakingRewardsPerWeight);
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).stakingRewardsPerWeightDelta), bn((await d.stakingRewards.getStakingRewardsState()).stakingRewardsPerWeight).div(bn(2)));
         expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).delegatorRewardsPerToken), c0_expectedDelegatorRewards.mul(bn(2)).mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).delegatorRewardsPerTokenDelta), c0_expectedDelegatorRewards.mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
 
         expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).balance), c0_expectedDelegatorRewards);
         expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).claimed), c0_expectedDelegatorRewards);
         expect((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).guardian).to.eq(c0.address);
-        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).stake), fromMilliOrbs(4000));
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).lastDelegatorRewardsPerToken), c0_expectedDelegatorRewards.mul(bn(2)).mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).delegatorRewardsPerTokenDelta), c0_expectedDelegatorRewards.mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
 
         expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).balance), delegator_expectedDelegatorRewards.mul(bn(2)));
         expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).claimed), bn(0));
         expect((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).guardian).to.eq(c0.address);
-        expect(bn((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).stake)).to.bignumber.eq(fromMilliOrbs(1000));
     });
 
     it('properly estimates guardian and delegator future rewards', async () => {
