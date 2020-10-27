@@ -22,13 +22,33 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
         _;
     }
 
+    modifier onlyMigrationManager {
+        require(isMigrationManager(), "sender is not the migration manager");
+
+        _;
+    }
+
+    modifier onlyFunctionalManager {
+        require(isFunctionalManager(), "sender is not the functional manager");
+
+        _;
+    }
+
+    function isAdmin() internal view returns (bool) {
+        return msg.sender == address(contractRegistry) || msg.sender == registryAdmin() || msg.sender == initializationAdmin();
+    }
+
     function isManager(string memory role) internal view returns (bool) {
         IContractRegistry _contractRegistry = contractRegistry;
         return isAdmin() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
     }
 
-    function isAdmin() internal view returns (bool) {
-        return msg.sender == registryAdmin() || msg.sender == initializationAdmin() || msg.sender == address(contractRegistry);
+    function isMigrationManager() internal view returns (bool) {
+        return isManager('migrationManager');
+    }
+
+    function isFunctionalManager() internal view returns (bool) {
+        return isManager('functionalManager');
     }
 
     function getProtocolContract() internal view returns (address) {
