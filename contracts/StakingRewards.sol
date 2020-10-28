@@ -39,7 +39,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
     StakingRewardsState public stakingRewardsState;
 
-    uint256 public stakingRewardsWithdrawnFromWallet;
+    uint256 public stakingRewardsContractBalance;
 
     struct GuardianStakingRewards {
         uint96 delegatorRewardsPerToken;
@@ -211,7 +211,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function getStakingRewardsWalletAllocatedTokens() external override view returns (uint256 allocated) {
         (, uint96 unclaimedStakingRewards) = getStakingRewardsState();
-        return uint256(unclaimedStakingRewards).sub(stakingRewardsWithdrawnFromWallet);
+        return uint256(unclaimedStakingRewards).sub(stakingRewardsContractBalance);
     }
 
     /*
@@ -262,9 +262,11 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function deactivateRewardDistribution() external override onlyMigrationManager {
         require(settings.rewardAllocationActive, "reward distribution is already deactivated");
 
-        updateStakingRewardsState();
+        StakingRewardsState memory _stakingRewardsState = updateStakingRewardsState();
 
         settings.rewardAllocationActive = false;
+
+        withdrawRewardsWalletAllocatedTokens(_stakingRewardsState);
 
         emit RewardDistributionDeactivated();
     }
@@ -510,15 +512,21 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
         StakingRewardsState memory _stakingRewardsState = stakingRewardsState;
 
-        uint256 _stakingRewardsWithdrawnFromWallet = stakingRewardsWithdrawnFromWallet;
-        if (total > _stakingRewardsWithdrawnFromWallet) {
-            uint256 allocated = _stakingRewardsState.unclaimedStakingRewards.sub(_stakingRewardsWithdrawnFromWallet);
-            stakingRewardsWallet.withdraw(allocated);
-            _stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.add(allocated);
+        uint256 _stakingRewardsContractBalance = stakingRewardsContractBalance;
+        if (total > _stakingRewardsContractBalance) {
+            _stakingRewardsContractBalance = withdrawRewardsWalletAllocatedTokens(_stakingRewardsState);
         }
 
-        stakingRewardsWithdrawnFromWallet = _stakingRewardsWithdrawnFromWallet.sub(total);
+        stakingRewardsContractBalance = _stakingRewardsContractBalance.sub(total);
         stakingRewardsState.unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards.sub(total);
+    }
+
+    function withdrawRewardsWalletAllocatedTokens(StakingRewardsState memory _stakingRewardsState) private returns (uint256 _stakingRewardsContractBalance){
+        _stakingRewardsContractBalance = stakingRewardsContractBalance;
+        uint256 allocated = _stakingRewardsState.unclaimedStakingRewards.sub(_stakingRewardsContractBalance);
+        stakingRewardsWallet.withdraw(allocated);
+        _stakingRewardsContractBalance = _stakingRewardsContractBalance.add(allocated);
+        stakingRewardsContractBalance = _stakingRewardsContractBalance;
     }
 
     /*

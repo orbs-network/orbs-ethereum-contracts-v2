@@ -120,7 +120,7 @@ interface IStakingRewards {
     /// @dev accepts guardian's balance migration from a previous rewards contarct.
     function acceptRewardsBalanceMigration(address guardian, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external;
 
-    /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
+    /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager.
     function emergencyWithdraw(address token) external /* onlyMigrationManager */;
 }
 

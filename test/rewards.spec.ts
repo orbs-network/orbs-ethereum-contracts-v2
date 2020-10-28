@@ -1350,4 +1350,25 @@ describe('rewards', async () => {
         }
 
     });
+
+    it("full claim after deactivation, balance is 0 (staking rewards)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        await d.stakingRewards.deactivateRewardDistribution({from: d.migrationManager.address});
+        await d.stakingRewardsWallet.setClient(ZERO_ADDR, {from: d.functionalManager.address});
+
+        expect(await d.erc20.balanceOf(d.stakingRewards.address)).to.be.bignumber.gt(fromMilliOrbs(1) as any);
+        expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
+
+        for (const c of committee) {
+            await d.stakingRewards.claimStakingRewards(c.address);
+        }
+
+        expect(await d.erc20.balanceOf(d.stakingRewards.address)).to.be.bignumber.lt(bn(100));
+        expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
+    });
 });
