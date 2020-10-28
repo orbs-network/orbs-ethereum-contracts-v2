@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -16,7 +16,7 @@ interface IStakingRewards {
      */
 
     /// @dev Returns the currently unclaimed orbs token reward balance of the given address.
-    function getStakingRewardsBalance(address addr) external view returns (uint256 balance);
+    function getStakingRewardsBalance(address addr) external view returns (uint256 guardianStakingRewardsBalance, uint256 delegatorStakingRewardsBalance);
 
     /// @dev Allows Guardian to set a different delegator staking reward cut than the default
     /// delegatorRewardsPercentMille accepts values between 0 - maxDelegatorsStakingRewardsPercentMille
@@ -45,12 +45,17 @@ interface IStakingRewards {
         uint256 lastDelegatorRewardsPerToken
     );
 
+    function estimateFutureRewards(address addr, uint256 duration) external view returns (
+        uint256 estimatedDelegatorStakingRewards,
+        uint256 estimatedGuardianStakingRewards
+    );
+
     function getStakingRewardsState() external view returns (
         uint96 stakingRewardsPerWeight,
         uint96 unclaimedStakingRewards
     );
 
-    function getCurrentStakingRewardsRatePercentMille() external returns (uint256);
+    function getCurrentStakingRewardsRatePercentMille() external view returns (uint256);
 
     /// @dev called by the Committee contract upon expected change in the committee membership of the guardian
     /// Triggers update of the member rewards
@@ -71,7 +76,7 @@ interface IStakingRewards {
     event RewardDistributionDeactivated();
     event StakingRewardsBalanceMigrated(address indexed addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards, address toRewardsContract);
     event StakingRewardsBalanceMigrationAccepted(address from, address indexed addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards);
-    event EmergencyWithdrawal(address addr);
+    event EmergencyWithdrawal(address addr, address token);
 
     /// @dev activates reward distribution, all rewards will be distributed up
     /// assuming the last assignment was on startTime (the time the old contarct was deactivated)
@@ -92,7 +97,7 @@ interface IStakingRewards {
     function getMaxDelegatorsStakingRewardsPercentMille() external view returns (uint32);
 
     /// @dev Sets a new annual rate and cap for the staking reward.
-    function setAnnualStakingRewardsRate(uint256 annualRateInPercentMille, uint256 annualCap) external /* onlyFunctionalManager */;
+    function setAnnualStakingRewardsRate(uint32 annualRateInPercentMille, uint96 annualCap) external /* onlyFunctionalManager */;
 
     function getAnnualStakingRewardsRatePercentMille() external view returns (uint32);
 
@@ -116,6 +121,6 @@ interface IStakingRewards {
     function acceptRewardsBalanceMigration(address guardian, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
-    function emergencyWithdraw() external /* onlyMigrationManager */;
+    function emergencyWithdraw(address token) external /* onlyMigrationManager */;
 }
 

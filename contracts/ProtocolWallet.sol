@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -19,7 +19,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
         client = _client;
-        lastWithdrawal = now;
+        lastWithdrawal = block.timestamp;
 
         setMaxAnnualRate(_maxAnnualRate);
     }
@@ -42,18 +42,21 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// @dev Transfers the given amount of orbs tokens form the sender to this contract an update the pool.
     function topUp(uint256 amount) external override {
-        emit FundsAddedToPool(amount, getBalance() + amount);
+        emit FundsAddedToPool(amount, getBalance().add(amount));
         require(token.transferFrom(msg.sender, address(this), amount), "ProtocolWallet::topUp - insufficient allowance");
     }
 
     /// @dev withdraws from the pool to a spender, limited by the pool's MaxRate.
     /// A maximum of MaxRate x time period since the last Orbs transfer may be transferred out.
     function withdraw(uint256 amount) external override onlyClient {
-        uint duration = now - lastWithdrawal;
+        uint256 _lastWithdrawal = lastWithdrawal;
+        require(_lastWithdrawal <= block.timestamp, "withdrawal is not yet active");
+
+        uint duration = block.timestamp.sub(_lastWithdrawal);
         uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
         require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
-        lastWithdrawal = now;
+        lastWithdrawal = block.timestamp;
         if (amount > 0) {
             require(token.transfer(msg.sender, amount), "ProtocolWallet::withdraw - transfer failed");
         }
@@ -80,9 +83,10 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// @dev transfer the entire pool's balance to a new wallet.
-    function emergencyWithdraw() external override onlyMigrationOwner {
-        emit EmergencyWithdrawal(msg.sender);
-        require(token.transfer(msg.sender, getBalance()), "ProtocolWallet::emergencyWithdraw - transfer failed");
+    function emergencyWithdraw(address erc20) external override onlyMigrationOwner {
+        IERC20 _token = IERC20(erc20);
+        emit EmergencyWithdrawal(msg.sender, address(_token));
+        require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "FeesWallet::emergencyWithdraw - transfer failed");
     }
 
     /// @dev sets the address of the new contract

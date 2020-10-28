@@ -16,16 +16,21 @@ describe('delegations-contract-lockdown', async () => {
 
   // functional owner
 
-  it('allows the registry manager to lock and unlock the contract', async () => {
+  it('allows only the migration manager to lock and unlock the contract', async () => {
     const d = await Driver.new();
 
     const contractRegistry = await d.web3.deploy('ContractRegistry', [d.contractRegistry.address, d.registryAdmin.address]);
     await d.protocol.setContractRegistry(contractRegistry.address, {from: d.registryAdmin.address});
 
-    await expectRejected(d.protocol.lock({from: d.functionalManager.address}), /caller is not a lock owner/);
+    await expectRejected(d.protocol.lock({from: d.functionalManager.address}), /sender is not the migration manager/);
     let r = await d.delegations.lock({from: d.registryAdmin.address});
     expect(r).to.have.a.lockedEvent();
     r = await d.delegations.unlock({from: d.registryAdmin.address});
+    expect(r).to.have.a.unlockedEvent();
+
+    r = await d.delegations.lock({from: d.migrationManager.address});
+    expect(r).to.have.a.lockedEvent();
+    r = await d.delegations.unlock({from: d.migrationManager.address});
     expect(r).to.have.a.unlockedEvent();
   });
 

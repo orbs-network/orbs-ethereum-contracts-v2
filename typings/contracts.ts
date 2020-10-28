@@ -39,3 +39,5 @@ export type Contracts = {
     FeesWallet: FeesWalletContract;
     StakingContractHandler: StakingContractHandlerContract;
 }
+
+export type ContractName = keyof Contracts;

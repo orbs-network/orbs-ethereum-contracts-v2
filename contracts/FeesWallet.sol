@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -23,7 +23,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
         token = _token;
-        lastCollectedAt = now;
+        lastCollectedAt = block.timestamp;
     }
 
     modifier onlyRewardsContract() {
@@ -39,7 +39,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     /// @dev collect fees from the buckets since the last call and transfers the amount back.
     /// Called by: only Rewards contract.
     function collectFees() external override onlyRewardsContract returns (uint256 collectedFees)  {
-        (uint256 _collectedFees, uint[] memory bucketsWithdrawn, uint[] memory amountsWithdrawn, uint[] memory newTotals) = _getOutstandingFees();
+        (uint256 _collectedFees, uint[] memory bucketsWithdrawn, uint[] memory amountsWithdrawn, uint[] memory newTotals) = _getOutstandingFees(block.timestamp);
 
         for (uint i = 0; i < bucketsWithdrawn.length; i++) {
             buckets[bucketsWithdrawn[i]] = newTotals[i];
@@ -52,8 +52,9 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         return _collectedFees;
     }
 
-    function getOutstandingFees() external override view returns (uint256 outstandingFees)  {
-        (outstandingFees,,,) = _getOutstandingFees();
+    function getOutstandingFees(uint256 currentTime) external override view returns (uint256 outstandingFees)  {
+        require(currentTime >= block.timestamp, "currentTime must not be in the past");
+        (outstandingFees,,,) = _getOutstandingFees(currentTime);
     }
 
     /// @dev Called by: subscriptions contract.
@@ -65,7 +66,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         uint256 _amount = amount;
 
         // add the partial amount to the first bucket
-        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD - fromTimestamp % BUCKET_TIME_PERIOD).div(BUCKET_TIME_PERIOD));
+        uint256 bucketAmount = Math.min(amount, monthlyRate.mul(BUCKET_TIME_PERIOD.sub(fromTimestamp % BUCKET_TIME_PERIOD)).div(BUCKET_TIME_PERIOD));
         fillFeeBucket(bucket, bucketAmount);
         _amount = _amount.sub(bucketAmount);
 
@@ -110,9 +111,10 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external override onlyMigrationManager {
-        emit EmergencyWithdrawal(msg.sender);
-        require(token.transfer(msg.sender, token.balanceOf(address(this))), "IFeesWallet::emergencyWithdraw - transfer failed (fee token)");
+    function emergencyWithdraw(address erc20) external override onlyMigrationManager {
+        IERC20 _token = IERC20(erc20);
+        emit EmergencyWithdrawal(msg.sender, address(_token));
+        require(_token.transfer(msg.sender, _token.balanceOf(address(this))), "FeesWallet::emergencyWithdraw - transfer failed");
     }
 
     /*
@@ -125,27 +127,27 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         emit FeesAddedToBucket(bucketId, amount, bucketTotal);
     }
 
-    function _getOutstandingFees() private view returns (uint256 outstandingFees, uint[] memory bucketsWithdrawn, uint[] memory withdrawnAmounts, uint[] memory newTotals)  {
+    function _getOutstandingFees(uint256 currentTime) private view returns (uint256 outstandingFees, uint[] memory bucketsWithdrawn, uint[] memory withdrawnAmounts, uint[] memory newTotals)  {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
 
         // Fee pool
         uint _lastCollectedAt = lastCollectedAt;
-        uint nUpdatedBuckets = _bucketTime(block.timestamp).sub(_bucketTime(_lastCollectedAt)).div(BUCKET_TIME_PERIOD).add(1);
+        uint nUpdatedBuckets = _bucketTime(currentTime).sub(_bucketTime(_lastCollectedAt)).div(BUCKET_TIME_PERIOD).add(1);
         bucketsWithdrawn = new uint[](nUpdatedBuckets);
         withdrawnAmounts = new uint[](nUpdatedBuckets);
         newTotals = new uint[](nUpdatedBuckets);
         uint bucketsPayed = 0;
-        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastCollectedAt < block.timestamp) {
+        while (bucketsPayed < MAX_FEE_BUCKET_ITERATIONS && _lastCollectedAt < currentTime) {
             uint256 bucketStart = _bucketTime(_lastCollectedAt);
             uint256 bucketEnd = bucketStart.add(BUCKET_TIME_PERIOD);
-            uint256 payUntil = Math.min(bucketEnd, block.timestamp);
+            uint256 payUntil = Math.min(bucketEnd, currentTime);
             uint256 bucketDuration = payUntil.sub(_lastCollectedAt);
             uint256 remainingBucketTime = bucketEnd.sub(_lastCollectedAt);
 
             uint256 bucketTotal = buckets[bucketStart];
-            uint256 amount = bucketTotal * bucketDuration / remainingBucketTime;
-            outstandingFees += amount;
+            uint256 amount = bucketTotal.mul(bucketDuration).div(remainingBucketTime);
+            outstandingFees = outstandingFees.add(amount);
             bucketTotal = bucketTotal.sub(amount);
 
             bucketsWithdrawn[bucketsPayed] = bucketStart;
@@ -158,7 +160,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     function _bucketTime(uint256 time) private pure returns (uint256) {
-        return time - time % BUCKET_TIME_PERIOD;
+        return time.sub(time % BUCKET_TIME_PERIOD);
     }
 
     /*

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -43,6 +43,12 @@ contract Elections is IElections, ManagedContract {
 
 	modifier onlyGuardiansRegistrationContract() {
 		require(msg.sender == address(guardianRegistrationContract), "caller is not the guardian registrations contract");
+
+		_;
+	}
+
+	modifier onlyCertificationContract() {
+		require(msg.sender == address(certificationContract), "caller is not the certification contract");
 
 		_;
 	}
@@ -195,9 +201,9 @@ contract Elections is IElections, ManagedContract {
 		committeeContract.removeMember(guardian);
 	}
 
-	/// @dev Called by: guardian registration contract
+	/// @dev Called by: guardian registration contract§
 	/// Notifies on a guardian certification change
-	function guardianCertificationChanged(address guardian, bool isCertified) external override onlyWhenActive {
+	function guardianCertificationChanged(address guardian, bool isCertified) external override onlyCertificationContract onlyWhenActive {
 		committeeContract.memberCertificationChange(guardian, isCertified);
 	}
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -11,11 +11,6 @@ import "./ManagedContract.sol";
 
 contract Subscriptions is ISubscriptions, ManagedContract {
     using SafeMath for uint256;
-
-    enum CommitteeType {
-        General,
-        Certification
-    }
 
     struct VirtualChain {
         string name;

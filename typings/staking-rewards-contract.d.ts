@@ -86,7 +86,9 @@ export interface StakingRewardsContract extends OwnedContract {
 
     setGuardianDelegatorsStakingRewardsPercentMille(delegatorsStakingRewardsPercentMille: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    getStakingRewardsBalance(address: string): Promise<string>;
+    getStakingRewardsBalance(address: string): Promise<{delegatorStakingRewardsBalance: string, guardianStakingRewardsBalance: string}>;
+
+    estimateFutureRewards(address: string, duration: number): Promise<{estimatedDelegatorStakingRewards: string, estimatedGuardianStakingRewards: string}>;
 
     getLastRewardAssignmentTime(): Promise<string>;
 
@@ -118,7 +120,7 @@ export interface StakingRewardsContract extends OwnedContract {
         lastDelegatorRewardsPerToken: string
     }>;
 
-    emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
+    emergencyWithdraw(token: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
@@ -23,13 +23,13 @@ interface IFeesWallet {
     function collectFees() external returns (uint256 collectedFees) /* onlyRewardsContract */;
 
     /// @dev Returns the amount of fees that are currently available for withdrawal
-    function getOutstandingFees() external view returns (uint256 outstandingFees);
+    function getOutstandingFees(uint256 currentTime) external view returns (uint256 outstandingFees);
 
     /*
      * General governance
      */
 
-    event EmergencyWithdrawal(address addr);
+    event EmergencyWithdrawal(address addr, address token);
 
     /// @dev migrates the fees of bucket starting at startTimestamp.
     /// bucketStartTime must be a bucket's start time.
@@ -41,6 +41,6 @@ interface IFeesWallet {
     function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external;
 
     /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
-    function emergencyWithdraw() external /* onlyMigrationManager */;
+    function emergencyWithdraw(address token) external /* onlyMigrationManager */;
 
 }

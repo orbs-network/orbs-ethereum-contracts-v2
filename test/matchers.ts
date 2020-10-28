@@ -86,7 +86,7 @@ import {
   BootstrapRewardsWithdrawnEvent, CertifiedCommitteeAnnualBootstrapChangedEvent,
   FeesAndBootstrapRewardsBalanceMigratedEvent,
   FeesAndBootstrapRewardsBalanceMigrationAcceptedEvent,
-  FeesAssignedEvent,
+  FeesAssignedEvent, FeesAllocatedEvent, BootstrapRewardsAllocatedEvent,
   FeesWithdrawnEvent, GeneralCommitteeAnnualBootstrapChangedEvent
 } from "../typings/fees-and-bootstrap-rewards-contract";
 
@@ -254,6 +254,8 @@ declare global {
       voteOutCastedEvent(data?: Partial<VoteOutCastedEvent>): void;
       protocolVersionChangedEvent(data?: Partial<ProtocolVersionChangedEvent>): void;
       stakingRewardsAllocatedEvent(data?: Partial<StakingRewardsAllocatedEvent>);
+      feesAllocatedEvent(data?: Partial<FeesAllocatedEvent>);
+      bootstrapRewardsAllocatedEvent(data?: Partial<BootstrapRewardsAllocatedEvent>);
       delegatorStakingRewardsAssignedEvent(data?: Partial<DelegatorStakingRewardsAssignedEvent>);
       guardianCertificationUpdateEvent(data?: Partial<GuardianCertificationUpdateEvent>)
       feesAssignedEvent(data?: Partial<FeesAssignedEvent>)

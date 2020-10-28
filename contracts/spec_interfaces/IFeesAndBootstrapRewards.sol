@@ -1,11 +1,13 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
 
 /// @title Rewards contract interface
 interface IFeesAndBootstrapRewards {
+    event FeesAllocated(uint256 allocatedGeneralFees, uint256 generalFeesPerMember, uint256 allocatedCertifiedFees, uint256 certifiedFeesPerMember);
     event FeesAssigned(address indexed guardian, uint256 amount);
     event FeesWithdrawn(address indexed guardian, uint256 amount);
+    event BootstrapRewardsAllocated(uint256 allocatedGeneralBootstrapRewards, uint256 generalBootstrapRewardsPerMember, uint256 allocatedCertifiedBootstrapRewards, uint256 certifiedBootstrapRewardsPerMember);
     event BootstrapRewardsAssigned(address indexed guardian, uint256 amount);
     event BootstrapRewardsWithdrawn(address indexed guardian, uint256 amount);
 
@@ -20,6 +22,11 @@ interface IFeesAndBootstrapRewards {
     function getFeesAndBootstrapBalance(address guardian) external view returns (
         uint256 feeBalance,
         uint256 bootstrapBalance
+    );
+
+    function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external view returns (
+        uint256 estimatedFees,
+        uint256 estimatedBootstrapRewards
     );
 
     /// @dev Transfer all of msg.sender's outstanding balance to their account
@@ -54,7 +61,7 @@ interface IFeesAndBootstrapRewards {
     event RewardDistributionDeactivated();
     event FeesAndBootstrapRewardsBalanceMigrated(address indexed guardian, uint256 fees, uint256 bootstrapRewards, address toRewardsContract);
     event FeesAndBootstrapRewardsBalanceMigrationAccepted(address from, address indexed guardian, uint256 fees, uint256 bootstrapRewards);
-    event EmergencyWithdrawal(address addr);
+    event EmergencyWithdrawal(address addr, address token);
 
     /// @dev deactivates reward distribution, all rewards will be distributed up
     /// deactivate moment.
@@ -90,6 +97,6 @@ interface IFeesAndBootstrapRewards {
     function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrapRewards) external;
 
     /// @dev emergency withdrawal of the rewards contract balances, may eb called only by the EmergencyManager. 
-    function emergencyWithdraw() external; /* onlyMigrationManager */
+    function emergencyWithdraw(address token) external; /* onlyMigrationManager */
 }
 
