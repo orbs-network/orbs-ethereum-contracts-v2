@@ -4,7 +4,7 @@ pragma solidity 0.6.12;
 
 import "./IContractRegistry.sol";
 
-interface IContractRegistryListener {
+interface IContractRegistryAccessor {
 
     function refreshContracts() external;
 
