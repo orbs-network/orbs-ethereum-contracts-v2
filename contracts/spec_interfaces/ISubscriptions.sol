@@ -14,24 +14,59 @@ interface ISubscriptions {
      *   External functions
      */
 
-    /// @dev Called by: authorized subscriber (plan) contracts
     /// Creates a new VC
-    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint, uint);
+    /// @dev Called only by: an authorized subscription plan contract
+    /// @dev the initial amount paid for the virtual chain must be large than minimumInitialVcPayment
+    /// @param name is the virtual chain name
+    /// @param tier is the virtual chain tier
+    /// @param rate is the virtual chain tier rate as determined by the subscription plan
+    /// @param amount is the amount paid for the virtual chain initial subscription
+    /// @param owner is the virtual chain owner. The owner may change virtual chain properties or ser config records
+    /// @param isCertified indicates the virtual is run by the certified committee
+    /// @param deploymentSubset indicates the code deployment subset the virtual chain uses such as main or canary
+    /// @return vcId is the virtual chain ID allocated to the new virtual chain
+    /// @return genRefTime is the virtual chain genesis reference time that determines the first block committee
+    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint vcId, uint genRefTime);
 
-    /// @dev Called by: authorized subscriber (plan) contracts
     /// Extends the subscription of an existing VC.
+    /// @dev Called only by: an authorized subscription plan contract
+    /// @param vcId is the virtual chain ID
+    /// @param amount is the amount paid for the virtual chain subscription extension
+    /// @param tier is the virtual chain tier, must match the tier selected in the virtual creation
+    /// @param rate is the virtual chain tier rate as determined by the subscription plan
+    /// @param payer is the address paying for the subscription extension
     function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external;
 
-    /// @dev called by VC owner to set a VC config record. Emits a VcConfigRecordChanged event.
+    /// Sets a VC config record
+    /// @dev may be called only by the virtual chain owner
+    /// @param vcId is the virtual chain ID
+    /// @param key iis the name of the config record to update
+    /// @param value is the config record value
     function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external /* onlyVcOwner */;
 
-    /// @dev returns the value of a VC config record
+    /// Returns the value of a VC config record
+    /// @param vcId is the virtual chain ID
+    /// @param key iis the name of the config record to query
+    /// @return value is the config record value
     function getVcConfigRecord(uint256 vcId, string calldata key) external view returns (string memory);
 
-    /// @dev Transfers VC ownership to a new owner (can only be called by the current owner)
+    /// Transfers a virtual chain ownership to a new owner 
+    /// @dev may be called only by the current virtual chain owner
+    /// @param vcId is the virtual chain ID
+    /// @param owner is the address of the new owner
     function setVcOwner(uint256 vcId, address owner) external /* onlyVcOwner */;
 
-    /// @dev Returns the data of a VC (not including config records)
+    /// Returns the data of a virtual chain
+    /// @dev does not include config records data
+    /// @param vcId is the virtual chain ID
+    /// @return name is the virtual chain name
+    /// @return tier is the virtual chain tier
+    /// @return rate is the virtual chain tier rate
+    /// @return expiresAt the virtual chain subscription expiration time
+    /// @return genRefTime is the virtual chain genesis reference time
+    /// @return owner is the virtual chain owner. The owner may change virtual chain properties or ser config records
+    /// @return deploymentSubset indicates the code deployment subset the virtual chain uses such as main or canary
+    /// @return isCertified indicates the virtual is run by the certified committee
     function getVcData(uint256 vcId) external view returns (
         string memory name,
         string memory tier,
@@ -52,25 +87,38 @@ interface ISubscriptions {
     event GenesisRefTimeDelayChanged(uint256 newGenesisRefTimeDelay);
     event MinimumInitialVcPaymentChanged(uint256 newMinimumInitialVcPayment);
 
-    /// @dev Called by the owner to authorize a subscriber (plan)
+    /// Adds a subscription plan contract to the authorized subscribers list
+	/// @dev governance function called only by the functional manager
+    /// @param addr is the address of the subscription plan contract
     function addSubscriber(address addr) external /* onlyFunctionalManager */;
 
-    /// @dev Called by the owner to unauthorize a subscriber (plan)
+    /// Removes a subscription plan contract to the authorized subscribers list
+	/// @dev governance function called only by the functional manager
+    /// @param addr is the address of the subscription plan contract
     function removeSubscriber(address addr) external /* onlyFunctionalManager */;
 
-    /// @dev Called by the owner to set the genesis ref time delay
+    /// Set the genesis reference time delay from the virtual chain creation time
+	/// @dev governance function called only by the functional manager
+    /// @dev the reference time delay allows the guardian to be ready with the virtual chain resources for the first block consensus
+    /// @param newGenesisRefTimeDelay is the delay time in seconds
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalManager */;
 
-    /// @dev Returns the genesis ref time delay
+    /// Returns the genesis reference time delay
+    /// @return genesisRefTimeDelay is the delay time in seconds
     function getGenesisRefTimeDelay() external view returns (uint256);
 
-    /// @dev Called by the owner to set the minimum initial vc payment
+    /// Sets the minimum initial virtual chain payment 
+    /// @dev Prevents abuse of the guardian nodes resources
+    /// @param minimumInitialVcPayment is the minimum payment required for the initial subscription
     function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalManager */;
 
-    /// @dev Returns the minimum initial vc payment
+    /// Returns the minimum initial virtual chain payment 
+    /// @return minimumInitialVcPayment is the minimum payment required for the initial subscription
     function getMinimumInitialVcPayment() external view returns (uint256);
 
-    /// @dev Returns the settings of this contract
+    /// Returns the settings of this contract
+    /// @return genesisRefTimeDelay is the delay time in seconds
+    /// @return minimumInitialVcPayment is the minimum payment required for the initial subscription
     function getSettings() external view returns(
         uint genesisRefTimeDelay,
         uint256 minimumInitialVcPayment

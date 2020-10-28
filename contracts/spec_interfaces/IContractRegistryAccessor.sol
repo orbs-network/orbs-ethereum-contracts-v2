@@ -6,8 +6,12 @@ import "./IContractRegistry.sol";
 
 interface IContractRegistryAccessor {
 
+    /// Refreshes the address of the other contracts the contract interacts with
+    /// @dev called by the registry contract upon an update of a contract in the registry
     function refreshContracts() external;
 
-    function setContractRegistry(IContractRegistry newRegistry) external;
+    /// Sets the contract registry address
+    /// @dev governance function called only by an admin
+    function setContractRegistry(IContractRegistry newRegistry) external /* onlyAdmin */;
 
 }

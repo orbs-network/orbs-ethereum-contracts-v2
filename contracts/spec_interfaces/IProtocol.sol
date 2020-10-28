@@ -9,19 +9,32 @@ interface IProtocol {
      *   External functions
      */
 
-    /// @dev returns true if the given deployment subset exists (i.e - is registered with a protocol version)
+    /// Checks whether a deployment subset exists 
+    /// @param deploymentSubset is the name of the deployment subset to query
+    /// @return exists is a bool indicating the deployment subset exists
     function deploymentSubsetExists(string calldata deploymentSubset) external view returns (bool);
 
-    /// @dev returns the current protocol version for the given deployment subset.
-    function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256);
+    /// Returns the current protocol version for a given deployment subset to query
+	/// @dev an unexisting deployment subset returns protocol version 0
+    /// @param deploymentSubset is the name of the deployment subset
+    /// @return currentVersion is the current protocol version of the deployment subset
+    function getProtocolVersion(string calldata deploymentSubset) external view returns (uint256 currentVersion);
 
     /*
      *   Governance functions
      */
 
-    /// @dev create a new deployment subset.
+    /// Creates a new deployment subset
+	/// @dev governance function called only by the functional manager
+    /// @param deploymentSubset is the name of the new deployment subset
+    /// @param initialProtocolVersion is the initial protocol version of the deployment subset
     function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external /* onlyFunctionalManager */;
 
-    /// @dev schedules a protocol version upgrade for the given deployment subset.
+
+    /// Schedules a protocol version upgrade for the given deployment subset
+	/// @dev governance function called only by the functional manager
+    /// @param deploymentSubset is the name of the deployment subset
+    /// @param nextVersion is the new protocol version to upgrade to, must be greater or equal to current version
+    /// @param fromTimestamp is the time the new protocol version takes effect, must be in the future
     function setProtocolVersion(string calldata deploymentSubset, uint256 nextVersion, uint256 fromTimestamp) external /* onlyFunctionalManager */;
 }
