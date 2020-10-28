@@ -197,11 +197,11 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards;
     }
 
-    function getCurrentStakingRewardsRatePercentMille() external override view returns (uint256) {
+    function getCurrentStakingRewardsRatePercentMille() external override view returns (uint256 annualRate) {
         (, , uint totalCommitteeWeight) = committeeContract.getCommitteeStats();
-        return _getAnnualRate(totalCommitteeWeight, settings);
+        annualRate = _getAnnualRewardPerWeight(totalCommitteeWeight, settings).mul(PERCENT_MILLIE_BASE).div(TOKEN_BASE);
     }
-
+    
     function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external override onlyWhenActive {
         require(delegatorRewardsPercentMille <= PERCENT_MILLIE_BASE, "delegatorRewardsPercentMille must be 100000 at most");
         require(delegatorRewardsPercentMille <= settings.maxDelegatorsStakingRewardsPercentMille, "delegatorRewardsPercentMille must not be larger than maxDelegatorsStakingRewardsPercentMille");
@@ -332,16 +332,16 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     // Global state
 
-    function _getAnnualRate(uint256 totalCommitteeWeight, Settings memory _settings) private pure returns (uint256) {
-        return totalCommitteeWeight == 0 ? 0 : Math.min(uint(_settings.annualRateInPercentMille), uint256(_settings.annualCap).mul(PERCENT_MILLIE_BASE).div(totalCommitteeWeight));
+    function _getAnnualRewardPerWeight(uint256 totalCommitteeWeight, Settings memory _settings) private pure returns (uint256) {
+        return totalCommitteeWeight == 0 ? 0 : Math.min(uint256(_settings.annualRateInPercentMille).mul(TOKEN_BASE).div(PERCENT_MILLIE_BASE), uint256(_settings.annualCap).mul(TOKEN_BASE).div(totalCommitteeWeight));
     }
 
     function calcStakingRewardPerWeightDelta(uint256 totalCommitteeWeight, uint duration, Settings memory _settings) private pure returns (uint256 stakingRewardsPerWeightDelta) {
         stakingRewardsPerWeightDelta = 0;
 
         if (totalCommitteeWeight > 0) {
-            uint annualRateInPercentMille = _getAnnualRate(totalCommitteeWeight, _settings);
-            stakingRewardsPerWeightDelta = annualRateInPercentMille.mul(TOKEN_BASE).mul(duration).div(PERCENT_MILLIE_BASE.mul(365 days));
+            uint annualRewardPerWeight = _getAnnualRewardPerWeight(totalCommitteeWeight, _settings);
+            stakingRewardsPerWeightDelta = annualRewardPerWeight.mul(duration).div(365 days);
         }
     }
 
