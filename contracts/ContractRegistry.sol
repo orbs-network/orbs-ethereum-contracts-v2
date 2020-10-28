@@ -3,7 +3,7 @@
 pragma solidity 0.6.12;
 import "./spec_interfaces/IContractRegistry.sol";
 import "./spec_interfaces/ILockable.sol";
-import "./spec_interfaces/IContractRegistryListener.sol";
+import "./spec_interfaces/IContractRegistryAccessor.sol";
 import "./WithClaimableRegistryManagement.sol";
 import "./Initializable.sol";
 
@@ -77,8 +77,8 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 
 	function setNewContractRegistry(IContractRegistry newRegistry) external override onlyAdmin {
 		for (uint i = 0; i < managedContractAddresses.length; i++) {
-			IContractRegistryListener(managedContractAddresses[i]).setContractRegistry(newRegistry);
-			IContractRegistryListener(managedContractAddresses[i]).refreshContracts();
+			IContractRegistryAccessor(managedContractAddresses[i]).setContractRegistry(newRegistry);
+			IContractRegistryAccessor(managedContractAddresses[i]).refreshContracts();
 		}
 		emit ContractRegistryUpdated(address(newRegistry));
 	}
@@ -93,7 +93,7 @@ contract ContractRegistry is IContractRegistry, Initializable, WithClaimableRegi
 
 	function notifyOnContractsChange() private {
 		for (uint i = 0; i < managedContractAddresses.length; i++) {
-			IContractRegistryListener(managedContractAddresses[i]).refreshContracts();
+			IContractRegistryAccessor(managedContractAddresses[i]).refreshContracts();
 		}
 	}
 

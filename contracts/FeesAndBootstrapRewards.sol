@@ -41,9 +41,11 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     struct FeesAndBootstrap {
         uint96 feeBalance;
-        uint96 lastFeesPerMember;
         uint96 bootstrapBalance;
+        uint96 lastFeesPerMember;
         uint96 lastBootstrapPerMember;
+        uint96 withdrawnFees;
+        uint96 withdrawnBootstrap;
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
@@ -80,13 +82,13 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     function getFeesAndBootstrapBalance(address guardian) external override view returns (uint256 feeBalance, uint256 bootstrapBalance) {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        (FeesAndBootstrap memory guardianFeesAndBootstrap,) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (guardianFeesAndBootstrap.feeBalance, guardianFeesAndBootstrap.bootstrapBalance);
     }
 
     function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external override view returns (uint256 estimatedFees, uint256 estimatedBootstrapRewards) {
-        FeesAndBootstrap memory guardianFeesAndBootstrapNow = getGuardianFeesAndBootstrap(guardian, block.timestamp);
-        FeesAndBootstrap memory guardianFeesAndBootstrapFuture = getGuardianFeesAndBootstrap(guardian, block.timestamp.add(duration));
+        (FeesAndBootstrap memory guardianFeesAndBootstrapNow,) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        (FeesAndBootstrap memory guardianFeesAndBootstrapFuture,) = getGuardianFeesAndBootstrap(guardian, block.timestamp.add(duration));
         estimatedFees = guardianFeesAndBootstrapFuture.feeBalance.sub(guardianFeesAndBootstrapNow.feeBalance);
         estimatedBootstrapRewards = guardianFeesAndBootstrapFuture.bootstrapBalance.sub(guardianFeesAndBootstrapNow.bootstrapBalance);
     }
@@ -95,7 +97,9 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         updateGuardianFeesAndBootstrap(guardian);
         uint256 amount = feesAndBootstrap[guardian].bootstrapBalance;
         feesAndBootstrap[guardian].bootstrapBalance = 0;
-        emit BootstrapRewardsWithdrawn(guardian, amount);
+        uint96 withdrawnBootstrap = feesAndBootstrap[guardian].withdrawnBootstrap.add(amount);
+        feesAndBootstrap[guardian].withdrawnBootstrap = withdrawnBootstrap;
+        emit BootstrapRewardsWithdrawn(guardian, amount, withdrawnBootstrap);
 
         require(bootstrapToken.transfer(guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
@@ -105,7 +109,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         uint256 amount = feesAndBootstrap[guardian].feeBalance;
         feesAndBootstrap[guardian].feeBalance = 0;
-        emit FeesWithdrawn(guardian, amount);
+        uint96 withdrawnFees = feesAndBootstrap[guardian].withdrawnFees.add(amount);
+        feesAndBootstrap[guardian].withdrawnFees = withdrawnFees;
+
+        emit FeesWithdrawn(guardian, amount, withdrawnFees);
         require(feesToken.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
     }
 
@@ -129,14 +136,21 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 feeBalance,
         uint256 lastFeesPerMember,
         uint256 bootstrapBalance,
-        uint256 lastBootstrapPerMember
+        uint256 lastBootstrapPerMember,
+        uint256 withdrawnFees,
+        uint256 withdrawnBootstrap,
+        bool certified
     ) {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        (guardianFeesAndBootstrap, certified) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (
             guardianFeesAndBootstrap.feeBalance,
             guardianFeesAndBootstrap.lastFeesPerMember,
             guardianFeesAndBootstrap.bootstrapBalance,
-            guardianFeesAndBootstrap.lastBootstrapPerMember
+            guardianFeesAndBootstrap.lastBootstrapPerMember,
+            guardianFeesAndBootstrap.withdrawnFees,
+            guardianFeesAndBootstrap.withdrawnBootstrap,
+            certified
         );
     }
 
@@ -317,18 +331,21 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 addedFeesAmount;
 
         FeesAndBootstrapState memory _feesAndBootstrapState = _updateFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
-        (feesAndBootstrap[guardian], addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        (guardianFeesAndBootstrap, addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
+        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
 
-        emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount);
-        emit FeesAssigned(guardian, addedFeesAmount);
+        emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount, guardianFeesAndBootstrap.withdrawnBootstrap.add(guardianFeesAndBootstrap.bootstrapBalance), isCertified, guardianFeesAndBootstrap.lastBootstrapPerMember);
+        emit FeesAssigned(guardian, addedFeesAmount, guardianFeesAndBootstrap.withdrawnFees.add(guardianFeesAndBootstrap.feeBalance), isCertified, guardianFeesAndBootstrap.lastFeesPerMember);
     }
 
-    function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap) {
+    function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, bool certified) {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
         (FeesAndBootstrapState memory _feesAndBootstrapState,,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(currentTime), certifiedFeesWallet.getOutstandingFees(currentTime), currentTime, settings);
-        (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
-        (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, isCertified, _feesAndBootstrapState);
+        bool inCommittee;
+        (inCommittee, , certified,) = _committeeContract.getMemberInfo(guardian);
+        (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, certified, certified, _feesAndBootstrapState);
     }
 
     function updateGuardianFeesAndBootstrap(address guardian) private {
