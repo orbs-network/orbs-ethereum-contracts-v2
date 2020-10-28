@@ -103,8 +103,8 @@ interface IStakingRewards {
 
     /// Returns the current annual staking reward rate
     /// @dev calculated based on the current total committee weight
-    /// @return stakingRewardsRatePercentMille is the current staking reward rate in percent-mille
-    function getCurrentStakingRewardsRatePercentMille() external view returns (uint256);
+    /// @return annualRate is the current staking reward rate in percent-mille
+    function getCurrentStakingRewardsRatePercentMille() external view returns (uint256 annualRate);
 
     /// Notifies an expected change in the committee membership of the guardian
     /// @dev Called only by: the Committee contract
