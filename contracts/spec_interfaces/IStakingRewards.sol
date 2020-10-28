@@ -51,7 +51,7 @@ interface IStakingRewards {
     /// @param guardian is the guardian to query
     /// @return balance is the staking rewards balance for the guardian role
     /// @return claimed is the staking rewards for the guardian role that were claimed
-    /// @return delegatorRewardsPerToken is the potential reward per token assigned to a guardian's delegator that delegated from day zero
+    /// @return delegatorRewardsPerToken is the potential reward per token (1E18 units) assigned to a guardian's delegator that delegated from day zero
     /// @return delegatorRewardsPerTokenDelta is the increment in delegatorRewardsPerToken since the last guardian update
     /// @return lastStakingRewardsPerWeight is the up to date stakingRewardsPerWeight used for the guardian state calculation
     /// @return stakingRewardsPerWeightDelta is the increment in stakingRewardsPerWeight since the last guardian update
@@ -94,7 +94,7 @@ interface IStakingRewards {
 
     /// Returns the current global staking rewards state 
     /// @dev calculated to the latest block, may differ from the state read
-    /// @return stakingRewardsPerWeight is the potential reward per committee weight assigned to a guardian was in the committee from day zero 
+    /// @return stakingRewardsPerWeight is the potential reward per 1E18 (TOKEN_BASE) committee weight assigned to a guardian was in the committee from day zero 
     /// @return unclaimedStakingRewards is the of tokens that were assigned to participants and not claimed yet
     function getStakingRewardsState() external view returns (
         uint96 stakingRewardsPerWeight,
