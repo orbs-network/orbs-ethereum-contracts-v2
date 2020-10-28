@@ -153,4 +153,6 @@ export interface StakingRewardsContract extends OwnedContract {
     }>;
 
     isRewardAllocationActive(): Promise<boolean>;
+
+    stakingRewardsContractBalance(): Promise<string>;
 }
