@@ -5,8 +5,8 @@ pragma solidity 0.6.12;
 /// @title Staking rewards contract interface
 interface IStakingRewards {
 
-    event DelegatorStakingRewardsAssigned(address indexed delegator, uint256 amount, uint256 totalAwarded, address guardian, uint256 delegatorRewardsPerToken);
-    event GuardianStakingRewardsAssigned(address indexed guardian, uint256 amount, uint256 totalAwarded, uint256 delegatorRewardsPerToken, uint256 stakingRewardsPerWeight);
+    event DelegatorStakingRewardsAssigned(address indexed delegator, uint256 amount, uint256 totalAwarded, address guardian, uint256 delegatorRewardsPerToken, uint256 delegatorRewardsPerTokenDelta);
+    event GuardianStakingRewardsAssigned(address indexed guardian, uint256 amount, uint256 totalAwarded, uint256 delegatorRewardsPerToken, uint256 delegatorRewardsPerTokenDelta, uint256 stakingRewardsPerWeight, uint256 stakingRewardsPerWeightDelta);
     event StakingRewardsClaimed(address indexed addr, uint256 claimedDelegatorRewards, uint256 claimedGuardianRewards, uint256 totalClaimedDelegatorRewards, uint256 totalClaimedGuardianRewards);
     event StakingRewardsAllocated(uint256 allocatedRewards, uint256 stakingRewardsPerWeight);
     event GuardianDelegatorsStakingRewardsPercentMilleUpdated(address indexed guardian, uint256 delegatorsStakingRewardsPercentMille);
@@ -52,12 +52,16 @@ interface IStakingRewards {
     /// @return balance is the staking rewards balance for the guardian role
     /// @return claimed is the staking rewards for the guardian role that were claimed
     /// @return delegatorRewardsPerToken is the potential reward per token assigned to a guardian's delegator that delegated from day zero
+    /// @return delegatorRewardsPerTokenDelta is the increment in delegatorRewardsPerToken since the last guardian update
     /// @return lastStakingRewardsPerWeight is the up to date stakingRewardsPerWeight used for the guardian state calculation
+    /// @return stakingRewardsPerWeightDelta is the increment in stakingRewardsPerWeight since the last guardian update
     function getGuardianStakingRewardsData(address guardian) external view returns (
         uint256 balance,
         uint256 claimed,
         uint256 delegatorRewardsPerToken,
-        uint256 lastStakingRewardsPerWeight
+        uint256 delegatorRewardsPerTokenDelta,
+        uint256 lastStakingRewardsPerWeight,
+        uint256 stakingRewardsPerWeightDelta
     );
 
     /// Returns the current delegator staking rewards state 
@@ -65,11 +69,15 @@ interface IStakingRewards {
     /// @param delegator is the delegator to query
     /// @return balance is the staking rewards balance for the delegator role
     /// @return claimed is the staking rewards for the delegator role that were claimed
+    /// @return guardian is the guardian the delegator delegated to receiving a portion of the guardian staking rewards
     /// @return lastDelegatorRewardsPerToken is the up to date delegatorRewardsPerToken used for the delegator state calculation
+    /// @return delegatorRewardsPerTokenDelta is the increment in delegatorRewardsPerToken since the last delegator update
     function getDelegatorStakingRewardsData(address delegator) external view returns (
         uint256 balance,
         uint256 claimed,
-        uint256 lastDelegatorRewardsPerToken
+        address guardian,
+        uint256 lastDelegatorRewardsPerToken,
+        uint256 delegatorRewardsPerTokenDelta
     );
 
     /// Returns an estimation for the delegator and guardian staking rewards for a given duration
