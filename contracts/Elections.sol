@@ -5,7 +5,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./spec_interfaces/IElections.sol";
-import "./spec_interfaces/IDelegation.sol";
+import "./spec_interfaces/IDelegations.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
