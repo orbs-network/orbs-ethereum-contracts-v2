@@ -1,7 +1,10 @@
 import {ContractRegistryKey} from "./test/driver";
 import {ContractName} from "./typings/contracts";
+import {AbiItem} from "web3-utils";
 
-export function getAbiByContractRegistryKey(key: ContractRegistryKey): object {
+export {ContractRegistryKey, ContractName}
+
+export function getAbiByContractRegistryKey(key: ContractRegistryKey): AbiItem[] {
     switch (key) {
         case 'protocol':
             return require('./abi/Protocol.abi.json');
@@ -38,7 +41,7 @@ export function getAbiByContractRegistryKey(key: ContractRegistryKey): object {
     }
 }
 
-export function getAbiByContractName(key: ContractName): object {
+export function getAbiByContractName(key: ContractName): AbiItem[] {
     return require(`./abi/${key}.abi.json`);
 }
 
