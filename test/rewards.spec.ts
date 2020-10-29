@@ -1101,21 +1101,27 @@ describe('rewards', async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
+        const c1 = committee[1];
 
         await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-        await expectRejected(d.stakingRewards.migrateRewardsBalance(c0.address), /Reward distribution must be deactivated for migration/);
+        await expectRejected(d.stakingRewards.migrateRewardsBalance([c0.address, c1.address]), /Reward distribution must be deactivated for migration/);
 
         let r = await d.stakingRewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent({});
 
         // Migrating to the same contract should revert
-        await expectRejected(d.stakingRewards.migrateRewardsBalance(c0.address), /New rewards contract is not set/);
+        await expectRejected(d.stakingRewards.migrateRewardsBalance([c0.address, c1.address]), /New rewards contract is not set/);
 
         // trigger reward assignment
         await c0.stake(1);
         await c0.readyToSync();
         await c0.readyForCommittee();
+
+        // trigger reward assignment
+        await c1.stake(1);
+        await c1.readyToSync();
+        await c1.readyForCommittee();
 
         const c0StakingBalance = bn(await totalStakingRewardsBalance(d, c0));
         expect(c0StakingBalance).to.be.bignumber.greaterThan(bn(0));
@@ -1124,6 +1130,14 @@ describe('rewards', async () => {
         const c0DelegatorStakingBalance = bn((await (d.stakingRewards as any).delegatorsStakingRewards(c0.address)).balance);
 
         expectApproxEq(c0GuardianStakingBalance.add(c0DelegatorStakingBalance), c0StakingBalance);
+
+        const c1StakingBalance = bn(await totalStakingRewardsBalance(d, c1));
+        expect(c1StakingBalance).to.be.bignumber.greaterThan(bn(0));
+
+        const c1GuardianStakingBalance = bn((await (d.stakingRewards as any).guardiansStakingRewards(c1.address)).balance);
+        const c1DelegatorStakingBalance = bn((await (d.stakingRewards as any).delegatorsStakingRewards(c1.address)).balance);
+
+        expectApproxEq(c1GuardianStakingBalance.add(c1DelegatorStakingBalance), c1StakingBalance);
 
         const newRewardsContract = await d.web3.deploy('StakingRewards', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address,
           defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
@@ -1136,7 +1150,9 @@ describe('rewards', async () => {
         await d.contractRegistry.setContract('stakingRewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
         // migrate to the new contract
-        r = await d.stakingRewards.migrateRewardsBalance(c0.address);
+        r = await d.stakingRewards.migrateRewardsBalance([c0.address, c1.address]);
+
+        // c0
         expect(r).to.have.withinContract(newRewardsContract).a.approx().stakingRewardsBalanceMigrationAcceptedEvent({
           from: d.stakingRewards.address,
           addr: c0.address,
@@ -1149,24 +1165,49 @@ describe('rewards', async () => {
           delegatorStakingRewards: c0DelegatorStakingBalance,
           toRewardsContract: newRewardsContract.address
         });
-        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
-            from: d.stakingRewards.address,
-            to: newRewardsContract.address,
-            value: bn(c0GuardianStakingBalance).add(c0DelegatorStakingBalance)
-        });
         expect(bn(await totalStakingRewardsBalance(d, c0))).to.bignumber.eq(bn(0));
         const c0MigratedBalance = await newRewardsContract.getStakingRewardsBalance(c0.address);
         expectApproxEq(bn(c0MigratedBalance.guardianStakingRewardsBalance).add(bn(c0MigratedBalance.delegatorStakingRewardsBalance)), c0StakingBalance);
 
+        // c1
+        expect(r).to.have.withinContract(newRewardsContract).a.approx().stakingRewardsBalanceMigrationAcceptedEvent({
+          from: d.stakingRewards.address,
+          addr: c1.address,
+          guardianStakingRewards: c1GuardianStakingBalance.toString(),
+          delegatorStakingRewards: c1DelegatorStakingBalance.toString(),
+        });
+        expect(r).to.have.withinContract(d.stakingRewards).a.approx().stakingRewardsBalanceMigratedEvent({
+          addr: c1.address,
+          guardianStakingRewards: c1GuardianStakingBalance,
+          delegatorStakingRewards: c1DelegatorStakingBalance,
+          toRewardsContract: newRewardsContract.address
+        });
+        expect(bn(await totalStakingRewardsBalance(d, c1))).to.bignumber.eq(bn(0));
+
+        const c1MigratedBalance = await newRewardsContract.getStakingRewardsBalance(c1.address);
+        expectApproxEq(bn(c1MigratedBalance.guardianStakingRewardsBalance).add(bn(c1MigratedBalance.delegatorStakingRewardsBalance)), c1StakingBalance);
+
+        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
+            from: d.stakingRewards.address,
+            to: newRewardsContract.address,
+            value: bn(c1GuardianStakingBalance).add(c1DelegatorStakingBalance).add(bn(c0GuardianStakingBalance).add(c0DelegatorStakingBalance))
+        });
+
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
         await migrator.assignAndApproveOrbs(180, newRewardsContract.address);
-        r = await newRewardsContract.acceptRewardsBalanceMigration(c0.address, 40, 60, {from: migrator.address});
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address], [10, 20], [30, 40], {from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             addr: c0.address,
-            guardianStakingRewards: bn(40),
-            delegatorStakingRewards: bn(60),
+            guardianStakingRewards: bn(10),
+            delegatorStakingRewards: bn(30),
+        });
+        expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
+            from: migrator.address,
+            addr: c1.address,
+            guardianStakingRewards: bn(20),
+            delegatorStakingRewards: bn(40),
         });
         expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
             from: migrator.address,
