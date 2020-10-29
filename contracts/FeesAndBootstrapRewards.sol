@@ -185,21 +185,24 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         require(feesToken.approve(address(currentRewardsContract), totalFees), "migrateRewardsBalance: approve failed");
         require(bootstrapToken.approve(address(currentRewardsContract), totalBootstrap), "migrateRewardsBalance: approve failed");
-        currentRewardsContract.acceptRewardsBalanceMigration(guardians, fees, bootstrap);
+        currentRewardsContract.acceptRewardsBalanceMigration(guardians, fees, totalFees, bootstrap, totalBootstrap);
 
         for (uint i = 0; i < guardians.length; i++) {
             emit FeesAndBootstrapRewardsBalanceMigrated(guardians[i], fees[i], bootstrap[i], address(currentRewardsContract));
         }
     }
 
-    function acceptRewardsBalanceMigration(address[] memory guardians, uint256[] memory fees, uint256[] memory bootstrap) external override {
-        uint256 totalFees = 0;
-        uint256 totalBootstrap = 0;
+    function acceptRewardsBalanceMigration(address[] memory guardians, uint256[] memory fees, uint256 totalFees, uint256[] memory bootstrap, uint256 totalBootstrap) external override {
+        uint256 _totalFees = 0;
+        uint256 _totalBootstrap = 0;
 
         for (uint i = 0; i < guardians.length; i++) {
-            totalFees = totalFees.add(fees[i]);
-            totalBootstrap = totalBootstrap.add(bootstrap[i]);
+            _totalFees = _totalFees.add(fees[i]);
+            _totalBootstrap = _totalBootstrap.add(bootstrap[i]);
         }
+
+        require(totalFees == _totalFees, "totalFees does not match fees sum");
+        require(totalBootstrap == _totalBootstrap, "totalBootstrap does not match bootstrap sum");
 
         if (totalFees > 0) {
             require(feesToken.transferFrom(msg.sender, address(this), totalFees), "acceptRewardBalanceMigration: transfer failed");

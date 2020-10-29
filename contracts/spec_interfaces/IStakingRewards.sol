@@ -217,7 +217,8 @@ interface IStakingRewards {
     /// @param addrs is the list migrated addresses
     /// @param migratedGuardianStakingRewards is the list of received guardian rewards balance for each address
     /// @param migratedDelegatorStakingRewards is the list of received delegator rewards balance for each address
-    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards) external;
+    /// @param totalAmount is the total amount of staking rewards migrated for all addresses in the list. Must match the sum of migratedGuardianStakingRewards and migratedDelegatorStakingRewards lists.
+    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards, uint256 totalAmount) external;
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens

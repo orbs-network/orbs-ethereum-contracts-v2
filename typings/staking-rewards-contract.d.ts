@@ -97,7 +97,7 @@ export interface StakingRewardsContract extends OwnedContract {
 
     migrateRewardsBalance(addrs: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    acceptRewardsBalanceMigration(addrs: string[], guardianAmounts: Array<number | BN>, delegatorAmounts: Array<number | BN>, params?: TransactionConfig): Promise<TransactionReceipt>;
+    acceptRewardsBalanceMigration(addrs: string[], guardianAmounts: Array<number | BN>, delegatorAmounts: Array<number | BN>, totalAmount: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     getGuardianDelegatorsStakingRewardsPercentMille(guardian: string): Promise<string | BN>;
 
