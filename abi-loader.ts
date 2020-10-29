@@ -42,7 +42,7 @@ export function getAbiByContractRegistryKey(key: ContractRegistryKey): AbiItem[]
 }
 
 export function getAbiByContractName(key: ContractName): AbiItem[] {
-    return require(`./abi/${key}.abi.json`);
+    return require(`./abi/${key.replace(/[\/\\\.]/g, '')}.abi.json`);
 }
 
 function assertUnreachable(x: never, msg: string): never {
