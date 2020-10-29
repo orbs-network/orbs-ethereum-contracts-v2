@@ -75,6 +75,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr));
 	}
 
+	function refreshStakeBatch(address[] calldata addrs) external override onlyWhenActive {
+		for (uint i = 0; i < addrs.length; i++) {
+			_stakeChange(addrs[i], stakingContractHandler.getStakeBalanceOf(addrs[i]));
+		}
+	}
+
 	/*
 	* Notifications from staking contract
 	*/

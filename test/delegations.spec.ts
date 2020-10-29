@@ -562,4 +562,35 @@ describe('delegations-contract', async () => {
         await d.delegations.delegate(await d.delegations.VOID_ADDR(), {from: p1.address});
         expect(await d.delegations.getTotalDelegatedStake()).to.bignumber.eq(bn(1000));
     })
+
+    it('refreshStake and refreshStakeBatch', async () => {
+       const d = await Driver.new();
+       await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
+
+       const d1 = d.newParticipant();
+       const d2 = d.newParticipant();
+
+       let r = await d1.stake(bn(100));
+       expect(r).to.not.have.a.delegatedStakeChangedEvent();
+
+       r = await d.delegations.refreshStake(d1.address);
+       expect(r).to.have.a.delegatedStakeChangedEvent({
+           addr: d1.address,
+           selfDelegatedStake: bn(100)
+       });
+
+        r = await d1.stake(bn(100));
+        expect(r).to.not.have.a.delegatedStakeChangedEvent();
+        r = await d2.stake(bn(100));
+        expect(r).to.not.have.a.delegatedStakeChangedEvent();
+        r = await d.delegations.refreshStakeBatch([d1.address, d2.address]);
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: d1.address,
+            selfDelegatedStake: bn(200)
+        });
+        expect(r).to.have.a.delegatedStakeChangedEvent({
+            addr: d2.address,
+            selfDelegatedStake: bn(100)
+        });
+    });
 });
