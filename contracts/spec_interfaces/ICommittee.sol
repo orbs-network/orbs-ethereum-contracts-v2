@@ -37,6 +37,8 @@ interface ICommittee {
 	/// The new member will be added only if it is qualified to join the committee 
 	/// @dev Called only by: Elections contract
 	/// @param addr is the added committee member address
+	/// @param weight is the added member weight
+	/// @param isCertified is the added member certification state
 	/// @return memberAdded bool indicates whether the member was addded
 	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool memberAdded)  /* onlyElectionsContract */;
 
@@ -79,8 +81,8 @@ interface ICommittee {
 	/// Sets the maximum number of committee members
 	/// @dev governance function called only by the functional manager
 	/// @dev when reducing the number of members, the bottom ones are removed from the committee
-	/// @param maxCommitteeSize is the maximum number of committee members 
-	function setMaxCommitteeSize(uint8 maxCommitteeSize) external /* onlyFunctionalManager onlyWhenActive */;
+	/// @param _maxCommitteeSize is the maximum number of committee members 
+	function setMaxCommitteeSize(uint8 _maxCommitteeSize) external /* onlyFunctionalManager */;
 
 	/// Returns the maximum number of committee members
 	/// @return maxCommitteeSize is the maximum number of committee members 

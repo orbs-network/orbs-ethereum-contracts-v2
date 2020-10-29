@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-/// @title Elections contract interface
+/// @title Certification contract interface
 interface ICertification /* is Ownable */ {
 	event GuardianCertificationUpdate(address indexed guardian, bool isCertified);
 
