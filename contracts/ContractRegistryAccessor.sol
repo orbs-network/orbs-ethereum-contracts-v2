@@ -128,4 +128,8 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
         return contractRegistry;
     }
 
+    function setRegistryAdmin(address _registryAdmin) external override onlyInitializationAdmin {
+        _transferRegistryManagement(_registryAdmin);
+    }
+
 }
