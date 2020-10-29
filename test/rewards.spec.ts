@@ -1097,7 +1097,7 @@ describe('rewards', async () => {
         expect(r).to.have.a.rewardDistributionActivatedEvent();
     });
 
-    it("allows anyone to migrate staking rewards to a new contract (stakingRewards)", async () => {
+    it("allows anyone to migrate rewards to a new contract (stakingRewards)", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
@@ -1216,20 +1216,21 @@ describe('rewards', async () => {
         });
     });
 
-    it("allows anyone to migrate staking rewards to a new contract (feesAndBootstrapRewards)", async () => {
+    it("allows anyone to migrate rewards to a new contract (feesAndBootstrapRewards)", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
+        const c1 = committee[1];
 
         await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance(c0.address), /Reward distribution must be deactivated for migration/);
+        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance([c0.address, c1.address]), /Reward distribution must be deactivated for migration/);
 
         let r = await d.feesAndBootstrapRewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent({});
 
         // Migrating to the same contract should revert
-        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance(c0.address), /New rewards contract is not set/);
+        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance([c0.address, c1.address]), /New rewards contract is not set/);
 
         // trigger reward assignment
         await c0.stake(1);
@@ -1242,6 +1243,17 @@ describe('rewards', async () => {
         const c0FeeBalance = bn(await c0.getFeeBalance());
         expect(c0FeeBalance).to.be.bignumber.greaterThan(bn(0));
 
+        // trigger reward assignment
+        await c1.stake(1);
+        await c1.readyToSync();
+        await c1.readyForCommittee();
+
+        const c1BootstrapBalance = bn(await c1.getBootstrapBalance());
+        expect(c1BootstrapBalance).to.be.bignumber.greaterThan(bn(0));
+
+        const c1FeeBalance = bn(await c1.getFeeBalance());
+        expect(c1FeeBalance).to.be.bignumber.greaterThan(bn(0));
+
         const newRewardsContract = await d.web3.deploy('FeesAndBootstrapRewards', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address, d.bootstrapToken.address,
           defaultDriverOptions.generalCommitteeAnnualBootstrap,
           defaultDriverOptions.certifiedCommitteeAnnualBootstrap
@@ -1249,7 +1261,9 @@ describe('rewards', async () => {
         await d.contractRegistry.setContract('feesAndBootstrapRewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
         // migrate to the new contract
-        r = await d.feesAndBootstrapRewards.migrateRewardsBalance(c0.address);
+        r = await d.feesAndBootstrapRewards.migrateRewardsBalance([c0.address, c1.address]);
+
+        // c0
         expect(r).to.have.withinContract(newRewardsContract).a.approx().feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
           from: d.feesAndBootstrapRewards.address,
           guardian: c0.address,
@@ -1262,36 +1276,61 @@ describe('rewards', async () => {
           fees: c0FeeBalance,
           toRewardsContract: newRewardsContract.address
         });
-        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
-            from: d.feesAndBootstrapRewards.address,
-            to: newRewardsContract.address,
-            value: bn(c0FeeBalance)
-        });
-        expect(r).to.have.withinContract(d.bootstrapToken).a.approx().transferEvent({
-            from: d.feesAndBootstrapRewards.address,
-            to: newRewardsContract.address,
-            value: bn(c0BootstrapBalance)
-        });
         expect(bn(await c0.getBootstrapBalance())).to.bignumber.eq(bn(0));
         expect(bn(await c0.getFeeBalance())).to.bignumber.eq(bn(0));
         expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c0.address)).bootstrapBalance), c0BootstrapBalance);
         expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c0.address)).feeBalance), c0FeeBalance);
 
+        // c1
+        expect(r).to.have.withinContract(newRewardsContract).a.approx().feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
+          from: d.feesAndBootstrapRewards.address,
+          guardian: c1.address,
+          bootstrapRewards: c1BootstrapBalance.toString(),
+          fees: c1FeeBalance.toString()
+        });
+        expect(r).to.have.withinContract(d.feesAndBootstrapRewards).a.approx().feesAndBootstrapRewardsBalanceMigratedEvent({
+          guardian: c1.address,
+          bootstrapRewards: c1BootstrapBalance,
+          fees: c1FeeBalance,
+          toRewardsContract: newRewardsContract.address
+        });
+        expect(bn(await c1.getBootstrapBalance())).to.bignumber.eq(bn(0));
+        expect(bn(await c1.getFeeBalance())).to.bignumber.eq(bn(0));
+        expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c1.address)).bootstrapBalance), c1BootstrapBalance);
+        expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c1.address)).feeBalance), c1FeeBalance);
+
+        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
+            from: d.feesAndBootstrapRewards.address,
+            to: newRewardsContract.address,
+            value: bn(c1FeeBalance).add(bn(c0FeeBalance))
+        });
+        expect(r).to.have.withinContract(d.bootstrapToken).a.approx().transferEvent({
+            from: d.feesAndBootstrapRewards.address,
+            to: newRewardsContract.address,
+            value: bn(c1BootstrapBalance).add(bn(c0BootstrapBalance))
+        });
+
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
-        await migrator.assignAndApproveOrbs(180, newRewardsContract.address);
+        await migrator.assignAndApproveOrbs(200, newRewardsContract.address);
         await migrator.assignAndApproveExternalToken(100, newRewardsContract.address);
-        r = await newRewardsContract.acceptRewardsBalanceMigration(c0.address,80, 100, {from: migrator.address});
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], [20, 80], {from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             guardian: c0.address,
-            fees: bn(80),
-            bootstrapRewards: bn(100)
+            fees: bn(60),
+            bootstrapRewards: bn(20)
+        });
+        expect(r).to.have.withinContract(newRewardsContract).a.feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
+            from: migrator.address,
+            guardian: c1.address,
+            fees: bn(140),
+            bootstrapRewards: bn(80)
         });
         expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
             from: migrator.address,
             to: newRewardsContract.address,
-            value: bn(80)
+            value: bn(200)
         });
         expect(r).to.have.withinContract(d.bootstrapToken).a.approx().transferEvent({
             from: migrator.address,

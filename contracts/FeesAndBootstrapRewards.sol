@@ -158,43 +158,65 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
      * Governance functions
      */
 
-    function migrateRewardsBalance(address guardian) external override {
+    function migrateRewardsBalance(address[] calldata guardians) external override {
         require(!settings.rewardAllocationActive, "Reward distribution must be deactivated for migration");
 
         IFeesAndBootstrapRewards currentRewardsContract = IFeesAndBootstrapRewards(getFeesAndBootstrapRewardsContract());
         require(address(currentRewardsContract) != address(this), "New rewards contract is not set");
 
-        updateGuardianFeesAndBootstrap(guardian);
+        uint256 totalFees = 0;
+        uint256 totalBootstrap = 0;
+        uint256[] memory fees = new uint256[](guardians.length);
+        uint256[] memory bootstrap = new uint256[](guardians.length);
 
-        FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardian];
-        uint256 fees = guardianFeesAndBootstrap.feeBalance;
-        uint256 bootstrap = guardianFeesAndBootstrap.bootstrapBalance;
+        for (uint i = 0; i < guardians.length; i++) {
+            updateGuardianFeesAndBootstrap(guardians[i]);
 
-        guardianFeesAndBootstrap.feeBalance = 0;
-        guardianFeesAndBootstrap.bootstrapBalance = 0;
-        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
+            FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardians[i]];
+            fees[i] = guardianFeesAndBootstrap.feeBalance;
+            totalFees = totalFees.add(fees[i]);
+            bootstrap[i] = guardianFeesAndBootstrap.bootstrapBalance;
+            totalBootstrap = totalBootstrap.add(bootstrap[i]);
 
-        require(feesToken.approve(address(currentRewardsContract), fees), "migrateRewardsBalance: approve failed");
-        require(bootstrapToken.approve(address(currentRewardsContract), bootstrap), "migrateRewardsBalance: approve failed");
-        currentRewardsContract.acceptRewardsBalanceMigration(guardian, fees, bootstrap);
+            guardianFeesAndBootstrap.feeBalance = 0;
+            guardianFeesAndBootstrap.bootstrapBalance = 0;
+            feesAndBootstrap[guardians[i]] = guardianFeesAndBootstrap;
+        }
 
-        emit FeesAndBootstrapRewardsBalanceMigrated(guardian, fees, bootstrap, address(currentRewardsContract));
+        require(feesToken.approve(address(currentRewardsContract), totalFees), "migrateRewardsBalance: approve failed");
+        require(bootstrapToken.approve(address(currentRewardsContract), totalBootstrap), "migrateRewardsBalance: approve failed");
+        currentRewardsContract.acceptRewardsBalanceMigration(guardians, fees, bootstrap);
+
+        for (uint i = 0; i < guardians.length; i++) {
+            emit FeesAndBootstrapRewardsBalanceMigrated(guardians[i], fees[i], bootstrap[i], address(currentRewardsContract));
+        }
     }
 
-    function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrap) external override {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardian];
-        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(fees);
-        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrap);
-        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
+    function acceptRewardsBalanceMigration(address[] memory guardians, uint256[] memory fees, uint256[] memory bootstrap) external override {
+        uint256 totalFees = 0;
+        uint256 totalBootstrap = 0;
 
-        if (fees > 0) {
-            require(feesToken.transferFrom(msg.sender, address(this), fees), "acceptRewardBalanceMigration: transfer failed");
-        }
-        if (bootstrap > 0) {
-            require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+        for (uint i = 0; i < guardians.length; i++) {
+            totalFees = totalFees.add(fees[i]);
+            totalBootstrap = totalBootstrap.add(bootstrap[i]);
         }
 
-        emit FeesAndBootstrapRewardsBalanceMigrationAccepted(msg.sender, guardian, fees, bootstrap);
+        if (totalFees > 0) {
+            require(feesToken.transferFrom(msg.sender, address(this), totalFees), "acceptRewardBalanceMigration: transfer failed");
+        }
+        if (totalBootstrap > 0) {
+            require(bootstrapToken.transferFrom(msg.sender, address(this), totalBootstrap), "acceptRewardBalanceMigration: transfer failed");
+        }
+
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        for (uint i = 0; i < guardians.length; i++) {
+            guardianFeesAndBootstrap = feesAndBootstrap[guardians[i]];
+            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(fees[i]);
+            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrap[i]);
+            feesAndBootstrap[guardians[i]] = guardianFeesAndBootstrap;
+
+            emit FeesAndBootstrapRewardsBalanceMigrationAccepted(msg.sender, guardians[i], fees[i], bootstrap[i]);
+        }
     }
 
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {

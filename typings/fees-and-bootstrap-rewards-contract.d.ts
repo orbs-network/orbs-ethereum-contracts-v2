@@ -96,16 +96,16 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
         lastBootstrapPerMember: string,
         withdrawnFees: string,
         withdrawnBootstrap: string,
-        certified: bool
+        certified: boolean
     }>;
 
     estimateFutureFeesAndBootstrapRewards(guardian: string, duration: number): Promise<{estimatedFees: number, estimatedBootstrapRewards: number}>;
 
     emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    migrateRewardsBalance(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+    migrateRewardsBalance(addrs: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    acceptRewardsBalanceMigration(addr: string, fees: number | BN, bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    acceptRewardsBalanceMigration(addrs: string[], fees: (number | BN)[], bootstrap: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 
