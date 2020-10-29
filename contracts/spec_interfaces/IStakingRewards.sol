@@ -215,9 +215,9 @@ interface IStakingRewards {
     /// Accepts addresses balance migration from a previous rewards contract
     /// @dev the function may be called by any caller that approves the amounts provided for transfer
     /// @param addrs is the list migrated addresses
-    /// @param guardianStakingRewards is the list of received guardian rewards balance for each address
-    /// @param delegatorStakingRewards is the list of received delegator rewards balance for each address
-    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata guardianStakingRewards, uint256[] calldata delegatorStakingRewards) external;
+    /// @param migratedGuardianStakingRewards is the list of received guardian rewards balance for each address
+    /// @param migratedDelegatorStakingRewards is the list of received delegator rewards balance for each address
+    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards) external;
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens

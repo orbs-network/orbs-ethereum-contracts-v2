@@ -244,11 +244,11 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         }
     }
 
-    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata guardianStakingRewards, uint256[] calldata delegatorStakingRewards) external override {
+    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards) external override {
         uint256 totalAmount = 0;
 
         for (uint i = 0; i < addrs.length; i++) {
-            totalAmount = totalAmount.add(guardianStakingRewards[i]).add(delegatorStakingRewards[i]);
+            totalAmount = totalAmount.add(migratedGuardianStakingRewards[i]).add(migratedDelegatorStakingRewards[i]);
         }
 
         if (totalAmount > 0) {
@@ -256,9 +256,9 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         }
 
         for (uint i = 0; i < addrs.length; i++) {
-            guardiansStakingRewards[addrs[i]].balance = guardiansStakingRewards[addrs[i]].balance.add(guardianStakingRewards[i]);
-            delegatorsStakingRewards[addrs[i]].balance = delegatorsStakingRewards[addrs[i]].balance.add(delegatorStakingRewards[i]);
-            emit StakingRewardsBalanceMigrationAccepted(msg.sender, addrs[i], guardianStakingRewards[i], delegatorStakingRewards[i]);
+            guardiansStakingRewards[addrs[i]].balance = guardiansStakingRewards[addrs[i]].balance.add(migratedGuardianStakingRewards[i]);
+            delegatorsStakingRewards[addrs[i]].balance = delegatorsStakingRewards[addrs[i]].balance.add(migratedDelegatorStakingRewards[i]);
+            emit StakingRewardsBalanceMigrationAccepted(msg.sender, addrs[i], migratedGuardianStakingRewards[i], migratedDelegatorStakingRewards[i]);
         }
     }
 
