@@ -222,30 +222,44 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     * Governance functions
     */
 
-    function migrateRewardsBalance(address addr) external override {
+    function migrateRewardsBalance(address[] calldata addrs) external override {
         require(!settings.rewardAllocationActive, "Reward distribution must be deactivated for migration");
 
         IStakingRewards currentRewardsContract = IStakingRewards(getStakingRewardsContract());
         require(address(currentRewardsContract) != address(this), "New rewards contract is not set");
 
-        (uint256 guardianRewards, uint256 delegatorRewards) = claimStakingRewardsLocally(addr);
-
-        require(token.approve(address(currentRewardsContract), guardianRewards.add(delegatorRewards)), "migrateRewardsBalance: approve failed");
-        currentRewardsContract.acceptRewardsBalanceMigration(addr, guardianRewards, delegatorRewards);
-
-        emit StakingRewardsBalanceMigrated(addr, guardianRewards, delegatorRewards, address(currentRewardsContract));
-    }
-
-    function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external override {
-        guardiansStakingRewards[addr].balance = guardiansStakingRewards[addr].balance.add(guardianStakingRewards);
-        delegatorsStakingRewards[addr].balance = delegatorsStakingRewards[addr].balance.add(delegatorStakingRewards);
-
-        uint orbsTransferAmount = guardianStakingRewards.add(delegatorStakingRewards);
-        if (orbsTransferAmount > 0) {
-            require(token.transferFrom(msg.sender, address(this), orbsTransferAmount), "acceptRewardBalanceMigration: transfer failed");
+        uint256 totalAmount = 0;
+        uint256[] memory guardianRewards = new uint256[](addrs.length);
+        uint256[] memory delegatorRewards = new uint256[](addrs.length);
+        for (uint i = 0; i < addrs.length; i++) {
+            (guardianRewards[i], delegatorRewards[i]) = claimStakingRewardsLocally(addrs[i]);
+            totalAmount = totalAmount.add(guardianRewards[i]).add(delegatorRewards[i]);
         }
 
-        emit StakingRewardsBalanceMigrationAccepted(msg.sender, addr, guardianStakingRewards, delegatorStakingRewards);
+        require(token.approve(address(currentRewardsContract), totalAmount), "migrateRewardsBalance: approve failed");
+        currentRewardsContract.acceptRewardsBalanceMigration(addrs, guardianRewards, delegatorRewards);
+
+        for (uint i = 0; i < addrs.length; i++) {
+            emit StakingRewardsBalanceMigrated(addrs[i], guardianRewards[i], delegatorRewards[i], address(currentRewardsContract));
+        }
+    }
+
+    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata guardianStakingRewards, uint256[] calldata delegatorStakingRewards) external override {
+        uint256 totalAmount = 0;
+
+        for (uint i = 0; i < addrs.length; i++) {
+            totalAmount = totalAmount.add(guardianStakingRewards[i]).add(delegatorStakingRewards[i]);
+        }
+
+        if (totalAmount > 0) {
+            require(token.transferFrom(msg.sender, address(this), totalAmount), "acceptRewardBalanceMigration: transfer failed");
+        }
+
+        for (uint i = 0; i < addrs.length; i++) {
+            guardiansStakingRewards[addrs[i]].balance = guardiansStakingRewards[addrs[i]].balance.add(guardianStakingRewards[i]);
+            delegatorsStakingRewards[addrs[i]].balance = delegatorsStakingRewards[addrs[i]].balance.add(delegatorStakingRewards[i]);
+            emit StakingRewardsBalanceMigrationAccepted(msg.sender, addrs[i], guardianStakingRewards[i], delegatorStakingRewards[i]);
+        }
     }
 
     function emergencyWithdraw(address erc20) external override onlyMigrationManager {
