@@ -9,12 +9,19 @@ import "./ManagedContract.sol";
 
 contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier, ManagedContract {
 
-    bool notifyDelegations = true;
+    IStakingContract stakingContract;
+    struct Settings {
+        IStakeChangeNotifier delegationsContract;
+        bool notifyDelegations;
+    }
+    Settings settings;
 
-    constructor(IContractRegistry _contractRegistry, address _registryAdmin) public ManagedContract(_contractRegistry, _registryAdmin) {}
+    constructor(IContractRegistry _contractRegistry, address _registryAdmin) public ManagedContract(_contractRegistry, _registryAdmin) {
+        settings.notifyDelegations = true;
+    }
 
     modifier onlyStakingContract() {
-        require(msg.sender == address(getStakingContract()), "caller is not the staking contract");
+        require(msg.sender == address(stakingContract), "caller is not the staking contract");
 
         _;
     }
@@ -24,12 +31,13 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     */
 
     function stakeChange(address stakeOwner, uint256 amount, bool sign, uint256 updatedStake) external override onlyStakingContract {
-        if (!notifyDelegations) {
+        Settings memory _settings = settings;
+        if (!_settings.notifyDelegations) {
             emit StakeChangeNotificationSkipped(stakeOwner);
             return;
         }
 
-        delegationsContract.stakeChange(stakeOwner, amount, sign, updatedStake);
+        _settings.delegationsContract.stakeChange(stakeOwner, amount, sign, updatedStake);
     }
 
     /// @dev Notifies of multiple stake change events.
@@ -38,24 +46,26 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     /// @param signs bool[] The signs of the added (true) or subtracted (false) amounts.
     /// @param updatedStakes uint256[] The updated total staked amounts.
     function stakeChangeBatch(address[] calldata stakeOwners, uint256[] calldata amounts, bool[] calldata signs, uint256[] calldata updatedStakes) external override onlyStakingContract {
-        if (!notifyDelegations) {
+        Settings memory _settings = settings;
+        if (!_settings.notifyDelegations) {
             emit StakeChangeBatchNotificationSkipped(stakeOwners);
             return;
         }
 
-        delegationsContract.stakeChangeBatch(stakeOwners, amounts, signs, updatedStakes);
+        _settings.delegationsContract.stakeChangeBatch(stakeOwners, amounts, signs, updatedStakes);
     }
 
     /// @dev Notifies of stake migration event.
     /// @param stakeOwner address The address of the subject stake owner.
     /// @param amount uint256 The migrated amount.
     function stakeMigration(address stakeOwner, uint256 amount) external override onlyStakingContract {
-        if (!notifyDelegations) {
+        Settings memory _settings = settings;
+        if (!_settings.notifyDelegations) {
             emit StakeMigrationNotificationSkipped(stakeOwner);
             return;
         }
 
-        delegationsContract.stakeMigration(stakeOwner, amount);
+        _settings.delegationsContract.stakeMigration(stakeOwner, amount);
     }
 
     /// @dev Returns the stake of the specified stake owner (excluding unstaked tokens).
@@ -76,22 +86,20 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     */
 
     function setNotifyDelegations(bool _notifyDelegations) external override onlyMigrationManager {
-        notifyDelegations = _notifyDelegations;
+        settings.notifyDelegations = _notifyDelegations;
         emit NotifyDelegationsChanged(_notifyDelegations);
     }
 
     function getNotifyDelegations() external override returns (bool) {
-        return notifyDelegations;
+        return settings.notifyDelegations;
     }
 
     /*
      * Contracts topology / registry interface
      */
 
-    IStakeChangeNotifier delegationsContract;
-    IStakingContract stakingContract;
     function refreshContracts() external override {
-        delegationsContract = IStakeChangeNotifier(getDelegationsContract());
+        settings.delegationsContract = IStakeChangeNotifier(getDelegationsContract());
         stakingContract = IStakingContract(getStakingContract());
     }
 }
