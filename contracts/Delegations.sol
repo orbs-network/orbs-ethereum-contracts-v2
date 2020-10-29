@@ -11,6 +11,7 @@ import "./spec_interfaces/IStakingContractHandler.sol";
 import "./spec_interfaces/IStakingRewards.sol";
 import "./ManagedContract.sol";
 
+/// @title Delegations contract
 contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	using SafeMath for uint256;
 	using SafeMath96 for uint96;
@@ -34,6 +35,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		uint96 selfDelegatedStake;
 	}
 
+    /// Constructor
+    /// @param _contractRegistry is the contract registry address
+    /// @param _registryAdmin is the registry admin address
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {
 		address VOID_ADDRESS_DUMMY_DELEGATION = address(-2);
 		assert(VOID_ADDR != VOID_ADDRESS_DUMMY_DELEGATION && VOID_ADDR != address(0) && VOID_ADDRESS_DUMMY_DELEGATION != address(0));
@@ -50,39 +54,70 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	* External functions
 	*/
 
+	/// Delegate your stake
+	/// @dev updates the election contract on the changes in the delegated stake
+	/// @dev updates the rewards contract on the upcoming change in the delegator's delegation state
+	/// @param to is the address to delegate to
 	function delegate(address to) external override onlyWhenActive {
 		delegateFrom(msg.sender, to);
 	}
 
+	/// Refresh the address stake for delegation power based on the staking contract
+	/// @dev Disabled stake change update notifications from the staking contract may create mismatches
+	/// @dev refreshStake re-syncs the stake data with the staking contract
+	/// @param addr is the address to refresh its stake
+	function refreshStake(address addr) external override onlyWhenActive {
+		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr));
+	}
+
+	/// Returns the delegate address of the given address
+	/// @param addr is the address to query
+	/// @return delegation is the address the addr delegated to
 	function getDelegation(address addr) external override view returns (address) {
 		return getStakeOwnerData(addr).delegation;
 	}
 
+	/// Returns a delegator info
+	/// @param addr is the address to query
+	/// @return delegation is the address the addr delegated to
+	/// @return delegatorStake is the stake of the delegator as reflected in the delegation contract
 	function getDelegationInfo(address addr) external override view returns (address delegation, uint256 delegatorStake) {
 		StakeOwnerData memory data = getStakeOwnerData(addr);
 		return (data.delegation, data.stake);
 	}
 
+	/// Returns the delegated stake of an addr 
+	/// @dev an address that is not self delegating has a 0 delegated stake
+	/// @param addr is the address to query
+	/// @return delegatedStake is the address delegated stake
 	function getDelegatedStake(address addr) external override view returns (uint256) {
 		return getDelegateStatus(addr).delegatedStake;
 	}
 
+	/// Returns the total delegated stake
+	/// @dev delegatedStake - the total stake delegated to an address that is self delegating
+	/// @dev the delegated stake of a non self-delegated address is 0
+	/// @return totalDelegatedStake is the total delegatedStake of all the addresses
 	function getTotalDelegatedStake() external override view returns (uint256) {
 		return totalDelegatedStake;
 	}
 
-	function refreshStake(address addr) external override onlyWhenActive {
-		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr));
-	}
-
 	/*
-	* Notifications from staking contract
+	* Notifications from staking contract (IStakeChangeNotifier)
 	*/
 
+    /// Notifies of stake change event.
+    /// @param _stakeOwner is the address of the subject stake owner.
+    /// @param _updatedStake is the updated total staked amount.
 	function stakeChange(address _stakeOwner, uint256, bool, uint256 _updatedStake) external override onlyStakingContractHandler onlyWhenActive {
 		_stakeChange(_stakeOwner, _updatedStake);
 	}
 
+    /// Notifies of multiple stake change events.
+    /// @param _stakeOwners is the addresses of subject stake owners.
+    /// @param _amounts is the differences in total staked amounts.
+    /// @param _signs is the signs of the added (true) or subtracted (false) amounts.
+    /// @param _updatedStakes is the updated total staked amounts.
 	function stakeChangeBatch(address[] calldata _stakeOwners, uint256[] calldata _amounts, bool[] calldata _signs, uint256[] calldata _updatedStakes) external override onlyStakingContractHandler onlyWhenActive {
 		uint batchLength = _stakeOwners.length;
 		require(batchLength == _amounts.length, "_stakeOwners, _amounts - array length mismatch");
@@ -94,12 +129,22 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		}
 	}
 
+    /// Notifies of stake migration event.
+	/// @dev Empty function. A staking contract migration may be handled in the future in the StakingContractHandler 
+    /// @param _stakeOwner address The address of the subject stake owner.
+    /// @param _amount uint256 The migrated amount.
 	function stakeMigration(address _stakeOwner, uint256 _amount) external override onlyStakingContractHandler onlyWhenActive {}
 
 	/*
 	* Governance functions
 	*/
 
+	/// Imports delegations during initial migration
+	/// @dev initialization function called only by the initializationManager
+	/// @dev Does not update the Rewards or Election contracts
+	/// @dev assumes deactivated Rewards
+	/// @param from is a list of delegator addresses
+	/// @param to is the address the delegators delegate to
 	function importDelegations(address[] calldata from, address to) external override onlyInitializationAdmin {
 		require(to != address(0), "to must be a non zero address");
 		require(from.length > 0, "from array must contain at least one address");
@@ -165,6 +210,11 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		emit DelegationsImported(from, to);
 	}
 
+	/// Initializes the delegation of an address during initial migration 
+	/// @dev initialization function called only by the initializationManager
+	/// @dev behaves identically to a delegate transaction sent by the delegator
+	/// @param from is the delegator addresses
+	/// @param to is the delegator delegates to
 	function initDelegation(address from, address to) external override onlyInitializationAdmin {
 		delegateFrom(from, to);
 		emit DelegationInitialized(from, to);
@@ -174,6 +224,13 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	* Private functions
 	*/
 
+	/// Generates and returns an internal memory structure with a Delegate status
+	/// @dev updated based on the up to date state
+	/// @dev status.addr is the queried address
+	/// @dev status.uncappedDelegatedStake is the amount delegated to address including self-delegated stake
+	/// @dev status.isSelfDelegating indicates whether the address is self-delegated
+	/// @dev status.selfDelegatedStake if the addr is self-delegated is  the addr self stake. 0 if not self-delegated
+	/// @dev status.delegatedStake if the addr is self-delegated is the mount delegated to address. 0 if not self-delegated
 	function getDelegateStatus(address addr) private view returns (DelegateStatus memory status) {
 		StakeOwnerData memory data = getStakeOwnerData(addr);
 
@@ -186,6 +243,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		return status;
 	}
 
+	/// Returns an address stake and delegation data. 
+	/// @dev implicitly self-delegated addresses (delegation = 0) return delegation to the address
 	function getStakeOwnerData(address addr) private view returns (StakeOwnerData memory data) {
 		data = stakeOwnersData[addr];
 		data.delegation = (data.delegation == address(0)) ? addr : data.delegation;
@@ -199,6 +258,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		DelegateStatus newDelegateStatusAfter;
 	}
 
+	/// Handles a delegation change
+	/// @dev notifies the rewards contract on the expected change (with data prior to the change)
+	/// @dev updates the impacted delegates delegated stake and the total stake
+	/// @dev notifies the election contract on changes in the impacted delegates delegated stake
+	/// @param from is the delegator address 
+	/// @param to is the delegate address
 	function delegateFrom(address from, address to) private {
 		require(to != address(0), "cannot delegate to a zero address");
 
@@ -281,6 +346,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		}
 	}
 
+	/// Handles a change in a stake owner stake
+	/// @dev notifies the rewards contract on the expected change (with data prior to the change)
+	/// @dev updates the impacted delegate delegated stake and the total stake
+	/// @dev notifies the election contract on changes in the impacted delegate delegated stake
+	/// @param _stakeOwner is the stake owner
+	/// @param _updatedStake is the stake owner stake after the change
 	function _stakeChange(address _stakeOwner, uint256 _updatedStake) private {
 		StakeOwnerData memory stakeOwnerDataBefore = getStakeOwnerData(_stakeOwner);
 		DelegateStatus memory delegateStatusBefore = getDelegateStatus(stakeOwnerDataBefore.delegation);
@@ -328,6 +399,9 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 	IElections electionsContract;
 	IStakingRewards stakingRewardsContract;
 	IStakingContractHandler stakingContractHandler;
+
+	/// Refreshes the address of the other contracts the contract interacts with
+    /// @dev called by the registry contract upon an update of a contract in the registry
 	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 		stakingContractHandler = IStakingContractHandler(getStakingContractHandler());

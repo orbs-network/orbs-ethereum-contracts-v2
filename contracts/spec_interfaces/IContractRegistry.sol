@@ -3,7 +3,7 @@
 pragma solidity 0.6.12;
 
 /// @title Contract registry contract interface
-/// The contract registry holds Orbs PoS contracts and managers lists
+/// @dev The contract registry holds Orbs PoS contracts and managers lists
 /// @dev The contract registry updates the managed contracts on changes in the contract list
 /// @dev Governance functions restricted to managers access the registry to retrieve the manager address 
 /// @dev The contract registry represents the source of truth for Orbs Ethereum contracts 
@@ -35,6 +35,15 @@ interface IContractRegistry {
 	/// @return addrs is the list of managed contracts
 	function getManagedContracts() external view returns (address[] memory);
 
+	/// Locks all the managed contracts 
+	/// @dev governance function called only by the migrationManager or registryAdmin
+	/// @dev When set all onlyWhenActive functions will revert
+	function lockContracts() external /* onlyAdminOrMigrationManager */;
+
+	/// Unlocks all the managed contracts 
+	/// @dev governance function called only by the migrationManager or registryAdmin
+	function unlockContracts() external /* onlyAdminOrMigrationManager */;
+	
 	/// Updates a manager address and emits a corresponding event
 	/// @dev governance function called only by the registryAdmin
 	/// @dev the managers list is a flexible list of role to the manager's address
@@ -46,15 +55,6 @@ interface IContractRegistry {
 	/// @param role is the manager name, used to identify it
 	/// @return addr is the manager updated address
 	function getManager(string calldata role) external view returns (address);
-
-	/// Locks all the managed contracts 
-	/// @dev governance function called only by the migrationManager or registryAdmin
-	/// @dev When set all onlyWhenActive functions will revert
-	function lockContracts() external /* onlyAdminOrMigrationManager */;
-
-	/// Unlocks all the managed contracts 
-	/// @dev governance function called only by the migrationManager or registryAdmin
-	function unlockContracts() external /* onlyAdminOrMigrationManager */;
 
 	/// Sets a new contract registry to migrate to
 	/// @dev governance function called only by the registryAdmin

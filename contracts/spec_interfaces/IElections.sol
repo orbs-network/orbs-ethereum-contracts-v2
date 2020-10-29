@@ -20,11 +20,13 @@ interface IElections {
 	 */
 
 	/// Notifies that the guardian is ready to sync with other nodes
+	/// @dev may be called with either the guardian address or the guardian's orbs address
 	/// @dev ready to sync state is not managed in the contract that only emits an event
 	/// @dev readyToSync clears the readyForCommittee state
 	function readyToSync() external;
 
 	/// Notifies that the guardian is ready to join the committee
+	/// @dev may be called with either the guardian address or the guardian's orbs address
 	/// @dev a qualified guardian calling readyForCommittee is added to the committee
 	function readyForCommittee() external;
 
@@ -54,8 +56,8 @@ interface IElections {
 	/// @dev Called by a guardian as part of the automatic vote-unready flow
 	/// @dev The transaction may be sent from the guardian or orbs address.
 	/// @param subject is the subject guardian to vote out
-	/// @param expiration is the expiration time of the vote unready to prevent counting of a vote that is already irrelevant.
-	function voteUnready(address subject, uint expiration) external;
+	/// @param voteExpiration is the expiration time of the vote unready to prevent counting of a vote that is already irrelevant.
+	function voteUnready(address subject, uint voteExpiration) external;
 
 	/// Returns the current vote unready vote for a voter and a subject pair
 	/// @param voter is the voting guardian address
@@ -138,35 +140,35 @@ interface IElections {
 
 	/// Sets the minimum self stake requirement for the effective stake
 	/// @dev governance function called only by the functional manager
-	/// @param minSelfStakePercentMille the minimum self stake in percent-mille units 
-	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager onlyWhenActive */;
+	/// @param minSelfStakePercentMille is the minimum self stake in percent-mille (0-100,000) 
+	function setMinSelfStakePercentMille(uint32 minSelfStakePercentMille) external /* onlyFunctionalManager */;
 
 	/// Returns the minimum self-stake required for the effective stake
-	/// @return minSelfStakePercentMille is the minimum self stake in percent-mille (0-100,000)
+	/// @return minSelfStakePercentMille is the minimum self stake in percent-mille 
 	function getMinSelfStakePercentMille() external view returns (uint32);
 
 	/// Sets the vote-out threshold
 	/// @dev governance function called only by the functional manager
-	/// @param voteUnreadyPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
-	function setVoteOutPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager onlyWhenActive */;
+	/// @param voteOutPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
+	function setVoteOutPercentMilleThreshold(uint32 voteOutPercentMilleThreshold) external /* onlyFunctionalManager */;
 
 	/// Returns the vote-out threshold
-	/// @return voteOutPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
+	/// @return voteOutPercentMilleThreshold is the minimum threshold in percent-mille
 	function getVoteOutPercentMilleThreshold() external view returns (uint32);
 
 	/// Sets the vote-unready threshold
 	/// @dev governance function called only by the functional manager
 	/// @param voteUnreadyPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
-	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager onlyWhenActive */;
+	function setVoteUnreadyPercentMilleThreshold(uint32 voteUnreadyPercentMilleThreshold) external /* onlyFunctionalManager */;
 
 	/// Returns the vote-unready threshold
-	/// @return voteUnreadyPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
+	/// @return voteUnreadyPercentMilleThreshold is the minimum threshold in percent-mille
 	function getVoteUnreadyPercentMilleThreshold() external view returns (uint32);
 
 	/// Returns the contract's settings 
-	/// @return minSelfStakePercentMille is the minimum self stake in percent-mille (0-100,000)
-	/// @return voteUnreadyPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
-	/// @return voteOutPercentMilleThreshold is the minimum threshold in percent-mille (0-100,000)
+	/// @return minSelfStakePercentMille is the minimum self stake in percent-mille
+	/// @return voteUnreadyPercentMilleThreshold is the minimum threshold in percent-mille
+	/// @return voteOutPercentMilleThreshold is the minimum threshold in percent-mille
 	function getSettings() external view returns (
 		uint32 minSelfStakePercentMille,
 		uint32 voteUnreadyPercentMilleThreshold,

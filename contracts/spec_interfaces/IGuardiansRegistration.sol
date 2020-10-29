@@ -31,7 +31,7 @@ interface IGuardiansRegistration {
 
 	/// Updates a registered guardian ip address
 	/// @dev may be called only by a registered guardian
-	/// @dev may be called by the guardian address or guardian's orbs address
+	/// @dev may be called with either the guardian address or the guardian's orbs address
 	/// @param ip is the guardian's node ipv4 address as a 32b number 
 	function updateGuardianIp(bytes4 ip) external /* onlyWhenActive */;
 

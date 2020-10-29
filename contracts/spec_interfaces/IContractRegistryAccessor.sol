@@ -12,6 +12,11 @@ interface IContractRegistryAccessor {
 
     /// Sets the contract registry address
     /// @dev governance function called only by an admin
+	/// @param newRegistry is the new registry contract 
     function setContractRegistry(IContractRegistry newRegistry) external /* onlyAdmin */;
+
+    /// Returns the contract registry that the contract is set to use
+	/// @return contractRegistry is the registry contract address
+    function getContractRegistry() external view returns (IContractRegistry);
 
 }

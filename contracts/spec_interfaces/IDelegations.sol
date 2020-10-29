@@ -27,12 +27,6 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/// @param addr is the address to refresh its stake
 	function refreshStake(address addr) external /* onlyWhenActive */;
 
-	/// Returns the delegated stake of an addr 
-	/// @dev an address that is not self delegating has a 0 delegated stake
-	/// @param addr is the address to query
-	/// @return delegatedStake is the address delegated stake
-	function getDelegatedStake(address addr) external view returns (uint256);
-
 	/// Returns the delegate address of the given address
 	/// @param addr is the address to query
 	/// @return delegation is the address the addr delegated to
@@ -43,6 +37,12 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/// @return delegation is the address the addr delegated to
 	/// @return delegatorStake is the stake of the delegator as reflected in the delegation contract
 	function getDelegationInfo(address addr) external view returns (address delegation, uint256 delegatorStake);
+	
+	/// Returns the delegated stake of an addr 
+	/// @dev an address that is not self delegating has a 0 delegated stake
+	/// @param addr is the address to query
+	/// @return delegatedStake is the address delegated stake
+	function getDelegatedStake(address addr) external view returns (uint256);
 
 	/// Returns the total delegated stake
 	/// @dev delegatedStake - the total stake delegated to an address that is self delegating
