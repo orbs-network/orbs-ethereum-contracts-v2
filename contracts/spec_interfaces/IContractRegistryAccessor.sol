@@ -14,4 +14,6 @@ interface IContractRegistryAccessor {
     /// @return contractRegistry is the contract registry address
     function getContractRegistry() external view returns (IContractRegistry contractRegistry);
 
+    function setRegistryAdmin(address registryAdmin) external /* onlyInitializationAdmin */;
+
 }
