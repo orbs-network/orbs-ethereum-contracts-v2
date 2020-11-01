@@ -1196,7 +1196,8 @@ describe('rewards', async () => {
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
         await migrator.assignAndApproveOrbs(180, newRewardsContract.address);
-        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address], [10, 20], [30, 40], {from: migrator.address});
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address], [10, 20], [30, 40], 99, {from: migrator.address}), /totalAmount does not match sum of rewards/);
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address], [10, 20], [30, 40], 100, {from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             addr: c0.address,
@@ -1314,7 +1315,9 @@ describe('rewards', async () => {
         const migrator = d.newParticipant();
         await migrator.assignAndApproveOrbs(200, newRewardsContract.address);
         await migrator.assignAndApproveExternalToken(100, newRewardsContract.address);
-        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], [20, 80], {from: migrator.address});
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], 201,[20, 80], 100,{from: migrator.address}), /totalFees does not match fees sum/);
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], 200,[20, 80], 101,{from: migrator.address}), /totalBootstrap does not match bootstrap sum/);
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], 200,[20, 80], 100,{from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             guardian: c0.address,

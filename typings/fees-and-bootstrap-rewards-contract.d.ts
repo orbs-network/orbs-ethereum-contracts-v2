@@ -105,7 +105,7 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
 
     migrateRewardsBalance(addrs: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    acceptRewardsBalanceMigration(addrs: string[], fees: (number | BN)[], bootstrap: (number | BN)[], params?: TransactionConfig): Promise<TransactionReceipt>;
+    acceptRewardsBalanceMigration(addrs: string[], fees: (number | BN)[], totalFees: number | BN, bootstrap: (number | BN)[], totalBootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 

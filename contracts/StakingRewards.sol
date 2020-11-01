@@ -237,19 +237,21 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         }
 
         require(token.approve(address(currentRewardsContract), totalAmount), "migrateRewardsBalance: approve failed");
-        currentRewardsContract.acceptRewardsBalanceMigration(addrs, guardianRewards, delegatorRewards);
+        currentRewardsContract.acceptRewardsBalanceMigration(addrs, guardianRewards, delegatorRewards, totalAmount);
 
         for (uint i = 0; i < addrs.length; i++) {
             emit StakingRewardsBalanceMigrated(addrs[i], guardianRewards[i], delegatorRewards[i], address(currentRewardsContract));
         }
     }
 
-    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards) external override {
-        uint256 totalAmount = 0;
+    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards, uint256 totalAmount) external override {
+        uint256 _totalAmount = 0;
 
         for (uint i = 0; i < addrs.length; i++) {
-            totalAmount = totalAmount.add(migratedGuardianStakingRewards[i]).add(migratedDelegatorStakingRewards[i]);
+            _totalAmount = _totalAmount.add(migratedGuardianStakingRewards[i]).add(migratedDelegatorStakingRewards[i]);
         }
+
+        require(totalAmount == _totalAmount, "totalAmount does not match sum of rewards");
 
         if (totalAmount > 0) {
             require(token.transferFrom(msg.sender, address(this), totalAmount), "acceptRewardBalanceMigration: transfer failed");

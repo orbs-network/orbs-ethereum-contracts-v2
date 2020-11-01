@@ -155,8 +155,10 @@ interface IFeesAndBootstrapRewards {
     /// @dev the function may be called by any caller that approves the amounts provided for transfer
     /// @param guardians is the list of migrated guardians
     /// @param fees is the list of received guardian fees balance
-    /// @param bootstrapRewards is the list of received guardian bootstrap balance
-    function acceptRewardsBalanceMigration(address[] calldata guardians, uint256[] calldata fees, uint256[] calldata bootstrapRewards) external;
+    /// @param totalFees is the total amount of fees migrated for all guardians in the list. Must match the sum of the fees list.
+    /// @param bootstrap is the list of received guardian bootstrap balance.
+    /// @param totalBootstrap is the total amount of bootstrap rewards migrated for all guardians in the list. Must match the sum of the bootstrap list.
+    function acceptRewardsBalanceMigration(address[] memory guardians, uint256[] memory fees, uint256 totalFees, uint256[] memory bootstrap, uint256 totalBootstrap) external;
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens
