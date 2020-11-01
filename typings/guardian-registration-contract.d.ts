@@ -15,6 +15,7 @@ export interface GuardianDataUpdatedEvent {
     orbsAddr: string,
     name: string,
     website: string
+    registrationTime: number|BN
 }
 
 export interface GuardianUnregisteredEvent {
