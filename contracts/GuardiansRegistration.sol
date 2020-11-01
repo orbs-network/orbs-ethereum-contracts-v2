@@ -125,8 +125,8 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	 * Governance
 	 */
 
-	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistration previousContract) external override onlyInitializationAdmin {
-		require(previousContract != IGuardiansRegistration(0), "previousContract must not be the zero address");
+	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistrationPreviousVersion previousContract) external override onlyInitializationAdmin {
+		require(previousContract != IGuardiansRegistrationPreviousVersion(0), "previousContract must not be the zero address");
 
 		for (uint i = 0; i < guardiansToMigrate.length; i++) {
 			require(guardiansToMigrate[i] != address(0), "guardian must not be the zero address");
@@ -168,8 +168,8 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		emit GuardianMetadataChanged(guardian, key, value, oldValue);
 	}
 
-	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
-		(bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
+	function migrateGuardianData(IGuardiansRegistrationPreviousVersion previousContract, address guardianAddress) private {
+		(bytes4 ip, address orbsAddr, string memory name, string memory website,, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
 		guardians[guardianAddress] = Guardian({
 			orbsAddr: orbsAddr,
 			ip: ip,
@@ -185,7 +185,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	}
 
 	string public constant ID_FORM_URL_METADATA_KEY = "ID_FORM_URL";
-	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
+	function migrateGuardianMetadata(IGuardiansRegistrationPreviousVersion previousContract, address guardianAddress) private {
 		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY);
 		if (bytes(rewardsFreqMetadata).length > 0) {
 			_setMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY, rewardsFreqMetadata);

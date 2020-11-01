@@ -113,6 +113,28 @@ interface IGuardiansRegistration {
 	/// @dev emits a GuardianDataUpdated for each guardian to allow tracking by tools
 	/// @param guardiansToMigrate is a list of guardians' addresses to migrate
 	/// @param previousContract is the previous registration contract address
-	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistration previousContract) external /* onlyInitializationAdmin */;
+	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistrationPreviousVersion previousContract) external /* onlyInitializationAdmin */;
 
 }
+
+// The previous version of the guardians contract, for migration
+interface IGuardiansRegistrationPreviousVersion {
+	/// Returns a guardian's data
+	/// @param guardian is the guardian to query
+	/// @param ip is the guardian's node ipv4 address as a 32b number
+	/// @param orbsAddr is the guardian's Orbs node address
+	/// @param name is the guardian's name as a string
+	/// @param website is the guardian's website as a string
+	/// @param contact is the guardian's contact details as a string (deprecated in current contract version)
+	/// @param registrationTime is the timestamp of the guardian's registration
+	/// @param lastUpdateTime is the timestamp of the guardian's last update
+	function getGuardianData(address guardian) external view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, string memory contact, uint registrationTime, uint lastUpdateTime);
+
+	/// Returns a guardian's metadata property
+	/// @dev a property that wasn't set returns an empty string
+	/// @param guardian is the guardian to query
+	/// @param key is the name of the metadata property to query
+	/// @return value is the value of the queried property in a string format
+	function getMetadata(address guardian, string calldata key) external view returns (string memory value);
+}
+
