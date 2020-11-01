@@ -110,19 +110,9 @@ interface IFeesAndBootstrapRewards {
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
 
-    /// Returns the contract's settings
-    /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
-    /// @return certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap
-    /// @return rewardAllocationActive indicates the rewards allocation activation state 
-    function getSettings() external view returns (
-        uint generalCommitteeAnnualBootstrap,
-        uint certifiedCommitteeAnnualBootstrap,
-        bool rewardAllocationActive
-    );
-
-    /// Returns the general committee annual bootstrap award
-    /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
-    function getGeneralCommitteeAnnualBootstrap() external view returns (uint256);
+    /// Returns the rewards allocation activation status
+    /// @return rewardAllocationActive is the activation status
+    function isRewardAllocationActive() external view returns (bool);
 
 	/// Sets the annual rate for the general committee bootstrap
 	/// @dev governance function called only by the functional manager
@@ -130,9 +120,9 @@ interface IFeesAndBootstrapRewards {
 	/// @param annualAmount is the annual general committee bootstrap award
     function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) external /* onlyFunctionalManager */;
 
-    /// Returns the certified committee annual bootstrap reward
-    /// @return certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap
-    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256);
+    /// Returns the general committee annual bootstrap award
+    /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
+    function getGeneralCommitteeAnnualBootstrap() external view returns (uint256);
 
 	/// Sets the annual rate for the certified committee bootstrap
 	/// @dev governance function called only by the functional manager
@@ -140,9 +130,9 @@ interface IFeesAndBootstrapRewards {
 	/// @param annualAmount is the annual certified committee bootstrap award
     function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) external /* onlyFunctionalManager */;
 
-    /// Returns the rewards allocation activation status
-    /// @return rewardAllocationActive is the activation status
-    function isRewardAllocationActive() external view returns (bool);
+    /// Returns the certified committee annual bootstrap reward
+    /// @return certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap
+    function getCertifiedCommitteeAnnualBootstrap() external view returns (uint256);
 
     /// Migrates the rewards balance to a new FeesAndBootstrap contract
     /// @dev The new rewards contract is determined according to the contracts registry
@@ -163,5 +153,15 @@ interface IFeesAndBootstrapRewards {
 	/// @dev governance function called only by the migration manager
     /// @param token is the ERC20 token to withdraw
     function emergencyWithdraw(address token) external; /* onlyMigrationManager */
+
+    /// Returns the contract's settings
+    /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
+    /// @return certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap
+    /// @return rewardAllocationActive indicates the rewards allocation activation state 
+    function getSettings() external view returns (
+        uint generalCommitteeAnnualBootstrap,
+        uint certifiedCommitteeAnnualBootstrap,
+        bool rewardAllocationActive
+    );
 }
 
