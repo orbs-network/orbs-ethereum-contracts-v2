@@ -183,11 +183,11 @@ contract Elections is IElections, ManagedContract {
 	 * Notification functions from other PoS contracts
 	 */
 
-	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address delegate, uint256 selfDelegatedStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
 
-		uint effectiveStake = calcEffectiveStake(selfStake, delegatedStake, _settings);
-		emit StakeChanged(delegate, selfStake, delegatedStake, effectiveStake);
+		uint effectiveStake = calcEffectiveStake(selfDelegatedStake, delegatedStake, _settings);
+		emit StakeChanged(delegate, selfDelegatedStake, delegatedStake, effectiveStake);
 
 		committeeContract.memberWeightChange(delegate, effectiveStake);
 
