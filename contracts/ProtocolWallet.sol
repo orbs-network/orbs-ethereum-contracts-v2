@@ -53,8 +53,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         require(_lastWithdrawal <= block.timestamp, "withdrawal is not yet active");
 
         uint duration = block.timestamp.sub(_lastWithdrawal);
-        uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
-        require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
+        require(amount.mul(365 * 24 * 60 * 60) <= maxAnnualRate.mul(duration), "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
         lastWithdrawal = block.timestamp;
         if (amount > 0) {

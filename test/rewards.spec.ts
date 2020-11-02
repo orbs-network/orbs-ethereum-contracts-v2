@@ -1097,7 +1097,7 @@ describe('rewards', async () => {
         expect(r).to.have.a.rewardDistributionActivatedEvent();
     });
 
-    it.only("allows anyone to migrate rewards to a new contract (stakingRewards)", async () => {
+    it("allows anyone to migrate rewards to a new contract (stakingRewards)", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
