@@ -21,6 +21,9 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	mapping(bytes4 => address) public ipToGuardian;
 	mapping(address => mapping(string => string)) guardianMetadata;
 
+    /// Constructor
+    /// @param _contractRegistry is the contract registry address
+    /// @param _registryAdmin is the registry admin address
 	constructor(IContractRegistry _contractRegistry, address _registryAdmin) ManagedContract(_contractRegistry, _registryAdmin) public {}
 
 	modifier onlyRegisteredGuardian {
@@ -33,7 +36,12 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
      * External methods
      */
 
-    /// @dev Called by a participant who wishes to register as a guardian
+    /// Registers a new guardian
+	/// @dev called using the guardian's address that holds the guardian self-stake and used for delegation
+	/// @param ip is the guardian's node ipv4 address as a 32b number 
+	/// @param orbsAddr is the guardian's Orbs node address 
+	/// @param name is the guardian's name as a string
+	/// @param website is the guardian's website as a string, publishing a name and website provide information for delegators
 	function registerGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external override onlyWhenActive {
 		require(!isRegistered(msg.sender), "registerGuardian: Guardian is already registered");
 
@@ -43,27 +51,47 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
 	}
 
-    /// @dev Called by a participant who wishes to update its properties
+    /// Updates a registered guardian data
+	/// @dev may be called only by a registered guardian
+	/// @param ip is the guardian's node ipv4 address as a 32b number 
+	/// @param orbsAddr is the guardian's Orbs node address 
+	/// @param name is the guardian's name as a string
+	/// @param website is the guardian's website as a string, publishing a name and website provide information for delegators
 	function updateGuardian(bytes4 ip, address orbsAddr, string calldata name, string calldata website) external override onlyRegisteredGuardian onlyWhenActive {
 		_updateGuardian(msg.sender, ip, orbsAddr, name, website);
 	}
 
+	/// Updates a registered guardian ip address
+	/// @dev may be called only by a registered guardian
+	/// @dev may be called with either the guardian address or the guardian's orbs address
+	/// @param ip is the guardian's node ipv4 address as a 32b number 
 	function updateGuardianIp(bytes4 ip) external override onlyWhenActive {
 		address guardianAddr = resolveGuardianAddress(msg.sender);
 		Guardian memory data = guardians[guardianAddr];
 		_updateGuardian(guardianAddr, ip, data.orbsAddr, data.name, data.website);
 	}
 
-    /// @dev Called by a guardian to update additional guardian metadata properties.
-    function setMetadata(string calldata key, string calldata value) external override onlyRegisteredGuardian onlyWhenActive {
+    /// Updates a guardian's metadata property
+	/// @dev called using the guardian's address
+	/// @dev any key may be updated to be used by Orbs platform and tools
+	/// @param key is the name of the property to update
+	/// @param value is the value of the property to update in a string format
+	function setMetadata(string calldata key, string calldata value) external override onlyRegisteredGuardian onlyWhenActive {
 		_setMetadata(msg.sender, key, value);
 	}
 
+    /// Returns a guardian's metadata property
+	/// @dev a property that wasn't set returns an empty string
+	/// @param guardian is the guardian to query
+	/// @param key is the name of the metadata property to query
+	/// @return value is the value of the queried property in a string format
 	function getMetadata(address guardian, string calldata key) external override view returns (string memory) {
 		return guardianMetadata[guardian][key];
 	}
 
-	/// @dev Called by a participant who wishes to unregister
+    /// Unregisters a guardian
+	/// @dev may be called only by a registered guardian
+	/// @dev unregistering does not clear the guardian's metadata properties
 	function unregisterGuardian() external override onlyRegisteredGuardian onlyWhenActive {
 		delete orbsAddressToGuardianAddress[guardians[msg.sender].orbsAddr];
 		delete ipToGuardian[guardians[msg.sender].ip];
@@ -75,12 +103,23 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		emit GuardianUnregistered(msg.sender);
 	}
 
-    /// @dev Returns a guardian's data
+    /// Returns a guardian's data
+	/// @param guardian is the guardian to query
+	/// @param ip is the guardian's node ipv4 address as a 32b number 
+	/// @param orbsAddr is the guardian's Orbs node address 
+	/// @param name is the guardian's name as a string
+	/// @param website is the guardian's website as a string
+	/// @param registrationTime is the timestamp of the guardian's registration
+	/// @param lastUpdateTime is the timestamp of the guardian's last update
 	function getGuardianData(address guardian) external override view returns (bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) {
 		Guardian memory v = guardians[guardian];
 		return (v.ip, v.orbsAddr, v.name, v.website, v.registrationTime, v.lastUpdateTime);
 	}
 
+	/// Returns the Orbs addresses of a list of guardians
+	/// @dev an unregistered guardian returns address(0) Orbs address
+	/// @param guardianAddrs is a list of guardians' addresses to query
+	/// @return orbsAddrs is a list of the guardians' Orbs addresses 
 	function getGuardiansOrbsAddress(address[] calldata guardianAddrs) external override view returns (address[] memory orbsAddrs) {
 		orbsAddrs = new address[](guardianAddrs.length);
 		for (uint i = 0; i < guardianAddrs.length; i++) {
@@ -88,10 +127,18 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		}
 	}
 
+	/// Returns a guardian's ip
+	/// @dev an unregistered guardian returns 0 ip address
+	/// @param guardian is the guardian to query
+	/// @param ip is the guardian's node ipv4 address as a 32b number 
 	function getGuardianIp(address guardian) external override view returns (bytes4 ip) {
 		return guardians[guardian].ip;
 	}
 
+	/// Returns the ip of a list of guardians
+	/// @dev an unregistered guardian returns 0 ip address
+	/// @param guardianAddrs is a list of guardians' addresses to query
+	/// @param ips is a list of the guardians' node ipv4 addresses as a 32b numbers
 	function getGuardianIps(address[] calldata guardianAddrs) external override view returns (bytes4[] memory ips) {
 		ips = new bytes4[](guardianAddrs.length);
 		for (uint i = 0; i < guardianAddrs.length; i++) {
@@ -99,10 +146,31 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		}
 	}
 
+	/// Checks if a guardian is registered
+	/// @param guardian is the guardian to query
+	/// @return registered is a bool indicating a guardian address is registered
 	function isRegistered(address guardian) public override view returns (bool) {
 		return guardians[guardian].registrationTime != 0;
 	}
 
+	/// Translates a list guardians Orbs addresses to guardian addresses
+	/// @dev an Orbs address that does not correspond to any registered guardian returns address(0)
+	/// @param orbsAddrs is a list of the guardians' Orbs addresses to query
+	/// @param guardianAddrs is a list of guardians' addresses that matches the Orbs addresses
+	function getGuardianAddresses(address[] calldata orbsAddrs) external override view returns (address[] memory guardianAddrs) {
+		guardianAddrs = new address[](orbsAddrs.length);
+		for (uint i = 0; i < orbsAddrs.length; i++) {
+			guardianAddrs[i] = orbsAddressToGuardianAddress[orbsAddrs[i]];
+		}
+	}
+
+	/// Resolves the guardian address for a guardian, given a Guardian/Orbs address
+	/// @dev revert if the address does not correspond to a registered guardian address or Orbs address
+	/// @dev designed to be used for contracts calls, validating a registered guardian
+	/// @dev should be used with caution when called by tools as the call may revert
+	/// @dev in case of a conflict matching both guardian and Orbs address, the Guardian address takes precedence
+	/// @param guardianOrOrbsAddress is the address to query representing a guardian address or Orbs address
+	/// @return guardianAddress is the guardian address that matches the queried address
 	function resolveGuardianAddress(address guardianOrOrbsAddress) public override view returns (address guardianAddress) {
 		if (isRegistered(guardianOrOrbsAddress)) {
 			guardianAddress = guardianOrOrbsAddress;
@@ -113,18 +181,17 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		require(guardianAddress != address(0), "Cannot resolve address");
 	}
 
-	/// @dev Translates a list guardians Orbs addresses to Ethereum addresses
-	function getGuardianAddresses(address[] calldata orbsAddrs) external override view returns (address[] memory guardianAddrs) {
-		guardianAddrs = new address[](orbsAddrs.length);
-		for (uint i = 0; i < orbsAddrs.length; i++) {
-			guardianAddrs[i] = orbsAddressToGuardianAddress[orbsAddrs[i]];
-		}
-	}
-
 	/*
 	 * Governance
 	 */
 
+	/// Migrates a list of guardians from a previous guardians registration contract
+	/// @dev governance function called only by the initialization manager
+	/// @dev reads the migrated guardians data by calling getGuardianData in the previous contract
+	/// @dev imports also the gurdians' registration time and last update
+	/// @dev emits a GuardianDataUpdated for each guardian to allow tracking by tools
+	/// @param guardiansToMigrate is a list of guardians' addresses to migrate
+	/// @param previousContract is the previous registration contract address
 	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistration previousContract) external override onlyInitializationAdmin {
 		require(previousContract != IGuardiansRegistration(0), "previousContract must not be the zero address");
 
@@ -139,6 +206,14 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	 * Private methods
 	 */
 
+	/// Updates a registered guardian data
+	/// @dev used by external functions that register a guardian or update its data
+	/// @dev emits a GuardianDataUpdated event on any update to the registration  
+	/// @param guardianAddr is the address of the guardian to update
+	/// @param ip is the guardian's node ipv4 address as a 32b number 
+	/// @param orbsAddr is the guardian's Orbs node address 
+	/// @param name is the guardian's name as a string
+	/// @param website is the guardian's website as a string, publishing a name and website provide information for delegators
 	function _updateGuardian(address guardianAddr, bytes4 ip, address orbsAddr, string memory name, string memory website) private {
 		require(orbsAddr != address(0), "orbs address must be non zero");
 		require(orbsAddr != guardianAddr, "orbs address must be different than the guardian address");
@@ -162,12 +237,24 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
         emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website);
     }
 
+    /// Updates a guardian's metadata property
+	/// @dev used by setMetadata and migration functions
+	/// @dev any key may be updated to be used by Orbs platform and tools
+	/// @param key is the name of the property to update
+	/// @param value is the value of the property to update in a string format
 	function _setMetadata(address guardian, string memory key, string memory value) private {
 		string memory oldValue = guardianMetadata[guardian][key];
 		guardianMetadata[guardian][key] = value;
 		emit GuardianMetadataChanged(guardian, key, value, oldValue);
 	}
 
+	/// Migrates a guardian data from a previous guardians registration contract
+	/// @dev used by migrateGuardians
+	/// @dev reads the migrated guardians data by calling getGuardianData in the previous contract
+	/// @dev imports also the gurdians' registration time and last update
+	/// @dev emits a GuardianDataUpdated
+	/// @param previousContract is the previous registration contract address
+	/// @param guardianAddress is the address of the guardians to migrate
 	function migrateGuardianData(IGuardiansRegistration previousContract, address guardianAddress) private {
 		(bytes4 ip, address orbsAddr, string memory name, string memory website, uint registrationTime, uint lastUpdateTime) = previousContract.getGuardianData(guardianAddress);
 		guardians[guardianAddress] = Guardian({
@@ -185,6 +272,14 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 	}
 
 	string public constant ID_FORM_URL_METADATA_KEY = "ID_FORM_URL";
+
+	/// Migrates a guardian metadata keys in use from a previous guardians registration contract
+	/// @dev the metadata used by the contract are hard-coded in the function
+	/// @dev used by migrateGuardians
+	/// @dev reads the migrated guardians metadata by calling getMetadata in the previous contract
+	/// @dev emits a GuardianMetadataChanged
+	/// @param previousContract is the previous registration contract address
+	/// @param guardianAddress is the address of the guardians to migrate	
 	function migrateGuardianMetadata(IGuardiansRegistration previousContract, address guardianAddress) private {
 		string memory rewardsFreqMetadata = previousContract.getMetadata(guardianAddress, ID_FORM_URL_METADATA_KEY);
 		if (bytes(rewardsFreqMetadata).length > 0) {
@@ -197,6 +292,9 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
      */
 
 	IElections electionsContract;
+
+	/// Refreshes the address of the other contracts the contract interacts with
+    /// @dev called by the registry contract upon an update of a contract in the registry
 	function refreshContracts() external override {
 		electionsContract = IElections(getElectionsContract());
 	}

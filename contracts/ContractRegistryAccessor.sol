@@ -3,10 +3,11 @@
 pragma solidity 0.6.12;
 
 import "./spec_interfaces/IContractRegistry.sol";
+import "./spec_interfaces/IContractRegistryAccessor.sol";
 import "./WithClaimableRegistryManagement.sol";
 import "./Initializable.sol";
 
-contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializable {
+contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableRegistryManagement, Initializable {
 
     IContractRegistry private contractRegistry;
 
@@ -131,17 +132,22 @@ contract ContractRegistryAccessor is WithClaimableRegistryManagement, Initializa
 
     /// Sets the contract registry address
     /// @dev governance function called only by an admin
-	/// @param newRegistry is the new registry contract 
-    function setContractRegistry(IContractRegistry newRegistry) public onlyAdmin {
-        require(newRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
-        contractRegistry = newRegistry;
-        emit ContractRegistryAddressUpdated(address(newRegistry));
+	/// @param newContractRegistry is the new registry contract 
+    function setContractRegistry(IContractRegistry newContractRegistry) public override onlyAdmin {
+        require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
+        contractRegistry = newContractRegistry;
+        emit ContractRegistryAddressUpdated(address(newContractRegistry));
     }
 
     /// Returns the contract registry that the contract is set to use
 	/// @return contractRegistry is the registry contract address
-    function getContractRegistry() public view returns (IContractRegistry) {
+    function getContractRegistry() public override view returns (IContractRegistry) {
         return contractRegistry;
     }
 
+    function setRegistryAdmin(address _registryAdmin) external override onlyInitializationAdmin {
+        _transferRegistryManagement(_registryAdmin);
+    }
+
 }
+

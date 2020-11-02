@@ -27,6 +27,13 @@ interface IDelegations /* is IStakeChangeNotifier */ {
 	/// @param addr is the address to refresh its stake
 	function refreshStake(address addr) external /* onlyWhenActive */;
 
+	/// Refresh the addresses stake for delegation power based on the staking contract
+	/// @dev Batched version of refreshStake
+	/// @dev Disabled stake change update notifications from the staking contract may create mismatches
+	/// @dev refreshStakeBatch re-syncs the stake data with the staking contract
+	/// @param addrs is the list of addresses to refresh their stake
+	function refreshStakeBatch(address[] calldata addrs) external /* onlyWhenActive */;
+
 	/// Returns the delegate address of the given address
 	/// @param addr is the address to query
 	/// @return delegation is the address the addr delegated to

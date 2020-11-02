@@ -57,7 +57,7 @@ interface IFeesWallet {
     /// Emergency withdraw the contract funds
 	/// @dev governance function called only by the migration manager
     /// @dev used in emergencies only, where migrateBucket is not a suitable solution
-    /// @param token is the erc20 address of the token to withdraw
-    function emergencyWithdraw(address token) external /* onlyMigrationManager */;
+    /// @param erc20 is the erc20 address of the token to withdraw
+    function emergencyWithdraw(address erc20) external /* onlyMigrationManager */;
 
 }

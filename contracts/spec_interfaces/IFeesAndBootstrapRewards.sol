@@ -143,21 +143,23 @@ interface IFeesAndBootstrapRewards {
     /// @dev The new rewards contract is determined according to the contracts registry
     /// @dev No impact of the calling contract if the currently configured contract in the registry
     /// @dev may be called also while the contract is locked
-    /// @param guardian is the guardian to migrate
-    function migrateRewardsBalance(address guardian) external;
+    /// @param guardians is the list of guardians to migrate
+    function migrateRewardsBalance(address[] calldata guardians) external;
 
     /// Accepts guardian's balance migration from a previous rewards contract
     /// @dev the function may be called by any caller that approves the amounts provided for transfer
-    /// @param guardian is the migrated guardian
-    /// @param fees is the received guardian fees balance 
-    /// @param bootstrapRewards is the received guardian bootstrap balance
-    function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrapRewards) external;
+    /// @param guardians is the list of migrated guardians
+    /// @param fees is the list of received guardian fees balance
+    /// @param totalFees is the total amount of fees migrated for all guardians in the list. Must match the sum of the fees list.
+    /// @param bootstrap is the list of received guardian bootstrap balance.
+    /// @param totalBootstrap is the total amount of bootstrap rewards migrated for all guardians in the list. Must match the sum of the bootstrap list.
+    function acceptRewardsBalanceMigration(address[] memory guardians, uint256[] memory fees, uint256 totalFees, uint256[] memory bootstrap, uint256 totalBootstrap) external;
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens
 	/// @dev governance function called only by the migration manager
-    /// @param token is the ERC20 token to withdraw
-    function emergencyWithdraw(address token) external; /* onlyMigrationManager */
+    /// @param erc20 is the ERC20 token to withdraw
+    function emergencyWithdraw(address erc20) external; /* onlyMigrationManager */
 
     /// Returns the contract's settings
     /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap

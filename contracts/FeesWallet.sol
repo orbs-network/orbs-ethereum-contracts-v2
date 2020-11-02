@@ -21,6 +21,10 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     mapping(uint256 => uint256) public buckets;
     uint256 public lastCollectedAt;
 
+    /// Constructor
+    /// @param _contractRegistry is the contract registry address
+    /// @param _registryAdmin is the registry admin address
+    /// @param _token is the token used for virtual chains fees 
     constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
         token = _token;
         lastCollectedAt = block.timestamp;
@@ -36,29 +40,12 @@ contract FeesWallet is IFeesWallet, ManagedContract {
      *   External methods
      */
 
-    /// @dev collect fees from the buckets since the last call and transfers the amount back.
-    /// Called by: only Rewards contract.
-    function collectFees() external override onlyRewardsContract returns (uint256 collectedFees)  {
-        (uint256 _collectedFees, uint[] memory bucketsWithdrawn, uint[] memory amountsWithdrawn, uint[] memory newTotals) = _getOutstandingFees(block.timestamp);
-
-        for (uint i = 0; i < bucketsWithdrawn.length; i++) {
-            buckets[bucketsWithdrawn[i]] = newTotals[i];
-            emit FeesWithdrawnFromBucket(bucketsWithdrawn[i], amountsWithdrawn[i], newTotals[i]);
-        }
-
-        lastCollectedAt = block.timestamp;
-
-        require(token.transfer(msg.sender, _collectedFees), "FeesWallet::failed to transfer collected fees to rewards"); // TODO in that case, transfer the remaining balance?
-        return _collectedFees;
-    }
-
-    function getOutstandingFees(uint256 currentTime) external override view returns (uint256 outstandingFees)  {
-        require(currentTime >= block.timestamp, "currentTime must not be in the past");
-        (outstandingFees,,,) = _getOutstandingFees(currentTime);
-    }
-
-    /// @dev Called by: subscriptions contract.
-    /// Top-ups the fee pool with the given amount at the given rate (typically called by the subscriptions contract).
+    /// Top-ups the fee pool with the given amount at the given rate
+    /// @dev Called by: subscriptions contract. (not enforced)
+    /// @dev fills the rewards in 30 days buckets based on the monthlyRate
+    /// @param amount is the amount to fill
+    /// @param monthlyRate is the monthly rate
+    /// @param fromTimestamp is the to start fill the buckets, determines the first bucket to fill and the amount filled in the first bucket.
     function fillFeeBuckets(uint256 amount, uint256 monthlyRate, uint256 fromTimestamp) external override onlyWhenActive {
         uint256 bucket = _bucketTime(fromTimestamp);
         require(bucket >= _bucketTime(block.timestamp), "FeeWallet::cannot fill bucket from the past");
@@ -82,13 +69,41 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet");
     }
 
+    /// Collect fees from the buckets since the last call and transfers the amount back.
+    /// @dev Called by: only FeesAndBootstrapRewards contract
+    /// @dev The amount to collect may be queried before collect by calling getOutstandingFees
+    /// @return collectedFees the amount of fees collected and transferred
+    function collectFees() external override onlyRewardsContract returns (uint256 collectedFees)  {
+        (uint256 _collectedFees, uint[] memory bucketsWithdrawn, uint[] memory amountsWithdrawn, uint[] memory newTotals) = _getOutstandingFees(block.timestamp);
+
+        for (uint i = 0; i < bucketsWithdrawn.length; i++) {
+            buckets[bucketsWithdrawn[i]] = newTotals[i];
+            emit FeesWithdrawnFromBucket(bucketsWithdrawn[i], amountsWithdrawn[i], newTotals[i]);
+        }
+
+        lastCollectedAt = block.timestamp;
+
+        require(token.transfer(msg.sender, _collectedFees), "FeesWallet::failed to transfer collected fees to rewards"); // TODO in that case, transfer the remaining balance?
+        return _collectedFees;
+    }
+
+    /// Returns the amount of fees that are currently available for withdrawal
+    /// @param currentTime is the time to check the pending fees for
+    /// @return outstandingFees is the amount of pending fees to collect at time currentTime
+    function getOutstandingFees(uint256 currentTime) external override view returns (uint256 outstandingFees)  {
+        require(currentTime >= block.timestamp, "currentTime must not be in the past");
+        (outstandingFees,,,) = _getOutstandingFees(currentTime);
+    }
+
     /*
      * Governance functions
      */
 
-    /// @dev migrates the fees of bucket starting at startTimestamp.
-    /// bucketStartTime must be a bucket's start time.
-    /// Calls acceptBucketMigration in the destination contract.
+    /// Migrates the fees of bucket starting at startTimestamp.
+	/// @dev governance function called only by the migration manager
+    /// @dev Calls acceptBucketMigration in the destination contract.
+    /// @param destination is the address of the new FeesWallet contract
+    /// @param bucketStartTime is the start time of the bucket to migration, must be a bucket's valid start time
     function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external override onlyMigrationManager {
         require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
 
@@ -102,15 +117,22 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         destination.acceptBucketMigration(bucketStartTime, bucketAmount);
     }
 
+    /// Accepts a bucket fees from a old fees wallet as part of a migration
     /// @dev Called by the old FeesWallet contract.
-    /// Part of the IMigratableFeesWallet interface.
+    /// @dev Part of the IMigratableFeesWallet interface.
+    /// @dev assumes the caller approved the amount prior to calling
+    /// @param bucketStartTime is the start time of the bucket to migration, must be a bucket's valid start time
+    /// @param amount is the amount to migrate (transfer) to the bucket
     function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external override {
         require(_bucketTime(bucketStartTime) == bucketStartTime,  "bucketStartTime must be the  start time of a bucket");
         fillFeeBucket(bucketStartTime, amount);
         require(token.transferFrom(msg.sender, address(this), amount), "failed to transfer fees into fee wallet on bucket migration");
     }
 
-    /// @dev an emergency withdrawal enables withdrawal of all funds to an escrow account. To be use in emergencies only.
+    /// Emergency withdraw the contract funds
+	/// @dev governance function called only by the migration manager
+    /// @dev used in emergencies only, where migrateBucket is not a suitable solution
+    /// @param erc20 is the erc20 address of the token to withdraw
     function emergencyWithdraw(address erc20) external override onlyMigrationManager {
         IERC20 _token = IERC20(erc20);
         emit EmergencyWithdrawal(msg.sender, address(_token));
@@ -121,12 +143,21 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     * Private methods
     */
 
+    /// Fills a bucket with the given amount and emits a corresponding event
     function fillFeeBucket(uint256 bucketId, uint256 amount) private {
         uint256 bucketTotal = buckets[bucketId].add(amount);
         buckets[bucketId] = bucketTotal;
         emit FeesAddedToBucket(bucketId, amount, bucketTotal);
     }
 
+    /// Returns the amount of fees that are currently available for withdrawal
+    /// Private function utilized by collectFees and getOutstandingFees
+    /// @dev the buckets details returned by the function are used for the corresponding events generation
+    /// @param currentTime is the time to check the pending fees for
+    /// @return outstandingFees is the amount of pending fees to collect at time currentTime 
+    /// @return bucketsWithdrawn is the list of buckets that fees were withdrawn from
+    /// @return withdrawnAmounts is the list of amounts withdrawn from the buckets
+    /// @return newTotals is the updated total of the buckets
     function _getOutstandingFees(uint256 currentTime) private view returns (uint256 outstandingFees, uint[] memory bucketsWithdrawn, uint[] memory withdrawnAmounts, uint[] memory newTotals)  {
         // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
         // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
@@ -159,6 +190,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         }
     }
 
+    /// Returns the start time of a bucket, sued also to identify the bucket
     function _bucketTime(uint256 time) private pure returns (uint256) {
         return time.sub(time % BUCKET_TIME_PERIOD);
     }
@@ -168,6 +200,9 @@ contract FeesWallet is IFeesWallet, ManagedContract {
      */
 
     address rewardsContract;
+
+	/// Refreshes the address of the other contracts the contract interacts with
+    /// @dev called by the registry contract upon an update of a contract in the registry
     function refreshContracts() external override {
         rewardsContract = getFeesAndBootstrapRewardsContract();
     }

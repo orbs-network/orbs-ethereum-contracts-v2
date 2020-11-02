@@ -205,19 +205,20 @@ interface IStakingRewards {
         bool rewardAllocationActive
     );
 
-    /// Migrates the staking rewards balance of a given address to a new staking rewards contract
+    /// Migrates the staking rewards balance of the given addresses to a new staking rewards contract
     /// @dev The new rewards contract is determined according to the contracts registry
     /// @dev No impact of the calling contract if the currently configured contract in the registry
     /// @dev may be called also while the contract is locked
-    /// @param addr is the address to migrate
-    function migrateRewardsBalance(address addr) external;
+    /// @param addrs is the list of addresses to migrate
+    function migrateRewardsBalance(address[] calldata addrs) external;
 
-    /// Accepts an address balance migration from a previous rewards contract
+    /// Accepts addresses balance migration from a previous rewards contract
     /// @dev the function may be called by any caller that approves the amounts provided for transfer
-    /// @param addr is the migrated address
-    /// @param guardianStakingRewards is the received guardian rewards balance
-    /// @param delegatorStakingRewards is the received delegator rewards balance
-    function acceptRewardsBalanceMigration(address addr, uint256 guardianStakingRewards, uint256 delegatorStakingRewards) external;
+    /// @param addrs is the list migrated addresses
+    /// @param migratedGuardianStakingRewards is the list of received guardian rewards balance for each address
+    /// @param migratedDelegatorStakingRewards is the list of received delegator rewards balance for each address
+    /// @param totalAmount is the total amount of staking rewards migrated for all addresses in the list. Must match the sum of migratedGuardianStakingRewards and migratedDelegatorStakingRewards lists.
+    function acceptRewardsBalanceMigration(address[] calldata addrs, uint256[] calldata migratedGuardianStakingRewards, uint256[] calldata migratedDelegatorStakingRewards, uint256 totalAmount) external;
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens

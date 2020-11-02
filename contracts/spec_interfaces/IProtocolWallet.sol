@@ -40,12 +40,18 @@ interface IProtocolWallet {
     /// Sets a new annual withdraw rate for the pool
 	/// @dev governance function called only by the migration owner
     /// @dev the rate for a duration is duration x annualRate / 1 year 
-    /// @param annualRate is the maximum annual rate that can be withdrawn
-    function setMaxAnnualRate(uint256 annualRate) external; /* onlyMigrationOwner */
+    /// @param _annualRate is the maximum annual rate that can be withdrawn
+    function setMaxAnnualRate(uint256 _annualRate) external; /* onlyMigrationOwner */
 
     /// Returns the annual withdraw rate of the pool
     /// @return annualRate is the maximum annual rate that can be withdrawn
     function getMaxAnnualRate() external view returns (uint256);
+
+    /// Resets the outstanding tokens to new start time
+	/// @dev governance function called only by the migration owner
+    /// @dev the next duration will be calculated starting from the given time
+    /// @param startTime is the time to set as the last withdrawal time
+    function resetOutstandingTokens(uint256 startTime) external; /* onlyMigrationOwner */
 
     /// Emergency withdraw the wallet funds
 	/// @dev governance function called only by the migration owner
@@ -57,11 +63,5 @@ interface IProtocolWallet {
 	/// @dev governance function called only by the functional owner
     /// @param client is the address of the new client
     function setClient(address client) external; /* onlyFunctionalOwner */
-
-    /// Resets the outstanding tokens to new start time
-	/// @dev governance function called only by the migration owner
-    /// @dev the next duration will be calculated starting from the given time
-    /// @param startTime is the time to set as the last withdrawal time
-    function resetOutstandingTokens(uint256 startTime) external; /* onlyMigrationOwner */
 
 }

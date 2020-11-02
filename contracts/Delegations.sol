@@ -70,6 +70,17 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr));
 	}
 
+	/// Refresh the addresses stake for delegation power based on the staking contract
+	/// @dev Batched version of refreshStake
+	/// @dev Disabled stake change update notifications from the staking contract may create mismatches
+	/// @dev refreshStakeBatch re-syncs the stake data with the staking contract
+	/// @param addrs is the list of addresses to refresh their stake
+	function refreshStakeBatch(address[] calldata addrs) external override onlyWhenActive {
+		for (uint i = 0; i < addrs.length; i++) {
+			_stakeChange(addrs[i], stakingContractHandler.getStakeBalanceOf(addrs[i]));
+		}
+	}
+
 	/// Returns the delegate address of the given address
 	/// @param addr is the address to query
 	/// @return delegation is the address the addr delegated to

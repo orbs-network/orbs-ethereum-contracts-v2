@@ -14,7 +14,7 @@ interface ISubscriptions {
      *   External functions
      */
 
-    /// Creates a new VC
+    /// Creates a new virtual chain
     /// @dev Called only by: an authorized subscription plan contract
     /// @dev the initial amount paid for the virtual chain must be large than minimumInitialVcPayment
     /// @param name is the virtual chain name
@@ -28,7 +28,7 @@ interface ISubscriptions {
     /// @return genRefTime is the virtual chain genesis reference time that determines the first block committee
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint vcId, uint genRefTime);
 
-    /// Extends the subscription of an existing VC.
+    /// Extends the subscription of an existing virtual chain.
     /// @dev Called only by: an authorized subscription plan contract
     /// @param vcId is the virtual chain ID
     /// @param amount is the amount paid for the virtual chain subscription extension
@@ -37,14 +37,14 @@ interface ISubscriptions {
     /// @param payer is the address paying for the subscription extension
     function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external;
 
-    /// Sets a VC config record
+    /// Sets a virtual chain config record
     /// @dev may be called only by the virtual chain owner
     /// @param vcId is the virtual chain ID
     /// @param key iis the name of the config record to update
     /// @param value is the config record value
     function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external /* onlyVcOwner */;
 
-    /// Returns the value of a VC config record
+    /// Returns the value of a virtual chain config record
     /// @param vcId is the virtual chain ID
     /// @param key iis the name of the config record to query
     /// @return value is the config record value

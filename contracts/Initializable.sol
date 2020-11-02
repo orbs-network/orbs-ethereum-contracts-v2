@@ -8,6 +8,9 @@ contract Initializable {
 
     event InitializationComplete();
 
+    /// Constructor
+    /// Sets the initializationAdmin to the contract deployer
+    /// The initialization admin may call any manager only function until initializationComplete
     constructor() public{
         _initializationAdmin = msg.sender;
     }
@@ -22,15 +25,18 @@ contract Initializable {
     * External functions
     */
 
+    /// Returns the initializationAdmin address
     function initializationAdmin() public view returns (address) {
         return _initializationAdmin;
     }
 
+    /// Finalizes the initialization and revokes the initializationAdmin role 
     function initializationComplete() external onlyInitializationAdmin {
         _initializationAdmin = address(0);
         emit InitializationComplete();
     }
 
+    /// Checks if teh initialization wad completed
     function isInitializationComplete() public view returns (bool) {
         return _initializationAdmin == address(0);
     }
