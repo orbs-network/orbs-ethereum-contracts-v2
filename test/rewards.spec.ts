@@ -1193,6 +1193,22 @@ describe('rewards', async () => {
             value: bn(c1GuardianStakingBalance).add(c1DelegatorStakingBalance).add(bn(c0GuardianStakingBalance).add(c0DelegatorStakingBalance))
         });
 
+        await d.contractRegistry.setContract('stakingRewards', newRewardsContract.address, true, {from: d.migrationManager.address});
+        await d.stakingRewardsWallet.setClient(newRewardsContract.address, {from: d.functionalManager.address});
+
+        // c0, c1 are able to withdraw
+        r = await newRewardsContract.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c0DelegatorStakingBalance,
+            claimedGuardianRewards: c0GuardianStakingBalance
+        });
+
+        r = await newRewardsContract.claimStakingRewards(c1.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c1DelegatorStakingBalance,
+            claimedGuardianRewards: c1GuardianStakingBalance
+        });
+
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
         await migrator.assignAndApproveOrbs(180, newRewardsContract.address);

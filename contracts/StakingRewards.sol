@@ -127,7 +127,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     function getStakingRewardsBalance(address addr) external override view returns (uint256 delegatorStakingRewardsBalance, uint256 guardianStakingRewardsBalance) {
         (DelegatorStakingRewards memory delegatorStakingRewards,,) = getDelegatorStakingRewards(addr, block.timestamp);
-        (GuardianStakingRewards memory guardianStakingRewards,,) = getGuardianStakingRewards(addr, block.timestamp); // TODO consider removing, data in state must be up to date at this point
+        (GuardianStakingRewards memory guardianStakingRewards,,) = getGuardianStakingRewards(addr, block.timestamp);
         return (delegatorStakingRewards.balance, guardianStakingRewards.balance);
     }
 
@@ -262,6 +262,9 @@ contract StakingRewards is IStakingRewards, ManagedContract {
             delegatorsStakingRewards[addrs[i]].balance = delegatorsStakingRewards[addrs[i]].balance.add(migratedDelegatorStakingRewards[i]);
             emit StakingRewardsBalanceMigrationAccepted(msg.sender, addrs[i], migratedGuardianStakingRewards[i], migratedDelegatorStakingRewards[i]);
         }
+
+        stakingRewardsContractBalance = stakingRewardsContractBalance.add(totalAmount);
+        stakingRewardsState.unclaimedStakingRewards = stakingRewardsState.unclaimedStakingRewards.add(totalAmount);
     }
 
     function emergencyWithdraw(address erc20) external override onlyMigrationManager {
