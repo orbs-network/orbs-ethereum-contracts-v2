@@ -49,6 +49,13 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
+    /// Constructor
+    /// @param _contractRegistry is the contract registry address
+    /// @param _registryAdmin is the registry admin address
+    /// @param _feesToken is the token used for virtual chains fees 
+    /// @param _bootstrapToken is the token used for the bootstrap reward
+    /// @param generalCommitteeAnnualBootstrap is the general committee annual bootstrap reward
+    /// @param certifiedCommitteeAnnualBootstrap is the certified committee additional annual bootstrap reward
     constructor(
         IContractRegistry _contractRegistry,
         address _registryAdmin,
@@ -373,7 +380,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     /// @dev utilizes _getFeesAndBootstrapState to calculate the global state 
     /// @param generalCommitteeSize is the current number of members in the certified committee
     /// @param certifiedCommitteeSize is the current number of members in the general committee
-    /// @return _feesAndBootstrapState is a FeesAndBootstrapState struct with teh updated state
+    /// @return _feesAndBootstrapState is a FeesAndBootstrapState struct with the updated state
     function _updateFeesAndBootstrapState(uint generalCommitteeSize, uint certifiedCommitteeSize) private returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
         Settings memory _settings = settings;
         if (!_settings.rewardAllocationActive) {
@@ -404,6 +411,16 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     // Guardian state
 
+    /// Returns the current guardian Fees and Bootstrap rewards state 
+    /// @dev receives the relevant guardian committee membership data and the global state
+    /// @param guardian is the guardian to query
+    /// @param inCommittee indicates whether the guardian is currently in the committee
+    /// @param isCertified indicates whether the guardian is currently certified
+    /// @param nextCertification indicates whether after the change, the guardian is certified
+    /// @param _feesAndBootstrapState is the current updated global fees and bootstrap state
+    /// @return guardianFeesAndBootstrap is a struct with the guardian updated fees and bootstrap state
+    /// @return addedBootstrapAmount is the amount added to the guardian bootstrap balance
+    /// @return addedFeesAmount is the amount added to the guardian fees balance
     function _getGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, bool nextCertification, FeesAndBootstrapState memory _feesAndBootstrapState) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, uint256 addedBootstrapAmount, uint256 addedFeesAmount) {
         guardianFeesAndBootstrap = feesAndBootstrap[guardian];
 
@@ -419,6 +436,16 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         guardianFeesAndBootstrap.lastFeesPerMember = nextCertification ?  _feesAndBootstrapState.certifiedFeesPerMember : _feesAndBootstrapState.generalFeesPerMember;
     }
 
+    /// Updates a guardian Fees and Bootstrap rewards state
+    /// @dev receives the relevant guardian committee membership data
+    /// @dev updates the global Fees and Bootstrap state prior to calculating the guardian's
+    /// @dev utilizes _getGuardianFeesAndBootstrap
+    /// @param guardian is the guardian to update
+    /// @param inCommittee indicates whether the guardian is currently in the committee
+    /// @param isCertified indicates whether the guardian is currently certified
+    /// @param nextCertification indicates whether after the change, the guardian is certified
+    /// @param generalCommitteeSize indicates the general committee size prior to the change
+    /// @param certifiedCommitteeSize indicates the certified committee size prior to the change
     function _updateGuardianFeesAndBootstrap(address guardian, bool inCommittee, bool isCertified, bool nextCertification, uint generalCommitteeSize, uint certifiedCommitteeSize) private {
         uint256 addedBootstrapAmount;
         uint256 addedFeesAmount;
@@ -432,6 +459,13 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         emit FeesAssigned(guardian, addedFeesAmount, guardianFeesAndBootstrap.withdrawnFees.add(guardianFeesAndBootstrap.feeBalance), isCertified, guardianFeesAndBootstrap.lastFeesPerMember);
     }
 
+    /// Returns the guardian Fees and Bootstrap rewards state for a given time
+    /// @dev if the time to estimate is in the future, estimates the fees and rewards for the given time
+    /// @dev for future time estimation assumes no change in the guardian committee membership and certification
+    /// @param guardian is the guardian to query
+    /// @param currentTime is the time to calculate the fees and bootstrap for
+    /// @return guardianFeesAndBootstrap is a struct with the guardian updated fees and bootstrap state
+    /// @return certified is the guardian certification status
     function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, bool certified) {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
@@ -441,6 +475,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, certified, certified, _feesAndBootstrapState);
     }
 
+    /// Updates a guardian Fees and Bootstrap rewards state
+    /// @dev query the relevant guardian and committee data from the committee contract
+    /// @dev utilizes _updateGuardianFeesAndBootstrap
+    /// @param guardian is the guardian to update
     function updateGuardianFeesAndBootstrap(address guardian) private {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
@@ -450,6 +488,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     // Governance and misc.
 
+	/// Sets the annual rate for the general committee bootstrap
+	/// @param annualAmount is the annual general committee bootstrap award
     function _setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) private {
         require(uint256(uint96(annualAmount)) == annualAmount, "annualAmount must fit in uint96");
 
@@ -457,6 +497,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         emit GeneralCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
+	/// Sets the annual rate for the certified committee bootstrap
+	/// @param annualAmount is the annual certified committee bootstrap award
     function _setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) private {
         require(uint256(uint96(annualAmount)) == annualAmount, "annualAmount must fit in uint96");
 
@@ -472,6 +514,9 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     IFeesWallet generalFeesWallet;
     IFeesWallet certifiedFeesWallet;
     IProtocolWallet bootstrapRewardsWallet;
+
+	/// Refreshes the address of the other contracts the contract interacts with
+    /// @dev called by the registry contract upon an update of a contract in the registry
     function refreshContracts() external override {
         committeeContract = ICommittee(getCommitteeContract());
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());

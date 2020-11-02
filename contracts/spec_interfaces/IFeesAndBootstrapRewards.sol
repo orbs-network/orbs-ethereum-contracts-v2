@@ -28,6 +28,7 @@ interface IFeesAndBootstrapRewards {
 
     /// Returns the fees and bootstrap balances of a guardian
     /// @dev calculates the up to date balances (differ from the state)
+    /// @param guardian is the guardian address
     /// @return feeBalance the guardian's fees balance
     /// @return bootstrapBalance the guardian's bootstrap balance
     function getFeesAndBootstrapBalance(address guardian) external view returns (
@@ -73,10 +74,14 @@ interface IFeesAndBootstrapRewards {
 
     /// Returns the current guardian Fees and Bootstrap rewards state 
     /// @dev calculated to the latest block, may differ from the state read
+    /// @param guardian is the guardian to query
     /// @return feeBalance is the guardian fees balance 
     /// @return lastFeesPerMember is the FeesPerMember on the last update based on the guardian certification state
     /// @return bootstrapBalance is the guardian bootstrap balance 
     /// @return lastBootstrapPerMember is the FeesPerMember on the last BootstrapPerMember based on the guardian certification state
+    /// @return withdrawnFees is the amount of fees withdrawn by the guardian
+    /// @return withdrawnBootstrap is the amount of bootstrap reward withdrawn by the guardian
+    /// @return certified is the current guardian certification state 
     function getFeesAndBootstrapData(address guardian) external view returns (
         uint256 feeBalance,
         uint256 lastFeesPerMember,
