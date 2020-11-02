@@ -207,5 +207,28 @@ describe('protocol-wallet-contract', async () => {
     expect(await d.stakingRewardsWallet.getMaxAnnualRate()).to.bignumber.eq(defaultDriverOptions.stakingRewardsWalletRate);
   })
 
+  it('properly resets oustanding tokens, only by migration manager', async () => {
+    const d = await Driver.new();
+
+    const client = d.newParticipant();
+    await d.stakingRewardsWallet.setClient(client.address, {from: d.functionalManager.address});
+    await d.stakingRewardsWallet.setMaxAnnualRate(1000, {from: d.migrationManager.address});
+
+    await client.assignAndApproveOrbs(10000, d.stakingRewardsWallet.address);
+    await d.stakingRewardsWallet.topUp(10000, {from: client.address});
+
+    await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
+
+    let r = await d.stakingRewardsWallet.withdraw(1000, {from: client.address});
+
+    await expectRejected(d.stakingRewardsWallet.resetOutstandingTokens((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS, {from: d.functionalManager.address}), /WithClaimableMigrationOwnership: caller is not the migrationOwner/);
+
+    await expectRejected(d.stakingRewardsWallet.withdraw(100, {from: client.address}), /ProtocolWallet::withdraw - requested amount is larger than allowed by rate/);
+    r = await d.stakingRewardsWallet.resetOutstandingTokens((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS, {from: d.migrationManager.address});
+    expect(r).to.have.a.outstandingTokensResetEvent({startTime: bn((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS)});
+
+    await d.stakingRewardsWallet.withdraw(1000, {from: client.address});
+  });
+
 });
 

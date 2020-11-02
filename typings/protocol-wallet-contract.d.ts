@@ -12,15 +12,18 @@ interface ClientSetEvent {
   client: string;
 }
 
-interface MaxAnnualRateSetEvent {
+export interface MaxAnnualRateSetEvent {
   maxAnnualRate: string|BN;
 }
 
-interface EmergencyWithdrawalEvent {
+export interface EmergencyWithdrawalEvent {
   addr: string;
   token: string;
 }
 
+export interface OutstandingTokensResetEvent {
+  startTime: string|BN;
+}
 
 export interface ProtocolWalletContract extends OwnedContract {
   getMaxAnnualRate(): Promise<number>;
@@ -31,6 +34,7 @@ export interface ProtocolWalletContract extends OwnedContract {
   setMaxAnnualRate(annualRate: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
   emergencyWithdraw(token: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   setClient(client: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+  resetOutstandingTokens(startTime: number, params?: TransactionConfig): Promise<TransactionReceipt>;
   transferMigrationOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   claimMigrationOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
   migrationOwner(params?: TransactionConfig): Promise<string>;
