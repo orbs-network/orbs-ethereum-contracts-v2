@@ -1569,4 +1569,5 @@ describe('rewards', async () => {
         expect(await d.erc20.balanceOf(d.stakingRewards.address)).to.be.bignumber.lt(bn(100));
         expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
     });
+
 });
