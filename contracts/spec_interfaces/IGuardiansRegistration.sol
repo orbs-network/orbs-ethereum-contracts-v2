@@ -116,4 +116,3 @@ interface IGuardiansRegistration {
 	function migrateGuardians(address[] calldata guardiansToMigrate, IGuardiansRegistration previousContract) external /* onlyInitializationAdmin */;
 
 }
-
