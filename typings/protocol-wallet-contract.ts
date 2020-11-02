@@ -3,27 +3,27 @@ import {Contract} from "../eth";
 import * as BN from "bn.js";
 import {OwnedContract} from "./base-contract";
 
-interface FundsAddedToPoolEvent {
+export interface FundsAddedToPoolEvent {
   added: string|BN;
   total: string|BN;
 }
 
-interface ClientSetEvent {
+export interface ClientSetEvent {
   client: string;
 }
 
-interface MaxAnnualRateSetEvent {
+export interface MaxAnnualRateSetEvent {
   maxAnnualRate: string|BN;
 }
 
-interface EmergencyWithdrawalEvent {
+export interface EmergencyWithdrawalEvent {
   addr: string;
   token: string;
 }
 
 
 export interface ProtocolWalletContract extends OwnedContract {
-  getMaxAnnualRate(): Promise<number>;
+  getMaxAnnualRate(): Promise<number>;ª
   token(params?: TransactionConfig): Promise<string>;
   getBalance(params?: TransactionConfig): Promise<string>;
   topUp(amount: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
