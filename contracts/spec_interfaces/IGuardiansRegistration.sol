@@ -6,7 +6,7 @@ pragma solidity 0.6.12;
 interface IGuardiansRegistration {
 	event GuardianRegistered(address indexed guardian);
 	event GuardianUnregistered(address indexed guardian);
-	event GuardianDataUpdated(address indexed guardian, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website);
+	event GuardianDataUpdated(address indexed guardian, bool isRegistered, bytes4 ip, address orbsAddr, string name, string website, uint256 registrationTime);
 	event GuardianMetadataChanged(address indexed guardian, string key, string newValue, string oldValue);
 
 	/*
