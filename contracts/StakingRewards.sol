@@ -435,8 +435,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         uint256 stakingRewardsPerWeightDelta;
         uint256 delegatorRewardsPerTokenDelta;
         (guardianStakingRewards, guardianStakingRewardsAdded, stakingRewardsPerWeightDelta, delegatorRewardsPerTokenDelta) = _getGuardianStakingRewards(guardian, inCommittee, inCommitteeAfter, guardianWeight, guardianDelegatedStake, _stakingRewardsState, _settings);
-        guardiansStakingRewards[guardian] = guardianStakingRewards;
-        emit GuardianStakingRewardsAssigned(guardian, guardianStakingRewardsAdded, guardianStakingRewards.claimed.add(guardianStakingRewards.balance), guardianStakingRewards.delegatorRewardsPerToken, delegatorRewardsPerTokenDelta, _stakingRewardsState.stakingRewardsPerWeight, stakingRewardsPerWeightDelta);
+        if (guardianStakingRewardsAdded > 0 || stakingRewardsPerWeightDelta > 0 || delegatorRewardsPerTokenDelta > 0) {
+            guardiansStakingRewards[guardian] = guardianStakingRewards;
+            emit GuardianStakingRewardsAssigned(guardian, guardianStakingRewardsAdded, guardianStakingRewards.claimed.add(guardianStakingRewards.balance), guardianStakingRewards.delegatorRewardsPerToken, delegatorRewardsPerTokenDelta, _stakingRewardsState.stakingRewardsPerWeight, stakingRewardsPerWeightDelta);
+        }
     }
 
     function updateGuardianStakingRewards(address guardian, StakingRewardsState memory _stakingRewardsState, Settings memory _settings) private returns (GuardianStakingRewards memory guardianStakingRewards) {
@@ -472,9 +474,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         uint256 delegatorRewardsPerTokenDelta;
         DelegatorStakingRewards memory delegatorStakingRewards;
         (delegatorStakingRewards, delegatorStakingRewardsAdded, delegatorRewardsPerTokenDelta) = _getDelegatorStakingRewards(delegator, delegatorStake, guardianStakingRewards);
-        delegatorsStakingRewards[delegator] = delegatorStakingRewards;
-
-        emit DelegatorStakingRewardsAssigned(delegator, delegatorStakingRewardsAdded, delegatorStakingRewards.claimed.add(delegatorStakingRewards.balance), guardian, guardianStakingRewards.delegatorRewardsPerToken, delegatorRewardsPerTokenDelta);
+        if (delegatorStakingRewardsAdded > 0 || delegatorRewardsPerTokenDelta > 0) {
+            delegatorsStakingRewards[delegator] = delegatorStakingRewards;
+            emit DelegatorStakingRewardsAssigned(delegator, delegatorStakingRewardsAdded, delegatorStakingRewards.claimed.add(delegatorStakingRewards.balance), guardian, guardianStakingRewards.delegatorRewardsPerToken, delegatorRewardsPerTokenDelta);
+        }
     }
 
     function updateDelegatorStakingRewards(address delegator) private {
