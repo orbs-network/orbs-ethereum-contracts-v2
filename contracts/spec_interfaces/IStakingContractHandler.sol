@@ -13,9 +13,9 @@ interface IStakingContractHandler {
     */
 
     /// Returns the stake of the specified stake owner (excluding unstaked tokens).
-    /// @param _stakeOwner address The address to check.
+    /// @param stakeOwner address The address to check.
     /// @return uint256 The total stake.
-    function getStakeBalanceOf(address _stakeOwner) external view returns (uint256);
+    function getStakeBalanceOf(address stakeOwner) external view returns (uint256);
 
     /// Returns the total amount staked tokens (excluding unstaked tokens).
     /// @return uint256 is the total staked tokens of all stake owners.

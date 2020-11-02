@@ -41,7 +41,6 @@ contract MonthlySubscriptionPlan is ContractRegistryAccessor {
     /// @dev the initial amount paid for the virtual chain must be large than minimumInitialVcPayment
     /// @param name is the virtual chain name
     /// @param amount is the amount paid for the virtual chain initial subscription
-    /// @param owner is the virtual chain owner. The owner may change virtual chain properties or ser config records
     /// @param isCertified indicates the virtual is run by the certified committee
     /// @param deploymentSubset indicates the code deployment subset the virtual chain uses such as main or canary  
     function createVC(string calldata name, uint256 amount, bool isCertified, string calldata deploymentSubset) external {

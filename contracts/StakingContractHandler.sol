@@ -37,10 +37,10 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
 
     /// @dev Notifies of stake change event.
     /// @dev IStakeChangeNotifier interface function.
-    /// @param _stakeOwner address The address of the subject stake owner.
-    /// @param _amount uint256 The difference in the total staked amount.
-    /// @param _sign bool The sign of the added (true) or subtracted (false) amount.
-    /// @param _updatedStake uint256 The updated total staked amount.
+    /// @param stakeOwner address The address of the subject stake owner.
+    /// @param amount uint256 The difference in the total staked amount.
+    /// @param sign bool The sign of the added (true) or subtracted (false) amount.
+    /// @param updatedStake uint256 The updated total staked amount.
     function stakeChange(address stakeOwner, uint256 amount, bool sign, uint256 updatedStake) external override onlyStakingContract {
         Settings memory _settings = settings;
         if (!_settings.notifyDelegations) {
@@ -82,7 +82,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     }
 
     /// Returns the stake of the specified stake owner (excluding unstaked tokens).
-    /// @param _stakeOwner address The address to check.
+    /// @param stakeOwner address The address to check.
     /// @return uint256 The total stake.
     function getStakeBalanceOf(address stakeOwner) external override view returns (uint256) {
         return stakingContract.getStakeBalanceOf(stakeOwner);
@@ -102,9 +102,9 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     /// @dev staking while notifications are disabled may lead to a discrepancy in the delegation data  
 	/// @dev governance function called only by the migration manager
     /// @param notifyDelegations is a bool indicating whether to notify the delegation contract
-    function setNotifyDelegations(bool _notifyDelegations) external override onlyMigrationManager {
-        settings.notifyDelegations = _notifyDelegations;
-        emit NotifyDelegationsChanged(_notifyDelegations);
+    function setNotifyDelegations(bool notifyDelegations) external override onlyMigrationManager {
+        settings.notifyDelegations = notifyDelegations;
+        emit NotifyDelegationsChanged(notifyDelegations);
     }
 
     /// Returns the notifications to the delegation contract status

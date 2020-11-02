@@ -56,12 +56,12 @@ interface IProtocolWallet {
     /// Emergency withdraw the wallet funds
 	/// @dev governance function called only by the migration owner
     /// @dev used in emergencies, when a migration to a new wallet is needed
-    /// @param token is the erc20 address of the token to withdraw
-    function emergencyWithdraw(address token) external; /* onlyMigrationOwner */
+    /// @param erc20 is the erc20 address of the token to withdraw
+    function emergencyWithdraw(address erc20) external; /* onlyMigrationOwner */
 
     /// Sets the address of the client that can withdraw funds
 	/// @dev governance function called only by the functional owner
-    /// @param client is the address of the new client
-    function setClient(address client) external; /* onlyFunctionalOwner */
+    /// @param _client is the address of the new client
+    function setClient(address _client) external; /* onlyFunctionalOwner */
 
 }

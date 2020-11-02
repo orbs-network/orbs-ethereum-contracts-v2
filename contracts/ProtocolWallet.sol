@@ -20,7 +20,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// Constructor
     /// @param _token is the wallet token
-    /// @param client is the initial wallet client address
+    /// @param _client is the initial wallet client address
     /// @param _maxAnnualRate is the maximum annual rate that can be withdrawn
     constructor(IERC20 _token, address _client, uint256 _maxAnnualRate) public {
         token = _token;
@@ -104,7 +104,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     /// Emergency withdraw the wallet funds
 	/// @dev governance function called only by the migration owner
     /// @dev used in emergencies, when a migration to a new wallet is needed
-    /// @param token is the erc20 address of the token to withdraw
+    /// @param erc20 is the erc20 address of the token to withdraw
     function emergencyWithdraw(address erc20) external override onlyMigrationOwner {
         IERC20 _token = IERC20(erc20);
         emit EmergencyWithdrawal(msg.sender, address(_token));
@@ -113,7 +113,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// Sets the address of the client that can withdraw funds
 	/// @dev governance function called only by the functional owner
-    /// @param client is the address of the new client
+    /// @param _client is the address of the new client
     function setClient(address _client) external override onlyFunctionalOwner {
         client = _client;
         emit ClientSet(_client);

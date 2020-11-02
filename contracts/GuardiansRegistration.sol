@@ -99,7 +99,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		delete guardians[msg.sender];
 
 		electionsContract.guardianUnregistered(msg.sender);
-		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website);
+		emit GuardianDataUpdated(msg.sender, false, guardian.ip, guardian.orbsAddr, guardian.name, guardian.website, guardian.registrationTime);
 		emit GuardianUnregistered(msg.sender);
 	}
 
@@ -220,21 +220,25 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		require(!isRegistered(orbsAddr), "orbs address must not be a guardian address of a registered guardian");
 		require(bytes(name).length != 0, "name must be given");
 
-		delete ipToGuardian[guardians[guardianAddr].ip];
+		Guardian memory guardian = guardians[guardianAddr];
+
+		delete ipToGuardian[guardian.ip];
 		require(ipToGuardian[ip] == address(0), "ip is already in use");
 		ipToGuardian[ip] = guardianAddr;
 
-		delete orbsAddressToGuardianAddress[guardians[guardianAddr].orbsAddr];
+		delete orbsAddressToGuardianAddress[guardian.orbsAddr];
 		require(orbsAddressToGuardianAddress[orbsAddr] == address(0), "orbs address is already in use");
 		orbsAddressToGuardianAddress[orbsAddr] = guardianAddr;
 
-		guardians[guardianAddr].orbsAddr = orbsAddr;
-		guardians[guardianAddr].ip = ip;
-		guardians[guardianAddr].name = name;
-		guardians[guardianAddr].website = website;
-		guardians[guardianAddr].lastUpdateTime = uint32(block.timestamp);
+		guardian.orbsAddr = orbsAddr;
+		guardian.ip = ip;
+		guardian.name = name;
+		guardian.website = website;
+		guardian.lastUpdateTime = uint32(block.timestamp);
 
-        emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website);
+		guardians[guardianAddr] = guardian;
+
+        emit GuardianDataUpdated(guardianAddr, true, ip, orbsAddr, name, website, guardian.registrationTime);
     }
 
     /// Updates a guardian's metadata property
@@ -268,7 +272,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
 		ipToGuardian[ip] = guardianAddress;
 
-		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website);
+		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website, registrationTime);
 	}
 
 	string public constant ID_FORM_URL_METADATA_KEY = "ID_FORM_URL";

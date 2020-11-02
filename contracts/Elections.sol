@@ -94,7 +94,7 @@ contract Elections is IElections, ManagedContract {
 			return false;
 		}
 
-		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
+		uint256 effectiveStake = getGuardianEffectiveStake(guardian, settings);
 		return committeeContract.checkAddMember(guardian, effectiveStake);
 	}
 
@@ -102,7 +102,7 @@ contract Elections is IElections, ManagedContract {
 	/// The effective stake is derived from a guardian delegate stake and selfs stake  
 	/// @return effectiveStake is the guardian's effective stake
 	function getEffectiveStake(address guardian) external override view returns (uint effectiveStake) {
-		(, effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
+		return getGuardianEffectiveStake(guardian, settings);
 	}
 
 	/// Returns the current committee along with the guardians' Orbs address and IP
@@ -242,14 +242,14 @@ contract Elections is IElections, ManagedContract {
 	/// Notifies a delegated stake change event
 	/// @dev Called by: delegation contract
 	/// @param delegate is the delegate to update
-	/// @param selfStake is the delegate self stake (0 if not self-delegating)
+	/// @param selfDelegatedStake is the delegate self stake (0 if not self-delegating)
 	/// @param delegatedStake is the delegate delegated stake (0 if not self-delegating)
 	/// @param totalDelegatedStake is the total delegated stake
-	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address delegate, uint256 selfDelegatedStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
 
-		uint effectiveStake = calcEffectiveStake(selfStake, delegatedStake, _settings);
-		emit StakeChanged(delegate, selfStake, delegatedStake, effectiveStake);
+		uint effectiveStake = calcEffectiveStake(selfDelegatedStake, delegatedStake, _settings);
+		emit StakeChanged(delegate, selfDelegatedStake, delegatedStake, effectiveStake);
 
 		committeeContract.memberWeightChange(delegate, effectiveStake);
 
@@ -362,7 +362,7 @@ contract Elections is IElections, ManagedContract {
 
 		emit GuardianStatusUpdated(guardian, true, true);
 
-		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
+		uint256 effectiveStake = getGuardianEffectiveStake(guardian, settings);
 		committeeContract.addMember(guardian, effectiveStake, certificationContract.isGuardianCertified(guardian));
 	}
 
@@ -374,14 +374,16 @@ contract Elections is IElections, ManagedContract {
 		return selfStake.mul(PERCENT_MILLIE_BASE).div(_settings.minSelfStakePercentMille); // never overflows or divides by zero
 	}
 
-	/// Returns a guardians stake and delegated stake information
-	/// @dev returns the same information as emitted in the StakeChanged event
-	/// @dev retrieves the relevant information from the delegation contract
-	function getGuardianStakeInfo(address guardian, Settings memory _settings) private view returns (uint256 selfStake, uint256 effectiveStake, uint256 delegatedStake) {
+	/// Returns the effective state of a guardian 
+	/// @dev calls the delegation contract to retrieve the guardian current stake and delegated stake
+	/// @param guardian is the guardian to query
+	/// @param _settings is the contract settings struct
+	/// @return effectiveStake is the guardian's effective stake
+	function getGuardianEffectiveStake(address guardian, Settings memory _settings) private view returns (uint256 effectiveStake) {
 		IDelegations _delegationsContract = delegationsContract;
-		(,selfStake) = _delegationsContract.getDelegationInfo(guardian);
-		delegatedStake = _delegationsContract.getDelegatedStake(guardian);
-		effectiveStake = calcEffectiveStake(selfStake, delegatedStake, _settings);
+		(,uint256 selfStake) = _delegationsContract.getDelegationInfo(guardian);
+		uint256 delegatedStake = _delegationsContract.getDelegatedStake(guardian);
+		return calcEffectiveStake(selfStake, delegatedStake, _settings);
 	}
 
 	// Vote-unready
