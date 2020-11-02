@@ -187,7 +187,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
      */
 
     /// Adds a subscription plan contract to the authorized subscribers list
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @param addr is the address of the subscription plan contract
     function addSubscriber(address addr) external override onlyFunctionalManager {
         authorizedSubscribers[addr] = true;
@@ -195,7 +195,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     /// Removes a subscription plan contract to the authorized subscribers list
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @param addr is the address of the subscription plan contract
     function removeSubscriber(address addr) external override onlyFunctionalManager {
         require(authorizedSubscribers[addr], "given add is not an authorized subscriber");
@@ -205,7 +205,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     /// Set the genesis reference time delay from the virtual chain creation time
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @dev the reference time delay allows the guardian to be ready with the virtual chain resources for the first block consensus
     /// @param newGenesisRefTimeDelay is the delay time in seconds
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) public override onlyFunctionalManager {
@@ -246,7 +246,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     /// Imports virtual chain subscription from a previous subscriptions contract
-	/// @dev governance function called only by the initialization admin during migration
+    /// @dev governance function called only by the initialization admin during migration
     /// @dev if the migrated vcId is larger or equal to the next virtual chain ID to allocate, increment the next virtual chain ID
     /// @param vcId is the virtual chain ID to migrate
     /// @param previousSubscriptionsContract is the address of the previous subscription contract
@@ -323,7 +323,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     IFeesWallet certifiedFeesWallet;
     IProtocol protocolContract;
 
-	/// Refreshes the address of the other contracts the contract interacts with
+    /// Refreshes the address of the other contracts the contract interacts with
     /// @dev called by the registry contract upon an update of a contract in the registry
     function refreshContracts() external override {
         generalFeesWallet = IFeesWallet(getGeneralFeesWallet());

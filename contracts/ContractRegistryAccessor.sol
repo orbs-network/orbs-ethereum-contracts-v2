@@ -132,7 +132,7 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
 
     /// Sets the contract registry address
     /// @dev governance function called only by an admin
-	/// @param newContractRegistry is the new registry contract 
+    /// @param newContractRegistry is the new registry contract 
     function setContractRegistry(IContractRegistry newContractRegistry) public override onlyAdmin {
         require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
         contractRegistry = newContractRegistry;
@@ -140,7 +140,7 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
     }
 
     /// Returns the contract registry that the contract is set to use
-	/// @return contractRegistry is the registry contract address
+    /// @return contractRegistry is the registry contract address
     function getContractRegistry() public override view returns (IContractRegistry) {
         return contractRegistry;
     }

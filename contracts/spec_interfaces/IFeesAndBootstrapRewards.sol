@@ -16,7 +16,7 @@ interface IFeesAndBootstrapRewards {
     */
 
     /// Triggers update of the guardian rewards
-	/// @dev Called by: the Committee contract
+    /// @dev Called by: the Committee contract
     /// @dev called upon expected change in the committee membership of the guardian
     /// @param guardian is the guardian who's committee membership is updated
     /// @param inCommittee indicates whether the guardian is in the committee prior to the change
@@ -105,13 +105,13 @@ interface IFeesAndBootstrapRewards {
     event EmergencyWithdrawal(address addr, address token);
 
     /// Activates fees and bootstrap allocation
-	/// @dev governance function called only by the initialization admin
+    /// @dev governance function called only by the initialization admin
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
     
     /// Deactivates fees and bootstrap allocation
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @dev guardians updates remain active based on the current perMember value
     function deactivateRewardDistribution() external /* onlyMigrationManager */;
 
@@ -119,20 +119,20 @@ interface IFeesAndBootstrapRewards {
     /// @return rewardAllocationActive is the activation status
     function isRewardAllocationActive() external view returns (bool);
 
-	/// Sets the annual rate for the general committee bootstrap
-	/// @dev governance function called only by the functional manager
+    /// Sets the annual rate for the general committee bootstrap
+    /// @dev governance function called only by the functional manager
     /// @dev updates the global bootstrap and fees state before updating  
-	/// @param annualAmount is the annual general committee bootstrap award
+    /// @param annualAmount is the annual general committee bootstrap award
     function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) external /* onlyFunctionalManager */;
 
     /// Returns the general committee annual bootstrap award
     /// @return generalCommitteeAnnualBootstrap is the general committee annual bootstrap
     function getGeneralCommitteeAnnualBootstrap() external view returns (uint256);
 
-	/// Sets the annual rate for the certified committee bootstrap
-	/// @dev governance function called only by the functional manager
+    /// Sets the annual rate for the certified committee bootstrap
+    /// @dev governance function called only by the functional manager
     /// @dev updates the global bootstrap and fees state before updating  
-	/// @param annualAmount is the annual certified committee bootstrap award
+    /// @param annualAmount is the annual certified committee bootstrap award
     function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) external /* onlyFunctionalManager */;
 
     /// Returns the certified committee annual bootstrap reward
@@ -157,7 +157,7 @@ interface IFeesAndBootstrapRewards {
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @param erc20 is the ERC20 token to withdraw
     function emergencyWithdraw(address erc20) external; /* onlyMigrationManager */
 

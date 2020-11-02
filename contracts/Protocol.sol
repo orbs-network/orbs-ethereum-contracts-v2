@@ -33,7 +33,7 @@ contract Protocol is IProtocol, ManagedContract {
     }
 
     /// Returns the current protocol version for a given deployment subset to query
-	/// @dev an unexisting deployment subset returns protocol version 0
+    /// @dev an unexisting deployment subset returns protocol version 0
     /// @param deploymentSubset is the name of the deployment subset
     /// @return currentVersion is the current protocol version of the deployment subset
     function getProtocolVersion(string calldata deploymentSubset) external override view returns (uint256 currentVersion) {
@@ -41,7 +41,7 @@ contract Protocol is IProtocol, ManagedContract {
     }
 
     /// Creates a new deployment subset
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @param deploymentSubset is the name of the new deployment subset
     /// @param initialProtocolVersion is the initial protocol version of the deployment subset
     function createDeploymentSubset(string calldata deploymentSubset, uint256 initialProtocolVersion) external override onlyFunctionalManager {
@@ -56,7 +56,7 @@ contract Protocol is IProtocol, ManagedContract {
     }
 
     /// Schedules a protocol version upgrade for the given deployment subset
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @param deploymentSubset is the name of the deployment subset
     /// @param nextVersion is the new protocol version to upgrade to, must be greater or equal to current version
     /// @param fromTimestamp is the time the new protocol version takes effect, must be in the future
@@ -95,7 +95,7 @@ contract Protocol is IProtocol, ManagedContract {
      * Contracts topology / registry interface
      */
 
-	/// Refreshes the address of the other contracts the contract interacts with
+    /// Refreshes the address of the other contracts the contract interacts with
     /// @dev called by the registry contract upon an update of a contract in the registry
     /// @dev the protocol upgrades contract does not interact with other contracts and therefore implements an empty refreshContracts function
     function refreshContracts() external override {}

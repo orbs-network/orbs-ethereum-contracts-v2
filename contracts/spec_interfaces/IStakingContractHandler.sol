@@ -29,7 +29,7 @@ interface IStakingContractHandler {
 
     /// Sets notifications to the delegation contract
     /// @dev staking while notifications are disabled may lead to a discrepancy in the delegation data  
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @param notifyDelegations is a bool indicating whether to notify the delegation contract
     function setNotifyDelegations(bool notifyDelegations) external; /* onlyMigrationManager */
 

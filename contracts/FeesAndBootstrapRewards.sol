@@ -85,7 +85,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     */
 
     /// Triggers update of the guardian rewards
-	/// @dev Called by: the Committee contract
+    /// @dev Called by: the Committee contract
     /// @dev called upon expected change in the committee membership of the guardian
     /// @param guardian is the guardian who's committee membership is updated
     /// @param inCommittee indicates whether the guardian is in the committee prior to the change
@@ -204,7 +204,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
      */
 
     /// Activates fees and bootstrap allocation
-	/// @dev governance function called only by the initialization admin
+    /// @dev governance function called only by the initialization admin
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
@@ -217,7 +217,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     /// Deactivates fees and bootstrap allocation
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @dev guardians updates remain active based on the current perMember value
     function deactivateRewardDistribution() external override onlyMigrationManager {
         require(settings.rewardAllocationActive, "reward distribution is already deactivated");
@@ -235,10 +235,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         return settings.rewardAllocationActive;
     }
 
-	/// Sets the annual rate for the general committee bootstrap
-	/// @dev governance function called only by the functional manager
+    /// Sets the annual rate for the general committee bootstrap
+    /// @dev governance function called only by the functional manager
     /// @dev updates the global bootstrap and fees state before updating  
-	/// @param annualAmount is the annual general committee bootstrap award
+    /// @param annualAmount is the annual general committee bootstrap award
     function setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) external override onlyFunctionalManager {
         updateFeesAndBootstrapState();
         _setGeneralCommitteeAnnualBootstrap(annualAmount);
@@ -250,10 +250,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         return settings.generalCommitteeAnnualBootstrap;
     }
 
-	/// Sets the annual rate for the certified committee bootstrap
-	/// @dev governance function called only by the functional manager
+    /// Sets the annual rate for the certified committee bootstrap
+    /// @dev governance function called only by the functional manager
     /// @dev updates the global bootstrap and fees state before updating  
-	/// @param annualAmount is the annual certified committee bootstrap award
+    /// @param annualAmount is the annual certified committee bootstrap award
     function setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) external override onlyFunctionalManager {
         updateFeesAndBootstrapState();
         _setCertifiedCommitteeAnnualBootstrap(annualAmount);
@@ -343,7 +343,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     /// Performs emergency withdrawal of the contract balance
     /// @dev called with a token to withdraw, should be called twice with the fees and bootstrap tokens
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @param erc20 is the ERC20 token to withdraw
     function emergencyWithdraw(address erc20) external override onlyMigrationManager {
         IERC20 _token = IERC20(erc20);
@@ -515,8 +515,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     // Governance and misc.
 
-	/// Sets the annual rate for the general committee bootstrap
-	/// @param annualAmount is the annual general committee bootstrap award
+    /// Sets the annual rate for the general committee bootstrap
+    /// @param annualAmount is the annual general committee bootstrap award
     function _setGeneralCommitteeAnnualBootstrap(uint256 annualAmount) private {
         require(uint256(uint96(annualAmount)) == annualAmount, "annualAmount must fit in uint96");
 
@@ -524,8 +524,8 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         emit GeneralCommitteeAnnualBootstrapChanged(annualAmount);
     }
 
-	/// Sets the annual rate for the certified committee bootstrap
-	/// @param annualAmount is the annual certified committee bootstrap award
+    /// Sets the annual rate for the certified committee bootstrap
+    /// @param annualAmount is the annual certified committee bootstrap award
     function _setCertifiedCommitteeAnnualBootstrap(uint256 annualAmount) private {
         require(uint256(uint96(annualAmount)) == annualAmount, "annualAmount must fit in uint96");
 
@@ -542,7 +542,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     IFeesWallet certifiedFeesWallet;
     IProtocolWallet bootstrapRewardsWallet;
 
-	/// Refreshes the address of the other contracts the contract interacts with
+    /// Refreshes the address of the other contracts the contract interacts with
     /// @dev called by the registry contract upon an update of a contract in the registry
     function refreshContracts() external override {
         committeeContract = ICommittee(getCommitteeContract());

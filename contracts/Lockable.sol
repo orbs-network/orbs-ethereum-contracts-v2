@@ -16,7 +16,7 @@ contract Lockable is ILockable, ContractRegistryAccessor {
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) ContractRegistryAccessor(_contractRegistry, _registryAdmin) public {}
 
     /// Locks the contract to external non-governance function calls
-	/// @dev governance function called only by the migration manager or an admin
+    /// @dev governance function called only by the migration manager or an admin
     /// @dev typically called by the registry contract upon locking all managed contracts
     /// @dev getters and migration functions remain active also for locked contracts
     /// @dev checked by the onlyWhenActive modifier
@@ -26,7 +26,7 @@ contract Lockable is ILockable, ContractRegistryAccessor {
     }
 
     /// Unlocks the contract 
-	/// @dev governance function called only by the migration manager or an admin
+    /// @dev governance function called only by the migration manager or an admin
     /// @dev typically called by the registry contract upon unlocking all managed contracts
     function unlock() external override onlyMigrationManager {
         locked = false;

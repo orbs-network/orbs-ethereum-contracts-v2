@@ -100,7 +100,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
 
     /// Sets notifications to the delegation contract
     /// @dev staking while notifications are disabled may lead to a discrepancy in the delegation data  
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @param notifyDelegations is a bool indicating whether to notify the delegation contract
     function setNotifyDelegations(bool notifyDelegations) external override onlyMigrationManager {
         settings.notifyDelegations = notifyDelegations;
@@ -117,7 +117,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
      * Contracts topology / registry interface
      */
 
-	/// Refreshes the address of the other contracts the contract interacts with
+    /// Refreshes the address of the other contracts the contract interacts with
     /// @dev called by the registry contract upon an update of a contract in the registry
     function refreshContracts() external override {
         settings.delegationsContract = IStakeChangeNotifier(getDelegationsContract());

@@ -25,16 +25,16 @@ contract Certification is ICertification, ManagedContract {
      * External functions
      */
 
-	/// Returns the certification status of a guardian
-	/// @param guardian is the guardian to query
+    /// Returns the certification status of a guardian
+    /// @param guardian is the guardian to query
     function isGuardianCertified(address guardian) external override view returns (bool isCertified) {
         return guardianCertification[guardian];
     }
 
-	/// Sets the guardian certification status
-	/// @dev governance function called only by the certification manager
-	/// @param guardian is the guardian to update
-	/// @param isCertified bool indication whether the guardian is certified
+    /// Sets the guardian certification status
+    /// @dev governance function called only by the certification manager
+    /// @param guardian is the guardian to update
+    /// @param isCertified bool indication whether the guardian is certified
     function setGuardianCertification(address guardian, bool isCertified) external override onlyCertificationManager onlyWhenActive {
         guardianCertification[guardian] = isCertified;
         emit GuardianCertificationUpdate(guardian, isCertified);

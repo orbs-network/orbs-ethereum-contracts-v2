@@ -78,7 +78,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     */
 
     /// Sets a new annual withdraw rate for the pool
-	/// @dev governance function called only by the migration owner
+    /// @dev governance function called only by the migration owner
     /// @dev the rate for a duration is duration x annualRate / 1 year 
     /// @param _annualRate is the maximum annual rate that can be withdrawn
     function setMaxAnnualRate(uint256 _annualRate) public override onlyMigrationOwner {
@@ -93,7 +93,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// Resets the outstanding tokens to new start time
-	/// @dev governance function called only by the migration owner
+    /// @dev governance function called only by the migration owner
     /// @dev the next duration will be calculated starting from the given time
     /// @param startTime is the time to set as the last withdrawal time
     function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner { //TODO add test
@@ -102,7 +102,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// Emergency withdraw the wallet funds
-	/// @dev governance function called only by the migration owner
+    /// @dev governance function called only by the migration owner
     /// @dev used in emergencies, when a migration to a new wallet is needed
     /// @param erc20 is the erc20 address of the token to withdraw
     function emergencyWithdraw(address erc20) external override onlyMigrationOwner {
@@ -112,7 +112,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// Sets the address of the client that can withdraw funds
-	/// @dev governance function called only by the functional owner
+    /// @dev governance function called only by the functional owner
     /// @param _client is the address of the new client
     function setClient(address _client) external override onlyFunctionalOwner {
         client = _client;
