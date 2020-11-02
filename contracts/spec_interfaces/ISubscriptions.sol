@@ -30,6 +30,7 @@ interface ISubscriptions {
 
     /// Extends the subscription of an existing virtual chain.
     /// @dev Called only by: an authorized subscription plan contract
+    /// @dev assumes that the msg.sender approved the amount prior to the call
     /// @param vcId is the virtual chain ID
     /// @param amount is the amount paid for the virtual chain subscription extension
     /// @param tier is the virtual chain tier, must match the tier selected in the virtual creation
@@ -123,5 +124,12 @@ interface ISubscriptions {
         uint genesisRefTimeDelay,
         uint256 minimumInitialVcPayment
     );
+
+    /// Imports virtual chain subscription from a previous subscriptions contract
+	/// @dev governance function called only by the initialization manager during migration
+    /// @dev if the migrated vcId is larger or equal to the next virtual chain ID to allocate, increment the next virtual chain ID
+    /// @param vcId is the virtual chain ID to migrate
+    /// @param previousSubscriptionsContract is the address of the previous subscription contract
+    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) public onlyInitializationAdmin {
 
 }

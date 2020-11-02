@@ -104,16 +104,16 @@ interface IFeesAndBootstrapRewards {
     event FeesAndBootstrapRewardsBalanceMigrationAccepted(address from, address indexed guardian, uint256 fees, uint256 bootstrapRewards);
     event EmergencyWithdrawal(address addr, address token);
 
-    /// Deactivates fees and bootstrap allocation
-	/// @dev governance function called only by the migration manager
-    /// @dev guardians updates remain active based on the current perMember value
-    function deactivateRewardDistribution() external /* onlyMigrationManager */;
-
     /// Activates fees and bootstrap allocation
 	/// @dev governance function called only by the initialization manager
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
+    
+    /// Deactivates fees and bootstrap allocation
+	/// @dev governance function called only by the migration manager
+    /// @dev guardians updates remain active based on the current perMember value
+    function deactivateRewardDistribution() external /* onlyMigrationManager */;
 
     /// Returns the rewards allocation activation status
     /// @return rewardAllocationActive is the activation status

@@ -203,19 +203,6 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
      * Governance functions
      */
 
-    /// Deactivates fees and bootstrap allocation
-	/// @dev governance function called only by the migration manager
-    /// @dev guardians updates remain active based on the current perMember value
-    function deactivateRewardDistribution() external override onlyMigrationManager {
-        require(settings.rewardAllocationActive, "reward distribution is already deactivated");
-
-        updateFeesAndBootstrapState();
-
-        settings.rewardAllocationActive = false;
-
-        emit RewardDistributionDeactivated();
-    }
-
     /// Activates fees and bootstrap allocation
 	/// @dev governance function called only by the initialization manager
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
@@ -229,6 +216,19 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         emit RewardDistributionActivated(startTime);
     }
 
+    /// Deactivates fees and bootstrap allocation
+	/// @dev governance function called only by the migration manager
+    /// @dev guardians updates remain active based on the current perMember value
+    function deactivateRewardDistribution() external override onlyMigrationManager {
+        require(settings.rewardAllocationActive, "reward distribution is already deactivated");
+
+        updateFeesAndBootstrapState();
+
+        settings.rewardAllocationActive = false;
+
+        emit RewardDistributionDeactivated();
+    }
+    
     /// Returns the rewards allocation activation status
     /// @return rewardAllocationActive is the activation status
     function isRewardAllocationActive() external override view returns (bool) {

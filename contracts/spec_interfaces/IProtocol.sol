@@ -2,6 +2,7 @@
 
 pragma solidity 0.6.12;
 
+/// @title Protocol upgrades contract interface
 interface IProtocol {
     event ProtocolVersionChanged(string deploymentSubset, uint256 currentVersion, uint256 nextVersion, uint256 fromTimestamp);
 
