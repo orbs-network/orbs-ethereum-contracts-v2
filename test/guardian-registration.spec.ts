@@ -12,7 +12,7 @@ chai.use(chaiEventMatchersPlugin);
 
 const expect = chai.expect;
 
-describe.only('guardian-registration', async () => {
+describe('guardian-registration', async () => {
 
   it("registers, updates and unregisters a guardian", async () => {
     const d = await Driver.new();
