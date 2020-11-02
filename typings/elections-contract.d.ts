@@ -11,7 +11,7 @@ export interface GuardianStatusUpdatedEvent {
 
 export interface StakeChangedEvent {
   addr: string,
-  selfStake: string|BN,
+  selfDelegatedStake: string|BN,
   delegatedStake: string|BN,
   effectiveStake: string|BN
 }

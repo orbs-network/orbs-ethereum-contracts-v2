@@ -6,7 +6,7 @@ pragma solidity 0.6.12;
 interface IElections {
 	
 	// Election state change events
-	event StakeChanged(address indexed addr, uint256 selfStake, uint256 delegatedStake, uint256 effectiveStake);
+	event StakeChanged(address indexed addr, uint256 selfDelegatedStake, uint256 delegatedStake, uint256 effectiveStake);
 	event GuardianStatusUpdated(address indexed guardian, bool readyToSync, bool readyForCommittee);
 
 	// Vote out / Vote unready
@@ -109,10 +109,10 @@ interface IElections {
 	/// Notifies a delegated stake change event
 	/// @dev Called by: delegation contract
 	/// @param delegate is the delegate to update
-	/// @param selfStake is the delegate self stake (0 if not self-delegating)
+	/// @param selfDelegatedStake is the delegate self stake (0 if not self-delegating)
 	/// @param delegatedStake is the delegate delegated stake (0 if not self-delegating)
 	/// @param totalDelegatedStake is the total delegated stake
-	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external /* onlyDelegationsContract onlyWhenActive */;
+	function delegatedStakeChange(address delegate, uint256 selfDelegatedStake, uint256 delegatedStake, uint256 totalDelegatedStake) external /* onlyDelegationsContract onlyWhenActive */;
 
 	/// Notifies a new guardian was unregistered
 	/// @dev Called by: guardian registration contract
