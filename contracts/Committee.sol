@@ -97,7 +97,7 @@ contract Committee is ICommittee, ManagedContract {
 		emit CommitteeChange(addr, weight, isCertified, true);
 	}
 
-    /// Notifies a member removal for example due to voteOut / voteUnready
+    /// Notifies a member removal for example due to voteOut or voteUnready
     /// @dev Called only by: Elections contract
     /// @param memberRemoved is the removed committee member address
     /// @return memberRemoved indicates whether the member was removed from the committee
@@ -150,7 +150,7 @@ contract Committee is ICommittee, ManagedContract {
     /// Returns the currently appointed committee data
     /// @return generalCommitteeSize is the number of members in the committee
     /// @return certifiedCommitteeSize is the number of certified members in the committee
-    /// @return totalWeight is the total effective stake / weight of the committee
+    /// @return totalWeight is the total effective stake (weight) of the committee
 	function getCommitteeStats() external override view returns (uint generalCommitteeSize, uint certifiedCommitteeSize, uint totalWeight) {
 		CommitteeStats memory _committeeStats = committeeStats;
 		return (_committeeStats.generalCommitteeSize, _committeeStats.certifiedCommitteeSize, _committeeStats.totalWeight);
