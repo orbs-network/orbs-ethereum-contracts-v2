@@ -107,7 +107,7 @@ interface IGuardiansRegistration {
 	 */
 
 	/// Migrates a list of guardians from a previous guardians registration contract
-	/// @dev governance function called only by the initialization manager
+	/// @dev governance function called only by the initialization admin
 	/// @dev reads the migrated guardians data by calling getGuardianData in the previous contract
 	/// @dev imports also the gurdians' registration time and last update
 	/// @dev emits a GuardianDataUpdated for each guardian to allow tracking by tools

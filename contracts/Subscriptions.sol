@@ -221,7 +221,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
 
     /// Sets the minimum initial virtual chain payment 
     /// @dev Prevents abuse of the guardian nodes resources
-    /// @param minimumInitialVcPayment is the minimum payment required for the initial subscription
+    /// @param newMinimumInitialVcPayment is the minimum payment required for the initial subscription
     function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public override onlyFunctionalManager {
         settings.minimumInitialVcPayment = newMinimumInitialVcPayment;
         emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
@@ -246,11 +246,11 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     }
 
     /// Imports virtual chain subscription from a previous subscriptions contract
-	/// @dev governance function called only by the initialization manager during migration
+	/// @dev governance function called only by the initialization admin during migration
     /// @dev if the migrated vcId is larger or equal to the next virtual chain ID to allocate, increment the next virtual chain ID
     /// @param vcId is the virtual chain ID to migrate
     /// @param previousSubscriptionsContract is the address of the previous subscription contract
-    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) public onlyInitializationAdmin {
+    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) public override onlyInitializationAdmin {
         require(virtualChains[vcId].owner == address(0), "the vcId already exists");
 
         (string memory name,

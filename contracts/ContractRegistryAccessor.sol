@@ -38,7 +38,7 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
         _;
     }
 
-    /// Checks whether the caller is Admin: either the contract registry, the registry admin, or the initialization manager
+    /// Checks whether the caller is Admin: either the contract registry, the registry admin, or the initialization admin
     function isAdmin() internal view returns (bool) {
         return msg.sender == address(contractRegistry) || msg.sender == registryAdmin() || msg.sender == initializationAdmin();
     }

@@ -204,7 +204,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
      */
 
     /// Activates fees and bootstrap allocation
-	/// @dev governance function called only by the initialization manager
+	/// @dev governance function called only by the initialization admin
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
@@ -228,7 +228,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         emit RewardDistributionDeactivated();
     }
-    
+
     /// Returns the rewards allocation activation status
     /// @return rewardAllocationActive is the activation status
     function isRewardAllocationActive() external override view returns (bool) {
@@ -430,7 +430,7 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     /// Updates the global Fees and Bootstrap rewards state
     /// @dev utilizes _updateFeesAndBootstrapState
-    /// @return _feesAndBootstrapState is a FeesAndBootstrapState struct with teh updated state
+    /// @return _feesAndBootstrapState is a FeesAndBootstrapState struct with the updated state
     function updateFeesAndBootstrapState() private returns (FeesAndBootstrapState memory _feesAndBootstrapState) {
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = committeeContract.getCommitteeStats();
         return _updateFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);

@@ -110,8 +110,8 @@ interface ISubscriptions {
 
     /// Sets the minimum initial virtual chain payment 
     /// @dev Prevents abuse of the guardian nodes resources
-    /// @param minimumInitialVcPayment is the minimum payment required for the initial subscription
-    function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalManager */;
+    /// @param newMinimumInitialVcPayment is the minimum payment required for the initial subscription
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) external /* onlyFunctionalManager */;
 
     /// Returns the minimum initial virtual chain payment 
     /// @return minimumInitialVcPayment is the minimum payment required for the initial subscription
@@ -126,10 +126,10 @@ interface ISubscriptions {
     );
 
     /// Imports virtual chain subscription from a previous subscriptions contract
-	/// @dev governance function called only by the initialization manager during migration
+	/// @dev governance function called only by the initialization admin during migration
     /// @dev if the migrated vcId is larger or equal to the next virtual chain ID to allocate, increment the next virtual chain ID
     /// @param vcId is the virtual chain ID to migrate
     /// @param previousSubscriptionsContract is the address of the previous subscription contract
-    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) public onlyInitializationAdmin {
+    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) external /* onlyInitializationAdmin */;
 
 }

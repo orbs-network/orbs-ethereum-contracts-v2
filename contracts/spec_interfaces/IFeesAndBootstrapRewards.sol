@@ -105,7 +105,7 @@ interface IFeesAndBootstrapRewards {
     event EmergencyWithdrawal(address addr, address token);
 
     /// Activates fees and bootstrap allocation
-	/// @dev governance function called only by the initialization manager
+	/// @dev governance function called only by the initialization admin
     /// @dev On migrations, startTime should be set as the previous contract deactivation time.
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;

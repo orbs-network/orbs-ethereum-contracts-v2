@@ -176,7 +176,7 @@ interface IElections {
 	);
 
 	/// Initializes the ready for committee notification for the committee guardians
-	/// @dev governance function called only by the initialization manager during migration 
+	/// @dev governance function called only by the initialization admin during migration 
 	/// @dev identical behaviour as if each guardian sent readyForCommittee() 
 	/// @param guardians a list of guardians addresses to update
 	function initReadyForCommittee(address[] calldata guardians) external /* onlyInitializationAdmin */;
