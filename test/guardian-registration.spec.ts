@@ -678,28 +678,92 @@ describe.only('guardian-registration', async () => {
     expect(await d.guardiansRegistration.resolveGuardianAddress(v2.address)).to.deep.equal(v2.address);
   });
 
+  // it('is able to migrate registered guardians from a previous contract', async () => {
+  //   const d = await Driver.new();
+  //
+  //   const v1 = d.newParticipant();
+  //   let r = await v1.registerAsGuardian();
+  //   const v1RegistrationTime = await d.web3.txTimestamp(r);
+  //   await d.guardiansRegistration.setMetadata("ID_FORM_URL", "123", {from: v1.address});
+  //
+  //   const v2 = d.newParticipant();
+  //   r = await v2.registerAsGuardian();
+  //   const v2RegistrationTime = await d.web3.txTimestamp(r);
+  //
+  //   await evmIncreaseTime(d.web3, 5);
+  //
+  //   v1.ip = "0x12121212";
+  //   r = await d.guardiansRegistration.updateGuardianIp(v1.ip, {from: v1.address});
+  //   const v1LastUpdateTime = await d.web3.txTimestamp(r);
+  //   const v2LastUpdateTime = v2RegistrationTime;
+  //
+  //   const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
+  //
+  //   r = await newContract.migrateGuardians([v1.address, v2.address], d.guardiansRegistration.address);
+  //   expect(r).to.have.a.guardianDataUpdatedEvent({
+  //     guardian: v1.address,
+  //     orbsAddr: v1.orbsAddress,
+  //     name: v1.name,
+  //     website: v1.website,
+  //     isRegistered: true
+  //   });
+  //   expect(r).to.have.a.guardianMetadataChangedEvent({key: "ID_FORM_URL", newValue: "123", oldValue: ""});
+  //   expect(r).to.have.a.guardianDataUpdatedEvent({
+  //     guardian: v2.address,
+  //     orbsAddr: v2.orbsAddress,
+  //     name: v2.name,
+  //     website: v2.website,
+  //     isRegistered: true
+  //   });
+  //
+  //   d.guardiansRegistration = null as any;
+  //
+  //   const v1Data = await newContract.getGuardianData(v1.address);
+  //
+  //   expect(v1Data.ip.toString()).to.eq(v1.ip);
+  //   expect(v1Data.orbsAddr.toString()).to.eq(v1.orbsAddress);
+  //   expect(v1Data.name.toString()).to.eq(v1.name);
+  //   expect(v1Data.website.toString()).to.eq(v1.website);
+  //   expect(v1Data.registrationTime.toString()).to.eq(v1RegistrationTime.toString());
+  //   expect(v1Data.lastUpdateTime.toString()).to.eq(v1LastUpdateTime.toString());
+  //   expect(await newContract.getMetadata(v1.address, "ID_FORM_URL")).to.eq("123");
+  //
+  //   const v2Data = await newContract.getGuardianData(v2.address);
+  //
+  //   expect(v2Data.ip.toString()).to.eq(v2.ip);
+  //   expect(v2Data.orbsAddr.toString()).to.eq(v2.orbsAddress);
+  //   expect(v2Data.name.toString()).to.eq(v2.name);
+  //   expect(v2Data.website.toString()).to.eq(v2.website);
+  //   expect(v2Data.registrationTime.toString()).to.eq(v2RegistrationTime.toString());
+  //   expect(v2Data.lastUpdateTime.toString()).to.eq(v2LastUpdateTime.toString());
+  //
+  //   expect(await newContract.resolveGuardianAddress(v1.orbsAddress)).to.eq(v1.address);
+  //   await expectRejected(newContract.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
+  //   await expectRejected(newContract.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, {from: v2.address}), /orbs address is already in use/);
+  // });
+
   it('is able to migrate registered guardians from a previous contract', async () => {
     const d = await Driver.new();
 
+    const prevContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistrationPreviousVersion' as any, [], null, d.session);
+
     const v1 = d.newParticipant();
-    let r = await v1.registerAsGuardian();
+    let r = await prevContract.registerGuardian(v1.ip, v1.orbsAddress, v1.name, v1.website, {from: v1.address});
     const v1RegistrationTime = await d.web3.txTimestamp(r);
-    await d.guardiansRegistration.setMetadata("ID_FORM_URL", "123", {from: v1.address});
+    await prevContract.setMetadata("ID_FORM_URL", "123", {from: v1.address});
 
     const v2 = d.newParticipant();
-    r = await v2.registerAsGuardian();
+    r = await prevContract.registerGuardian(v2.ip, v2.orbsAddress, v2.name, v2.website, {from: v2.address});
     const v2RegistrationTime = await d.web3.txTimestamp(r);
 
     await evmIncreaseTime(d.web3, 5);
 
     v1.ip = "0x12121212";
-    r = await d.guardiansRegistration.updateGuardianIp(v1.ip, {from: v1.address});
+    r = await prevContract.updateGuardianIp(v1.ip, {from: v1.address});
     const v1LastUpdateTime = await d.web3.txTimestamp(r);
     const v2LastUpdateTime = v2RegistrationTime;
 
-    const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
-
-    r = await newContract.migrateGuardians([v1.address, v2.address], d.guardiansRegistration.address);
+    r = await d.guardiansRegistration.migrateGuardians([v1.address, v2.address], prevContract.address);
     expect(r).to.have.a.guardianDataUpdatedEvent({
       guardian: v1.address,
       orbsAddr: v1.orbsAddress,
@@ -718,9 +782,7 @@ describe.only('guardian-registration', async () => {
       registrationTime: bn(v2RegistrationTime)
     });
 
-    d.guardiansRegistration = null as any;
-
-    const v1Data = await newContract.getGuardianData(v1.address);
+    const v1Data = await d.guardiansRegistration.getGuardianData(v1.address);
 
     expect(v1Data.ip.toString()).to.eq(v1.ip);
     expect(v1Data.orbsAddr.toString()).to.eq(v1.orbsAddress);
@@ -728,9 +790,9 @@ describe.only('guardian-registration', async () => {
     expect(v1Data.website.toString()).to.eq(v1.website);
     expect(v1Data.registrationTime.toString()).to.eq(v1RegistrationTime.toString());
     expect(v1Data.lastUpdateTime.toString()).to.eq(v1LastUpdateTime.toString());
-    expect(await newContract.getMetadata(v1.address, "ID_FORM_URL")).to.eq("123");
+    expect(await d.guardiansRegistration.getMetadata(v1.address, "ID_FORM_URL")).to.eq("123");
 
-    const v2Data = await newContract.getGuardianData(v2.address);
+    const v2Data = await d.guardiansRegistration.getGuardianData(v2.address);
 
     expect(v2Data.ip.toString()).to.eq(v2.ip);
     expect(v2Data.orbsAddr.toString()).to.eq(v2.orbsAddress);
@@ -739,9 +801,9 @@ describe.only('guardian-registration', async () => {
     expect(v2Data.registrationTime.toString()).to.eq(v2RegistrationTime.toString());
     expect(v2Data.lastUpdateTime.toString()).to.eq(v2LastUpdateTime.toString());
 
-    expect(await newContract.resolveGuardianAddress(v1.orbsAddress)).to.eq(v1.address);
-    await expectRejected(newContract.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
-    await expectRejected(newContract.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, {from: v2.address}), /orbs address is already in use/);
+    expect(await d.guardiansRegistration.resolveGuardianAddress(v1.orbsAddress)).to.eq(v1.address);
+    await expectRejected(d.guardiansRegistration.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
+    await expectRejected(d.guardiansRegistration.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, {from: v2.address}), /orbs address is already in use/);
   });
 
 
