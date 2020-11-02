@@ -1097,7 +1097,7 @@ describe('rewards', async () => {
         expect(r).to.have.a.rewardDistributionActivatedEvent();
     });
 
-    it("allows anyone to migrate rewards to a new contract (stakingRewards)", async () => {
+    it.only("allows anyone to migrate rewards to a new contract (stakingRewards)", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
@@ -1191,6 +1191,22 @@ describe('rewards', async () => {
             from: d.stakingRewards.address,
             to: newRewardsContract.address,
             value: bn(c1GuardianStakingBalance).add(c1DelegatorStakingBalance).add(bn(c0GuardianStakingBalance).add(c0DelegatorStakingBalance))
+        });
+
+        await d.contractRegistry.setContract('stakingRewards', newRewardsContract.address, true, {from: d.migrationManager.address});
+        await d.stakingRewardsWallet.setClient(newRewardsContract.address, {from: d.functionalManager.address});
+
+        // c0, c1 are able to withdraw
+        r = await newRewardsContract.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c0DelegatorStakingBalance,
+            claimedGuardianRewards: c0GuardianStakingBalance
+        });
+
+        r = await newRewardsContract.claimStakingRewards(c1.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c1DelegatorStakingBalance,
+            claimedGuardianRewards: c1GuardianStakingBalance
         });
 
         // anyone can call acceptMigration
