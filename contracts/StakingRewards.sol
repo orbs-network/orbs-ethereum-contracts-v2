@@ -262,6 +262,9 @@ contract StakingRewards is IStakingRewards, ManagedContract {
             delegatorsStakingRewards[addrs[i]].balance = delegatorsStakingRewards[addrs[i]].balance.add(migratedDelegatorStakingRewards[i]);
             emit StakingRewardsBalanceMigrationAccepted(msg.sender, addrs[i], migratedGuardianStakingRewards[i], migratedDelegatorStakingRewards[i]);
         }
+
+        stakingRewardsContractBalance = stakingRewardsContractBalance.add(totalAmount);
+        stakingRewardsState.unclaimedStakingRewards = stakingRewardsState.unclaimedStakingRewards.add(totalAmount);
     }
 
     function emergencyWithdraw(address erc20) external override onlyMigrationManager {
