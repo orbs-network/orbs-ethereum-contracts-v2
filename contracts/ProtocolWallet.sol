@@ -77,7 +77,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     }
 
     /// @dev Sets a new transfer rate for the Orbs pool.
-    function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner { //TODO add test
+    function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner {
         lastWithdrawal = startTime;
         emit OutstandingTokensReset(startTime);
     }
