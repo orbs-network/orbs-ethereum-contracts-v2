@@ -223,9 +223,10 @@ describe('protocol-wallet-contract', async () => {
 
     await expectRejected(d.stakingRewardsWallet.resetOutstandingTokens((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS, {from: d.functionalManager.address}), /WithClaimableMigrationOwnership: caller is not the migrationOwner/);
 
+    const startTime = bn((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS)
     await expectRejected(d.stakingRewardsWallet.withdraw(100, {from: client.address}), /ProtocolWallet::withdraw - requested amount is larger than allowed by rate/);
-    r = await d.stakingRewardsWallet.resetOutstandingTokens((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS, {from: d.migrationManager.address});
-    expect(r).to.have.a.outstandingTokensResetEvent({startTime: bn((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS)});
+    r = await d.stakingRewardsWallet.resetOutstandingTokens(startTime, {from: d.migrationManager.address});
+    expect(r).to.have.a.outstandingTokensResetEvent({startTime});
 
     await d.stakingRewardsWallet.withdraw(1000, {from: client.address});
   });
