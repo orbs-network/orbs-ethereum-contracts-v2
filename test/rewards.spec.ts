@@ -1196,46 +1196,46 @@ describe('rewards', async () => {
         await d.contractRegistry.setContract('stakingRewards', newRewardsContract.address, true, {from: d.migrationManager.address});
         await d.stakingRewardsWallet.setClient(newRewardsContract.address, {from: d.functionalManager.address});
 
-        // c0, c1 are able to withdraw
-        r = await newRewardsContract.claimStakingRewards(c0.address);
-        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
-            claimedDelegatorRewards: c0DelegatorStakingBalance,
-            claimedGuardianRewards: c0GuardianStakingBalance
-        });
-
-        r = await newRewardsContract.claimStakingRewards(c1.address);
-        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
-            claimedDelegatorRewards: c1DelegatorStakingBalance,
-            claimedGuardianRewards: c1GuardianStakingBalance
-        });
-
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
-        await migrator.assignAndApproveOrbs(210, newRewardsContract.address);
-        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address, c1.address], [10, 20, 30], [40, 50, 60], 209, {from: migrator.address}), /totalAmount does not match sum of rewards/);
-        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address, c1.address], [10, 20, 30], [40, 50, 60], 210, {from: migrator.address});
+        await migrator.assignAndApproveOrbs(fromMilliOrbs(210), newRewardsContract.address);
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address, c1.address], [fromMilliOrbs(10), fromMilliOrbs(20), fromMilliOrbs(30)], [fromMilliOrbs(40), fromMilliOrbs(50), fromMilliOrbs(60)], fromMilliOrbs(209), {from: migrator.address}), /totalAmount does not match sum of rewards/);
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address, c1.address], [fromMilliOrbs(10), fromMilliOrbs(20), fromMilliOrbs(30)], [fromMilliOrbs(40), fromMilliOrbs(50), fromMilliOrbs(60)], fromMilliOrbs(210), {from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             addr: c0.address,
-            guardianStakingRewards: bn(10),
-            delegatorStakingRewards: bn(40),
+            guardianStakingRewards: fromMilliOrbs(10),
+            delegatorStakingRewards: fromMilliOrbs(40),
         });
         expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             addr: c1.address,
-            guardianStakingRewards: bn(20),
-            delegatorStakingRewards: bn(50),
+            guardianStakingRewards: fromMilliOrbs(20),
+            delegatorStakingRewards: fromMilliOrbs(50),
         });
         expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             addr: c1.address,
-            guardianStakingRewards: bn(30),
-            delegatorStakingRewards: bn(60),
+            guardianStakingRewards: fromMilliOrbs(30),
+            delegatorStakingRewards: fromMilliOrbs(60),
         });
         expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
             from: migrator.address,
             to: newRewardsContract.address,
-            value: bn(210)
+            value: fromMilliOrbs(210)
+        });
+
+        // c0, c1 are able to withdraw
+        r = await newRewardsContract.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c0DelegatorStakingBalance.add(fromMilliOrbs(40)),
+            claimedGuardianRewards: c0GuardianStakingBalance.add(fromMilliOrbs(10))
+        });
+
+        r = await newRewardsContract.claimStakingRewards(c1.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c1DelegatorStakingBalance.add(fromMilliOrbs(110)),
+            claimedGuardianRewards: c1GuardianStakingBalance.add(fromMilliOrbs(50))
         });
     });
 
