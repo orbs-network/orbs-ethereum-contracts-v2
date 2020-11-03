@@ -4,7 +4,7 @@ const expect = chai.expect;
 import {getAbiByContractName, getAbiByContractRegistryKey} from "../abi-loader";
 import {loadCompiledContracts} from "../compiled-contracts";
 
-describe("helpers tests", async () => {
+describe("helpers tests [skip-coverage]", async () => {
 
     const compiledContracts = loadCompiledContracts();
 

@@ -74,7 +74,7 @@ async function fullCommittee(committeeEvenStakes:boolean = false, numVCs=5): Pro
 }
 
 
-describe('gas usage scenarios', async () => {
+describe('gas usage scenarios [skip-coverage]', async () => {
     it("New delegator stakes and delegates (tetra flow)", async () => {
         const {d, committee} = await fullCommittee();
 
