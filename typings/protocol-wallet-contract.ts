@@ -1,7 +1,7 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import {Contract} from "../eth";
 import * as BN from "bn.js";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface FundsAddedToPoolEvent {
   added: string|BN;
@@ -25,7 +25,7 @@ export interface OutstandingTokensResetEvent {
   startTime: string|BN;
 }
 
-export interface ProtocolWalletContract extends OwnedContract {
+export interface ProtocolWalletContract extends ManagedContract {
   getMaxAnnualRate(): Promise<number>;ª
   token(params?: TransactionConfig): Promise<string>;
   getBalance(params?: TransactionConfig): Promise<string>;

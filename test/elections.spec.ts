@@ -507,6 +507,9 @@ describe('elections-high-level-flows', async () => {
             effectiveStake: new BN(1000),
         });
 
+        // Check the getter is consistent
+        expect(bn(await d.elections.getEffectiveStake(v1.address))).to.be.bignumber.eq(bn(1000));
+
         r = await v2.unstake(2);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
@@ -753,6 +756,7 @@ describe('elections-high-level-flows', async () => {
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
+            expect(await d.elections.getVoteOutVote(p.address)).to.eq(ZERO_ADDR);
             r = await d.elections.voteOut(votedOutGuardian.address, {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
@@ -760,6 +764,7 @@ describe('elections-high-level-flows', async () => {
             });
             expect(r).to.not.have.a.committeeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
+            expect(await d.elections.getVoteOutVote(p.address)).to.eq(votedOutGuardian.address);
         }
 
         // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
@@ -775,6 +780,9 @@ describe('elections-high-level-flows', async () => {
         await expectCommittee(d,  {
             addrs: []
         });
+
+        // A voted out member cannot join the committe
+        expect(await d.elections.canJoinCommittee(votedOutGuardian.address)).to.be.false;
     });
 
     it("VoteOut: vote-out is permanent - cannot be undone by cancelling a vote", async () => {

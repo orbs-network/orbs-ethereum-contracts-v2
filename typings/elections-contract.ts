@@ -1,7 +1,7 @@
 import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface GuardianStatusUpdatedEvent {
   guardian: string;
@@ -16,7 +16,7 @@ export interface StakeChangedEvent {
   effectiveStake: string|BN
 }
 
-export interface ElectionsContract extends OwnedContract {
+export interface ElectionsContract extends ManagedContract {
   registerGuardian( ip: string, orbsAddrs: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   getTopology(): Promise<TransactionReceipt>;
   readyForCommittee(params?: TransactionConfig): Promise<TransactionReceipt>;

@@ -3,7 +3,7 @@ import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
 import { DEPLOYMENT_SUBSET_MAIN, DEPLOYMENT_SUBSET_CANARY } from "../test/driver";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface SubscriptionChangedEvent {
   vcId: number | BN;
@@ -57,7 +57,7 @@ export interface MinimumInitialVcPaymentChangedEvent {
   newMinimumInitialVcPayment: number|BN;
 }
 
-export interface SubscriptionsContract extends OwnedContract {
+export interface SubscriptionsContract extends ManagedContract {
   addSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
   removeSubscriber(address,params?: TransactionConfig): Promise<TransactionReceipt>;
   setVcConfigRecord(vcId: number|BN, key: string, value: string, params?: TransactionConfig): Promise<TransactionReceipt>;

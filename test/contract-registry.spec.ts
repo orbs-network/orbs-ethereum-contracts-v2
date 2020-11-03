@@ -6,6 +6,7 @@ import chai from "chai";
 import {bn, contractId, expectRejected} from "./helpers";
 import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import {chaiEventMatchersPlugin} from "./matchers";
+import {ManagedContract} from "../typings/base-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);
@@ -273,6 +274,22 @@ describe('contract-registry-high-level-flows', async () => {
     await newRegistry.setContract('ManagedContractTest', testManaged.address, true, {from: d.registryAdmin.address});
 
     expect(await testManaged.delegations()).to.eq(d.delegations.address);
+  });
+
+  it("registry accessor: gets contract registry, sets registryAdmin only by init admin", async () => {
+    const d = await Driver.new();
+    const managed: ManagedContract = await d.web3.deploy('ManagedContractTest' as any, [d.contractRegistry.address, d.registryAdmin.address]);
+    expect(await managed.getContractRegistry()).to.eq(d.contractRegistry.address);
+
+    const newAdmin = d.newParticipant();
+
+    await expectRejected(managed.setRegistryAdmin(newAdmin.address, {from: d.migrationManager.address}), /sender is not the initialization admin/);
+
+    await managed.setRegistryAdmin(newAdmin.address, {from: d.initializationAdmin.address});
+    expect(await managed.registryAdmin()).to.eq(newAdmin.address);
+
+    await managed.initializationComplete({from: d.initializationAdmin.address});
+    await expectRejected(managed.setRegistryAdmin(newAdmin.address, {from: d.initializationAdmin.address}), /sender is not the initialization admin/);
   });
 
 });
