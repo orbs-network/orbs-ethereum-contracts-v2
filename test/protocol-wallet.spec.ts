@@ -2,11 +2,12 @@ import 'mocha';
 
 
 import BN from "bn.js";
-import {defaultDriverOptions, Driver} from "./driver";
+import {defaultDriverOptions, Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
 import {bn, evmIncreaseTime, evmIncreaseTimeForQueries, expectRejected, getTopBlockTimestamp} from "./helpers";
 import {inspect} from "util";
 import {chaiEventMatchersPlugin} from "./matchers";
+import {ManagedContract} from "../typings/base-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);
@@ -228,6 +229,34 @@ describe('protocol-wallet-contract', async () => {
     expect(r).to.have.a.outstandingTokensResetEvent({startTime: bn((await d.web3.txTimestamp(r)) - YEAR_IN_SECONDS)});
 
     await d.stakingRewardsWallet.withdraw(1000, {from: client.address});
+  });
+
+  it('is able to transfer, renounce migration ownership', async () => {
+    const d = await Driver.new();
+    const newManager = d.newParticipant()
+    await expectRejected(d.stakingRewardsWallet.transferMigrationOwnership(newManager.address, {from: d.functionalManager.address}), /WithClaimableMigrationOwnership: caller is not the migrationOwner/)
+    await d.stakingRewardsWallet.transferMigrationOwnership(newManager.address, {from: d.migrationManager.address});
+    await expectRejected(d.stakingRewardsWallet.claimMigrationOwnership({from: d.migrationManager.address}), /Caller is not the pending migrationOwner/);
+    await d.stakingRewardsWallet.claimMigrationOwnership({from: newManager.address});
+    expect(await d.stakingRewardsWallet.migrationOwner()).to.eq(newManager.address);
+
+    await expectRejected(d.stakingRewardsWallet.renounceMigrationOwnership({from: d.registryAdmin.address}), /WithClaimableMigrationOwnership: caller is not the migrationOwner/)
+    await d.stakingRewardsWallet.renounceMigrationOwnership({from: newManager.address});
+    expect(await d.stakingRewardsWallet.migrationOwner()).to.eq(ZERO_ADDR);
+  });
+
+  it('is able to transfer, renounce functional ownership', async () => {
+    const d = await Driver.new();
+    const newManager = d.newParticipant()
+    await expectRejected(d.stakingRewardsWallet.transferFunctionalOwnership(newManager.address, {from: d.migrationManager.address}), /WithClaimableFunctionalOwnership: caller is not the functionalOwner/)
+    await d.stakingRewardsWallet.transferFunctionalOwnership(newManager.address, {from: d.functionalManager.address});
+    await expectRejected(d.stakingRewardsWallet.claimFunctionalOwnership({from: d.functionalManager.address}), /Caller is not the pending functionalOwner/);
+    await d.stakingRewardsWallet.claimFunctionalOwnership({from: newManager.address});
+    expect(await d.stakingRewardsWallet.functionalOwner()).to.eq(newManager.address);
+
+    await expectRejected(d.stakingRewardsWallet.renounceFunctionalOwnership({from: d.registryAdmin.address}), /WithClaimableFunctionalOwnership: caller is not the functionalOwner/)
+    await d.stakingRewardsWallet.renounceFunctionalOwnership({from: newManager.address});
+    expect(await d.stakingRewardsWallet.functionalOwner()).to.eq(ZERO_ADDR);
   });
 
 });

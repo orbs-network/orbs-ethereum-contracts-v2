@@ -26,4 +26,6 @@ export interface ManagedContract extends Contract {
 
     setRegistryAdmin(adming: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     registryAdmin(): Promise<string>;
+
+    renounceRegistryManagement(params?: TransactionConfig): Promise<string>;
 }

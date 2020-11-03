@@ -1587,7 +1587,7 @@ describe('rewards', async () => {
         expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
     });
 
-    it.only("gets current staking rewards rate, allocated tokens, setting getters", async () => {
+    it("gets current staking rewards rate, allocated tokens, setting getters", async () => {
         const {d, committee} = await fullCommittee([fromMilliOrbs(10000)], 1);
 
         // getStakingRewardsWalletAllocatedTokens

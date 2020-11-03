@@ -41,4 +41,6 @@ export interface ProtocolWalletContract extends ManagedContract {
   transferFunctionalOwnership(newOwner: string, params?: TransactionConfig): Promise<TransactionReceipt>;
   claimFunctionalOwnership(params?: TransactionConfig): Promise<TransactionReceipt>;
   functionalOwner(params?: TransactionConfig): Promise<string>;
+  renounceFunctionalOwnership(params?: TransactionConfig): Promise<string>;
+  renounceMigrationOwnership(params?: TransactionConfig): Promise<string>;
 }
