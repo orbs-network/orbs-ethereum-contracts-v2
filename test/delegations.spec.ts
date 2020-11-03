@@ -593,4 +593,20 @@ describe('delegations-contract', async () => {
             selfDelegatedStake: bn(100)
         });
     });
+
+    it("handlers delegating with the same delegate", async () => {
+       const d = await Driver.new();
+
+       const d1 = d.newParticipant();
+       await d1.stake(100);
+
+       const p = d.newParticipant();
+       await d1.delegate(p);
+       expect(await d.delegations.getTotalDelegatedStake()).to.bignumber.eq(bn(100));
+
+       let r = await d1.delegate(p);
+       expect(await d.delegations.getTotalDelegatedStake()).to.bignumber.eq(bn(100));
+       expect(await d.delegations.getDelegatedStake(p.address)).to.bignumber.eq(bn(100));
+       expect(r).to.not.have.a.delegatedStakeChangedEvent();
+    });
 });

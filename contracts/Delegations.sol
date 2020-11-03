@@ -212,6 +212,8 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 		StakeOwnerData memory delegatorData = getStakeOwnerData(from);
 
+		if (to == delegatorData.delegation) return; // Delegation hasn't changed
+
 		// Optimization - no need for the full flow in the case of a zero staked delegator with no delegations
 		if (delegatorData.stake == 0 && uncappedDelegatedStake[from] == 0) {
 			stakeOwnersData[from].delegation = to;
