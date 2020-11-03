@@ -15,7 +15,7 @@ module.exports = {
         fs.copySync(__dirname + '/.coverage_artifacts', __dirname + '/build');
     },
     mocha: {
-        grep: '[skip-coverage]',
+        grep: '\\[skip-coverage\\]',
         invert: true
     }
 };
