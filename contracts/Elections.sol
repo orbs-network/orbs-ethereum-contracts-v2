@@ -5,7 +5,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./spec_interfaces/IElections.sol";
-import "./spec_interfaces/IDelegation.sol";
+import "./spec_interfaces/IDelegations.sol";
 import "./spec_interfaces/IGuardiansRegistration.sol";
 import "./spec_interfaces/ICommittee.sol";
 import "./spec_interfaces/ICertification.sol";
@@ -77,12 +77,12 @@ contract Elections is IElections, ManagedContract {
 			return false;
 		}
 
-		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
+		uint256 effectiveStake = getGuardianEffectiveStake(guardian, settings);
 		return committeeContract.checkAddMember(guardian, effectiveStake);
 	}
 
 	function getEffectiveStake(address guardian) external override view returns (uint effectiveStake) {
-		(, effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
+		return getGuardianEffectiveStake(guardian, settings);
 	}
 
 	/// @dev returns the current committee
@@ -183,11 +183,11 @@ contract Elections is IElections, ManagedContract {
 	 * Notification functions from other PoS contracts
 	 */
 
-	function delegatedStakeChange(address delegate, uint256 selfStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
+	function delegatedStakeChange(address delegate, uint256 selfDelegatedStake, uint256 delegatedStake, uint256 totalDelegatedStake) external override onlyDelegationsContract onlyWhenActive {
 		Settings memory _settings = settings;
 
-		uint effectiveStake = calcEffectiveStake(selfStake, delegatedStake, _settings);
-		emit StakeChanged(delegate, selfStake, delegatedStake, effectiveStake);
+		uint effectiveStake = calcEffectiveStake(selfDelegatedStake, delegatedStake, _settings);
+		emit StakeChanged(delegate, selfDelegatedStake, delegatedStake, effectiveStake);
 
 		committeeContract.memberWeightChange(delegate, effectiveStake);
 
@@ -268,7 +268,7 @@ contract Elections is IElections, ManagedContract {
 
 		emit GuardianStatusUpdated(guardian, true, true);
 
-		(, uint256 effectiveStake, ) = getGuardianStakeInfo(guardian, settings);
+		uint256 effectiveStake = getGuardianEffectiveStake(guardian, settings);
 		committeeContract.addMember(guardian, effectiveStake, certificationContract.isGuardianCertified(guardian));
 	}
 
@@ -279,11 +279,11 @@ contract Elections is IElections, ManagedContract {
 		return selfStake.mul(PERCENT_MILLIE_BASE).div(_settings.minSelfStakePercentMille); // never overflows or divides by zero
 	}
 
-	function getGuardianStakeInfo(address guardian, Settings memory _settings) private view returns (uint256 selfStake, uint256 effectiveStake, uint256 delegatedStake) {
+	function getGuardianEffectiveStake(address guardian, Settings memory _settings) private view returns (uint256 effectiveStake) {
 		IDelegations _delegationsContract = delegationsContract;
-		(,selfStake) = _delegationsContract.getDelegationInfo(guardian);
-		delegatedStake = _delegationsContract.getDelegatedStake(guardian);
-		effectiveStake = calcEffectiveStake(selfStake, delegatedStake, _settings);
+		(,uint256 selfStake) = _delegationsContract.getDelegationInfo(guardian);
+		uint256 delegatedStake = _delegationsContract.getDelegatedStake(guardian);
+		return calcEffectiveStake(selfStake, delegatedStake, _settings);
 	}
 
 	// Vote-unready

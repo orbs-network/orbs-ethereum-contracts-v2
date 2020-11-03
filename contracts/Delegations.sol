@@ -5,7 +5,7 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./SafeMath96.sol";
 import "./spec_interfaces/IElections.sol";
-import "./spec_interfaces/IDelegation.sol";
+import "./spec_interfaces/IDelegations.sol";
 import "./IStakeChangeNotifier.sol";
 import "./spec_interfaces/IStakingContractHandler.sol";
 import "./spec_interfaces/IStakingRewards.sol";
@@ -73,6 +73,12 @@ contract Delegations is IDelegations, IStakeChangeNotifier, ManagedContract {
 
 	function refreshStake(address addr) external override onlyWhenActive {
 		_stakeChange(addr, stakingContractHandler.getStakeBalanceOf(addr));
+	}
+
+	function refreshStakeBatch(address[] calldata addrs) external override onlyWhenActive {
+		for (uint i = 0; i < addrs.length; i++) {
+			_stakeChange(addrs[i], stakingContractHandler.getStakeBalanceOf(addrs[i]));
+		}
 	}
 
 	/*

@@ -108,9 +108,9 @@ export class Web3Driver{
         throw new Error(`Failed deploying contract ${contractName} after 5 attempts`);
     }
 
-    getExisting<N extends keyof Contracts>(contractName: N, contractAddress: string, session?: Web3Session) {
+    getExisting<N extends keyof Contracts>(contractName: N, contractAddress: string, session?: Web3Session, abi?: any) {
         session = session || this.defaultSession;
-        const abi = compiledContracts[contractName].abi;
+        abi = abi || compiledContracts[contractName].abi;
         const web3Contract = new this.web3.eth.Contract(abi, contractAddress);
         if (this.contracts.get(web3Contract.options.address) == null) {
             this.contracts.set(web3Contract.options.address, {web3Contract, name:contractName});

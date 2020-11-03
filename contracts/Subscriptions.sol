@@ -15,7 +15,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     struct VirtualChain {
         string name;
         string tier;
-        uint256 rate; // TODO get rate from subscriber when extending, don't keep in state
+        uint256 rate;
         uint expiresAt;
         uint256 genRefTime;
         address owner;
@@ -113,16 +113,17 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit SubscriberRemoved(addr);
     }
 
-    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlySubscriber onlyWhenActive returns (uint, uint) {
+    function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external override onlySubscriber onlyWhenActive returns (uint vcId, uint genRefTime) {
         require(owner != address(0), "vc owner cannot be the zero address");
         require(protocolContract.deploymentSubsetExists(deploymentSubset) == true, "No such deployment subset");
         require(amount >= settings.minimumInitialVcPayment, "initial VC payment must be at least minimumInitialVcPayment");
 
-        uint vcId = nextVcId++;
+        vcId = nextVcId++;
+        genRefTime = now + settings.genesisRefTimeDelay;
         VirtualChain memory vc = VirtualChain({
             name: name,
             expiresAt: block.timestamp,
-            genRefTime: now + settings.genesisRefTimeDelay,
+            genRefTime: genRefTime,
             owner: owner,
             tier: tier,
             rate: rate,
@@ -134,7 +135,6 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit VcCreated(vcId);
 
         _extendSubscription(vcId, amount, tier, rate, owner);
-        return (vcId, vc.genRefTime);
     }
 
     function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external override onlySubscriber onlyWhenActive {

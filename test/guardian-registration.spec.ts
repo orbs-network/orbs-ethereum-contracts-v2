@@ -3,7 +3,7 @@ import 'mocha';
 import BN from "bn.js";
 import {Driver, ZERO_ADDR} from "./driver";
 import chai from "chai";
-import {evmIncreaseTime, expectRejected} from "./helpers";
+import {bn, evmIncreaseTime, expectRejected} from "./helpers";
 import {GuardiansRegistrationContract} from "../typings/guardian-registration-contract";
 import {chaiEventMatchersPlugin} from "./matchers";
 
@@ -26,6 +26,7 @@ describe('guardian-registration', async () => {
         v.name,
         v.website
     , {from: v.address});
+    const registrationTime = await d.web3.txTimestamp(r);
     expect(r).to.have.a.guardianRegisteredEvent({
       guardian: v.address
     });
@@ -35,10 +36,9 @@ describe('guardian-registration', async () => {
       ip: v.ip,
       orbsAddr: v.orbsAddress,
       name: v.name,
-      website: v.website
+      website: v.website,
+      registrationTime: bn(registrationTime)
     });
-    const registrationTime = await d.web3.txTimestamp(r);
-    const firstUpdateTime = await d.web3.txTimestamp(r);
 
     // get data
     expect(await d.guardiansRegistration.getGuardianData(v.address)).to.include({
@@ -47,7 +47,7 @@ describe('guardian-registration', async () => {
       name: v.name,
       website: v.website,
       registrationTime: registrationTime.toString(),
-      lastUpdateTime: firstUpdateTime.toString()
+      lastUpdateTime: registrationTime.toString()
     });
 
     const _v = d.newParticipant();
@@ -705,7 +705,8 @@ describe('guardian-registration', async () => {
       orbsAddr: v1.orbsAddress,
       name: v1.name,
       website: v1.website,
-      isRegistered: true
+      isRegistered: true,
+      registrationTime: bn(v1RegistrationTime)
     });
     expect(r).to.have.a.guardianMetadataChangedEvent({key: "ID_FORM_URL", newValue: "123", oldValue: ""});
     expect(r).to.have.a.guardianDataUpdatedEvent({
@@ -713,7 +714,8 @@ describe('guardian-registration', async () => {
       orbsAddr: v2.orbsAddress,
       name: v2.name,
       website: v2.website,
-      isRegistered: true
+      isRegistered: true,
+      registrationTime: bn(v2RegistrationTime)
     });
 
     d.guardiansRegistration = null as any;
@@ -741,6 +743,5 @@ describe('guardian-registration', async () => {
     await expectRejected(newContract.updateGuardianIp(v1.ip, {from: v2.address}), /ip is already in use/);
     await expectRejected(newContract.updateGuardian(v2.ip, v1.orbsAddress, v2.name, v2.website, {from: v2.address}), /orbs address is already in use/);
   });
-
 
 });

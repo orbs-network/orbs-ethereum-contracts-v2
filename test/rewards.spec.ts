@@ -216,8 +216,20 @@ describe('rewards', async () => {
             allocatedCertifiedBootstrapRewards: bn(0),
             certifiedBootstrapRewardsPerMember: certifiedBootstrapForDuration(DURATION / 4),
         });
-        expect(r).to.have.a.approx().feesAssignedEvent({guardian: committee[0].address, amount: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)});
-        expect(r).to.have.a.approx().bootstrapRewardsAssignedEvent({guardian: committee[0].address, amount: generalBootstrapForDuration(DURATION / 4)});
+        expect(r).to.have.a.approx().feesAssignedEvent({
+            guardian: committee[0].address,
+            amount: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE),
+            totalAwarded: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE),
+            certification: false,
+            feesPerMember: generalFeesForDuration(DURATION / 4, MAX_COMMITTEE)
+        });
+        expect(r).to.have.a.approx().bootstrapRewardsAssignedEvent({
+            guardian: committee[0].address,
+            amount: generalBootstrapForDuration(DURATION / 4),
+            totalAwarded: generalBootstrapForDuration(DURATION / 4),
+            certification: false,
+            bootstrapPerMember: generalBootstrapForDuration(DURATION / 4)
+        });
 
         expectApproxEq(await committee[0].getFeeBalance(), generalFeesForDuration(DURATION / 4, MAX_COMMITTEE));
         expectApproxEq(await committee[0].getBootstrapBalance(), generalBootstrapForDuration(DURATION / 4));
@@ -449,6 +461,38 @@ describe('rewards', async () => {
         expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD / 2)).estimatedBootstrapRewards, expectedBootstrap.div(bn(2)));
     });
 
+    it('returns fees and bootstrap data', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0 = committee[0];
+
+        const expectedFees = await generalFeesForDuration(PERIOD, MAX_COMMITTEE);
+        const expectedBootstrap = await generalBootstrapForDuration(PERIOD);
+
+        expect(expectedFees).to.be.bignumber.gt(bn(0));
+        expect(expectedBootstrap).to.be.bignumber.gt(bn(0));
+
+        await d.feesAndBootstrapRewards.withdrawFees(c0.address);
+        await d.feesAndBootstrapRewards.withdrawBootstrapFunds(c0.address);
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).bootstrapBalance, expectedBootstrap);
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).withdrawnBootstrap, expectedBootstrap);
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).lastBootstrapPerMember, expectedBootstrap.mul(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).feeBalance, expectedFees);
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).withdrawnFees, expectedFees);
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).lastFeesPerMember, expectedFees.mul(bn(2)));
+
+        expect((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).certified).to.be.false;
+        await c0.becomeCertified();
+        expect((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).certified).to.be.true;
+    });
+
     // Staking rewards
 
     it('successfully claims 0 staking rewards ', async () => {
@@ -642,7 +686,11 @@ describe('rewards', async () => {
 
         const allocatedAfter = bn((await d.stakingRewards.getStakingRewardsState()).unclaimedStakingRewards);
 
+        const c0_delegatorRewardsPerToken_period1 = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).delegatorRewardsPerToken);
+        const stakingRewardsPerWeight_period1 = bn((await d.stakingRewards.getStakingRewardsState()).stakingRewardsPerWeight);
+
         let r = await d0.stake(fromMilliOrbs(1000));
+
         expect(r).to.have.a.approx().stakingRewardsAllocatedEvent({
             stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
             allocatedRewards: allocatedAfter.sub(allocatedBefore)
@@ -651,15 +699,18 @@ describe('rewards', async () => {
             guardian: c0.address,
             amount: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
             totalAwarded: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).balance),
-            delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
-            stakingRewardsPerWeight: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight),
+            delegatorRewardsPerToken: c0_delegatorRewardsPerToken_period1,
+            delegatorRewardsPerTokenDelta: c0_delegatorRewardsPerToken_period1,
+            stakingRewardsPerWeight: stakingRewardsPerWeight_period1,
+            stakingRewardsPerWeightDelta: stakingRewardsPerWeight_period1,
         });
         expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
             delegator: d0.address,
             amount: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
             totalAwarded: bn((await d.stakingRewards.delegatorsStakingRewards(d0.address)).balance),
             guardian: c0.address,
-            delegatorRewardsPerToken: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken),
+            delegatorRewardsPerToken: c0_delegatorRewardsPerToken_period1,
+            delegatorRewardsPerTokenDelta: c0_delegatorRewardsPerToken_period1,
         });
         
         const guardianRewards = bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance);
@@ -683,10 +734,13 @@ describe('rewards', async () => {
         expect(r).to.have.a.approx().guardianStakingRewardsAssignedEvent({
             guardian: c0.address,
             totalAwarded: guardianRewards.add(guardianRewards2),
+            delegatorRewardsPerTokenDelta: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken).sub(c0_delegatorRewardsPerToken_period1),
+            stakingRewardsPerWeightDelta: bn((await d.stakingRewards.stakingRewardsState()).stakingRewardsPerWeight).sub(stakingRewardsPerWeight_period1),
         });
         expect(r).to.have.a.approx().delegatorStakingRewardsAssignedEvent({
             delegator: c0.address,
             totalAwarded: delegatorRewards.add(delegatorRewards2),
+            delegatorRewardsPerTokenDelta: bn((await d.stakingRewards.guardiansStakingRewards(c0.address)).delegatorRewardsPerToken).sub(c0_delegatorRewardsPerToken_period1),
         });
         expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
             addr: c0.address,
@@ -729,6 +783,51 @@ describe('rewards', async () => {
 
         expectApproxEq((await d.stakingRewards.getStakingRewardsBalance(c0.address)).delegatorStakingRewardsBalance, expectedDelegatorRewards);
         expectApproxEq((await d.stakingRewards.getStakingRewardsBalance(c0.address)).guardianStakingRewardsBalance, expectedGuardianRewards);
+    });
+
+    it('properly returns guardian and delegator rewards data', async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+
+        const c0 = committee[0];
+
+        const delegator = d.newParticipant();
+        await delegator.stake(fromMilliOrbs(1000));
+        await delegator.delegate(c0);
+
+        const PERIOD = MONTH_IN_SECONDS * 5;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        const c0_expectedDelegatorRewards = (await stakingRewardsForDuration(d, PERIOD, c0, c0)).delegatorRewards;
+        const c0_expectedGuardianRewards = (await stakingRewardsForDuration(d, PERIOD, c0, c0)).guardianRewards.sub(c0_expectedDelegatorRewards);
+
+        const delegator_expectedDelegatorRewards = (await stakingRewardsForDuration(d, PERIOD, delegator, c0)).delegatorRewards;
+
+        expect(c0_expectedDelegatorRewards).to.be.bignumber.gt(bn(0));
+        expect(c0_expectedGuardianRewards).to.be.bignumber.gt(bn(0));
+        expect(delegator_expectedDelegatorRewards).to.be.bignumber.gt(bn(0));
+
+        await d.stakingRewards.claimStakingRewards(c0.address);
+        await c0.unstake(c0_expectedDelegatorRewards.add(c0_expectedGuardianRewards));
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).claimed), c0_expectedGuardianRewards)
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).balance), c0_expectedGuardianRewards)
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).lastStakingRewardsPerWeight), (await d.stakingRewards.getStakingRewardsState()).stakingRewardsPerWeight);
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).stakingRewardsPerWeightDelta), bn((await d.stakingRewards.getStakingRewardsState()).stakingRewardsPerWeight).div(bn(2)));
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).delegatorRewardsPerToken), c0_expectedDelegatorRewards.mul(bn(2)).mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
+        expectApproxEq(bn((await d.stakingRewards.getGuardianStakingRewardsData(c0.address)).delegatorRewardsPerTokenDelta), c0_expectedDelegatorRewards.mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
+
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).balance), c0_expectedDelegatorRewards);
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).claimed), c0_expectedDelegatorRewards);
+        expect((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).guardian).to.eq(c0.address);
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).lastDelegatorRewardsPerToken), c0_expectedDelegatorRewards.mul(bn(2)).mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(c0.address)).delegatorRewardsPerTokenDelta), c0_expectedDelegatorRewards.mul(bn(10).pow(bn(18))).div(fromMilliOrbs(4000)));
+
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).balance), delegator_expectedDelegatorRewards.mul(bn(2)));
+        expectApproxEq(bn((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).claimed), bn(0));
+        expect((await d.stakingRewards.getDelegatorStakingRewardsData(delegator.address)).guardian).to.eq(c0.address);
     });
 
     it('properly estimates guardian and delegator future rewards', async () => {
@@ -998,25 +1097,31 @@ describe('rewards', async () => {
         expect(r).to.have.a.rewardDistributionActivatedEvent();
     });
 
-    it("allows anyone to migrate staking rewards to a new contract (stakingRewards)", async () => {
+    it("allows anyone to migrate rewards to a new contract (stakingRewards)", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
+        const c1 = committee[1];
 
         await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-        await expectRejected(d.stakingRewards.migrateRewardsBalance(c0.address), /Reward distribution must be deactivated for migration/);
+        await expectRejected(d.stakingRewards.migrateRewardsBalance([c0.address, c1.address]), /Reward distribution must be deactivated for migration/);
 
         let r = await d.stakingRewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent({});
 
         // Migrating to the same contract should revert
-        await expectRejected(d.stakingRewards.migrateRewardsBalance(c0.address), /New rewards contract is not set/);
+        await expectRejected(d.stakingRewards.migrateRewardsBalance([c0.address, c1.address]), /New rewards contract is not set/);
 
         // trigger reward assignment
         await c0.stake(1);
         await c0.readyToSync();
         await c0.readyForCommittee();
+
+        // trigger reward assignment
+        await c1.stake(1);
+        await c1.readyToSync();
+        await c1.readyForCommittee();
 
         const c0StakingBalance = bn(await totalStakingRewardsBalance(d, c0));
         expect(c0StakingBalance).to.be.bignumber.greaterThan(bn(0));
@@ -1025,6 +1130,14 @@ describe('rewards', async () => {
         const c0DelegatorStakingBalance = bn((await (d.stakingRewards as any).delegatorsStakingRewards(c0.address)).balance);
 
         expectApproxEq(c0GuardianStakingBalance.add(c0DelegatorStakingBalance), c0StakingBalance);
+
+        const c1StakingBalance = bn(await totalStakingRewardsBalance(d, c1));
+        expect(c1StakingBalance).to.be.bignumber.greaterThan(bn(0));
+
+        const c1GuardianStakingBalance = bn((await (d.stakingRewards as any).guardiansStakingRewards(c1.address)).balance);
+        const c1DelegatorStakingBalance = bn((await (d.stakingRewards as any).delegatorsStakingRewards(c1.address)).balance);
+
+        expectApproxEq(c1GuardianStakingBalance.add(c1DelegatorStakingBalance), c1StakingBalance);
 
         const newRewardsContract = await d.web3.deploy('StakingRewards', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address,
           defaultDriverOptions.stakingRewardsAnnualRateInPercentMille,
@@ -1037,7 +1150,9 @@ describe('rewards', async () => {
         await d.contractRegistry.setContract('stakingRewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
         // migrate to the new contract
-        r = await d.stakingRewards.migrateRewardsBalance(c0.address);
+        r = await d.stakingRewards.migrateRewardsBalance([c0.address, c1.address]);
+
+        // c0
         expect(r).to.have.withinContract(newRewardsContract).a.approx().stakingRewardsBalanceMigrationAcceptedEvent({
           from: d.stakingRewards.address,
           addr: c0.address,
@@ -1050,24 +1165,66 @@ describe('rewards', async () => {
           delegatorStakingRewards: c0DelegatorStakingBalance,
           toRewardsContract: newRewardsContract.address
         });
-        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
-            from: d.stakingRewards.address,
-            to: newRewardsContract.address,
-            value: bn(c0GuardianStakingBalance).add(c0DelegatorStakingBalance)
-        });
         expect(bn(await totalStakingRewardsBalance(d, c0))).to.bignumber.eq(bn(0));
         const c0MigratedBalance = await newRewardsContract.getStakingRewardsBalance(c0.address);
         expectApproxEq(bn(c0MigratedBalance.guardianStakingRewardsBalance).add(bn(c0MigratedBalance.delegatorStakingRewardsBalance)), c0StakingBalance);
 
+        // c1
+        expect(r).to.have.withinContract(newRewardsContract).a.approx().stakingRewardsBalanceMigrationAcceptedEvent({
+          from: d.stakingRewards.address,
+          addr: c1.address,
+          guardianStakingRewards: c1GuardianStakingBalance.toString(),
+          delegatorStakingRewards: c1DelegatorStakingBalance.toString(),
+        });
+        expect(r).to.have.withinContract(d.stakingRewards).a.approx().stakingRewardsBalanceMigratedEvent({
+          addr: c1.address,
+          guardianStakingRewards: c1GuardianStakingBalance,
+          delegatorStakingRewards: c1DelegatorStakingBalance,
+          toRewardsContract: newRewardsContract.address
+        });
+        expect(bn(await totalStakingRewardsBalance(d, c1))).to.bignumber.eq(bn(0));
+
+        const c1MigratedBalance = await newRewardsContract.getStakingRewardsBalance(c1.address);
+        expectApproxEq(bn(c1MigratedBalance.guardianStakingRewardsBalance).add(bn(c1MigratedBalance.delegatorStakingRewardsBalance)), c1StakingBalance);
+
+        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
+            from: d.stakingRewards.address,
+            to: newRewardsContract.address,
+            value: bn(c1GuardianStakingBalance).add(c1DelegatorStakingBalance).add(bn(c0GuardianStakingBalance).add(c0DelegatorStakingBalance))
+        });
+
+        await d.contractRegistry.setContract('stakingRewards', newRewardsContract.address, true, {from: d.migrationManager.address});
+        await d.stakingRewardsWallet.setClient(newRewardsContract.address, {from: d.functionalManager.address});
+
+        // c0, c1 are able to withdraw
+        r = await newRewardsContract.claimStakingRewards(c0.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c0DelegatorStakingBalance,
+            claimedGuardianRewards: c0GuardianStakingBalance
+        });
+
+        r = await newRewardsContract.claimStakingRewards(c1.address);
+        expect(r).to.have.a.approx().stakingRewardsClaimedEvent({
+            claimedDelegatorRewards: c1DelegatorStakingBalance,
+            claimedGuardianRewards: c1GuardianStakingBalance
+        });
+
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
         await migrator.assignAndApproveOrbs(180, newRewardsContract.address);
-        r = await newRewardsContract.acceptRewardsBalanceMigration(c0.address, 40, 60, {from: migrator.address});
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address], [10, 20], [30, 40], 99, {from: migrator.address}), /totalAmount does not match sum of rewards/);
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address], [10, 20], [30, 40], 100, {from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             addr: c0.address,
-            guardianStakingRewards: bn(40),
-            delegatorStakingRewards: bn(60),
+            guardianStakingRewards: bn(10),
+            delegatorStakingRewards: bn(30),
+        });
+        expect(r).to.have.withinContract(newRewardsContract).a.stakingRewardsBalanceMigrationAcceptedEvent({
+            from: migrator.address,
+            addr: c1.address,
+            guardianStakingRewards: bn(20),
+            delegatorStakingRewards: bn(40),
         });
         expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
             from: migrator.address,
@@ -1076,20 +1233,21 @@ describe('rewards', async () => {
         });
     });
 
-    it("allows anyone to migrate staking rewards to a new contract (feesAndBootstrapRewards)", async () => {
+    it("allows anyone to migrate rewards to a new contract (feesAndBootstrapRewards)", async () => {
         const {d, committee} = await fullCommittee();
 
         const c0 = committee[0];
+        const c1 = committee[1];
 
         await evmIncreaseTime(d.web3, YEAR_IN_SECONDS);
 
-        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance(c0.address), /Reward distribution must be deactivated for migration/);
+        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance([c0.address, c1.address]), /Reward distribution must be deactivated for migration/);
 
         let r = await d.feesAndBootstrapRewards.deactivateRewardDistribution({from: d.migrationManager.address});
         expect(r).to.have.a.rewardDistributionDeactivatedEvent({});
 
         // Migrating to the same contract should revert
-        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance(c0.address), /New rewards contract is not set/);
+        await expectRejected(d.feesAndBootstrapRewards.migrateRewardsBalance([c0.address, c1.address]), /New rewards contract is not set/);
 
         // trigger reward assignment
         await c0.stake(1);
@@ -1102,6 +1260,17 @@ describe('rewards', async () => {
         const c0FeeBalance = bn(await c0.getFeeBalance());
         expect(c0FeeBalance).to.be.bignumber.greaterThan(bn(0));
 
+        // trigger reward assignment
+        await c1.stake(1);
+        await c1.readyToSync();
+        await c1.readyForCommittee();
+
+        const c1BootstrapBalance = bn(await c1.getBootstrapBalance());
+        expect(c1BootstrapBalance).to.be.bignumber.greaterThan(bn(0));
+
+        const c1FeeBalance = bn(await c1.getFeeBalance());
+        expect(c1FeeBalance).to.be.bignumber.greaterThan(bn(0));
+
         const newRewardsContract = await d.web3.deploy('FeesAndBootstrapRewards', [d.contractRegistry.address, d.registryAdmin.address, d.erc20.address, d.bootstrapToken.address,
           defaultDriverOptions.generalCommitteeAnnualBootstrap,
           defaultDriverOptions.certifiedCommitteeAnnualBootstrap
@@ -1109,7 +1278,9 @@ describe('rewards', async () => {
         await d.contractRegistry.setContract('feesAndBootstrapRewards', newRewardsContract.address, true, {from: d.registryAdmin.address});
 
         // migrate to the new contract
-        r = await d.feesAndBootstrapRewards.migrateRewardsBalance(c0.address);
+        r = await d.feesAndBootstrapRewards.migrateRewardsBalance([c0.address, c1.address]);
+
+        // c0
         expect(r).to.have.withinContract(newRewardsContract).a.approx().feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
           from: d.feesAndBootstrapRewards.address,
           guardian: c0.address,
@@ -1122,36 +1293,63 @@ describe('rewards', async () => {
           fees: c0FeeBalance,
           toRewardsContract: newRewardsContract.address
         });
-        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
-            from: d.feesAndBootstrapRewards.address,
-            to: newRewardsContract.address,
-            value: bn(c0FeeBalance)
-        });
-        expect(r).to.have.withinContract(d.bootstrapToken).a.approx().transferEvent({
-            from: d.feesAndBootstrapRewards.address,
-            to: newRewardsContract.address,
-            value: bn(c0BootstrapBalance)
-        });
         expect(bn(await c0.getBootstrapBalance())).to.bignumber.eq(bn(0));
         expect(bn(await c0.getFeeBalance())).to.bignumber.eq(bn(0));
         expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c0.address)).bootstrapBalance), c0BootstrapBalance);
         expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c0.address)).feeBalance), c0FeeBalance);
 
+        // c1
+        expect(r).to.have.withinContract(newRewardsContract).a.approx().feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
+          from: d.feesAndBootstrapRewards.address,
+          guardian: c1.address,
+          bootstrapRewards: c1BootstrapBalance.toString(),
+          fees: c1FeeBalance.toString()
+        });
+        expect(r).to.have.withinContract(d.feesAndBootstrapRewards).a.approx().feesAndBootstrapRewardsBalanceMigratedEvent({
+          guardian: c1.address,
+          bootstrapRewards: c1BootstrapBalance,
+          fees: c1FeeBalance,
+          toRewardsContract: newRewardsContract.address
+        });
+        expect(bn(await c1.getBootstrapBalance())).to.bignumber.eq(bn(0));
+        expect(bn(await c1.getFeeBalance())).to.bignumber.eq(bn(0));
+        expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c1.address)).bootstrapBalance), c1BootstrapBalance);
+        expectApproxEq(bn((await newRewardsContract.getFeesAndBootstrapBalance(c1.address)).feeBalance), c1FeeBalance);
+
+        expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
+            from: d.feesAndBootstrapRewards.address,
+            to: newRewardsContract.address,
+            value: bn(c1FeeBalance).add(bn(c0FeeBalance))
+        });
+        expect(r).to.have.withinContract(d.bootstrapToken).a.approx().transferEvent({
+            from: d.feesAndBootstrapRewards.address,
+            to: newRewardsContract.address,
+            value: bn(c1BootstrapBalance).add(bn(c0BootstrapBalance))
+        });
+
         // anyone can call acceptMigration
         const migrator = d.newParticipant();
-        await migrator.assignAndApproveOrbs(180, newRewardsContract.address);
+        await migrator.assignAndApproveOrbs(200, newRewardsContract.address);
         await migrator.assignAndApproveExternalToken(100, newRewardsContract.address);
-        r = await newRewardsContract.acceptRewardsBalanceMigration(c0.address,80, 100, {from: migrator.address});
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], 201,[20, 80], 100,{from: migrator.address}), /totalFees does not match fees sum/);
+        await expectRejected(newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], 200,[20, 80], 101,{from: migrator.address}), /totalBootstrap does not match bootstrap sum/);
+        r = await newRewardsContract.acceptRewardsBalanceMigration([c0.address, c1.address],[60, 140], 200,[20, 80], 100,{from: migrator.address});
         expect(r).to.have.withinContract(newRewardsContract).a.feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
             from: migrator.address,
             guardian: c0.address,
-            fees: bn(80),
-            bootstrapRewards: bn(100)
+            fees: bn(60),
+            bootstrapRewards: bn(20)
+        });
+        expect(r).to.have.withinContract(newRewardsContract).a.feesAndBootstrapRewardsBalanceMigrationAcceptedEvent({
+            from: migrator.address,
+            guardian: c1.address,
+            fees: bn(140),
+            bootstrapRewards: bn(80)
         });
         expect(r).to.have.withinContract(d.erc20).a.approx().transferEvent({
             from: migrator.address,
             to: newRewardsContract.address,
-            value: bn(80)
+            value: bn(200)
         });
         expect(r).to.have.withinContract(d.bootstrapToken).a.approx().transferEvent({
             from: migrator.address,
@@ -1350,4 +1548,26 @@ describe('rewards', async () => {
         }
 
     });
+
+    it("full claim after deactivation, balance is 0 (staking rewards)", async () => {
+        const {d, committee} = await fullCommittee();
+
+        const PERIOD = MONTH_IN_SECONDS * 2;
+
+        await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        await d.stakingRewards.deactivateRewardDistribution({from: d.migrationManager.address});
+        await d.stakingRewardsWallet.setClient(ZERO_ADDR, {from: d.functionalManager.address});
+
+        expect(await d.erc20.balanceOf(d.stakingRewards.address)).to.be.bignumber.gt(fromMilliOrbs(1) as any);
+        expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
+
+        for (const c of committee) {
+            await d.stakingRewards.claimStakingRewards(c.address);
+        }
+
+        expect(await d.erc20.balanceOf(d.stakingRewards.address)).to.be.bignumber.lt(bn(100));
+        expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
+    });
+
 });

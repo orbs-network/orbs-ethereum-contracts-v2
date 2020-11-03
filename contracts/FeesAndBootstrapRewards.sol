@@ -41,9 +41,11 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
     struct FeesAndBootstrap {
         uint96 feeBalance;
-        uint96 lastFeesPerMember;
         uint96 bootstrapBalance;
+        uint96 lastFeesPerMember;
         uint96 lastBootstrapPerMember;
+        uint96 withdrawnFees;
+        uint96 withdrawnBootstrap;
     }
     mapping(address => FeesAndBootstrap) public feesAndBootstrap;
 
@@ -80,13 +82,13 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
     }
 
     function getFeesAndBootstrapBalance(address guardian) external override view returns (uint256 feeBalance, uint256 bootstrapBalance) {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        (FeesAndBootstrap memory guardianFeesAndBootstrap,) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (guardianFeesAndBootstrap.feeBalance, guardianFeesAndBootstrap.bootstrapBalance);
     }
 
     function estimateFutureFeesAndBootstrapRewards(address guardian, uint256 duration) external override view returns (uint256 estimatedFees, uint256 estimatedBootstrapRewards) {
-        FeesAndBootstrap memory guardianFeesAndBootstrapNow = getGuardianFeesAndBootstrap(guardian, block.timestamp);
-        FeesAndBootstrap memory guardianFeesAndBootstrapFuture = getGuardianFeesAndBootstrap(guardian, block.timestamp.add(duration));
+        (FeesAndBootstrap memory guardianFeesAndBootstrapNow,) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        (FeesAndBootstrap memory guardianFeesAndBootstrapFuture,) = getGuardianFeesAndBootstrap(guardian, block.timestamp.add(duration));
         estimatedFees = guardianFeesAndBootstrapFuture.feeBalance.sub(guardianFeesAndBootstrapNow.feeBalance);
         estimatedBootstrapRewards = guardianFeesAndBootstrapFuture.bootstrapBalance.sub(guardianFeesAndBootstrapNow.bootstrapBalance);
     }
@@ -95,7 +97,9 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         updateGuardianFeesAndBootstrap(guardian);
         uint256 amount = feesAndBootstrap[guardian].bootstrapBalance;
         feesAndBootstrap[guardian].bootstrapBalance = 0;
-        emit BootstrapRewardsWithdrawn(guardian, amount);
+        uint96 withdrawnBootstrap = feesAndBootstrap[guardian].withdrawnBootstrap.add(amount);
+        feesAndBootstrap[guardian].withdrawnBootstrap = withdrawnBootstrap;
+        emit BootstrapRewardsWithdrawn(guardian, amount, withdrawnBootstrap);
 
         require(bootstrapToken.transfer(guardian, amount), "Rewards::withdrawBootstrapFunds - insufficient funds");
     }
@@ -105,7 +109,10 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
 
         uint256 amount = feesAndBootstrap[guardian].feeBalance;
         feesAndBootstrap[guardian].feeBalance = 0;
-        emit FeesWithdrawn(guardian, amount);
+        uint96 withdrawnFees = feesAndBootstrap[guardian].withdrawnFees.add(amount);
+        feesAndBootstrap[guardian].withdrawnFees = withdrawnFees;
+
+        emit FeesWithdrawn(guardian, amount, withdrawnFees);
         require(feesToken.transfer(guardian, amount), "Rewards::withdrawFees - insufficient funds");
     }
 
@@ -129,14 +136,21 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 feeBalance,
         uint256 lastFeesPerMember,
         uint256 bootstrapBalance,
-        uint256 lastBootstrapPerMember
+        uint256 lastBootstrapPerMember,
+        uint256 withdrawnFees,
+        uint256 withdrawnBootstrap,
+        bool certified
     ) {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = getGuardianFeesAndBootstrap(guardian, block.timestamp);
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        (guardianFeesAndBootstrap, certified) = getGuardianFeesAndBootstrap(guardian, block.timestamp);
         return (
             guardianFeesAndBootstrap.feeBalance,
             guardianFeesAndBootstrap.lastFeesPerMember,
             guardianFeesAndBootstrap.bootstrapBalance,
-            guardianFeesAndBootstrap.lastBootstrapPerMember
+            guardianFeesAndBootstrap.lastBootstrapPerMember,
+            guardianFeesAndBootstrap.withdrawnFees,
+            guardianFeesAndBootstrap.withdrawnBootstrap,
+            certified
         );
     }
 
@@ -144,43 +158,68 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
      * Governance functions
      */
 
-    function migrateRewardsBalance(address guardian) external override {
+    function migrateRewardsBalance(address[] calldata guardians) external override {
         require(!settings.rewardAllocationActive, "Reward distribution must be deactivated for migration");
 
         IFeesAndBootstrapRewards currentRewardsContract = IFeesAndBootstrapRewards(getFeesAndBootstrapRewardsContract());
         require(address(currentRewardsContract) != address(this), "New rewards contract is not set");
 
-        updateGuardianFeesAndBootstrap(guardian);
+        uint256 totalFees = 0;
+        uint256 totalBootstrap = 0;
+        uint256[] memory fees = new uint256[](guardians.length);
+        uint256[] memory bootstrap = new uint256[](guardians.length);
 
-        FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardian];
-        uint256 fees = guardianFeesAndBootstrap.feeBalance;
-        uint256 bootstrap = guardianFeesAndBootstrap.bootstrapBalance;
+        for (uint i = 0; i < guardians.length; i++) {
+            updateGuardianFeesAndBootstrap(guardians[i]);
 
-        guardianFeesAndBootstrap.feeBalance = 0;
-        guardianFeesAndBootstrap.bootstrapBalance = 0;
-        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
+            FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardians[i]];
+            fees[i] = guardianFeesAndBootstrap.feeBalance;
+            totalFees = totalFees.add(fees[i]);
+            bootstrap[i] = guardianFeesAndBootstrap.bootstrapBalance;
+            totalBootstrap = totalBootstrap.add(bootstrap[i]);
 
-        require(feesToken.approve(address(currentRewardsContract), fees), "migrateRewardsBalance: approve failed");
-        require(bootstrapToken.approve(address(currentRewardsContract), bootstrap), "migrateRewardsBalance: approve failed");
-        currentRewardsContract.acceptRewardsBalanceMigration(guardian, fees, bootstrap);
+            guardianFeesAndBootstrap.feeBalance = 0;
+            guardianFeesAndBootstrap.bootstrapBalance = 0;
+            feesAndBootstrap[guardians[i]] = guardianFeesAndBootstrap;
+        }
 
-        emit FeesAndBootstrapRewardsBalanceMigrated(guardian, fees, bootstrap, address(currentRewardsContract));
+        require(feesToken.approve(address(currentRewardsContract), totalFees), "migrateRewardsBalance: approve failed");
+        require(bootstrapToken.approve(address(currentRewardsContract), totalBootstrap), "migrateRewardsBalance: approve failed");
+        currentRewardsContract.acceptRewardsBalanceMigration(guardians, fees, totalFees, bootstrap, totalBootstrap);
+
+        for (uint i = 0; i < guardians.length; i++) {
+            emit FeesAndBootstrapRewardsBalanceMigrated(guardians[i], fees[i], bootstrap[i], address(currentRewardsContract));
+        }
     }
 
-    function acceptRewardsBalanceMigration(address guardian, uint256 fees, uint256 bootstrap) external override {
-        FeesAndBootstrap memory guardianFeesAndBootstrap = feesAndBootstrap[guardian];
-        guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(fees);
-        guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrap);
-        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
+    function acceptRewardsBalanceMigration(address[] memory guardians, uint256[] memory fees, uint256 totalFees, uint256[] memory bootstrap, uint256 totalBootstrap) external override {
+        uint256 _totalFees = 0;
+        uint256 _totalBootstrap = 0;
 
-        if (fees > 0) {
-            require(feesToken.transferFrom(msg.sender, address(this), fees), "acceptRewardBalanceMigration: transfer failed");
-        }
-        if (bootstrap > 0) {
-            require(bootstrapToken.transferFrom(msg.sender, address(this), bootstrap), "acceptRewardBalanceMigration: transfer failed");
+        for (uint i = 0; i < guardians.length; i++) {
+            _totalFees = _totalFees.add(fees[i]);
+            _totalBootstrap = _totalBootstrap.add(bootstrap[i]);
         }
 
-        emit FeesAndBootstrapRewardsBalanceMigrationAccepted(msg.sender, guardian, fees, bootstrap);
+        require(totalFees == _totalFees, "totalFees does not match fees sum");
+        require(totalBootstrap == _totalBootstrap, "totalBootstrap does not match bootstrap sum");
+
+        if (totalFees > 0) {
+            require(feesToken.transferFrom(msg.sender, address(this), totalFees), "acceptRewardBalanceMigration: transfer failed");
+        }
+        if (totalBootstrap > 0) {
+            require(bootstrapToken.transferFrom(msg.sender, address(this), totalBootstrap), "acceptRewardBalanceMigration: transfer failed");
+        }
+
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        for (uint i = 0; i < guardians.length; i++) {
+            guardianFeesAndBootstrap = feesAndBootstrap[guardians[i]];
+            guardianFeesAndBootstrap.feeBalance = guardianFeesAndBootstrap.feeBalance.add(fees[i]);
+            guardianFeesAndBootstrap.bootstrapBalance = guardianFeesAndBootstrap.bootstrapBalance.add(bootstrap[i]);
+            feesAndBootstrap[guardians[i]] = guardianFeesAndBootstrap;
+
+            emit FeesAndBootstrapRewardsBalanceMigrationAccepted(msg.sender, guardians[i], fees[i], bootstrap[i]);
+        }
     }
 
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
@@ -317,18 +356,21 @@ contract FeesAndBootstrapRewards is IFeesAndBootstrapRewards, ManagedContract {
         uint256 addedFeesAmount;
 
         FeesAndBootstrapState memory _feesAndBootstrapState = _updateFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize);
-        (feesAndBootstrap[guardian], addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
+        FeesAndBootstrap memory guardianFeesAndBootstrap;
+        (guardianFeesAndBootstrap, addedBootstrapAmount, addedFeesAmount) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, nextCertification, _feesAndBootstrapState);
+        feesAndBootstrap[guardian] = guardianFeesAndBootstrap;
 
-        emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount);
-        emit FeesAssigned(guardian, addedFeesAmount);
+        emit BootstrapRewardsAssigned(guardian, addedBootstrapAmount, guardianFeesAndBootstrap.withdrawnBootstrap.add(guardianFeesAndBootstrap.bootstrapBalance), isCertified, guardianFeesAndBootstrap.lastBootstrapPerMember);
+        emit FeesAssigned(guardian, addedFeesAmount, guardianFeesAndBootstrap.withdrawnFees.add(guardianFeesAndBootstrap.feeBalance), isCertified, guardianFeesAndBootstrap.lastFeesPerMember);
     }
 
-    function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap) {
+    function getGuardianFeesAndBootstrap(address guardian, uint256 currentTime) private view returns (FeesAndBootstrap memory guardianFeesAndBootstrap, bool certified) {
         ICommittee _committeeContract = committeeContract;
         (uint generalCommitteeSize, uint certifiedCommitteeSize, ) = _committeeContract.getCommitteeStats();
         (FeesAndBootstrapState memory _feesAndBootstrapState,,) = _getFeesAndBootstrapState(generalCommitteeSize, certifiedCommitteeSize, generalFeesWallet.getOutstandingFees(currentTime), certifiedFeesWallet.getOutstandingFees(currentTime), currentTime, settings);
-        (bool inCommittee, , bool isCertified,) = _committeeContract.getMemberInfo(guardian);
-        (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, isCertified, isCertified, _feesAndBootstrapState);
+        bool inCommittee;
+        (inCommittee, , certified,) = _committeeContract.getMemberInfo(guardian);
+        (guardianFeesAndBootstrap, ,) = _getGuardianFeesAndBootstrap(guardian, inCommittee, certified, certified, _feesAndBootstrapState);
     }
 
     function updateGuardianFeesAndBootstrap(address guardian) private {

@@ -5,21 +5,29 @@ import {OwnedContract} from "./base-contract";
 export interface FeesAssignedEvent {
     guardian: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
+    certification: boolean,
+    feesPerMember: (string|BN)
 }
 
 export interface BootstrapRewardsAssignedEvent {
     guardian: string,
     amount: (string|BN),
+    totalAwarded: (string|BN),
+    certification: boolean,
+    bootstrapPerMember: (string|BN)
 }
 
 export interface FeesWithdrawnEvent {
     guardian: string,
     amount: (string|BN),
+    totalWithdrawn: (string|BN)
 }
 
 export interface BootstrapRewardsWithdrawnEvent {
     guardian: string,
-    amount: string|BN
+    amount: string|BN,
+    totalWithdrawn: (string|BN)
 }
 
 export interface FeesAndBootstrapRewardsBalanceMigratedEvent {
@@ -81,15 +89,23 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
     // fees
     withdrawFees(guardian: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     getFeesAndBootstrapBalance(address: string): Promise<{feeBalance: string, bootstrapBalance: string}>;
-    getFeesAndBootstrapData(address: string): Promise<{feeBalance: string, lastFeesPerMember:string, bootstrapBalance: string, lastBootstrapPerMember: string}>;
+    getFeesAndBootstrapData(address: string): Promise<{
+        feeBalance: string,
+        lastFeesPerMember:string,
+        bootstrapBalance: string,
+        lastBootstrapPerMember: string,
+        withdrawnFees: string,
+        withdrawnBootstrap: string,
+        certified: boolean
+    }>;
 
     estimateFutureFeesAndBootstrapRewards(guardian: string, duration: number): Promise<{estimatedFees: number, estimatedBootstrapRewards: number}>;
 
     emergencyWithdraw(params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    migrateRewardsBalance(addr: string, params?: TransactionConfig): Promise<TransactionReceipt>;
+    migrateRewardsBalance(addrs: string[], params?: TransactionConfig): Promise<TransactionReceipt>;
 
-    acceptRewardsBalanceMigration(addr: string, fees: number | BN, bootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
+    acceptRewardsBalanceMigration(addrs: string[], fees: (number | BN)[], totalFees: number | BN, bootstrap: (number | BN)[], totalBootstrap: number | BN, params?: TransactionConfig): Promise<TransactionReceipt>;
 
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
 

@@ -48,7 +48,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
 
         lastCollectedAt = block.timestamp;
 
-        require(token.transfer(msg.sender, _collectedFees), "FeesWallet::failed to transfer collected fees to rewards"); // TODO in that case, transfer the remaining balance?
+        require(token.transfer(msg.sender, _collectedFees), "FeesWallet::failed to transfer collected fees to rewards");
         return _collectedFees;
     }
 
@@ -128,10 +128,6 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     }
 
     function _getOutstandingFees(uint256 currentTime) private view returns (uint256 outstandingFees, uint[] memory bucketsWithdrawn, uint[] memory withdrawnAmounts, uint[] memory newTotals)  {
-        // TODO we often do integer division for rate related calculation, which floors the result. Do we need to address this?
-        // TODO for an empty committee or a committee with 0 total stake the divided amounts will be locked in the contract FOREVER
-
-        // Fee pool
         uint _lastCollectedAt = lastCollectedAt;
         uint nUpdatedBuckets = _bucketTime(currentTime).sub(_bucketTime(_lastCollectedAt)).div(BUCKET_TIME_PERIOD).add(1);
         bucketsWithdrawn = new uint[](nUpdatedBuckets);
