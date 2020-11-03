@@ -308,7 +308,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     /// Activates staking rewards allocation
     /// @dev governance function called only by the initialization admin
-    /// @dev On migrations, startTime should be set as the previous contract deactivation time.
+    /// @dev On migrations, startTime should be set to the previous contract deactivation time
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external override onlyMigrationManager {
         require(!settings.rewardAllocationActive, "reward distribution is already activated");
@@ -488,7 +488,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         return totalCommitteeWeight == 0 ? 0 : Math.min(uint256(_settings.annualRateInPercentMille).mul(TOKEN_BASE).div(PERCENT_MILLIE_BASE), uint256(_settings.annualCap).mul(TOKEN_BASE).div(totalCommitteeWeight));
     }
 
-    /// Calculate the added rewards per weight for the duration based on the committee data
+    /// Calculates the added rewards per weight for the given duration based on the committee data
     /// @param totalCommitteeWeight is the current committee total weight
     /// @param duration is the duration to calculate for in seconds
     /// @param _settings is the contract settings
@@ -537,8 +537,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     /// Updates the global staking rewards 
     /// @dev calculated to the latest block, may differ from the state read
-    /// @dev uses the _updateStakingRewardsState function
     /// @dev queries the committee state from the committee contract
+    /// @dev uses the _updateStakingRewardsState function
     /// @return _stakingRewardsState is the updated global staking rewards struct
     function updateStakingRewardsState() private returns (StakingRewardsState memory _stakingRewardsState) {
         (, , uint totalCommitteeWeight) = committeeContract.getCommitteeStats();
@@ -629,7 +629,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     /// Updates a guardian staking rewards state
-    /// @dev query the relevant guardian and committee data from the committee contract
+    /// @dev queries the relevant guardian and committee data from the committee contract
     /// @dev uses _updateGuardianStakingRewards
     /// @param guardian is the guardian to update
     /// @param _stakingRewardsState is the updated global staking rewards state
@@ -698,7 +698,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     /// Updates a delegator staking rewards state
-    /// @dev query the relevant delegator and committee data from the committee contract amd delegation contract
+    /// @dev queries the relevant delegator and committee data from the committee contract and delegation contract
     /// @dev uses _updateDelegatorStakingRewards
     /// @param delegator is the delegator to update
     function updateDelegatorStakingRewards(address delegator) private {
@@ -785,7 +785,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         stakingRewardsState.unclaimedStakingRewards = _stakingRewardsState.unclaimedStakingRewards.sub(total);
     }
 
-    /// Withdraw the tokens allocated for the contract from the staking rewards wallet
+    /// Withdraws the tokens that were allocated to the contract from the staking rewards wallet
     /// @dev used as part of the migration flow to withdraw all the funds allocated for participants before updating the wallet client to a new contarct
     /// @param _stakingRewardsState is the updated global staking rewards state
     function withdrawRewardsWalletAllocatedTokens(StakingRewardsState memory _stakingRewardsState) private returns (uint256 _stakingRewardsContractBalance){

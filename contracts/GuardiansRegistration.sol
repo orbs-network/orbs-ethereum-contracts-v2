@@ -130,7 +130,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
     /// Returns a guardian's ip
     /// @dev an unregistered guardian returns 0 ip address
     /// @param guardian is the guardian to query
-    /// @param ip is the guardian's node ipv4 address as a 32b number 
+    /// @return ip is the guardian's node ipv4 address as a 32b number 
 	function getGuardianIp(address guardian) external override view returns (bytes4 ip) {
 		return guardians[guardian].ip;
 	}
@@ -138,7 +138,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
     /// Returns the ip of a list of guardians
     /// @dev an unregistered guardian returns 0 ip address
     /// @param guardianAddrs is a list of guardians' addresses to query
-    /// @param ips is a list of the guardians' node ipv4 addresses as a 32b numbers
+    /// @return ips is a list of the guardians' node ipv4 addresses as a 32b numbers
 	function getGuardianIps(address[] calldata guardianAddrs) external override view returns (bytes4[] memory ips) {
 		ips = new bytes4[](guardianAddrs.length);
 		for (uint i = 0; i < guardianAddrs.length; i++) {
@@ -156,7 +156,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
     /// Translates a list guardians Orbs addresses to guardian addresses
     /// @dev an Orbs address that does not correspond to any registered guardian returns address(0)
     /// @param orbsAddrs is a list of the guardians' Orbs addresses to query
-    /// @param guardianAddrs is a list of guardians' addresses that matches the Orbs addresses
+    /// @return guardianAddrs is a list of guardians' addresses that matches the Orbs addresses
 	function getGuardianAddresses(address[] calldata orbsAddrs) external override view returns (address[] memory guardianAddrs) {
 		guardianAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {

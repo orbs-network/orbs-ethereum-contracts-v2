@@ -81,7 +81,7 @@ contract Protocol is IProtocol, ManagedContract {
      * Private functions
      */
 
-    /// Check whether a previously set protocol upgrade was executed and returns accordingly the current protocol version 
+    /// Checks whether a previously set protocol upgrade was executed and returns the current protocol version 
     /// @param deploymentSubset is the name of the deployment subset to query
     /// @return prevUpgradeExecuted indicates whether the previous protocol upgrade was executed 
     /// @return currentVersion is the active protocol version for the deployment subset    

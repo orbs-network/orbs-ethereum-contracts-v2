@@ -117,7 +117,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         destination.acceptBucketMigration(bucketStartTime, bucketAmount);
     }
 
-    /// Accepts a bucket fees from a old fees wallet as part of a migration
+    /// Accepts a fees bucket balance from a previous fees wallet as part of the fees wallet migration
     /// @dev Called by the old FeesWallet contract.
     /// @dev Part of the IMigratableFeesWallet interface.
     /// @dev assumes the caller approved the amount prior to calling
@@ -190,7 +190,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
         }
     }
 
-    /// Returns the start time of a bucket, sued also to identify the bucket
+    /// Returns the start time of a bucket, used also to identify the bucket
     function _bucketTime(uint256 time) private pure returns (uint256) {
         return time.sub(time % BUCKET_TIME_PERIOD);
     }

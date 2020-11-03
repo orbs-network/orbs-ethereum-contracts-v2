@@ -46,7 +46,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         return token.balanceOf(address(this));
     }
 
-    /// Transfers the given amount of orbs tokens form the sender to this contract an updates the pool
+    /// Transfers the given amount of orbs tokens form the sender to this contract and updates the pool
     /// @dev assumes the caller approved the amount prior to calling
     /// @param amount is the amount to add to the wallet
     function topUp(uint256 amount) external override {

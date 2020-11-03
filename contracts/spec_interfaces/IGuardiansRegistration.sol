@@ -73,7 +73,7 @@ interface IGuardiansRegistration {
     /// Returns a guardian's ip
     /// @dev an unregistered guardian returns 0 ip address
     /// @param guardian is the guardian to query
-    /// @param ip is the guardian's node ipv4 address as a 32b number 
+    /// @return ip is the guardian's node ipv4 address as a 32b number 
 	function getGuardianIp(address guardian) external view returns (bytes4 ip);
 
     /// Returns the ip of a list of guardians
@@ -90,7 +90,7 @@ interface IGuardiansRegistration {
     /// Translates a list guardians Orbs addresses to guardian addresses
     /// @dev an Orbs address that does not correspond to any registered guardian returns address(0)
     /// @param orbsAddrs is a list of the guardians' Orbs addresses to query
-    /// @param guardianAddrs is a list of guardians' addresses that matches the Orbs addresses
+    /// @return guardianAddrs is a list of guardians' addresses that matches the Orbs addresses
 	function getGuardianAddresses(address[] calldata orbsAddrs) external view returns (address[] memory guardianAddrs);
 
     /// Resolves the guardian address for a guardian, given a Guardian/Orbs address

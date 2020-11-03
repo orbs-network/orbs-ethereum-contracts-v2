@@ -46,7 +46,7 @@ interface IFeesWallet {
     /// @param bucketStartTime is the start time of the bucket to migration, must be a bucket's valid start time
     function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external /* onlyMigrationManager */;
 
-    /// Accepts a bucket fees from a old fees wallet as part of a migration
+    /// Accepts a fees bucket balance from a old fees wallet as part of the fees wallet migration
     /// @dev Called by the old FeesWallet contract.
     /// @dev Part of the IMigratableFeesWallet interface.
     /// @dev assumes the caller approved the amount prior to calling

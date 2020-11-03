@@ -146,7 +146,7 @@ interface IStakingRewards {
 
     /// Activates staking rewards allocation
     /// @dev governance function called only by the initialization admin
-    /// @dev On migrations, startTime should be set as the previous contract deactivation time.
+    /// @dev On migrations, startTime should be set to the previous contract deactivation time
     /// @param startTime sets the last assignment time
     function activateRewardDistribution(uint startTime) external /* onlyInitializationAdmin */;
 

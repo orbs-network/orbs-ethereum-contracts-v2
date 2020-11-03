@@ -41,13 +41,13 @@ interface ISubscriptions {
     /// Sets a virtual chain config record
     /// @dev may be called only by the virtual chain owner
     /// @param vcId is the virtual chain ID
-    /// @param key iis the name of the config record to update
+    /// @param key is the name of the config record to update
     /// @param value is the config record value
     function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external /* onlyVcOwner */;
 
     /// Returns the value of a virtual chain config record
     /// @param vcId is the virtual chain ID
-    /// @param key iis the name of the config record to query
+    /// @param key is the name of the config record to query
     /// @return value is the config record value
     function getVcConfigRecord(uint256 vcId, string calldata key) external view returns (string memory);
 
@@ -98,7 +98,7 @@ interface ISubscriptions {
     /// @param addr is the address of the subscription plan contract
     function removeSubscriber(address addr) external /* onlyFunctionalManager */;
 
-    /// Set the genesis reference time delay from the virtual chain creation time
+    /// Sets the delay between a virtual chain genesis reference time and the virtual chain creation time
     /// @dev governance function called only by the functional manager
     /// @dev the reference time delay allows the guardian to be ready with the virtual chain resources for the first block consensus
     /// @param newGenesisRefTimeDelay is the delay time in seconds
