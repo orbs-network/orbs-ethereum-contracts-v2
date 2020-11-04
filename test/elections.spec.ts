@@ -834,7 +834,7 @@ describe('elections-high-level-flows', async () => {
         expect((await d.elections.getVoteOutStatus(subject.address)).votedStake).to.be.bignumber.eq(bn(200));
     });
 
-    it.only("voteOut: handles re-voting to the same subject", async () => {
+    it("voteOut: handles re-voting to the same subject", async () => {
        const d = await Driver.new();
 
        const voter = d.newParticipant();
@@ -845,6 +845,22 @@ describe('elections-high-level-flows', async () => {
        expect((await d.elections.getVoteOutStatus(subject.address)).votedStake).to.bignumber.eq(bn(100));
        await d.elections.voteOut(subject.address, {from: voter.address});
        expect((await d.elections.getVoteOutStatus(subject.address)).votedStake).to.bignumber.eq(bn(100));
+    });
+
+    it("voteOut: handle voteOut changed", async () => {
+       const d = await Driver.new();
+
+       const voter = d.newParticipant();
+       const subject1 = d.newParticipant();
+       const subject2 = d.newParticipant();
+
+       await voter.stake(100);
+       await d.elections.voteOut(subject1.address, {from: voter.address});
+       expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(100));
+       expect((await d.elections.getVoteOutStatus(subject2.address)).votedStake).to.bignumber.eq(bn(0));
+       await d.elections.voteOut(subject2.address, {from: voter.address});
+       expect((await d.elections.getVoteOutStatus(subject2.address)).votedStake).to.bignumber.eq(bn(100));
+       expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(100));
     });
 
     it("rejects readyToSync and readyForCommittee for a voted-out guardian", async () => {
