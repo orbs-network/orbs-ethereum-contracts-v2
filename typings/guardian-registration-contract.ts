@@ -2,7 +2,7 @@ import {Contract} from "../eth";
 
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface GuardianRegisteredEvent {
     guardian: string,
@@ -29,7 +29,7 @@ export interface GuardianMetadataChangedEvent {
     newValue: string,
 }
 
-export interface GuardiansRegistrationContract extends OwnedContract {
+export interface GuardiansRegistrationContract extends ManagedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     registerGuardian(ip: string, orbsAddr: string, name: string, website: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     unregisterGuardian(params?: TransactionConfig): Promise<TransactionReceipt>;

@@ -6,6 +6,7 @@ import chai from "chai";
 import {bn, contractId, expectRejected} from "./helpers";
 import {ContractRegistryContract} from "../typings/contract-registry-contract";
 import {chaiEventMatchersPlugin} from "./matchers";
+import {ManagedContract} from "../typings/base-contract";
 
 chai.use(require('chai-bn')(BN));
 chai.use(chaiEventMatchersPlugin);

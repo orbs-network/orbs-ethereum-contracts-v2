@@ -81,7 +81,7 @@ async function fullCommittee(stakes?: BN[] | null, numVCs=2, opts?: {
     await d.feesAndBootstrapRewards.setCertifiedCommitteeAnnualBootstrap(CERTIFIED_ANNUAL_BOOTSTRAP, {from: d.functionalManager.address});
 
     let committee: Participant[] = [];
-    for (let i = 0; i < MAX_COMMITTEE; i++) {
+    for (let i = 0; i < (stakes?.length || MAX_COMMITTEE); i++) {
         const stake = stakes ? stakes[i] : BASE_STAKE;
         const {v} = await d.newGuardian(stake, false, false, false);
         committee.push(v);
@@ -461,8 +461,9 @@ describe('rewards', async () => {
         expectApproxEq((await d.feesAndBootstrapRewards.estimateFutureFeesAndBootstrapRewards(c0.address, PERIOD / 2)).estimatedBootstrapRewards, expectedBootstrap.div(bn(2)));
     });
 
-    it('returns fees and bootstrap data', async () => {
+    it('returns fees and bootstrap state and data', async () => {
         const {d, committee} = await fullCommittee([fromMilliOrbs(4000), fromMilliOrbs(3000), fromMilliOrbs(2000), fromMilliOrbs(1000)], 1);
+        await committee[3].becomeCertified();
 
         const PERIOD = MONTH_IN_SECONDS * 2;
 
@@ -477,9 +478,16 @@ describe('rewards', async () => {
         expect(expectedBootstrap).to.be.bignumber.gt(bn(0));
 
         await d.feesAndBootstrapRewards.withdrawFees(c0.address);
-        await d.feesAndBootstrapRewards.withdrawBootstrapFunds(c0.address);
+        let r = await d.feesAndBootstrapRewards.withdrawBootstrapFunds(c0.address);
+        const lastAssigned = bn(await d.web3.txTimestamp(r));
 
         await evmIncreaseTimeForQueries(d.web3, PERIOD);
+
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapState()).certifiedBootstrapPerMember, bn(await certifiedBootstrapForDuration(PERIOD*2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapState()).certifiedFeesPerMember, bn(await certifiedFeesForDuration(PERIOD*2, 1, MAX_COMMITTEE)));
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapState()).generalBootstrapPerMember, expectedBootstrap.mul(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapState()).generalFeesPerMember, expectedFees.mul(bn(2)));
+        expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapState()).lastAssigned, lastAssigned);
 
         expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).bootstrapBalance, expectedBootstrap);
         expectApproxEq((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).withdrawnBootstrap, expectedBootstrap);
@@ -491,6 +499,15 @@ describe('rewards', async () => {
         expect((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).certified).to.be.false;
         await c0.becomeCertified();
         expect((await d.feesAndBootstrapRewards.getFeesAndBootstrapData(c0.address)).certified).to.be.true;
+    });
+
+    it('gets annual bootstrap rates', async () => {
+        const d = await Driver.new({
+            generalCommitteeAnnualBootstrap: bn(123),
+            certifiedCommitteeAnnualBootstrap: bn(456)
+        });
+        expect(await d.feesAndBootstrapRewards.getGeneralCommitteeAnnualBootstrap()).to.eq("123");
+        expect(await d.feesAndBootstrapRewards.getCertifiedCommitteeAnnualBootstrap()).to.eq("456");
     });
 
     // Staking rewards
@@ -1586,4 +1603,32 @@ describe('rewards', async () => {
         expect(await d.stakingRewards.stakingRewardsContractBalance()).to.be.bignumber.eq(bn(await d.erc20.balanceOf(d.stakingRewards.address)));
     });
 
+    it("gets current staking rewards rate, allocated tokens, setting getters", async () => {
+        const {d, committee} = await fullCommittee([fromMilliOrbs(10000)], 1);
+
+        // getStakingRewardsWalletAllocatedTokens
+
+        await evmIncreaseTimeForQueries(d.web3, MONTH_IN_SECONDS);
+        expectApproxEq(await d.stakingRewards.getStakingRewardsWalletAllocatedTokens(), await totalStakingRewardsBalance(d, committee[0]));
+        await d.stakingRewards.claimStakingRewards(committee[0].address);
+        expectApproxEq(await d.stakingRewards.getStakingRewardsWalletAllocatedTokens(), 100);
+
+        // getCurrentStakingRewardsRatePercentMille
+
+        expect(await d.stakingRewards.getCurrentStakingRewardsRatePercentMille()).to.bignumber.eq(STAKING_REWARDS_ANNUAL_RATE);
+
+        const total = STAKING_REWARDS_ANNUAL_CAP.mul(bn(100000)).div(STAKING_REWARDS_ANNUAL_RATE); // Maximum total weight where the annual rate still holds
+        await committee[0].stake(total.sub(fromMilliOrbs(10000)));
+        expectApproxEq(await d.stakingRewards.getCurrentStakingRewardsRatePercentMille(), STAKING_REWARDS_ANNUAL_RATE);
+
+        await committee[0].stake(total); // doubling the total should diving the rate by 2
+        expectApproxEq(await d.stakingRewards.getCurrentStakingRewardsRatePercentMille(), STAKING_REWARDS_ANNUAL_RATE.div(bn(2)));
+
+        // getDefaultDelegatorsStakingRewardsPercentMille
+
+        expect(await d.stakingRewards.getDefaultDelegatorsStakingRewardsPercentMille()).to.bignumber.eq(DELEGATOR_REWARDS_PERCENT_MILLE);
+        expect(await d.stakingRewards.getMaxDelegatorsStakingRewardsPercentMille()).to.bignumber.eq(bn(defaultDriverOptions.maxDelegatorsStakingRewardsPercentMille));
+        expect(await d.stakingRewards.getAnnualStakingRewardsRatePercentMille()).to.bignumber.eq(STAKING_REWARDS_ANNUAL_RATE);
+        expect(await d.stakingRewards.getAnnualStakingRewardsCap()).to.bignumber.eq(STAKING_REWARDS_ANNUAL_CAP);
+    });
 });

@@ -90,7 +90,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
         emit NotifyDelegationsChanged(_notifyDelegations);
     }
 
-    function getNotifyDelegations() external override returns (bool) {
+    function getNotifyDelegations() external view override returns (bool) {
         return settings.notifyDelegations;
     }
 

@@ -37,44 +37,53 @@ describe("staking-contract-handler", async () => {
         const d = await Driver.new();
 
         await expectRejected(d.stakingContractHandler.setNotifyDelegations(true, {from: d.functionalManager.address}), /sender is not the migration manager/);
-        let r = await d.stakingContractHandler.setNotifyDelegations(true, {from: d.migrationManager.address});
-        expect(r).to.have.a.notifyDelegationsChangedEvent({notifyDelegations: true});
 
-        r = await d.stakingContractHandler.setNotifyDelegations(false, {from: d.migrationManager.address});
-        expect(r).to.have.a.notifyDelegationsChangedEvent({notifyDelegations: false});
+        for (const notify of [true, false]) {
+            let r = await d.stakingContractHandler.setNotifyDelegations(notify, {from: d.migrationManager.address});
+            expect(r).to.have.a.notifyDelegationsChangedEvent({notifyDelegations: notify});
+            expect(await d.stakingContractHandler.getNotifyDelegations()).to.eq(notify);
 
-        const p = d.newParticipant();
-        r = await p.stake(100);
-        expect(r).to.have.a.stakedEvent({
-            stakeOwner: p.address,
-            totalStakedAmount: bn(100)
-        });
-        expect(r).to.have.a.stakeChangeNotificationSkippedEvent({
-            stakeOwner: p.address
-        });
-        expect(r).to.not.have.a.delegatedStakeChangedEvent();
+            const p = d.newParticipant();
+            r = await p.stake(100);
+            expect(r).to.have.a.stakedEvent({
+                stakeOwner: p.address,
+                totalStakedAmount: bn(100)
+            });
+            if (notify) {
+                expect(r).to.have.a.delegatedStakeChangedEvent();
+            } else {
+                expect(r).to.have.a.stakeChangeNotificationSkippedEvent({stakeOwner: p.address});
+                expect(r).to.not.have.a.delegatedStakeChangedEvent();
+            }
 
-        await p.assignAndApproveOrbs(100, d.staking.address);
-        const p2 = d.newParticipant();
-        r = await d.staking.distributeRewards(100, [p2.address], [100], {from: p.address});
-        expect(r).to.have.a.stakedEvent({
-            stakeOwner: p2.address,
-            totalStakedAmount: bn(100)
-        });
-        expect(r).to.have.a.stakeChangeBatchNotificationSkippedEvent({
-            stakeOwners: [p2.address]
-        });
-        expect(r).to.not.have.a.delegatedStakeChangedEvent();
+            await p.assignAndApproveOrbs(100, d.staking.address);
+            const p2 = d.newParticipant();
+            r = await d.staking.distributeRewards(100, [p2.address], [100], {from: p.address});
+            expect(r).to.have.a.stakedEvent({
+                stakeOwner: p2.address,
+                totalStakedAmount: bn(100)
+            });
+            if (notify) {
+                expect(r).to.have.a.delegatedStakeChangedEvent();
+            } else {
+                expect(r).to.have.a.stakeChangeBatchNotificationSkippedEvent({
+                    stakeOwners: [p2.address]
+                });
+                expect(r).to.not.have.a.delegatedStakeChangedEvent();
+            }
 
-        const newStaking = await d.newStakingContract(ZERO_ADDR, d.erc20.address);
+            const newStaking = await d.newStakingContract(ZERO_ADDR, d.erc20.address);
 
-        await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
-        r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});
-        expect(r).to.have.a.migratedStakeEvent({
-            stakeOwner: p2.address,
-            amount: bn(100)
-        });
-        expect(r).to.have.a.stakeMigrationNotificationSkippedEvent({stakeOwner: p2.address});
+            await d.staking.addMigrationDestination(newStaking.address, {from: d.migrationManager.address});
+            r = await d.staking.migrateStakedTokens(newStaking.address, 100, {from: p2.address});
+            expect(r).to.have.a.migratedStakeEvent({
+                stakeOwner: p2.address,
+                amount: bn(100)
+            });
+            if (!notify) {
+                expect(r).to.have.a.stakeMigrationNotificationSkippedEvent({stakeOwner: p2.address});
+            }
+        }
     });
 
 })

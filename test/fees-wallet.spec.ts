@@ -214,6 +214,11 @@ describe('fees-wallet-contract', async () => {
       });
     }
     expect(await d.erc20.balanceOf(newFeesWallet.address)).to.bignumber.eq(bn(amount));
+
+    // Skips migration for an empty bucket
+    r = await d.generalFeesWallet.migrateBucket(newFeesWallet.address, MONTH_IN_SECONDS, {from: d.migrationManager.address});
+    expect(r).to.not.have.a.feesWithdrawnFromBucketEvent();
+    expect(r).to.not.have.a.feesAddedToBucketEvent();
   });
 
 });

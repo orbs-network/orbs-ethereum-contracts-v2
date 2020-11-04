@@ -8,7 +8,7 @@ export interface ContractRegistryAddressUpdatedEvent {
     addr: string;
 }
 
-export interface OwnedContract extends Contract {
+export interface ManagedContract extends Contract {
     transferRegistryManagement(newManager: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     claimRegistryManagement(params?: TransactionConfig): Promise<TransactionReceipt>;
 
@@ -22,5 +22,10 @@ export interface OwnedContract extends Contract {
     initializationComplete(params?: TransactionConfig): Promise<TransactionReceipt>;
     isInitializationComplete(): Promise<boolean>;
 
+    getContractRegistry(): Promise<string>;
+
+    setRegistryAdmin(adming: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     registryAdmin(): Promise<string>;
+
+    renounceRegistryManagement(params?: TransactionConfig): Promise<string>;
 }
