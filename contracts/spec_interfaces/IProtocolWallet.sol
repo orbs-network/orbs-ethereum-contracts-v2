@@ -15,7 +15,7 @@ interface IProtocolWallet {
     /// @return balance is the wallet balance
     function getBalance() external view returns (uint256 balance);
 
-    /// Transfers the given amount of orbs tokens form the sender to this contract an updates the pool
+    /// Transfers the given amount of orbs tokens form the sender to this contract and updates the pool
     /// @dev assumes the caller approved the amount prior to calling
     /// @param amount is the amount to add to the wallet
     function topUp(uint256 amount) external;
@@ -38,30 +38,30 @@ interface IProtocolWallet {
     event OutstandingTokensReset(uint256 startTime);
 
     /// Sets a new annual withdraw rate for the pool
-	/// @dev governance function called only by the migration owner
+    /// @dev governance function called only by the migration owner
     /// @dev the rate for a duration is duration x annualRate / 1 year 
-    /// @param annualRate is the maximum annual rate that can be withdrawn
-    function setMaxAnnualRate(uint256 annualRate) external; /* onlyMigrationOwner */
+    /// @param _annualRate is the maximum annual rate that can be withdrawn
+    function setMaxAnnualRate(uint256 _annualRate) external; /* onlyMigrationOwner */
 
     /// Returns the annual withdraw rate of the pool
     /// @return annualRate is the maximum annual rate that can be withdrawn
     function getMaxAnnualRate() external view returns (uint256);
 
-    /// Emergency withdraw the wallet funds
-	/// @dev governance function called only by the migration owner
-    /// @dev used in emergencies, when a migration to a new wallet is needed
-    /// @param token is the erc20 address of the token to withdraw
-    function emergencyWithdraw(address token) external; /* onlyMigrationOwner */
-
-    /// Sets the address of the client that can withdraw funds
-	/// @dev governance function called only by the functional owner
-    /// @param client is the address of the new client
-    function setClient(address client) external; /* onlyFunctionalOwner */
-
     /// Resets the outstanding tokens to new start time
-	/// @dev governance function called only by the migration owner
+    /// @dev governance function called only by the migration owner
     /// @dev the next duration will be calculated starting from the given time
     /// @param startTime is the time to set as the last withdrawal time
     function resetOutstandingTokens(uint256 startTime) external; /* onlyMigrationOwner */
+
+    /// Emergency withdraw the wallet funds
+    /// @dev governance function called only by the migration owner
+    /// @dev used in emergencies, when a migration to a new wallet is needed
+    /// @param erc20 is the erc20 address of the token to withdraw
+    function emergencyWithdraw(address erc20) external; /* onlyMigrationOwner */
+
+    /// Sets the address of the client that can withdraw funds
+    /// @dev governance function called only by the functional owner
+    /// @param _client is the address of the new client
+    function setClient(address _client) external; /* onlyFunctionalOwner */
 
 }

@@ -162,7 +162,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
         emit StakeChangeNotifierUpdated(notifier);
     }
 
-    /// @dev Adds a new contract to the list of approved staking contracts migration destinations.
+    /// @dev Adds a new contract to the list of approved staking contract migration destinations.
     /// @param _newStakingContract IMigratableStakingContract The new contract to add.
     function addMigrationDestination(IMigratableStakingContract _newStakingContract) external onlyMigrationManager {
         require(address(_newStakingContract) != address(0),
@@ -183,7 +183,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
         emit MigrationDestinationAdded(_newStakingContract);
     }
 
-    /// @dev Removes a contract from the list of approved staking contracts migration destinations.
+    /// @dev Removes a contract from the list of approved staking contract migration destinations.
     /// @param _stakingContract IMigratableStakingContract The contract to remove.
     function removeMigrationDestination(IMigratableStakingContract _stakingContract) external onlyMigrationManager {
         require(address(_stakingContract) != address(0),
@@ -352,7 +352,7 @@ contract StakingContract is IStakingContract, IMigratableStakingContract {
     /// assumes that the user has already approved at least the required amount using ERC20 approve. Since this is a
     /// convenience method, we aren't concerned about reaching block gas limit by using large lists. We assume that
     /// callers will be able to batch/paginate their requests properly.
-    /// @param _totalAmount uint256 The total amount of rewards to distributes.
+    /// @param _totalAmount uint256 The total amount of rewards to distribute.
     /// @param _stakeOwners address[] The addresses of the stake owners.
     /// @param _amounts uint256[] The amounts of the rewards.
     function distributeRewards(uint256 _totalAmount, address[] calldata _stakeOwners, uint256[] calldata _amounts) external override

@@ -2,6 +2,7 @@
 
 pragma solidity 0.6.12;
 
+/// @title managed contract interface, used by the contracts registry to notify the contract on updates
 interface IManagedContract /* is ILockable, IContractRegistryAccessor, Initializable */ {
 
     /// Refreshes the address of the other contracts the contract interacts with

@@ -11,6 +11,9 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
 
     IContractRegistry private contractRegistry;
 
+    /// Constructor
+    /// @param _contractRegistry is the contract registry address
+    /// @param _registryAdmin is the registry admin address
     constructor(IContractRegistry _contractRegistry, address _registryAdmin) public {
         require(address(_contractRegistry) != address(0), "_contractRegistry cannot be 0");
         setContractRegistry(_contractRegistry);
@@ -35,22 +38,31 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
         _;
     }
 
+    /// Checks whether the caller is Admin: either the contract registry, the registry admin, or the initialization admin
     function isAdmin() internal view returns (bool) {
         return msg.sender == address(contractRegistry) || msg.sender == registryAdmin() || msg.sender == initializationAdmin();
     }
 
+    /// Checks whether the caller is a specific manager role or and Admin
+    /// @dev queries the registry contract for the up to date manager assignment
     function isManager(string memory role) internal view returns (bool) {
         IContractRegistry _contractRegistry = contractRegistry;
         return isAdmin() || _contractRegistry != IContractRegistry(0) && contractRegistry.getManager(role) == msg.sender;
     }
 
+    /// Checks whether the caller is the migration manager
     function isMigrationManager() internal view returns (bool) {
         return isManager('migrationManager');
     }
 
+    /// Checks whether the caller is the functional manager
     function isFunctionalManager() internal view returns (bool) {
         return isManager('functionalManager');
     }
+
+    /* 
+     * Contract getters, return the address of a contract by calling the contract registry 
+     */ 
 
     function getProtocolContract() internal view returns (address) {
         return contractRegistry.getContract("protocol");
@@ -118,12 +130,17 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
 
     event ContractRegistryAddressUpdated(address addr);
 
+    /// Sets the contract registry address
+    /// @dev governance function called only by an admin
+    /// @param newContractRegistry is the new registry contract 
     function setContractRegistry(IContractRegistry newContractRegistry) public override onlyAdmin {
         require(newContractRegistry.getPreviousContractRegistry() == address(contractRegistry), "new contract registry must provide the previous contract registry");
         contractRegistry = newContractRegistry;
         emit ContractRegistryAddressUpdated(address(newContractRegistry));
     }
 
+    /// Returns the contract registry that the contract is set to use
+    /// @return contractRegistry is the registry contract address
     function getContractRegistry() public override view returns (IContractRegistry) {
         return contractRegistry;
     }
@@ -133,3 +150,4 @@ contract ContractRegistryAccessor is IContractRegistryAccessor, WithClaimableReg
     }
 
 }
+

@@ -39,14 +39,14 @@ interface IFeesWallet {
 
     event EmergencyWithdrawal(address addr, address token);
 
-    /// Migrates the fees of bucket starting at startTimestamp.
-	/// @dev governance function called only by the migration manager
+    /// Migrates the fees of a bucket starting at startTimestamp.
+    /// @dev governance function called only by the migration manager
     /// @dev Calls acceptBucketMigration in the destination contract.
     /// @param destination is the address of the new FeesWallet contract
     /// @param bucketStartTime is the start time of the bucket to migration, must be a bucket's valid start time
     function migrateBucket(IMigratableFeesWallet destination, uint256 bucketStartTime) external /* onlyMigrationManager */;
 
-    /// Accepts a bucket fees from a old fees wallet as part of a migration
+    /// Accepts a fees bucket balance from a old fees wallet as part of the fees wallet migration
     /// @dev Called by the old FeesWallet contract.
     /// @dev Part of the IMigratableFeesWallet interface.
     /// @dev assumes the caller approved the amount prior to calling
@@ -55,9 +55,9 @@ interface IFeesWallet {
     function acceptBucketMigration(uint256 bucketStartTime, uint256 amount) external;
 
     /// Emergency withdraw the contract funds
-	/// @dev governance function called only by the migration manager
+    /// @dev governance function called only by the migration manager
     /// @dev used in emergencies only, where migrateBucket is not a suitable solution
-    /// @param token is the erc20 address of the token to withdraw
-    function emergencyWithdraw(address token) external /* onlyMigrationManager */;
+    /// @param erc20 is the erc20 address of the token to withdraw
+    function emergencyWithdraw(address erc20) external /* onlyMigrationManager */;
 
 }

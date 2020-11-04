@@ -56,7 +56,7 @@ contract GuardiansRegistrationPreviousVersion {
 		return guardianMetadata[guardian][key];
 	}
 
-	/// @dev Called by a participant who wishes to unregister
+    /// @dev Called by a participant who wishes to unregister
 	function unregisterGuardian() external onlyRegisteredGuardian {
 		delete orbsAddressToGuardianAddress[guardians[msg.sender].orbsAddr];
 		delete ipToGuardian[guardians[msg.sender].ip];
@@ -102,7 +102,7 @@ contract GuardiansRegistrationPreviousVersion {
 		require(guardianAddress != address(0), "Cannot resolve address");
 	}
 
-	/// @dev Translates a list guardians Orbs addresses to Ethereum addresses
+    /// @dev Translates a list guardians Orbs addresses to Ethereum addresses
 	function getGuardianAddresses(address[] calldata orbsAddrs) external view returns (address[] memory guardianAddrs) {
 		guardianAddrs = new address[](orbsAddrs.length);
 		for (uint i = 0; i < orbsAddrs.length; i++) {

@@ -14,7 +14,7 @@ interface ISubscriptions {
      *   External functions
      */
 
-    /// Creates a new VC
+    /// Creates a new virtual chain
     /// @dev Called only by: an authorized subscription plan contract
     /// @dev the initial amount paid for the virtual chain must be large than minimumInitialVcPayment
     /// @param name is the virtual chain name
@@ -28,8 +28,9 @@ interface ISubscriptions {
     /// @return genRefTime is the virtual chain genesis reference time that determines the first block committee
     function createVC(string calldata name, string calldata tier, uint256 rate, uint256 amount, address owner, bool isCertified, string calldata deploymentSubset) external returns (uint vcId, uint genRefTime);
 
-    /// Extends the subscription of an existing VC.
+    /// Extends the subscription of an existing virtual chain.
     /// @dev Called only by: an authorized subscription plan contract
+    /// @dev assumes that the msg.sender approved the amount prior to the call
     /// @param vcId is the virtual chain ID
     /// @param amount is the amount paid for the virtual chain subscription extension
     /// @param tier is the virtual chain tier, must match the tier selected in the virtual creation
@@ -37,16 +38,16 @@ interface ISubscriptions {
     /// @param payer is the address paying for the subscription extension
     function extendSubscription(uint256 vcId, uint256 amount, string calldata tier, uint256 rate, address payer) external;
 
-    /// Sets a VC config record
+    /// Sets a virtual chain config record
     /// @dev may be called only by the virtual chain owner
     /// @param vcId is the virtual chain ID
-    /// @param key iis the name of the config record to update
+    /// @param key is the name of the config record to update
     /// @param value is the config record value
     function setVcConfigRecord(uint256 vcId, string calldata key, string calldata value) external /* onlyVcOwner */;
 
-    /// Returns the value of a VC config record
+    /// Returns the value of a virtual chain config record
     /// @param vcId is the virtual chain ID
-    /// @param key iis the name of the config record to query
+    /// @param key is the name of the config record to query
     /// @return value is the config record value
     function getVcConfigRecord(uint256 vcId, string calldata key) external view returns (string memory);
 
@@ -88,17 +89,17 @@ interface ISubscriptions {
     event MinimumInitialVcPaymentChanged(uint256 newMinimumInitialVcPayment);
 
     /// Adds a subscription plan contract to the authorized subscribers list
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @param addr is the address of the subscription plan contract
     function addSubscriber(address addr) external /* onlyFunctionalManager */;
 
     /// Removes a subscription plan contract to the authorized subscribers list
-	/// @dev governance function called only by the functional manager
+    /// @dev governance function called only by the functional manager
     /// @param addr is the address of the subscription plan contract
     function removeSubscriber(address addr) external /* onlyFunctionalManager */;
 
-    /// Set the genesis reference time delay from the virtual chain creation time
-	/// @dev governance function called only by the functional manager
+    /// Sets the delay between a virtual chain genesis reference time and the virtual chain creation time
+    /// @dev governance function called only by the functional manager
     /// @dev the reference time delay allows the guardian to be ready with the virtual chain resources for the first block consensus
     /// @param newGenesisRefTimeDelay is the delay time in seconds
     function setGenesisRefTimeDelay(uint256 newGenesisRefTimeDelay) external /* onlyFunctionalManager */;
@@ -109,8 +110,8 @@ interface ISubscriptions {
 
     /// Sets the minimum initial virtual chain payment 
     /// @dev Prevents abuse of the guardian nodes resources
-    /// @param minimumInitialVcPayment is the minimum payment required for the initial subscription
-    function setMinimumInitialVcPayment(uint256 minimumInitialVcPayment) external /* onlyFunctionalManager */;
+    /// @param newMinimumInitialVcPayment is the minimum payment required for the initial subscription
+    function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) external /* onlyFunctionalManager */;
 
     /// Returns the minimum initial virtual chain payment 
     /// @return minimumInitialVcPayment is the minimum payment required for the initial subscription
@@ -123,5 +124,12 @@ interface ISubscriptions {
         uint genesisRefTimeDelay,
         uint256 minimumInitialVcPayment
     );
+
+    /// Imports virtual chain subscription from a previous subscriptions contract
+    /// @dev governance function called only by the initialization admin during migration
+    /// @dev if the migrated vcId is larger or equal to the next virtual chain ID to allocate, increment the next virtual chain ID
+    /// @param vcId is the virtual chain ID to migrate
+    /// @param previousSubscriptionsContract is the address of the previous subscription contract
+    function importSubscription(uint vcId, ISubscriptions previousSubscriptionsContract) external /* onlyInitializationAdmin */;
 
 }
