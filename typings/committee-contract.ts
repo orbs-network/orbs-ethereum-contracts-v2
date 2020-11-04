@@ -1,6 +1,6 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface MaxCommitteeSizeChangedEvent {
     newValue: string|BN;
@@ -20,7 +20,7 @@ export interface CommitteeSnapshotEvent {
     certification: boolean[];
 }
 
-export interface CommitteeContract extends OwnedContract {
+export interface CommitteeContract extends ManagedContract {
     setContractRegistry(contractRegistry: string, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberWeightChange(addr: string, weight: number|BN, params?: TransactionConfig): Promise<TransactionReceipt>;
     memberCertificationChange(addr: string, isCertified: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;

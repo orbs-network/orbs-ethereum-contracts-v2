@@ -99,7 +99,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
     */
 
     /// Sets notifications to the delegation contract
-    /// @dev staking while notifications are disabled may lead to a discrepancy in the delegation data  
+    /// @dev staking while notifications are disabled may lead to a discrepancy in the delegation data
     /// @dev governance function called only by the migration manager
     /// @param notifyDelegations is a bool indicating whether to notify the delegation contract
     function setNotifyDelegations(bool notifyDelegations) external override onlyMigrationManager {
@@ -109,7 +109,7 @@ contract StakingContractHandler is IStakingContractHandler, IStakeChangeNotifier
 
     /// Returns the notifications to the delegation contract status
     /// @return notifyDelegations is a bool indicating whether notifications are enabled
-    function getNotifyDelegations() external override returns (bool) {
+    function getNotifyDelegations() external view override returns (bool) {
         return settings.notifyDelegations;
     }
 

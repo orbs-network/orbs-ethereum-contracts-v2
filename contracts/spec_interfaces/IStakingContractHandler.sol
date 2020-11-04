@@ -35,5 +35,5 @@ interface IStakingContractHandler {
 
     /// Returns the notifications to the delegation contract status
     /// @return notifyDelegations is a bool indicating whether notifications are enabled
-    function getNotifyDelegations() external returns (bool);
+    function getNotifyDelegations() external view returns (bool);
 }

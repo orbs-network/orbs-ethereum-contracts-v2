@@ -507,6 +507,9 @@ describe('elections-high-level-flows', async () => {
             effectiveStake: new BN(1000),
         });
 
+        // Check the getter is consistent
+        expect(bn(await d.elections.getEffectiveStake(v1.address))).to.be.bignumber.eq(bn(1000));
+
         r = await v2.unstake(2);
         expect(r).to.have.a.stakeChangedEvent({
             addr: v1.address,
@@ -753,6 +756,7 @@ describe('elections-high-level-flows', async () => {
 
         for (let i = 0; i < thresholdCrossingIndex; i++) {
             const p = delegatees[i];
+            expect(await d.elections.getVoteOutVote(p.address)).to.eq(ZERO_ADDR);
             r = await d.elections.voteOut(votedOutGuardian.address, {from: p.address});
             expect(r).to.have.a.voteOutCastedEvent({
                 voter: p.address,
@@ -760,6 +764,7 @@ describe('elections-high-level-flows', async () => {
             });
             expect(r).to.not.have.a.committeeChangeEvent();
             expect(r).to.not.have.a.guardianVotedOutEvent();
+            expect(await d.elections.getVoteOutVote(p.address)).to.eq(votedOutGuardian.address);
         }
 
         // -------------- ONE MORE VOTE TO REACH BANNING THRESHOLD ---------------
@@ -775,6 +780,9 @@ describe('elections-high-level-flows', async () => {
         await expectCommittee(d,  {
             addrs: []
         });
+
+        // A voted out member cannot join the committe
+        expect(await d.elections.canJoinCommittee(votedOutGuardian.address)).to.be.false;
     });
 
     it("VoteOut: vote-out is permanent - cannot be undone by cancelling a vote", async () => {
@@ -832,6 +840,40 @@ describe('elections-high-level-flows', async () => {
         // Decrease vote weight by loosing a delegation
         await delegator.delegate(delegator);
         expect((await d.elections.getVoteOutStatus(subject.address)).votedStake).to.be.bignumber.eq(bn(200));
+    });
+
+    it("voteOut: handles re-voting to the same subject", async () => {
+       const d = await Driver.new();
+
+       const voter = d.newParticipant();
+       const subject = d.newParticipant();
+
+       await voter.stake(100);
+       await d.elections.voteOut(subject.address, {from: voter.address});
+       expect((await d.elections.getVoteOutStatus(subject.address)).votedStake).to.bignumber.eq(bn(100));
+       await d.elections.voteOut(subject.address, {from: voter.address});
+       expect((await d.elections.getVoteOutStatus(subject.address)).votedStake).to.bignumber.eq(bn(100));
+    });
+
+    it("voteOut: handle voteOut changed", async () => {
+       const d = await Driver.new();
+
+       const p = d.newParticipant();
+       await p.stake(1000); // So the threshold will not be crossed
+
+       const voter = d.newParticipant();
+       const subject1 = d.newParticipant();
+       const subject2 = d.newParticipant();
+
+       await voter.stake(100);
+       let r = await d.elections.voteOut(subject1.address, {from: voter.address});
+       expect(r).to.not.have.a.guardianVotedOutEvent();
+       expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(100));
+       expect((await d.elections.getVoteOutStatus(subject2.address)).votedStake).to.bignumber.eq(bn(0));
+
+       await d.elections.voteOut(subject2.address, {from: voter.address});
+       expect((await d.elections.getVoteOutStatus(subject2.address)).votedStake).to.bignumber.eq(bn(100));
+       expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(0));
     });
 
     it("rejects readyToSync and readyForCommittee for a voted-out guardian", async () => {

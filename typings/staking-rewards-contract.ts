@@ -1,6 +1,6 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface StakingRewardsAllocatedEvent {
     allocatedRewards: (string|BN);
@@ -72,7 +72,7 @@ export interface GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent {
     delegatorsStakingRewardsPercentMille: number|BN
 }
 
-export interface StakingRewardsContract extends OwnedContract {
+export interface StakingRewardsContract extends ManagedContract {
     assignRewards(params?: TransactionConfig): Promise<TransactionReceipt>; // TODO remove
     deactivateRewardDistribution(params?: TransactionConfig): Promise<TransactionReceipt>;
 
@@ -155,4 +155,13 @@ export interface StakingRewardsContract extends OwnedContract {
     isRewardAllocationActive(): Promise<boolean>;
 
     stakingRewardsContractBalance(): Promise<string>;
+
+    getCurrentStakingRewardsRatePercentMille(): Promise<number>;
+
+    getStakingRewardsWalletAllocatedTokens(): Promise<number>;
+
+    getDefaultDelegatorsStakingRewardsPercentMille(): Promise<number>;
+    getMaxDelegatorsStakingRewardsPercentMille(): Promise<number>;
+    getAnnualStakingRewardsRatePercentMille(): Promise<number>;
+    getAnnualStakingRewardsCap(): Promise<number>;
 }

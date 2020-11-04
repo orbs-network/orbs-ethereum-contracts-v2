@@ -1,6 +1,6 @@
 import {TransactionConfig, TransactionReceipt} from "web3-core";
 import * as BN from "bn.js";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
 export interface FeesAssignedEvent {
     guardian: string,
@@ -72,7 +72,7 @@ export interface BootstrapRewardsAllocatedEvent {
     certifiedBootstrapRewardsPerMember: number|BN|string;
 }
 
-export interface FeesAndBootstrapRewardsContract extends OwnedContract {
+export interface FeesAndBootstrapRewardsContract extends ManagedContract {
     deactivateRewardDistribution(params?: TransactionConfig): Promise<TransactionReceipt>;
 
     activateRewardDistribution(startTime: number, params?: TransactionConfig): Promise<TransactionReceipt>;
@@ -98,6 +98,16 @@ export interface FeesAndBootstrapRewardsContract extends OwnedContract {
         withdrawnBootstrap: string,
         certified: boolean
     }>;
+    getFeesAndBootstrapState(): Promise<{
+        certifiedFeesPerMember: string,
+        generalFeesPerMember: string,
+        certifiedBootstrapPerMember: string,
+        generalBootstrapPerMember: string,
+        lastAssigned: string
+    }>;
+
+    getGeneralCommitteeAnnualBootstrap(): Promise<number>;
+    getCertifiedCommitteeAnnualBootstrap(): Promise<number>;
 
     estimateFutureFeesAndBootstrapRewards(guardian: string, duration: number): Promise<{estimatedFees: number, estimatedBootstrapRewards: number}>;
 

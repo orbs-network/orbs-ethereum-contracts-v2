@@ -18,7 +18,7 @@ import {CertificationContract} from "../typings/certification-contract";
 import {TransactionReceipt} from "web3-core";
 import {GasRecorder} from "../gas-recorder";
 import {stakedEvents} from "./event-parsing";
-import {OwnedContract} from "../typings/base-contract";
+import {ManagedContract} from "../typings/base-contract";
 import {bn} from "./helpers";
 
 export const BANNING_LOCK_TIMEOUT = 7*24*60*60;

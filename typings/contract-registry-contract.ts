@@ -1,9 +1,7 @@
-import {Contract} from "../eth";
 import {TransactionConfig, TransactionReceipt} from "web3-core";
-import { ContractRegistryKey, ContractRegistryKey4Testkit } from "../test/driver";
-import {OwnedContract} from "./base-contract";
+import {ManagedContract} from "./base-contract";
 
-export interface ContractRegistryContract extends OwnedContract {
+export interface ContractRegistryContract extends ManagedContract {
   setContract(contractId: string, addr: string, isManaged: boolean, params?: TransactionConfig): Promise<TransactionReceipt>;
   getContract(contractId: string, params?: TransactionConfig): Promise<string>;
 
