@@ -5,7 +5,7 @@ import {getAbiByContractAddress, getAbiByContractName, getAbiByContractRegistryK
 import {loadCompiledContracts} from "../compiled-contracts";
 import {deployedContracts} from "../deployed-contracts";
 
-describe("helpers tests", async () => {
+describe("helpers tests [skip-coverage]", async () => {
 
     const compiledContracts = loadCompiledContracts();
 
