@@ -42,7 +42,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
     /// @dev the next allocated virtual chain id on createVC is the next ID after the maximum between the migrated virtual chains and the initialNextVcId
     /// @param _contractRegistry is the contract registry address
     /// @param _registryAdmin is the registry admin address
-    /// @param _erc20 is the token used for virtual chains fees 
+    /// @param _erc20 is the token used for virtual chains fees
     /// @param _genesisRefTimeDelay is the initial genesis virtual chain reference time delay from the creation time
     /// @param _minimumInitialVcPayment is the minimum payment required for the initial subscription
     /// @param vcIds is a list of virtual chain ids to migrate from the previous subscription contract
@@ -100,7 +100,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
             rate: rate,
             deploymentSubset: deploymentSubset,
             isCertified: isCertified
-        });
+            });
         virtualChains[vcId] = vc;
 
         emit VcCreated(vcId);
@@ -138,7 +138,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         return configRecords[vcId][key];
     }
 
-    /// Transfers a virtual chain ownership to a new owner 
+    /// Transfers a virtual chain ownership to a new owner
     /// @dev may be called only by the current virtual chain owner
     /// @param vcId is the virtual chain ID
     /// @param owner is the address of the new owner
@@ -219,7 +219,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         return settings.genesisRefTimeDelay;
     }
 
-    /// Sets the minimum initial virtual chain payment 
+    /// Sets the minimum initial virtual chain payment
     /// @dev Prevents abuse of the guardian nodes resources
     /// @param newMinimumInitialVcPayment is the minimum payment required for the initial subscription
     function setMinimumInitialVcPayment(uint256 newMinimumInitialVcPayment) public override onlyFunctionalManager {
@@ -227,7 +227,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
         emit MinimumInitialVcPaymentChanged(newMinimumInitialVcPayment);
     }
 
-    /// Returns the minimum initial virtual chain payment 
+    /// Returns the minimum initial virtual chain payment
     /// @return minimumInitialVcPayment is the minimum payment required for the initial subscription
     function getMinimumInitialVcPayment() external override view returns (uint) {
         return settings.minimumInitialVcPayment;
@@ -271,7 +271,7 @@ contract Subscriptions is ISubscriptions, ManagedContract {
             owner: owner,
             deploymentSubset: deploymentSubset,
             isCertified: isCertified
-        });
+            });
 
         if (vcId >= nextVcId) {
             nextVcId = vcId + 1;

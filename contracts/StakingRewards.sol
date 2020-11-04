@@ -290,7 +290,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     function delegationWillChange(address guardian, uint256 guardianDelegatedStake, address delegator, uint256 delegatorStake, address nextGuardian, uint256 nextGuardianDelegatedStake) external override onlyWhenActive onlyDelegationsContract {
         Settings memory _settings = settings;
         (bool inCommittee, uint256 weight, , uint256 totalCommitteeWeight) = committeeContract.getMemberInfo(guardian);
-        
+
         StakingRewardsState memory _stakingRewardsState = _updateStakingRewardsState(totalCommitteeWeight, _settings);
         GuardianStakingRewards memory guardianStakingRewards = _updateGuardianStakingRewards(guardian, inCommittee, inCommittee, weight, guardianDelegatedStake, _stakingRewardsState, _settings);
         _updateDelegatorStakingRewards(delegator, delegatorStake, guardian, guardianStakingRewards);
@@ -485,7 +485,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     // Global state
 
-    /// Returns the annual reward per weight 
+    /// Returns the annual reward per weight
     /// @dev calculates the current annual rewards per weight based on the annual rate and annual cap
     function _getAnnualRewardPerWeight(uint256 totalCommitteeWeight, Settings memory _settings) private pure returns (uint256) {
         return totalCommitteeWeight == 0 ? 0 : Math.min(uint256(_settings.annualRateInPercentMille).mul(TOKEN_BASE).div(PERCENT_MILLIE_BASE), uint256(_settings.annualCap).mul(TOKEN_BASE).div(totalCommitteeWeight));
@@ -506,7 +506,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
 
     /// Returns the up global staking rewards state for a specific time
     /// @dev receives the relevant committee data
-    /// @dev for future time calculations assumes no change in the committee data 
+    /// @dev for future time calculations assumes no change in the committee data
     /// @param totalCommitteeWeight is the current committee total weight
     /// @param currentTime is the time to calculate the rewards for
     /// @param _settings is the contract settings
@@ -521,7 +521,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         }
     }
 
-    /// Updates the global staking rewards 
+    /// Updates the global staking rewards
     /// @dev calculated to the latest block, may differ from the state read
     /// @dev uses the _getStakingRewardsState function
     /// @param totalCommitteeWeight is the current committee total weight
@@ -538,7 +538,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         emit StakingRewardsAllocated(allocatedRewards, _stakingRewardsState.stakingRewardsPerWeight);
     }
 
-    /// Updates the global staking rewards 
+    /// Updates the global staking rewards
     /// @dev calculated to the latest block, may differ from the state read
     /// @dev queries the committee state from the committee contract
     /// @dev uses the _updateStakingRewardsState function
@@ -555,8 +555,8 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     /// @dev calculated to the latest block, may differ from the state read
     /// @param guardian is the guardian to query
     /// @param inCommittee indicates whether the guardian is currently in the committee
-    /// @param inCommitteeAfter indicates whether after a potential change the guardian is in the committee 
-    /// @param guardianWeight is the guardian committee weight 
+    /// @param inCommitteeAfter indicates whether after a potential change the guardian is in the committee
+    /// @param guardianWeight is the guardian committee weight
     /// @param guardianDelegatedStake is the guardian delegated stake
     /// @param _stakingRewardsState is the updated global staking rewards state
     /// @param _settings is the contract settings
@@ -574,16 +574,16 @@ contract StakingRewards is IStakingRewards, ManagedContract {
             uint256 delegatorRewardsRatioPercentMille = _getGuardianDelegatorsStakingRewardsPercentMille(guardian, _settings);
 
             delegatorRewardsPerTokenDelta = guardianDelegatedStake == 0 ? 0 : totalRewards
-                .div(guardianDelegatedStake)
-                .mul(delegatorRewardsRatioPercentMille)
-                .div(PERCENT_MILLIE_BASE);
+            .div(guardianDelegatedStake)
+            .mul(delegatorRewardsRatioPercentMille)
+            .div(PERCENT_MILLIE_BASE);
 
             uint256 guardianCutPercentMille = PERCENT_MILLIE_BASE.sub(delegatorRewardsRatioPercentMille);
 
             rewardsAdded = totalRewards
-                    .mul(guardianCutPercentMille)
-                    .div(PERCENT_MILLIE_BASE)
-                    .div(TOKEN_BASE);
+            .mul(guardianCutPercentMille)
+            .div(PERCENT_MILLIE_BASE)
+            .div(TOKEN_BASE);
 
             guardianStakingRewards.delegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken.add(delegatorRewardsPerTokenDelta);
             guardianStakingRewards.balance = guardianStakingRewards.balance.add(rewardsAdded);
@@ -658,10 +658,10 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         delegatorStakingRewards = delegatorsStakingRewards[delegator];
 
         delegatorRewardsPerTokenDelta = uint256(guardianStakingRewards.delegatorRewardsPerToken)
-            .sub(delegatorStakingRewards.lastDelegatorRewardsPerToken);
+        .sub(delegatorStakingRewards.lastDelegatorRewardsPerToken);
         delegatorRewardsAdded = delegatorRewardsPerTokenDelta
-            .mul(delegatorStake)
-            .div(TOKEN_BASE);
+        .mul(delegatorStake)
+        .div(TOKEN_BASE);
 
         delegatorStakingRewards.balance = delegatorStakingRewards.balance.add(delegatorRewardsAdded);
         delegatorStakingRewards.lastDelegatorRewardsPerToken = guardianStakingRewards.delegatorRewardsPerToken;
@@ -761,11 +761,11 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         emit GuardianDelegatorsStakingRewardsPercentMilleUpdated(guardian, delegatorRewardsPercentMille);
     }
 
-    /// Claims an addr staking rewards and update its rewards state without transferring the rewards 
-    /// @dev used by claimStakingRewards and migrateRewardsBalance 
-    /// @param addr is the address to claim rewards for 
-    /// @return guardianRewards is the claimed guardian rewards balance 
-    /// @return delegatorRewards is the claimed delegator rewards balance 
+    /// Claims an addr staking rewards and update its rewards state without transferring the rewards
+    /// @dev used by claimStakingRewards and migrateRewardsBalance
+    /// @param addr is the address to claim rewards for
+    /// @return guardianRewards is the claimed guardian rewards balance
+    /// @return delegatorRewards is the claimed delegator rewards balance
     function claimStakingRewardsLocally(address addr) private returns (uint256 guardianRewards, uint256 delegatorRewards) {
         updateDelegatorStakingRewards(addr);
 

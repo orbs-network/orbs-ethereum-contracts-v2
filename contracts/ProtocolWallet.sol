@@ -78,13 +78,13 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
 
     /// Sets a new annual withdraw rate for the pool
     /// @dev governance function called only by the migration owner
-    /// @dev the rate for a duration is duration x annualRate / 1 year 
+    /// @dev the rate for a duration is duration x annualRate / 1 year
     /// @param _annualRate is the maximum annual rate that can be withdrawn
     function setMaxAnnualRate(uint256 _annualRate) public override onlyMigrationOwner {
         maxAnnualRate = _annualRate;
         emit MaxAnnualRateSet(_annualRate);
     }
-    
+
     /// Returns the annual withdraw rate of the pool
     /// @return annualRate is the maximum annual rate that can be withdrawn
     function getMaxAnnualRate() external override view returns (uint256) {

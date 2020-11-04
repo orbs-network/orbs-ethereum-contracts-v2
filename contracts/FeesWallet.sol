@@ -24,7 +24,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     /// Constructor
     /// @param _contractRegistry is the contract registry address
     /// @param _registryAdmin is the registry admin address
-    /// @param _token is the token used for virtual chains fees 
+    /// @param _token is the token used for virtual chains fees
     constructor(IContractRegistry _contractRegistry, address _registryAdmin, IERC20 _token) ManagedContract(_contractRegistry, _registryAdmin) public {
         token = _token;
         lastCollectedAt = block.timestamp;
@@ -154,7 +154,7 @@ contract FeesWallet is IFeesWallet, ManagedContract {
     /// Private function utilized by collectFees and getOutstandingFees
     /// @dev the buckets details returned by the function are used for the corresponding events generation
     /// @param currentTime is the time to check the pending fees for
-    /// @return outstandingFees is the amount of pending fees to collect at time currentTime 
+    /// @return outstandingFees is the amount of pending fees to collect at time currentTime
     /// @return bucketsWithdrawn is the list of buckets that fees were withdrawn from
     /// @return withdrawnAmounts is the list of amounts withdrawn from the buckets
     /// @return newTotals is the updated total of the buckets
