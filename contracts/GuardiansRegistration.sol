@@ -272,6 +272,7 @@ contract GuardiansRegistration is IGuardiansRegistration, ManagedContract {
 		orbsAddressToGuardianAddress[orbsAddr] = guardianAddress;
 		ipToGuardian[ip] = guardianAddress;
 
+		emit GuardianRegistered(guardianAddress);
 		emit GuardianDataUpdated(guardianAddress, true, ip, orbsAddr, name, website, registrationTime);
 	}
 
