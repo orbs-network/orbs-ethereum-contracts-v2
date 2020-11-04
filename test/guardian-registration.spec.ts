@@ -700,6 +700,7 @@ describe('guardian-registration', async () => {
     const newContract: GuardiansRegistrationContract = await d.web3.deploy('GuardiansRegistration', [d.contractRegistry.address, d.registryAdmin.address], null, d.session);
 
     r = await newContract.migrateGuardians([v1.address, v2.address], d.guardiansRegistration.address);
+    expect(r).to.have.a.guardianRegisteredEvent({guardian: v1.address})
     expect(r).to.have.a.guardianDataUpdatedEvent({
       guardian: v1.address,
       orbsAddr: v1.orbsAddress,
@@ -709,6 +710,7 @@ describe('guardian-registration', async () => {
       registrationTime: bn(v1RegistrationTime)
     });
     expect(r).to.have.a.guardianMetadataChangedEvent({key: "ID_FORM_URL", newValue: "123", oldValue: ""});
+    expect(r).to.have.a.guardianRegisteredEvent({guardian: v2.address})
     expect(r).to.have.a.guardianDataUpdatedEvent({
       guardian: v2.address,
       orbsAddr: v2.orbsAddress,
