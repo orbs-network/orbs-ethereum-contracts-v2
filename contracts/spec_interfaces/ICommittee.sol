@@ -39,13 +39,13 @@ interface ICommittee {
     /// @param addr is the added committee member address
     /// @param weight is the added member weight
     /// @param isCertified is the added member certification state
-    /// @return memberAdded bool indicates whether the member was addded
+    /// @return memberAdded bool indicates whether the member was added
 	function addMember(address addr, uint256 weight, bool isCertified) external returns (bool memberAdded)  /* onlyElectionsContract */;
 
     /// Checks if addMember() would add a the member to the committee (qualified to join)
     /// @param addr is the candidate committee member address
     /// @param weight is the candidate committee member weight
-    /// @return wouldAddMember bool indicates whether the member will be addded
+    /// @return wouldAddMember bool indicates whether the member will be added
 	function checkAddMember(address addr, uint256 weight) external view returns (bool wouldAddMember);
 
     /// Returns the committee members and their weights
@@ -69,7 +69,7 @@ interface ICommittee {
 	function getMemberInfo(address addr) external view returns (bool inCommittee, uint weight, bool isCertified, uint totalCommitteeWeight);
 
     /// Emits a CommitteeSnapshot events with current committee info
-    /// @dev a CommitteeSnapshot is useful on contracts migration or to remove the need to track past events.
+    /// @dev a CommitteeSnapshot is useful on contract migration or to remove the need to track past events.
 	function emitCommitteeSnapshot() external;
 
 	/*

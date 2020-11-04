@@ -39,7 +39,7 @@ interface IFeesWallet {
 
     event EmergencyWithdrawal(address addr, address token);
 
-    /// Migrates the fees of bucket starting at startTimestamp.
+    /// Migrates the fees of a bucket starting at startTimestamp.
     /// @dev governance function called only by the migration manager
     /// @dev Calls acceptBucketMigration in the destination contract.
     /// @param destination is the address of the new FeesWallet contract

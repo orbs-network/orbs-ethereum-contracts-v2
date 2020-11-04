@@ -36,7 +36,7 @@ contract Initializable {
         emit InitializationComplete();
     }
 
-    /// Checks if the initialization wad completed
+    /// Checks if the initialization was completed
     function isInitializationComplete() public view returns (bool) {
         return _initializationAdmin == address(0);
     }

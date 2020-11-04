@@ -121,7 +121,7 @@ contract Committee is ICommittee, ManagedContract {
     /// @param addr is the added committee member address
     /// @param weight is the added member weight
     /// @param isCertified is the added member certification state
-    /// @return memberAdded bool indicates whether the member was addded
+    /// @return memberAdded bool indicates whether the member was added
 	function addMember(address addr, uint256 weight, bool isCertified) external override onlyElectionsContract onlyWhenActive returns (bool memberAdded) {
 		return _addMember(addr, weight, isCertified, true);
 	}
@@ -129,7 +129,7 @@ contract Committee is ICommittee, ManagedContract {
     /// Checks if addMember() would add a the member to the committee (qualified to join)
     /// @param addr is the candidate committee member address
     /// @param weight is the candidate committee member weight
-    /// @return wouldAddMember bool indicates whether the member will be addded
+    /// @return wouldAddMember bool indicates whether the member will be added
 	function checkAddMember(address addr, uint256 weight) external view override returns (bool wouldAddMember) {
 		if (membersStatus[addr].inCommittee) {
 			return false;
@@ -172,7 +172,7 @@ contract Committee is ICommittee, ManagedContract {
 	}
 	
     /// Emits a CommitteeSnapshot events with current committee info
-    /// @dev a CommitteeSnapshot is useful on contracts migration or to remove the need to track past events.
+    /// @dev a CommitteeSnapshot is useful on contract migration or to remove the need to track past events.
 	function emitCommitteeSnapshot() external override {
 		(address[] memory addrs, uint256[] memory weights, bool[] memory certification) = _getCommittee();
 		for (uint i = 0; i < addrs.length; i++) {

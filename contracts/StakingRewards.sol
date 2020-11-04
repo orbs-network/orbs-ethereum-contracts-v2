@@ -113,7 +113,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     * External functions
     */
 
-    /// Returns the currently reward balance of the given address.
+    /// Returns the current reward balance of the given address.
     /// @dev calculates the up to date balances (differ from the state)
     /// @param addr is the address to query
     /// @return delegatorStakingRewardsBalance the rewards awarded to the guardian role
@@ -225,7 +225,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         estimatedGuardianStakingRewards = guardianRewardsFuture.balance.sub(guardianRewardsNow.balance);
     }
 
-    /// Sets ths guardian's delegators staking reward portion
+    /// Sets the guardian's delegators staking reward portion
     /// @dev by default uses the defaultDelegatorsStakingRewardsPercentMille
     /// @param delegatorRewardsPercentMille is the delegators portion in percent-mille (0 - maxDelegatorsStakingRewardsPercentMille)
     function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external override onlyWhenActive {
@@ -746,7 +746,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
         emit AnnualStakingRewardsRateChanged(annualRateInPercentMille, annualCap);
     }
 
-    /// Sets ths guardian's delegators staking reward portion
+    /// Sets the guardian's delegators staking reward portion
     /// @param guardian is the guardian to set
     /// @param delegatorRewardsPercentMille is the delegators portion in percent-mille (0 - maxDelegatorsStakingRewardsPercentMille)
     function _setGuardianDelegatorsStakingRewardsPercentMille(address guardian, uint32 delegatorRewardsPercentMille) private {
@@ -786,7 +786,7 @@ contract StakingRewards is IStakingRewards, ManagedContract {
     }
 
     /// Withdraws the tokens that were allocated to the contract from the staking rewards wallet
-    /// @dev used as part of the migration flow to withdraw all the funds allocated for participants before updating the wallet client to a new contarct
+    /// @dev used as part of the migration flow to withdraw all the funds allocated for participants before updating the wallet client to a new contract
     /// @param _stakingRewardsState is the updated global staking rewards state
     function withdrawRewardsWalletAllocatedTokens(StakingRewardsState memory _stakingRewardsState) private returns (uint256 _stakingRewardsContractBalance){
         _stakingRewardsContractBalance = stakingRewardsContractBalance;

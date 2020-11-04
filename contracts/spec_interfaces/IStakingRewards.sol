@@ -15,7 +15,7 @@ interface IStakingRewards {
      * External functions
      */
 
-    /// Returns the currently reward balance of the given address.
+    /// Returns the current reward balance of the given address.
     /// @dev calculates the up to date balances (differ from the state)
     /// @param addr is the address to query
     /// @return delegatorStakingRewardsBalance the rewards awarded to the guardian role
@@ -86,7 +86,7 @@ interface IStakingRewards {
         uint256 estimatedGuardianStakingRewards
     );
 
-    /// Sets ths guardian's delegators staking reward portion
+    /// Sets the guardian's delegators staking reward portion
     /// @dev by default uses the defaultDelegatorsStakingRewardsPercentMille
     /// @param delegatorRewardsPercentMille is the delegators portion in percent-mille (0 - maxDelegatorsStakingRewardsPercentMille)
     function setGuardianDelegatorsStakingRewardsPercentMille(uint32 delegatorRewardsPercentMille) external;
