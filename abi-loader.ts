@@ -1,6 +1,8 @@
 import {ContractRegistryKey} from "./test/driver";
 import {ContractName} from "./typings/contracts";
 import {AbiItem} from "web3-utils";
+import {deployedContracts} from "./deployed-contracts";
+import Web3 from "web3";
 
 export {ContractRegistryKey, ContractName}
 
@@ -43,6 +45,14 @@ export function getAbiByContractRegistryKey(key: ContractRegistryKey): AbiItem[]
 
 export function getAbiByContractName(key: ContractName): AbiItem[] {
     return require(`./abi/${key.replace(/[\/\\\.]/g, '')}.abi.json`);
+}
+
+export function getAbiByContractAddress(address: string): (AbiItem[]|undefined) {
+    if (!address.startsWith("0x")) {
+        address = "0x" + address;
+    }
+    address = Web3.utils.toChecksumAddress(address.toLowerCase());
+    return deployedContracts[address];
 }
 
 function assertUnreachable(x: never, msg: string): never {
