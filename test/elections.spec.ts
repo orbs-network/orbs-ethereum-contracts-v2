@@ -850,17 +850,22 @@ describe('elections-high-level-flows', async () => {
     it("voteOut: handle voteOut changed", async () => {
        const d = await Driver.new();
 
+       const p = d.newParticipant();
+       await p.stake(1000); // So the threshold will not be crossed
+
        const voter = d.newParticipant();
        const subject1 = d.newParticipant();
        const subject2 = d.newParticipant();
 
        await voter.stake(100);
-       await d.elections.voteOut(subject1.address, {from: voter.address});
+       let r = await d.elections.voteOut(subject1.address, {from: voter.address});
+       expect(r).to.not.have.a.guardianVotedOutEvent();
        expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(100));
        expect((await d.elections.getVoteOutStatus(subject2.address)).votedStake).to.bignumber.eq(bn(0));
+
        await d.elections.voteOut(subject2.address, {from: voter.address});
        expect((await d.elections.getVoteOutStatus(subject2.address)).votedStake).to.bignumber.eq(bn(100));
-       expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(100));
+       expect((await d.elections.getVoteOutStatus(subject1.address)).votedStake).to.bignumber.eq(bn(0));
     });
 
     it("rejects readyToSync and readyForCommittee for a voted-out guardian", async () => {
