@@ -53,10 +53,10 @@ import {ContractRegistryAddressUpdatedEvent, LockedEvent, UnlockedEvent} from ".
 import {transpose} from "./helpers";
 import {compiledContracts, eventDefinitions} from "../compiled-contracts";
 import {
-    ClientSetEvent,
-    EmergencyWithdrawalEvent,
-    FundsAddedToPoolEvent,
-    MaxAnnualRateSetEvent
+  ClientSetEvent,
+  EmergencyWithdrawalEvent,
+  FundsAddedToPoolEvent,
+  MaxAnnualRateSetEvent, OutstandingTokensResetEvent
 } from "../typings/protocol-wallet-contract";
 import {
   FeesAddedToBucketEvent, FeesWithdrawnFromBucketEvent,
@@ -311,6 +311,7 @@ declare global {
       rewardDistributionDeactivatedEvent(data?: Partial<RewardDistributionDeactivatedEvent>);
       rewardDistributionActivatedEvent(data?: Partial<RewardDistributionActivatedEvent>);
       guardianDelegatorsStakingRewardsPercentMilleUpdatedEvent(data?: Partial<GuardianDelegatorsStakingRewardsPercentMilleUpdatedEvent>);
+      outstandingTokensResetEvent(data?: OutstandingTokensResetEvent);
 
       withinContract(contract: Contract): Assertion;
       approx(): Assertion;

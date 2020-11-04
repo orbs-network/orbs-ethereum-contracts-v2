@@ -64,8 +64,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
         require(_lastWithdrawal <= block.timestamp, "withdrawal is not yet active");
 
         uint duration = block.timestamp.sub(_lastWithdrawal);
-        uint maxAmount = duration.mul(maxAnnualRate).div(365 * 24 * 60 * 60);
-        require(amount <= maxAmount, "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
+        require(amount.mul(365 * 24 * 60 * 60) <= maxAnnualRate.mul(duration), "ProtocolWallet::withdraw - requested amount is larger than allowed by rate");
 
         lastWithdrawal = block.timestamp;
         if (amount > 0) {
@@ -96,7 +95,7 @@ contract ProtocolWallet is IProtocolWallet, WithClaimableMigrationOwnership, Wit
     /// @dev governance function called only by the migration owner
     /// @dev the next duration will be calculated starting from the given time
     /// @param startTime is the time to set as the last withdrawal time
-    function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner { //TODO add test
+    function resetOutstandingTokens(uint256 startTime) external override onlyMigrationOwner {
         lastWithdrawal = startTime;
         emit OutstandingTokensReset(startTime);
     }

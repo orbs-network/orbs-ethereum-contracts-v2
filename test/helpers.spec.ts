@@ -1,10 +1,11 @@
 import chai from "chai";
 const expect = chai.expect;
 
-import {getAbiByContractName, getAbiByContractRegistryKey} from "../abi-loader";
+import {getAbiByContractAddress, getAbiByContractName, getAbiByContractRegistryKey} from "../abi-loader";
 import {loadCompiledContracts} from "../compiled-contracts";
+import {deployedContracts} from "../deployed-contracts";
 
-describe("helpers tests", async () => {
+describe("helpers tests [skip-coverage]", async () => {
 
     const compiledContracts = loadCompiledContracts();
 
@@ -42,6 +43,16 @@ describe("helpers tests", async () => {
         expect(getAbiByContractName('FeesWallet')).to.deep.eq(compiledContracts.FeesWallet.abi);
         expect(getAbiByContractName('StakingContractHandler')).to.deep.eq(compiledContracts.StakingContractHandler.abi);
         expect(() => getAbiByContractName('nonExistentName' as string as any)).to.throw()
+    });
+
+    it("should return the ABI by address", async () => {
+        expect(getAbiByContractAddress("0xAB7F3d56Da621Cff1F5646642d7F79f6A201E4eD")).to.deep.eq(deployedContracts["0xAB7F3d56Da621Cff1F5646642d7F79f6A201E4eD"]);
+        expect(getAbiByContractAddress("0xAB7F3d56Da621Cff1F5646642d7F79f6A201E4ed")).to.deep.eq(deployedContracts["0xAB7F3d56Da621Cff1F5646642d7F79f6A201E4eD"]);
+        expect(getAbiByContractAddress("AB7F3d56Da621Cff1F5646642d7F79f6A201E4ed")).to.deep.eq(deployedContracts["0xAB7F3d56Da621Cff1F5646642d7F79f6A201E4eD"]);
+        expect(getAbiByContractAddress("0x10E441aA45A7fb4230d1370Fba3CF98269bd4b5D")).to.deep.eq(deployedContracts["0x10E441aA45A7fb4230d1370Fba3CF98269bd4b5D"]);
+        expect(getAbiByContractAddress("0x10E441aA45A7fb4230d1370Fba3CF98269bd4b5d")).to.deep.eq(deployedContracts["0x10E441aA45A7fb4230d1370Fba3CF98269bd4b5D"]);
+        expect(getAbiByContractAddress("10E441aA45A7fb4230d1370Fba3CF98269bd4b5d")).to.deep.eq(deployedContracts["0x10E441aA45A7fb4230d1370Fba3CF98269bd4b5D"]);
+        expect(getAbiByContractAddress("0x1234567890123456789012345678901234567890")).to.be.undefined;
     });
 
 });
