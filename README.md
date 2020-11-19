@@ -21,7 +21,7 @@ const StakingRewardsWalletABI = getAbiByContractRegistryKey('stakingRewardsWalle
 import { getAbiByContractAddress } from "@orbs-network/orbs-ethereum-contracts-v2";
 const DelegationsContractABI = getAbiByContractRegistryKey("0xB97178870F39d4389210086E4BcaccACD715c71d");
 ```
-*Important* - `getAbiByContractAddress()` needs to be manually updated for every newly deployed contract. It may return `undefined` when the given address is unrecognized. The address->ABI mapping is defined [here](https://github.com/orbs-network/orbs-ethereum-contracts-v2/blob/master/deployed-contracts.ts).
+**Important** - `getAbiByContractAddress()` needs to be manually updated for every newly deployed contract. It may return `undefined` when the given address is unrecognized. The address->ABI mapping is defined [here](https://github.com/orbs-network/orbs-ethereum-contracts-v2/blob/master/deployed-contracts.ts). See (Upgrading a contract)[https://github.com/orbs-network/posv2-contracts-deployment-migration#upgrading-a-contract]. 
 
 ### To use the test-kit 
 ```bash
