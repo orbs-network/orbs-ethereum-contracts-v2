@@ -1,7 +1,27 @@
 [![Version](https://img.shields.io/npm/v/@orbs-network/orbs-ethereum-contracts-v2)](https://www.npmjs.com/package/@orbs-network/orbs-ethereum-contracts-v2)
 ![Licence](https://img.shields.io/npm/l/@orbs-network/orbs-ethereum-contracts-v2)
 # orbs-ethereum-contracts-v2
-Orbs PoS V2 contracts and testkit
+Orbs PoS V2 contracts and testkit.
+
+See also:
+- [posv2-contracts-deployment-migration](https://github.com/orbs-network/posv2-contracts-deployment-migration) - Instructions and scripts for contract deplyment and data migration.
+- [List of deployed contracts](https://github.com/orbs-network/posv2-contracts-deployment-migration/blob/master/DEPLOYED_CONTRACTS.md).
+
+### To acquire contract ABIs:
+```javascript
+// By name
+import { getAbiByContractName } from "@orbs-network/orbs-ethereum-contracts-v2";
+const ProtocolWalletABI = getAbiByContractName('ProcotolWallet');
+
+// By contract registry key
+import { getAbiByContractRegistryKey } from "@orbs-network/orbs-ethereum-contracts-v2";
+const StakingRewardsWalletABI = getAbiByContractRegistryKey('stakingRewardsWallet');
+
+// By address
+import { getAbiByContractAddress } from "@orbs-network/orbs-ethereum-contracts-v2";
+const DelegationsContractABI = getAbiByContractRegistryKey("0xB97178870F39d4389210086E4BcaccACD715c71d");
+```
+*Important* - `getAbiByContractAddress()` needs to be manually updated for every newly deployed contract. It may return `undefined` when the given address is unrecognized. The address->ABI mapping is defined [here](https://github.com/orbs-network/orbs-ethereum-contracts-v2/blob/master/deployed-contracts.ts).
 
 ### To use the test-kit 
 ```bash
