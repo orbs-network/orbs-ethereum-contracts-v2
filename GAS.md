@@ -35,7 +35,6 @@ The suggested flow is as follows:
 | Delegator increases stake (subsudized)          | 98663  | 2.46$                                                      |
 | Delegator unstakes partially (subsudized)       | 85573  | 2.13$                                                      |
 | Delegator fully unstakes                        | 70561  | 1.76$                                                      |
-|                                                 |        |                                                            |
 | **Subsudizer costs**                            |        |                                                            |
 | Subsudizer: refreshStake()                      | 157682 | 3.94$                                                      |
   
