@@ -6,6 +6,7 @@ Orbs PoS V2 contracts and testkit.
 See also:
 - [posv2-contracts-deployment-migration](https://github.com/orbs-network/posv2-contracts-deployment-migration) - Instructions and scripts for contract deplyment and data migration.
 - [List of deployed contracts](https://github.com/orbs-network/posv2-contracts-deployment-migration/blob/master/DEPLOYED_CONTRACTS.md).
+- [Gas costs and subsuziation](https://github.com/orbs-network/orbs-ethereum-contracts-v2/blob/master/GAS.md)
 
 ### To acquire contract ABIs:
 ```javascript
