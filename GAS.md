@@ -27,5 +27,15 @@ The suggested flow is as follows:
 
 4. To reconnect the staking contract and disable subsudizing, the migrationManager should call `StakingContractHandler.setNotifyDelegations(false)`.
 
+### Subsudization costs
 
+|                                                 | Gas    | Estimated cost (assuming: 1 gas = 50 gwei, 1 ether = 500$) |
+|-------------------------------------------------|--------|------------------------------------------------------------|
+| **Delegator costs**                             |        |                                                            |
+| Delegator increases stake (subsudized)          | 98663  | 2.46$                                                      |
+| Delegator unstakes partially (subsudized)       | 85573  | 2.13$                                                      |
+| Delegator fully unstakes                        | 70561  | 1.76$                                                      |
+|                                                 |        |                                                            |
+| **Subsudizer costs**                            |        |                                                            |
+| Subsudizer: refreshStake()                      | 157682 | 3.94$                                                      |
   
