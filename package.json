@@ -1,6 +1,6 @@
 {
   "name": "@orbs-network/orbs-ethereum-contracts-v2",
-  "version": "0.0.37",
+  "version": "0.0.38",
   "description": "",
   "main": "./release/index.js",
   "types": "./release/index.d.ts",
