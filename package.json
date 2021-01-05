@@ -16,7 +16,9 @@
     "start-ganache": "mkdir -p _out && ganache-cli -p 7545 -i 5777 -a 1000 --gasLimit 0x7FFFFFFF --gasPrice 1 -m  \"vanish junk genuine web seminar cook absurd royal ability series taste method identify elevator liquid\" > _out/ganache.log",
     "start-ganache-log": "npm run start-ganache & tail -f _out/ganache.log",
     "stop-ganache": "ps -x    | grep \"ganache-cli -p 7545 -i 5777\" | grep -v grep | cut -f 1 -d \" \" | xargs echo | xargs kill",
-    "top-up-funds": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && npm run prepublish && node --require ./tsinit.js ./top-up-test-accounts.ts"
+    "top-up-funds": "export ETHEREUM_URL=https://kovan.infura.io/v3/62f4815d28674debbe4703c5eb9d413c && npm run prepublish && node --require ./tsinit.js ./top-up-test-accounts.ts",
+    "gen-flatten": "cd scripts && source flatten.sh",
+    "gen-multi": "cd scripts && perl multi.pl"
   },
   "author": "",
   "license": "ISC",
@@ -34,7 +36,8 @@
     "solidity-coverage": "^0.7.11",
     "truffle": "^5.1.14",
     "ts-node": "^9.0.0",
-    "typescript": "^3.8.2"
+    "typescript": "^3.8.2",
+    "truffle-flattener": "^1.2.10"
   },
   "dependencies": {
     "bn.js": "^5.1.1",
